@@ -33,11 +33,18 @@ function alDeshacer() {
 </script>
 
 <template>
-  <div class="aviso-deshacer" role="status" aria-live="polite">
+  <!--
+    Q2: este componente es puramente visual. El anuncio para lectores de pantalla lo hace
+    LayoutApp con una región aria-live persistente (ver app/aviso-deshacer.ts `anuncio`), para
+    no insertar contenido ya anunciado de golpe ni repetir el anuncio en cada segundo que
+    cambia `restante`. Por eso el número regresivo va con aria-hidden.
+  -->
+  <div class="aviso-deshacer">
     <p class="mensaje">{{ mensaje }}</p>
     <button type="button" class="deshacer" @click="alDeshacer">
       <Undo2 aria-hidden="true" class="icono" />
-      <span>Deshacer ({{ restante }})</span>
+      <span>Deshacer</span>
+      <span class="contador" aria-hidden="true">({{ restante }})</span>
     </button>
   </div>
 </template>
@@ -74,5 +81,13 @@ function alDeshacer() {
 .icono {
   width: 1.2em;
   height: 1.2em;
+}
+.contador {
+  font-weight: 400;
+}
+
+/* M5: el foco azul estándar casi no se ve sobre este fondo oscuro (~2.3:1). */
+.aviso-deshacer :focus-visible {
+  outline-color: var(--color-foco-sobre-oscuro);
 }
 </style>

@@ -7,7 +7,10 @@ const emit = defineEmits<{ accion: [] }>()
 </script>
 
 <template>
-  <div class="estado-vacio" role="status">
+  <!-- Q2: es contenido estático normal de la página (no un aviso que aparece de golpe),
+       así que no lleva role="status": ese rol es para regiones vivas que cambian; aquí
+       alcanza con que el lector de pantalla lo lea en el orden normal del documento. -->
+  <div class="estado-vacio">
     <p class="titulo">{{ titulo }}</p>
     <p v-if="descripcion" class="descripcion">{{ descripcion }}</p>
     <button v-if="accion" type="button" class="accion" @click="emit('accion')">
