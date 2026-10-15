@@ -15,19 +15,36 @@ function alDeshacer() {
 
 <template>
   <a href="#contenido" class="saltar-al-contenido">Saltar al contenido</a>
+
+  <!--
+    Q2: región aria-live persistente y SIEMPRE presente (nunca se inserta ya llena): mostrar()
+    escribe aquí el mensaje una sola vez; el número regresivo visual vive en AvisoDeshacer con
+    aria-hidden, para que no se anuncie de nuevo en cada segundo.
+  -->
+  <p aria-live="polite" role="status" class="solo-lector">
+    {{ contextoAvisoDeshacer.anuncio.value }}
+  </p>
+
+  <!--
+    S1: la navegación es una fila/columna más de esta grilla (no un elemento position:fixed con
+    una altura "adivinada"): sea cual sea su alto real (p. ej. si una etiqueta ocupa más que una
+    línea en algún idioma/tamaño de letra), la grilla le reserva exactamente ese espacio y
+    <main> nunca queda tapado.
+  -->
   <div class="layout-app">
-    <BarraNavegacion class="navegacion" />
     <main id="contenido" class="contenido" tabindex="-1">
       <RouterView />
     </main>
-  </div>
-  <div v-if="contextoAvisoDeshacer.activo.value" class="zona-aviso-deshacer">
-    <AvisoDeshacer
-      :mensaje="contextoAvisoDeshacer.activo.value.mensaje"
-      :segundos="contextoAvisoDeshacer.activo.value.segundos"
-      @deshacer="alDeshacer"
-      @cerrar="contextoAvisoDeshacer.cerrar"
-    />
+    <div v-if="contextoAvisoDeshacer.activo.value" class="zona-aviso-deshacer">
+      <AvisoDeshacer
+        :key="contextoAvisoDeshacer.activo.value.id"
+        :mensaje="contextoAvisoDeshacer.activo.value.mensaje"
+        :segundos="contextoAvisoDeshacer.activo.value.segundos"
+        @deshacer="alDeshacer"
+        @cerrar="contextoAvisoDeshacer.cerrar"
+      />
+    </div>
+    <BarraNavegacion class="navegacion" />
   </div>
 </template>
 
@@ -49,70 +66,65 @@ function alDeshacer() {
 }
 
 .layout-app {
-  display: flex;
-  flex-direction: column;
-  min-height: 100dvh;
-}
-
-.navegacion {
-  position: fixed;
-  inset-inline: 0;
-  bottom: 0;
-  z-index: 10;
-  background: var(--color-fondo);
-  border-top: 1px solid var(--color-borde);
-  padding-bottom: env(safe-area-inset-bottom);
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr auto auto;
+  grid-template-areas: 'contenido' 'aviso' 'nav';
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .contenido {
-  flex: 1;
+  grid-area: contenido;
+  min-width: 0;
+  overflow-y: auto;
   width: 100%;
   max-width: var(--ancho-contenido);
   margin-inline: auto;
   padding-inline: var(--espacio-4);
-  padding-block-start: var(--espacio-4);
-  padding-block-end: calc(var(--alto-toque) + var(--espacio-6) + env(safe-area-inset-bottom));
+  padding-block: var(--espacio-4);
 }
 .contenido:focus {
   outline: none;
 }
 
 .zona-aviso-deshacer {
-  position: fixed;
-  left: var(--espacio-4);
-  right: var(--espacio-4);
-  bottom: calc(var(--alto-toque) + var(--espacio-4) + env(safe-area-inset-bottom));
-  z-index: 20;
+  grid-area: aviso;
+  padding: var(--espacio-4);
+  padding-top: 0;
+  max-width: var(--ancho-contenido);
+  margin-inline: auto;
+  width: 100%;
+}
+
+.navegacion {
+  grid-area: nav;
+  background: var(--color-fondo);
+  border-top: 1px solid var(--color-borde);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 @media (min-width: 1024px) {
   .layout-app {
-    flex-direction: row;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: 1fr auto;
+    grid-template-areas:
+      'nav contenido'
+      'nav aviso';
   }
   .navegacion {
-    position: sticky;
-    top: 0;
-    inset-inline: auto;
-    bottom: auto;
-    left: 0;
-    width: 260px;
-    flex: none;
-    height: 100dvh;
     border-top: none;
     border-right: 1px solid var(--color-borde);
     padding: var(--espacio-4);
-    padding-bottom: var(--espacio-4);
+    overflow-y: auto;
   }
   .contenido {
     max-width: var(--ancho-contenido-pc);
-    padding-block-end: var(--espacio-6);
+    padding-block: var(--espacio-6);
   }
   .zona-aviso-deshacer {
-    left: 280px;
-    right: var(--espacio-4);
-    bottom: var(--espacio-4);
     max-width: var(--ancho-contenido-pc);
-    margin-inline: auto;
+    padding-block: var(--espacio-4);
   }
 }
 </style>
