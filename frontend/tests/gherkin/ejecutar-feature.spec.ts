@@ -89,4 +89,19 @@ describe('ejecutarPaso', () => {
       'Falló el paso "falla con un texto": texto plano',
     )
   })
+  // Fix round 2, minor (ejecutar-feature.ts:65): reasignar error.message puede lanzar en un
+  // error de solo lectura (congelado, o con un getter sin setter, como algunos DataCloneError).
+  // En ese caso se envuelve con `cause` en vez de que ejecutarPaso mismo falle con el error
+  // equivocado.
+  it('si el error original es de solo lectura (congelado), lo envuelve con cause en vez de fallar al reasignar', async () => {
+    const original = Object.freeze(new Error('no se puede tocar'))
+    const registro = new RegistroDePasos<object>().paso('falla congelada', () => {
+      throw original
+    })
+    const resultado = ejecutarPaso({}, pasoFalso('falla congelada'), registro)
+    await expect(resultado).rejects.toMatchObject({
+      message: 'Falló el paso "falla congelada": no se puede tocar',
+      cause: original,
+    })
+  })
 })

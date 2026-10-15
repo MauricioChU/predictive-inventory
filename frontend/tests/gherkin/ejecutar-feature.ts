@@ -48,7 +48,10 @@ export function nombresVisibles(
  * ORIGINAL qué paso falló y lo vuelve a lanzar tal cual — así conserva propiedades propias
  * (p. ej. `expected`/`actual`/`diff` de una aserción de Vitest) que un `new Error(...)`
  * habría perdido. Si lo lanzado no es un Error, se convierte en uno con `String(valor)`
- * (Fix round 1, M6).
+ * (Fix round 1, M6). Si el error original es de solo lectura (congelado, o con un getter de
+ * `message` sin setter, como algunos DataCloneError) y la reasignación falla, se envuelve
+ * en un Error nuevo con `cause` en vez de que ejecutarPaso termine fallando con el error de
+ * la propia reasignación (Fix round 2, minor).
  */
 export async function ejecutarPaso<M>(
   mundo: M,
@@ -62,8 +65,16 @@ export async function ejecutarPaso<M>(
   } catch (error) {
     const prefijo = `Falló el paso "${paso.text}": `
     if (error instanceof Error) {
-      error.message = `${prefijo}${error.message}`
-      throw error
+      const mensajeOriginal = error.message
+      let reasignado = false
+      try {
+        error.message = `${prefijo}${mensajeOriginal}`
+        reasignado = true
+      } catch {
+        // mensaje no reasignable: se envuelve más abajo en vez de fallar aquí.
+      }
+      if (reasignado) throw error
+      throw new Error(`${prefijo}${mensajeOriginal}`, { cause: error })
     }
     throw new Error(`${prefijo}${String(error)}`)
   }
