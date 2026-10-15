@@ -95,6 +95,11 @@ export class ResumenDiario implements DatosDeResumen {
     return this.lineasVendidas > 0
   }
 
+  /** Un día con stock inicial o ingresos solamente no cuenta en los totales de la tienda. */
+  get tieneVentasMermasOAjustes(): boolean {
+    return this.tieneVentas || !this.costoMermas.esCero() || !this.valorAjustes.esCero()
+  }
+
   aRegistro(): ResumenDiarioRegistro {
     return {
       clave: this.clave,
