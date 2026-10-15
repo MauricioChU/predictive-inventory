@@ -61,6 +61,16 @@ export default defineConfigWithVueTs(
     ...pluginPlaywright.configs['flat/recommended'],
     files: ['e2e/**/*.{test,spec}.{js,ts,jsx,tsx}'],
   },
+  {
+    name: 'e2e/ayudantes-de-verificacion',
+    files: ['e2e/**/*.{test,spec}.{js,ts,jsx,tsx}'],
+    rules: {
+      // Los ayudantes `esperar…` de e2e/utilidades contienen los expect reales.
+      'playwright/expect-expect': ['warn', { assertFunctionPatterns: ['^esperar[A-Z]'] }],
+      // Saltos condicionales por proyecto (celular / pc) son intencionales.
+      'playwright/no-skipped-test': ['warn', { allowConditional: true }],
+    },
+  },
 
   {
     ...pluginVitest.configs.recommended,
