@@ -61,6 +61,38 @@ describe('GraficoBarras', () => {
     expect(w.get('.etiqueta').text()).toBe('lun')
     expect(w.get('.valor').text()).toBe('S/ 100.00')
   })
+  it('N2: todas las filas usan la misma escala (porcentaje del mayor) y un valor > 0 nunca queda sin barra', () => {
+    const w = mount(GraficoBarras, {
+      props: {
+        titulo: 'Ventas por mes',
+        barras: [
+          { etiqueta: 'ene', valor: 200, textoValor: 'S/ 200.00' },
+          { etiqueta: 'feb', valor: 0.01, textoValor: 'S/ 0.01' },
+          { etiqueta: 'mar', valor: 0, textoValor: 'S/ 0.00' },
+        ],
+      },
+    })
+    const barras = w.findAll('.barra')
+    expect(
+      barras.map((b) => (b.element as HTMLElement).style.getPropertyValue('--porcentaje')),
+    ).toEqual(['100%', '0.01%', '0%'])
+    expect(barras.map((b) => b.classes().includes('barra--visible'))).toEqual([true, true, false])
+  })
+  it('N2: las filas comparten una sola grilla (un único contenedor .filas con las tres partes de cada fila)', () => {
+    const w = mount(GraficoBarras, {
+      props: {
+        titulo: 'Ventas por día',
+        barras: [
+          { etiqueta: 'lun', valor: 100, textoValor: 'S/ 100.00' },
+          { etiqueta: 'mar', valor: 50, textoValor: 'S/ 50.00' },
+        ],
+      },
+    })
+    expect(w.findAll('.filas')).toHaveLength(1)
+    for (const fila of w.findAll('.filas > .fila')) {
+      expect(fila.findAll(':scope > .etiqueta, :scope > .pista, :scope > .valor')).toHaveLength(3)
+    }
+  })
   it('hallazgo 2: la barra destacada se distingue también sin color (borde de acento + negrita)', () => {
     const w = mount(GraficoBarras, {
       props: {
