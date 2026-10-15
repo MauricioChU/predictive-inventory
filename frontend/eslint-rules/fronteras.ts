@@ -13,6 +13,8 @@ const AQUI = dirname(fileURLToPath(import.meta.url))
 export const SRC_ROOT = join(AQUI, '..', 'src')
 /** `frontend/tests` — todo lo que no es `src/`. */
 export const TESTS_ROOT = join(AQUI, '..', 'tests')
+/** `frontend/e2e` — Fix round 3, minor 3: igual que tests/**, pero para Playwright. */
+export const E2E_ROOT = join(AQUI, '..', 'e2e')
 
 type Capa = 'domain' | 'application' | 'infrastructure' | 'ui'
 const CAPAS: readonly Capa[] = ['domain', 'application', 'infrastructure', 'ui']
@@ -23,18 +25,22 @@ export type Clasificacion =
   | { area: 'app' }
   | { area: 'router' }
   | { area: 'tests' }
+  | { area: 'e2e' }
   | { area: 'other' }
 
 function esCapa(valor: string | undefined): valor is Capa {
   return CAPAS.includes(valor as Capa)
 }
 
+function dentroDe(raiz: string, absoluto: string): boolean {
+  const rel = relative(raiz, absoluto)
+  return rel !== '' && !rel.startsWith('..') && !rel.startsWith(`.${sep}`)
+}
+
 /** Clasifica una ruta ABSOLUTA ya resuelta (Fix round 2, I3). */
 export function clasificar(absoluto: string): Clasificacion {
-  const relSrc = relative(SRC_ROOT, absoluto)
-  const dentroDeSrc = relSrc !== '' && !relSrc.startsWith('..') && !relSrc.startsWith(`.${sep}`)
-  if (dentroDeSrc) {
-    const [primero, segundo, tercero] = relSrc.split(sep)
+  if (dentroDe(SRC_ROOT, absoluto)) {
+    const [primero, segundo, tercero] = relative(SRC_ROOT, absoluto).split(sep)
     if (primero === 'modules' && segundo) {
       return { area: 'modules', modulo: segundo, capa: esCapa(tercero) ? tercero : 'root' }
     }
@@ -46,10 +52,20 @@ export function clasificar(absoluto: string): Clasificacion {
     if (primero === 'router') return { area: 'router' }
     return { area: 'other' }
   }
-  const relTests = relative(TESTS_ROOT, absoluto)
-  const dentroDeTests =
-    relTests !== '' && !relTests.startsWith('..') && !relTests.startsWith(`.${sep}`)
-  return dentroDeTests ? { area: 'tests' } : { area: 'other' }
+  if (dentroDe(TESTS_ROOT, absoluto)) return { area: 'tests' }
+  // Fix round 3, minor 3: e2e/** se trata igual que tests/** (solo módulos por su index).
+  if (dentroDe(E2E_ROOT, absoluto)) return { area: 'e2e' }
+  return { area: 'other' }
+}
+
+/**
+ * Fix round 3, ruling 1 (load-bearing para la Ola 2): un *.spec.ts, o un archivo bajo
+ * `__pruebas__/` usado solo por specs, puede probar su propio módulo de punta a punta con
+ * adaptadores en memoria.
+ */
+function esArchivoDePruebas(archivo: string): boolean {
+  if (archivo.endsWith('.spec.ts')) return true
+  return /[\\/]__pruebas__[\\/]/.test(archivo)
 }
 
 function quitarExtension(ruta: string): string {
@@ -78,7 +94,7 @@ const MENSAJE_UOW_SOLO_PRUEBAS =
 const MENSAJE_SHARED_NUNCA_MODULOS =
   'El código compartido (shared/**) nunca importa módulos, "app" ni "router" (ADR-0005).'
 const MENSAJE_TESTS_SOLO_INDEX =
-  'Desde tests/** un módulo solo se importa por su index (@/modules/<modulo>) o por la composición de pruebas (ADR-0005).'
+  'Desde tests/** o e2e/** un módulo solo se importa por su index (@/modules/<modulo>) o por la composición de pruebas (ADR-0005).'
 const MENSAJE_CRUCE_NO_INDICE =
   'No se cruza a otro módulo con una ruta relativa ni por un archivo interno: usa @/modules/<modulo> (ADR-0005).'
 const MENSAJE_CRUCE_DESDE_DOMINIO_O_APLICACION =
@@ -120,6 +136,27 @@ export function verificarFrontera(archivoImportador: string, especificador: stri
   const importador = clasificar(archivoImportador)
   const destino = clasificar(destinoAbsoluto)
 
+  // Fix round 3, ruling 1 (load-bearing para la Ola 2): un *.spec.ts (o un archivo bajo
+  // __pruebas__/) co-ubicado con su módulo puede probarlo de punta a punta con sus propios
+  // adaptadores en memoria — no está sujeto a las restricciones de CAPA dentro de su propio
+  // módulo, ni hacia shared/**, @/router o @/app/**. El cruce a OTRO módulo (salvo su index)
+  // ya se resuelve más abajo exactamente igual que para cualquier otro importador: un
+  // archivo de pruebas SIGUE sin poder meterse en los archivos internos de otro módulo.
+  if (esArchivoDePruebas(archivoImportador)) {
+    const mismoModulo =
+      importador.area === 'modules' &&
+      destino.area === 'modules' &&
+      destino.modulo === importador.modulo
+    if (
+      mismoModulo ||
+      destino.area === 'shared' ||
+      destino.area === 'router' ||
+      destino.area === 'app'
+    ) {
+      return null
+    }
+  }
+
   if (
     importador.area === 'shared' &&
     (destino.area === 'modules' || destino.area === 'app' || destino.area === 'router')
@@ -127,7 +164,7 @@ export function verificarFrontera(archivoImportador: string, especificador: stri
     return MENSAJE_SHARED_NUNCA_MODULOS
   }
 
-  if (importador.area === 'tests') {
+  if (importador.area === 'tests' || importador.area === 'e2e') {
     if (destino.area === 'modules' && !esIndiceDeModulo(destinoAbsoluto, destino.modulo)) {
       return MENSAJE_TESTS_SOLO_INDEX
     }
@@ -233,19 +270,47 @@ export function verificarFrontera(archivoImportador: string, especificador: stri
   return null // app, router, other como importadores: sin restricción adicional de esta regla
 }
 
-/** Forma mínima común a ImportDeclaration/ExportNamedDeclaration/ExportAllDeclaration/
- * ImportExpression: todas tienen (o pueden tener) un `source`. */
-interface NodoConFuente {
-  source?: { type: string; value?: unknown } | null
+interface NodoFuenteLiteral {
+  type: string
+  value?: unknown
 }
 
+interface NodoFuenteTemplateLiteral {
+  type: string
+  expressions?: readonly unknown[]
+  quasis?: readonly { value?: { cooked?: string | null } }[]
+}
+
+/** Forma mínima común a ImportDeclaration/ExportNamedDeclaration/ExportAllDeclaration/
+ * ImportExpression/TSImportType: todas tienen (o pueden tener) un `source`. */
+interface NodoConFuente {
+  source?: (NodoFuenteLiteral & NodoFuenteTemplateLiteral) | null
+}
+
+/**
+ * Fix round 3, minor 2: además de un string literal (`'./x'`), reconoce un template literal
+ * SIN interpolaciones (`` `./x` ``) — el único caso donde el destino sigue siendo estático y
+ * por lo tanto resoluble. `import.meta.glob`/`new URL(...)` quedan deliberadamente fuera: no
+ * tienen un único "especificador" que resolver de la misma manera.
+ */
 function fuenteLiteral(nodo: NodoConFuente): string | null {
   const fuente = nodo.source
-  return fuente && typeof fuente.value === 'string' ? fuente.value : null
+  if (!fuente) return null
+  if (typeof fuente.value === 'string') return fuente.value
+  if (fuente.type === 'TemplateLiteral' && fuente.expressions?.length === 0) {
+    const cooked = fuente.quasis?.[0]?.value?.cooked
+    return typeof cooked === 'string' ? cooked : null
+  }
+  return null
 }
 
-/** Plugin local de ESLint (sin dependencias nuevas) con la regla `fronteras` (Fix round 2, I3). */
+/**
+ * Plugin local de ESLint (sin dependencias nuevas) con la regla `fronteras` (Fix round 2, I3).
+ * Fix round 3, minor 8: `meta.name`/`meta.version` para que la caché de ESLint se invalide
+ * cuando cambie este archivo (sin esto, un plugin local sin versión puede quedar cacheado).
+ */
 export const pluginArquitectura = {
+  meta: { name: 'arquitectura-local', version: '1.0.0' },
   rules: {
     fronteras: {
       meta: {
@@ -268,6 +333,8 @@ export const pluginArquitectura = {
           ExportNamedDeclaration: revisar,
           ExportAllDeclaration: revisar,
           ImportExpression: revisar,
+          // Fix round 3, minor 2: import('…').Tipo (TypeScript) también se revisa.
+          TSImportType: revisar,
         }
       },
     } satisfies Rule.RuleModule,

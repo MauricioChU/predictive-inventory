@@ -2,7 +2,7 @@ import { join } from 'node:path'
 import { RuleTester } from 'eslint'
 import tsParser from '@typescript-eslint/parser'
 import { describe, it } from 'vitest'
-import { pluginArquitectura, SRC_ROOT, TESTS_ROOT } from './fronteras'
+import { E2E_ROOT, pluginArquitectura, SRC_ROOT, TESTS_ROOT } from './fronteras'
 
 // Fix round 2, I3: RuleTester cubre cada bypass que señaló el re-revisor como INVALID y
 // cada caso intramódulo legítimo que señaló como VALID.
@@ -13,6 +13,7 @@ const ruleTester = new RuleTester({
 
 const archivo = (...segmentos: string[]) => join(SRC_ROOT, ...segmentos)
 const archivoDeTest = (...segmentos: string[]) => join(TESTS_ROOT, ...segmentos)
+const archivoE2e = (...segmentos: string[]) => join(E2E_ROOT, ...segmentos)
 
 describe('arquitectura/fronteras', () => {
   it('pasa RuleTester con los casos válidos e inválidos del re-revisor', () => {
@@ -79,6 +80,36 @@ describe('arquitectura/fronteras', () => {
         {
           code: "import { UnidadDeTrabajoEnMemoria } from '../../src/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'",
           filename: archivoDeTest('composicion', 'mundo.ts'),
+        },
+        // Fix round 3, ruling 1: un *.spec.ts co-ubicado prueba su propio módulo de punta a
+        // punta con adaptadores en memoria: no está sujeto a las restricciones de capa.
+        {
+          code: "import { ProductoRepositorio } from '../infrastructure/memoria/repositorios'",
+          filename: archivo('modules', 'catalogo', 'application', 'crear.spec.ts'),
+        },
+        {
+          code: "import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'",
+          filename: archivo('modules', 'catalogo', 'application', 'crear.spec.ts'),
+        },
+        // Fix round 3, ruling 1: un *.spec.ts también puede llegar a @/router y @/app/**.
+        {
+          code: "import { router } from '@/router'",
+          filename: archivo('shared', 'ui', '__tests__', 'navegacion.spec.ts'),
+        },
+        // Fix round 3, ruling 1: y a archivos bajo __pruebas__/ usados solo por specs.
+        {
+          code: "import { ProductoRepositorio } from '../infrastructure/memoria/repositorios'",
+          filename: archivo('modules', 'catalogo', 'application', '__pruebas__', 'fabricas.ts'),
+        },
+        // Fix round 3, minor 6: export ... from también se revisa (intramódulo, válido).
+        {
+          code: "export { Producto } from '../domain/producto'",
+          filename: archivo('modules', 'catalogo', 'application', 'x.ts'),
+        },
+        // Fix round 3, minor 3: e2e/** sí puede llegar a un módulo por su index.
+        {
+          code: "import { catalogo } from '@/modules/catalogo'",
+          filename: archivoE2e('flujos', 'vender.spec.ts'),
         },
       ],
       invalid: [
@@ -159,6 +190,74 @@ describe('arquitectura/fronteras', () => {
         {
           code: "import { algo } from '../application/casos'",
           filename: archivo('shared', 'domain', 'x.ts'),
+          errors: 1,
+        },
+        // Fix round 3, ruling 1: el *.spec.ts de un módulo SIGUE sin poder cruzar a otro
+        // módulo salvo por su index.
+        {
+          code: "import { algo } from '../../inventario/domain/x'",
+          filename: archivo('modules', 'catalogo', 'application', 'crear.spec.ts'),
+          errors: 1,
+        },
+        // Fix round 3, minor 6: export ... from también se revisa (cruce de módulo).
+        {
+          code: "export { stock } from '../../inventario/domain/stock'",
+          filename: archivo('modules', 'catalogo', 'domain', 'x.ts'),
+          errors: 1,
+        },
+        // Fix round 3, minor 6: import type también se revisa.
+        {
+          code: "import type { Stock } from '../../inventario/domain/stock'",
+          filename: archivo('modules', 'catalogo', 'domain', 'x.ts'),
+          errors: 1,
+        },
+        // Fix round 3, minor 6: import() dinámico también se revisa.
+        {
+          code: "async function f() { await import('../../inventario/domain/stock') }",
+          filename: archivo('modules', 'catalogo', 'domain', 'x.ts'),
+          errors: 1,
+        },
+        // Fix round 3, minor 6: infraestructura no puede importar la UI de su propio módulo.
+        {
+          code: "import { Pagina } from '../ui/PaginaCatalogo.vue'",
+          filename: archivo('modules', 'catalogo', 'infrastructure', 'x.ts'),
+          errors: 1,
+        },
+        // Fix round 3, minor 6: infraestructura tampoco puede importar "app".
+        {
+          code: "import { algo } from '../../../app/composicion'",
+          filename: archivo('modules', 'catalogo', 'infrastructure', 'x.ts'),
+          errors: 1,
+        },
+        // Fix round 3, minor 6: aplicación no puede importar shared/infrastructure.
+        {
+          code: "import { algo } from '../../../shared/infrastructure/memoria/almacen-en-memoria'",
+          filename: archivo('modules', 'catalogo', 'application', 'x.ts'),
+          errors: 1,
+        },
+        // Fix round 3, minor 6: UI no puede entrar a un archivo interno de OTRO módulo
+        // (solo por su index, ya cubierto arriba; esto es un archivo profundo).
+        {
+          code: "import { Stock } from '../../inventario/domain/stock'",
+          filename: archivo('modules', 'catalogo', 'ui', 'x.ts'),
+          errors: 1,
+        },
+        // Fix round 3, minor 2: TSImportType (import('…').Tipo) también se revisa.
+        {
+          code: "type Stock = import('../../inventario/domain/stock').Stock",
+          filename: archivo('modules', 'catalogo', 'domain', 'x.ts'),
+          errors: 1,
+        },
+        // Fix round 3, minor 2: import(`…`) con template literal estático también se revisa.
+        {
+          code: 'async function f() { await import(`../../inventario/domain/stock`) }',
+          filename: archivo('modules', 'catalogo', 'domain', 'x.ts'),
+          errors: 1,
+        },
+        // Fix round 3, minor 3: e2e/** no entra a un módulo salvo por su index.
+        {
+          code: "import { algo } from '../../src/modules/catalogo/domain/x'",
+          filename: archivoE2e('flujos', 'vender.spec.ts'),
           errors: 1,
         },
       ],

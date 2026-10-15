@@ -12,9 +12,11 @@ import { pluginArquitectura } from './eslint-rules/fronteras'
 const PAQUETES_DE_FRAMEWORK = ['vue', 'vue-router', 'pinia', 'dexie', '@vueuse/*', 'lucide-vue-next']
 const MENSAJE_SIN_FRAMEWORK = 'El dominio y los casos de uso son TypeScript puro: no dependen de frameworks (ADR-0005).'
 
-// Fix round 2, I3: no-restricted-properties para globalThis/self/window × APIs del
-// navegador, generado una vez para no repetir 24 entradas a mano.
-const PROPIEDADES_DE_NAVEGADOR = [
+// Fix round 2, I3 / Fix round 3, minor 8: un solo mensaje y una sola lista base de APIs del
+// navegador, usados tanto por no-restricted-globals como por no-restricted-properties (antes
+// el mensaje estaba repetido en los dos sitios).
+const MENSAJE_SIN_APIS_DE_NAVEGADOR = 'El dominio es TypeScript puro: no usa APIs del navegador (ADR-0005).'
+const APIS_DE_NAVEGADOR = [
   'localStorage',
   'sessionStorage',
   'indexedDB',
@@ -25,11 +27,17 @@ const PROPIEDADES_DE_NAVEGADOR = [
   'location',
 ]
 const OBJETOS_GLOBALES = ['globalThis', 'self', 'window']
+// Fix round 3, minor 5: los propios objetos globales TAMBIÉN se restringen como propiedad.
+// no-restricted-properties solo mira un MemberExpression a la vez (object.property); en una
+// cadena como `globalThis.window.localStorage`, el acceso INTERNO (`globalThis.window`) debe
+// estar en la lista para que la expresión completa quede marcada (lo mismo para
+// `self.globalThis.indexedDB`, vía el acceso interno `self.globalThis`).
+const PROPIEDADES_RESTRINGIDAS = [...APIS_DE_NAVEGADOR, ...OBJETOS_GLOBALES]
 const RESTRICCIONES_DE_PROPIEDADES = OBJETOS_GLOBALES.flatMap((objeto) =>
-  PROPIEDADES_DE_NAVEGADOR.map((property) => ({
+  PROPIEDADES_RESTRINGIDAS.map((property) => ({
     object: objeto,
     property,
-    message: 'El dominio es TypeScript puro: no usa APIs del navegador (ADR-0005).',
+    message: MENSAJE_SIN_APIS_DE_NAVEGADOR,
   })),
 )
 
@@ -74,18 +82,20 @@ export default defineConfigWithVueTs(
     // importador y destino (ver eslint-rules/fronteras.ts). La profundidad de anidamiento ya
     // no importa: '../domain/x' o '../../../valores/precio' intramódulo siguen pasando sin
     // falsos positivos, y un cruce de módulo se detecta sin importar cuántos '..' tenga.
+    // Fix round 3, minor 3: incluye .mts/.tsx (no solo .ts/.vue), y e2e/** — e2e no debe
+    // entrar a los archivos internos de un módulo, solo a su index.
     name: 'arquitectura/fronteras',
-    files: ['src/**/*.{ts,vue}', 'tests/**/*.ts'],
+    files: ['src/**/*.{ts,mts,tsx,vue}', 'tests/**/*.ts', 'e2e/**/*.ts'],
     plugins: { arquitectura: pluginArquitectura },
     rules: { 'arquitectura/fronteras': 'error' },
   },
   {
     name: 'arquitectura/dominio-y-aplicacion-sin-framework',
     files: [
-      'src/shared/domain/**/*.ts',
-      'src/modules/*/domain/**/*.ts',
-      'src/shared/application/**/*.ts',
-      'src/modules/*/application/**/*.ts',
+      'src/shared/domain/**/*.{ts,mts,tsx}',
+      'src/modules/*/domain/**/*.{ts,mts,tsx}',
+      'src/shared/application/**/*.{ts,mts,tsx}',
+      'src/modules/*/application/**/*.{ts,mts,tsx}',
     ],
     rules: {
       'no-restricted-imports': ['error', { patterns: [{ group: PAQUETES_DE_FRAMEWORK, message: MENSAJE_SIN_FRAMEWORK }] }],
@@ -93,13 +103,11 @@ export default defineConfigWithVueTs(
   },
   {
     name: 'arquitectura/dominio-puro',
-    files: ['src/shared/domain/**/*.ts', 'src/modules/*/domain/**/*.ts'],
+    files: ['src/shared/domain/**/*.{ts,mts,tsx}', 'src/modules/*/domain/**/*.{ts,mts,tsx}'],
     rules: {
       'no-restricted-globals': [
         'error',
-        ...['window', 'document', 'localStorage', 'sessionStorage', 'navigator', 'indexedDB', 'fetch', 'Notification', 'location'].map(
-          (name) => ({ name, message: 'El dominio es TypeScript puro: no usa APIs del navegador (ADR-0005).' }),
-        ),
+        ...['window', ...APIS_DE_NAVEGADOR].map((name) => ({ name, message: MENSAJE_SIN_APIS_DE_NAVEGADOR })),
       ],
       // Fix round 2, I3: globalThis.localStorage, self.indexedDB, window.fetch, etc. —
       // no-restricted-globals solo detecta el identificador global suelto (`localStorage`),
@@ -111,7 +119,7 @@ export default defineConfigWithVueTs(
     // Fix round 2, I3: el import() dinámico se prohíbe en el CÓDIGO de dominio, pero no en
     // sus *.spec.ts (un test puede necesitar reimportar un módulo dinámicamente).
     name: 'arquitectura/dominio-sin-import-dinamico',
-    files: ['src/shared/domain/**/*.ts', 'src/modules/*/domain/**/*.ts'],
+    files: ['src/shared/domain/**/*.{ts,mts,tsx}', 'src/modules/*/domain/**/*.{ts,mts,tsx}'],
     ignores: ['**/*.spec.ts'],
     rules: {
       'no-restricted-syntax': [
