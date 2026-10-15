@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { crearAnunciador } from '../anunciador'
+import { crearAnunciador } from '@/shared/ui/anunciador'
 import { crearContextoAvisoDeshacer } from '../aviso-deshacer'
 import { exponerGanchosDePrueba } from '../ganchos-de-prueba'
 

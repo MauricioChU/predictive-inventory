@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject, onMounted, onUnmounted, ref } from 'vue'
 import { CircleCheck } from 'lucide-vue-next'
-import { CLAVE_ANUNCIADOR } from '@/app/anunciador'
+import { CLAVE_ANUNCIADOR } from '../anunciador'
 
 const props = defineProps<{ titulo: string; detalle?: string }>()
 

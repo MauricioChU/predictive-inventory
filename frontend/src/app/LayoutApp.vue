@@ -3,7 +3,7 @@ import { onBeforeUnmount, provide, ref } from 'vue'
 import AvisoDeshacer from '@/shared/ui/componentes/AvisoDeshacer.vue'
 import BarraNavegacion from '@/shared/ui/componentes/BarraNavegacion.vue'
 import { usarAltoComoVariable } from './alto-como-variable'
-import { CLAVE_ANUNCIADOR, crearAnunciador } from './anunciador'
+import { CLAVE_ANUNCIADOR, crearAnunciador } from '@/shared/ui/anunciador'
 import { CLAVE_AVISO_DESHACER, crearContextoAvisoDeshacer } from './aviso-deshacer'
 import { exponerGanchosDePrueba } from './ganchos-de-prueba'
 

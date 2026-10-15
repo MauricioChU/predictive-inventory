@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { CLAVE_ANUNCIADOR, crearAnunciador, ESPERA_ANUNCIO_MS } from '@/app/anunciador'
+import { CLAVE_ANUNCIADOR, crearAnunciador, ESPERA_ANUNCIO_MS } from '../anunciador'
 import PantallaExito from '../componentes/PantallaExito.vue'
 
 function proveer(anunciador: ReturnType<typeof crearAnunciador>) {

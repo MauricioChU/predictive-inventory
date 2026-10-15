@@ -1,5 +1,5 @@
 import { computed, inject, ref, type ComputedRef, type InjectionKey } from 'vue'
-import type { Anunciador } from './anunciador'
+import type { Anunciador } from '@/shared/ui/anunciador'
 
 export interface OpcionesAvisoDeshacer {
   mensaje: string

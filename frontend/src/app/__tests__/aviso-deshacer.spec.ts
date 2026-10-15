@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils'
 import { defineComponent, h, nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AvisoDeshacer from '../../shared/ui/componentes/AvisoDeshacer.vue'
-import { crearAnunciador, ESPERA_ANUNCIO_MS } from '../anunciador'
+import { crearAnunciador, ESPERA_ANUNCIO_MS } from '@/shared/ui/anunciador'
 import { CLAVE_AVISO_DESHACER, crearContextoAvisoDeshacer } from '../aviso-deshacer'
 
 /** Arnés mínimo que reproduce cómo LayoutApp consume el contexto: monta <AvisoDeshacer>
