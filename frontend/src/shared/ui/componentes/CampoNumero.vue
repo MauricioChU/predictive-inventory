@@ -17,7 +17,17 @@ const props = withDefaults(
 const emit = defineEmits<{ 'update:modelValue': [valor: string] }>()
 const id = useId()
 const idError = `${id}-error`
+const idSufijo = `${id}-sufijo`
 const valorNumerico = computed(() => Number(props.modelValue.replace(',', '.')) || 0)
+// M10: botón "−" también deshabilitado de verdad al llegar al mínimo (antes solo lo
+// bloqueaba cambiar(), así que seguía pareciendo activo para quien usa el dedo o el mouse).
+const enMinimo = computed(() => valorNumerico.value <= props.minimo)
+const describedBy = computed(() => {
+  const ids = [props.sufijo ? idSufijo : null, props.error ? idError : null].filter(
+    (valor): valor is string => valor !== null,
+  )
+  return ids.length > 0 ? ids.join(' ') : undefined
+})
 
 function cambiar(delta: number) {
   const siguiente = Math.round((valorNumerico.value + delta) * 1000) / 1000
@@ -30,7 +40,14 @@ function cambiar(delta: number) {
   <div class="campo-numero">
     <label :for="id" class="etiqueta">{{ etiqueta }}</label>
     <div class="fila">
-      <button type="button" class="paso" aria-label="Quitar uno" @click="cambiar(-paso)">
+      <button
+        type="button"
+        class="paso"
+        aria-label="Quitar uno"
+        :disabled="enMinimo"
+        :aria-disabled="enMinimo ? 'true' : undefined"
+        @click="cambiar(-paso)"
+      >
         <Minus aria-hidden="true" />
       </button>
       <input
@@ -38,11 +55,13 @@ function cambiar(delta: number) {
         :value="modelValue"
         :inputmode="decimales ? 'decimal' : 'numeric'"
         :aria-invalid="error ? 'true' : undefined"
-        :aria-describedby="error ? idError : undefined"
+        :aria-describedby="describedBy"
         autocomplete="off"
         @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
       />
-      <span v-if="sufijo" class="sufijo">{{ sufijo }}</span>
+      <!-- M10: el sufijo (p. ej. "kg") se asocia al input por aria-describedby, si no un
+           lector de pantalla solo anuncia el número y pierde la unidad. -->
+      <span v-if="sufijo" :id="idSufijo" class="sufijo">{{ sufijo }}</span>
       <button type="button" class="paso" aria-label="Agregar uno" @click="cambiar(paso)">
         <Plus aria-hidden="true" />
       </button>
@@ -83,6 +102,10 @@ input {
   background: var(--color-primario-suave);
   color: var(--color-primario);
   cursor: pointer;
+}
+.paso:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .sufijo {
   align-self: center;

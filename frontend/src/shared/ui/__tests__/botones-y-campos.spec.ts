@@ -21,7 +21,9 @@ describe('BotonPrincipal', () => {
 
 describe('CampoTexto', () => {
   it('asocia etiqueta y error al input (RN-UX-15)', () => {
-    const w = mount(CampoTexto, { props: { etiqueta: 'Nombre', modelValue: '', error: 'Escribe el nombre del producto' } })
+    const w = mount(CampoTexto, {
+      props: { etiqueta: 'Nombre', modelValue: '', error: 'Escribe el nombre del producto' },
+    })
     const input = w.get('input')
     expect(w.get('label').attributes('for')).toBe(input.attributes('id'))
     expect(input.attributes('aria-invalid')).toBe('true')
@@ -45,9 +47,28 @@ describe('CampoNumero (RN-UX-06)', () => {
     expect(w.emitted('update:modelValue')).toBeUndefined()
   })
   it('acepta coma decimal y abre el teclado numérico', async () => {
-    const w = mount(CampoNumero, { props: { etiqueta: 'Kilos', modelValue: '1,5', decimales: true } })
+    const w = mount(CampoNumero, {
+      props: { etiqueta: 'Kilos', modelValue: '1,5', decimales: true },
+    })
     expect(w.get('input').attributes('inputmode')).toBe('decimal')
     await w.get('[aria-label="Agregar uno"]').trigger('click')
     expect(w.emitted('update:modelValue')?.at(-1)).toEqual(['2.5'])
+  })
+  it('M10: deshabilita de verdad el botón "−" al llegar al mínimo', () => {
+    const w = mount(CampoNumero, { props: { etiqueta: 'Cantidad', modelValue: '0', minimo: 0 } })
+    const boton = w.get('[aria-label="Quitar uno"]')
+    expect(boton.attributes('disabled')).toBeDefined()
+    expect(boton.attributes('aria-disabled')).toBe('true')
+  })
+  it('M10: el botón "−" no está deshabilitado por encima del mínimo', () => {
+    const w = mount(CampoNumero, { props: { etiqueta: 'Cantidad', modelValue: '2', minimo: 0 } })
+    const boton = w.get('[aria-label="Quitar uno"]')
+    expect(boton.attributes('disabled')).toBeUndefined()
+  })
+  it('M10: el sufijo se asocia al input con aria-describedby', () => {
+    const w = mount(CampoNumero, { props: { etiqueta: 'Kilos', modelValue: '1', sufijo: 'kg' } })
+    const input = w.get('input')
+    const idDescrito = input.attributes('aria-describedby')!
+    expect(w.get(`#${idDescrito}`).text()).toBe('kg')
   })
 })

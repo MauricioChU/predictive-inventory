@@ -1,4 +1,5 @@
-<script setup lang="ts">// eslint-disable-line vue/multi-word-component-names -- nombre exigido por el plan
+<!-- eslint-disable vue/multi-word-component-names -- nombre exigido por el plan ("Tarjeta") -->
+<script setup lang="ts">
 withDefaults(defineProps<{ comoBoton?: boolean }>(), { comoBoton: false })
 const emit = defineEmits<{ click: [evento: MouseEvent] }>()
 </script>

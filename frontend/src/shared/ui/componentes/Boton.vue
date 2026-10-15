@@ -1,4 +1,5 @@
-<script setup lang="ts">// eslint-disable-line vue/multi-word-component-names -- nombre exigido por el plan
+<!-- eslint-disable vue/multi-word-component-names -- nombre exigido por el plan ("Boton"), distinto de BotonPrincipal -->
+<script setup lang="ts">
 import type { Component } from 'vue'
 
 withDefaults(
