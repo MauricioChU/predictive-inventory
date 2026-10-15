@@ -1,5 +1,6 @@
 import type { Cantidad, Unidad } from '@/shared/domain/cantidad'
 import type { Dinero } from '@/shared/domain/dinero'
+import type { SituacionDeProducto } from '@/shared/contratos/entre-modulos'
 import {
   formatearCantidad,
   formatearDinero,
@@ -61,6 +62,38 @@ export function mensajeCompraExcesiva(
     ? `Te sugerimos ~${formatearCantidad(sugerida, unidad)}`
     : 'Ahora no necesitabas comprar.'
   return `Con esto tendrías ${nombre} para ~${dias(diasDeCobertura)}. ${consejo}`
+}
+
+export type SituacionParaSobrecompra = Pick<
+  SituacionDeProducto,
+  'stock' | 'prediccion' | 'enListaParaComprar' | 'cantidadSugerida' | 'parado'
+>
+
+/**
+ * RN-OP-20: aviso de sobrecompra de una línea de ingreso, con la situación del producto
+ * ANTES del ingreso, o null si no hay que avisar. (b) Un producto parado avisa siempre.
+ * (a) Si no, con predicción: días = ⌊(stock + compra) ÷ VPD⌋, con VPD = vendido ÷ días
+ * válidos (RN-AN-04); avisa si SUPERA el límite configurado.
+ */
+export function mensajeDeSobrecompra(
+  producto: { nombre: string; unidad: Unidad },
+  situacion: SituacionParaSobrecompra,
+  compra: Cantidad,
+  diasMaximosDeCompra: number,
+): string | null {
+  const { nombre, unidad } = producto
+  if (situacion.parado) {
+    return mensajeProductoParado(nombre, situacion.parado.diasSinVender, situacion.stock, unidad)
+  }
+  const prediccion = situacion.prediccion
+  if (!prediccion?.vendido.esPositiva()) return null
+  const cobertura = Math.floor(
+    ((situacion.stock.milesimas + compra.milesimas) * prediccion.diasValidos) /
+      prediccion.vendido.milesimas,
+  )
+  if (cobertura <= diasMaximosDeCompra) return null
+  const sugerida = situacion.enListaParaComprar ? situacion.cantidadSugerida : null
+  return mensajeCompraExcesiva(nombre, cobertura, unidad, sugerida)
 }
 
 export interface CorreccionDeStock {

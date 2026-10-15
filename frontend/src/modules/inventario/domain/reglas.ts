@@ -30,6 +30,18 @@ export function leerCantidad(texto: string, unidad: Unidad): Cantidad {
   return validarCantidad(Cantidad.deTexto(texto, unidad))
 }
 
+/** RN-OP-16: lo que hay realmente en el estante (puede ser 0, nunca negativo). */
+export function leerContado(texto: string, unidad: Unidad): Cantidad {
+  const contado = Cantidad.deTexto(texto, unidad)
+  if (contado.esNegativa()) {
+    throw new ErrorDeDominio('CONTADO_NEGATIVO', 'La cantidad contada no puede ser negativa')
+  }
+  if (contado.mayorQue(CANTIDAD_MAXIMA)) {
+    throw new ErrorDeDominio('CANTIDAD_MAXIMA', 'La cantidad no puede pasar de 99 999')
+  }
+  return contado
+}
+
 /** RN-OP-09: ahora o hasta 7 días atrás (desde el inicio de ese día de negocio), nunca futura. */
 export function validarFecha(ocurridaEn: Instante, ahora: Instante): void {
   const momento = Date.parse(ocurridaEn)
@@ -97,18 +109,23 @@ export function fusionarLineas<T extends MovimientoConCantidad>(lineas: readonly
   return [...porProducto.values()]
 }
 
+export function exigirProducto<T>(producto: T | null): T {
+  if (!producto) throw new ErrorDeDominio('PRODUCTO_INEXISTENTE', 'No encontramos ese producto')
+  return producto
+}
+
 /** RN-OP-08: solo se operan productos activos. */
 export function exigirProductoActivo<T extends { nombre: string; activo: boolean }>(
   producto: T | null,
 ): T {
-  if (!producto) throw new ErrorDeDominio('PRODUCTO_INEXISTENTE', 'No encontramos ese producto')
-  if (!producto.activo) {
+  const existente = exigirProducto(producto)
+  if (!existente.activo) {
     throw new ErrorDeDominio(
       'PRODUCTO_ARCHIVADO',
-      `${producto.nombre} está archivado. Reactívalo para usarlo`,
+      `${existente.nombre} está archivado. Reactívalo para usarlo`,
     )
   }
-  return producto
+  return existente
 }
 
 function validarTope(precio: Dinero): Dinero {

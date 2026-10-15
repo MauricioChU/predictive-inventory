@@ -3,9 +3,11 @@ import { Cantidad } from '@/shared/domain/cantidad'
 import { Dinero } from '@/shared/domain/dinero'
 import { instanteLocal } from '@/shared/domain/fecha'
 import {
+  exigirProducto,
   exigirProductoActivo,
   fusionarLineas,
   leerCantidad,
+  leerContado,
   leerCosto,
   leerPrecioDeVenta,
   normalizarNota,
@@ -50,6 +52,23 @@ describe('validarCantidad y leerCantidad', () => {
   it('RN-OP-03: validarCantidad devuelve la misma cantidad si es válida', () => {
     const cantidad = c('2.5')
     expect(validarCantidad(cantidad)).toBe(cantidad)
+  })
+})
+
+describe('leerContado', () => {
+  it.each([
+    ['8', 'UNIDAD', 'registrada'],
+    ['0', 'UNIDAD', 'registrada'],
+    ['12.5', 'KILO', 'registrada'],
+    ['-1', 'UNIDAD', 'error: La cantidad contada no puede ser negativa'],
+    ['100000', 'UNIDAD', 'error: La cantidad no puede pasar de 99 999'],
+    ['1.5', 'UNIDAD', 'error: Este producto se cuenta por unidades enteras'],
+  ] as const)('RN-OP-16: contar "%s" (%s) → %s', (texto, unidad, resultado) => {
+    expect(resultadoDe(() => leerContado(texto, unidad))).toBe(resultado)
+  })
+
+  it('RN-OP-16: contar 0 es válido (el estante está vacío)', () => {
+    expect(leerContado('0', 'UNIDAD').esCero()).toBe(true)
   })
 })
 
@@ -161,6 +180,17 @@ describe('fusionarLineas', () => {
       { productoId: 'lejia', cantidad: Cantidad.deEntero(3), precio: 'normal' },
       { productoId: 'carbon', cantidad: c('1.25'), precio: 'normal' },
     ])
+  })
+})
+
+describe('exigirProducto', () => {
+  it('acepta un producto archivado (p. ej. para anular una operación pasada)', () => {
+    const producto = { nombre: 'Escoba', activo: false }
+    expect(exigirProducto(producto)).toBe(producto)
+  })
+
+  it('rechaza un producto que no existe', () => {
+    expect(() => exigirProducto(null)).toThrow('No encontramos ese producto')
   })
 })
 

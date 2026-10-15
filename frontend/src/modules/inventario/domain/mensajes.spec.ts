@@ -5,6 +5,7 @@ import {
   mensajeCambioDePrecio,
   mensajeCompraExcesiva,
   mensajeDeRevisionDeDatos,
+  mensajeDeSobrecompra,
   mensajeProductoParado,
   mensajeStockInsuficiente,
   progresoDelConteo,
@@ -77,6 +78,86 @@ describe('mensajes de sobrecompra', () => {
     expect(mensajeCompraExcesiva('Carbón', 60, 'KILO', null)).toBe(
       'Con esto tendrías Carbón para ~60 días. Ahora no necesitabas comprar.',
     )
+  })
+})
+
+describe('mensajeDeSobrecompra', () => {
+  const LEJIA = { nombre: 'Lejía 1 L', unidad: 'UNIDAD' as const }
+  const CARBON = { nombre: 'Carbón', unidad: 'KILO' as const }
+  const conVpd = (vendido: Cantidad, diasValidos: number) => ({ vendido, diasValidos })
+  const lejiaConVpd2 = {
+    stock: Cantidad.deEntero(10),
+    prediccion: conVpd(Cantidad.deEntero(56), 28),
+    enListaParaComprar: true,
+    cantidadSugerida: Cantidad.deEntero(7),
+    parado: null,
+  }
+
+  it('RN-OP-20: Lejía con VPD 2 y compra de 110 → ~60 días, con la cantidad sugerida', () => {
+    expect(mensajeDeSobrecompra(LEJIA, lejiaConVpd2, Cantidad.deEntero(110), 30)).toBe(
+      'Con esto tendrías Lejía 1 L para ~60 días. Te sugerimos ~7 unid.',
+    )
+  })
+
+  it('RN-OP-20: Carbón con VPD 0.25 y compra de 5 → ~60 días, no hacía falta comprar', () => {
+    const situacion = {
+      stock: kilos('10'),
+      prediccion: conVpd(kilos('7'), 28),
+      enListaParaComprar: false,
+      cantidadSugerida: null,
+      parado: null,
+    }
+    expect(mensajeDeSobrecompra(CARBON, situacion, kilos('5'), 30)).toBe(
+      'Con esto tendrías Carbón para ~60 días. Ahora no necesitabas comprar.',
+    )
+  })
+
+  it('RN-OP-20: una compra razonable (15 días) no avisa', () => {
+    expect(mensajeDeSobrecompra(LEJIA, lejiaConVpd2, Cantidad.deEntero(20), 30)).toBeNull()
+  })
+
+  it('RN-OP-20: los días se redondean hacia abajo y solo avisa si SUPERAN el límite', () => {
+    // (10 + 50) × 28 / 56 = 30 → no supera 30
+    expect(mensajeDeSobrecompra(LEJIA, lejiaConVpd2, Cantidad.deEntero(50), 30)).toBeNull()
+    // (10 + 53) × 28 / 56 = 31.5 → 31
+    expect(mensajeDeSobrecompra(LEJIA, lejiaConVpd2, Cantidad.deEntero(53), 30)).toBe(
+      'Con esto tendrías Lejía 1 L para ~31 días. Te sugerimos ~7 unid.',
+    )
+  })
+
+  it('RN-OP-20: usa el límite configurado', () => {
+    expect(mensajeDeSobrecompra(LEJIA, lejiaConVpd2, Cantidad.deEntero(110), 60)).toBeNull()
+    expect(mensajeDeSobrecompra(LEJIA, lejiaConVpd2, Cantidad.deEntero(110), 59)).not.toBeNull()
+  })
+
+  it('RN-OP-20: en Para comprar pero sin cantidad sugerida, dice que no hacía falta', () => {
+    const situacion = { ...lejiaConVpd2, cantidadSugerida: null }
+    expect(mensajeDeSobrecompra(LEJIA, situacion, Cantidad.deEntero(110), 30)).toBe(
+      'Con esto tendrías Lejía 1 L para ~60 días. Ahora no necesitabas comprar.',
+    )
+  })
+
+  it('RN-OP-20: un producto parado avisa con su stock, antes que la predicción', () => {
+    const situacion = {
+      ...lejiaConVpd2,
+      stock: Cantidad.deEntero(4),
+      parado: { diasSinVender: 45 },
+    }
+    expect(
+      mensajeDeSobrecompra(
+        { nombre: 'Escoba', unidad: 'UNIDAD' },
+        situacion,
+        Cantidad.deEntero(2),
+        30,
+      ),
+    ).toBe('Escoba no se vende hace 45 días y aún tienes 4 unid.')
+  })
+
+  it('RN-OP-20: sin predicción ni producto parado, no hay aviso', () => {
+    const situacion = { ...lejiaConVpd2, prediccion: null }
+    expect(mensajeDeSobrecompra(LEJIA, situacion, Cantidad.deEntero(500), 30)).toBeNull()
+    const sinVentas = { ...lejiaConVpd2, prediccion: conVpd(Cantidad.cero(), 28) }
+    expect(mensajeDeSobrecompra(LEJIA, sinVentas, Cantidad.deEntero(500), 30)).toBeNull()
   })
 })
 
