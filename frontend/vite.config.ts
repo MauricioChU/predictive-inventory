@@ -7,6 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/predictive-inventory/',
   plugins: [
     vue(),
     vueDevTools(),
@@ -14,12 +15,17 @@ export default defineConfig({
       // La app se actualiza sola: el usuario no debe responder avisos técnicos
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png', 'logo.svg'],
+      workbox: {
+        navigateFallback: 'index.html',
+      },
       manifest: {
+        id: '/predictive-inventory/',
         name: 'Inventario de la Tienda',
         short_name: 'Inventario',
         description: 'Control de stock de productos de limpieza',
         lang: 'es',
-        start_url: '/',
+        start_url: './',
+        scope: './',
         display: 'standalone',
         orientation: 'portrait',
         theme_color: '#0f766e',
