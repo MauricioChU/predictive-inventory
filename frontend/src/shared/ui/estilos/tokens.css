@@ -1,0 +1,39 @@
+:root {
+  --color-fondo: #ffffff;
+  --color-superficie: #f3f5f4;
+  --color-texto: #121a18;
+  --color-texto-suave: #37433f;
+  --color-borde: #66756f;
+  --color-primario: #0a524c;
+  --color-primario-texto: #ffffff;
+  --color-primario-suave: #e2f0ee;
+  --color-peligro: #8f1c16;
+  --color-peligro-suave: #fdeceb;
+  --color-advertencia: #6b3a00;
+  --color-advertencia-suave: #fff2df;
+  --color-exito: #17502d;
+  --color-exito-suave: #e5f3e9;
+  --color-foco: #1946c4;
+
+  --fuente: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --espacio-1: 0.25rem;
+  --espacio-2: 0.5rem;
+  --espacio-3: 0.75rem;
+  --espacio-4: 1rem;
+  --espacio-5: 1.5rem;
+  --espacio-6: 2rem;
+  --radio: 14px;
+  --radio-chico: 10px;
+  /* Medidas táctiles absolutas: no bajan aunque la letra sea Normal (RN-UX-02). */
+  --alto-toque: max(48px, 2.5rem);
+  --alto-boton-principal: max(56px, 3rem);
+  --separacion-toque: 8px;
+  --ancho-contenido: 720px;
+  --ancho-contenido-pc: 1200px;
+}
+
+/* RN-UX-01: la base escala todo el diseño (rem). */
+html { font-size: 20px; }
+html[data-letra='NORMAL'] { font-size: 18px; }
+html[data-letra='GRANDE'] { font-size: 20px; }
+html[data-letra='MUY_GRANDE'] { font-size: 24px; }
