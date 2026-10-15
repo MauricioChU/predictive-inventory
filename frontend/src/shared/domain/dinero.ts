@@ -6,7 +6,9 @@ const PATRON_NUMERO = /^-?\d+(\.\d+)?$/
 /** Redondea numerador/divisor al entero más cercano; las mitades se alejan de cero. */
 export function redondearMitadLejosDeCero(numerador: number, divisor: number): number {
   const signo = numerador < 0 ? -1 : 1
-  return signo * Math.floor((Math.abs(numerador) + divisor / 2) / divisor)
+  const resultado = signo * Math.floor((Math.abs(numerador) + divisor / 2) / divisor)
+  // Fix round 1, M1: -0 y 0 deben ser indistinguibles para quien usa Dinero.
+  return resultado === 0 ? 0 : resultado
 }
 
 /** Monto en soles, guardado como céntimos enteros (ADR-0003). */
@@ -15,7 +17,8 @@ export class Dinero {
 
   static deCentimos(centimos: number): Dinero {
     if (!Number.isSafeInteger(centimos)) throw new Error(`Céntimos inválidos: ${centimos}`)
-    return new Dinero(centimos)
+    // Fix round 1, M1: normaliza -0 a 0.
+    return new Dinero(centimos === 0 ? 0 : centimos)
   }
 
   static cero(): Dinero {
@@ -24,9 +27,12 @@ export class Dinero {
 
   /** Acepta "2.40", "2,40", "S/ 2.40". Lanza ErrorDeDominio con el mensaje de la spec. */
   static deTexto(texto: string): Dinero {
+    // Fix round 1, M3: "S/" solo es un prefijo opcional (con a lo sumo un espacio detrás);
+    // solo se recorta el espacio exterior del texto completo, nunca espacios internos. Así
+    // "3 S/ 5" y "1 2" quedan con un espacio en medio y fallan el patrón numérico.
     const limpio = texto
-      .replace(/S\/\s*/i, '')
-      .replace(/\s+/g, '')
+      .trim()
+      .replace(/^S\/\s?/i, '')
       .replace(',', '.')
     if (!PATRON_NUMERO.test(limpio)) {
       throw new ErrorDeDominio('DINERO_INVALIDO', 'Escribe un monto válido, por ejemplo 3.50')
@@ -37,6 +43,11 @@ export class Dinero {
       throw new ErrorDeDominio('DINERO_DECIMALES', 'Usa como máximo dos decimales')
     }
     const centimos = Number(entero) * 100 + Number(decimales.padEnd(2, '0'))
+    // Fix round 1, M2: un monto que desborda Number.isSafeInteger es un monto inválido
+    // para el usuario, no un error interno: usa el mismo mensaje que el formato inválido.
+    if (!Number.isSafeInteger(centimos)) {
+      throw new ErrorDeDominio('DINERO_INVALIDO', 'Escribe un monto válido, por ejemplo 3.50')
+    }
     return Dinero.deCentimos(negativo ? -centimos : centimos)
   }
 

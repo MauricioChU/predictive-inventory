@@ -72,4 +72,21 @@ describe('Cantidad', () => {
     expect(b.menorOIgualQue(a)).toBe(true)
     expect(a.menorOIgualQue(b)).toBe(false)
   })
+  // Fix round 1, M1: -0 y 0 deben ser indistinguibles para quien usa Cantidad.
+  it('M1: normaliza -0 a 0', () => {
+    expect(Object.is(Cantidad.deMilesimas(-0).milesimas, 0)).toBe(true)
+    expect(Object.is(Cantidad.cero().negar().milesimas, 0)).toBe(true)
+  })
+  // Fix round 1, M2: una cantidad que desborda Number.isSafeInteger debe rechazarse como
+  // ErrorDeDominio con el mismo mensaje de "cantidad inválida", no con un Error interno.
+  it('M2: rechaza cantidades que desbordan como ErrorDeDominio, no como Error interno', () => {
+    expect(() => Cantidad.deTexto('99999999999999', 'KILO')).toThrow(
+      'Escribe una cantidad válida, por ejemplo 2 o 1.5',
+    )
+  })
+  // Fix round 1, M8: deEntero exige un entero (si no, "3 unidades y media" pasaría la
+  // validación de UNIDAD sin que nadie lo note).
+  it('M8: deEntero exige un entero', () => {
+    expect(() => Cantidad.deEntero(1.5)).toThrow()
+  })
 })

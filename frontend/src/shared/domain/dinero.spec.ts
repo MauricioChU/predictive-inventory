@@ -42,6 +42,30 @@ describe('Dinero', () => {
   it('exige céntimos enteros', () => {
     expect(() => Dinero.deCentimos(1.5)).toThrow()
   })
+  // Fix round 1, M1: -0 y 0 deben ser indistinguibles para quien usa Dinero.
+  it('M1: normaliza -0 a 0', () => {
+    expect(Object.is(Dinero.deCentimos(-0).centimos, 0)).toBe(true)
+    expect(Object.is(Dinero.cero().negar().centimos, 0)).toBe(true)
+    expect(Object.is(redondearMitadLejosDeCero(-400, 1000), 0)).toBe(true)
+  })
+  // Fix round 1, M2: un monto que desborda Number.isSafeInteger debe rechazarse como
+  // ErrorDeDominio con el mismo mensaje de "monto inválido", no con un Error interno.
+  it('M2: rechaza montos que desbordan como ErrorDeDominio, no como Error interno', () => {
+    expect(() => Dinero.deTexto('999999999999999999')).toThrow(
+      'Escribe un monto válido, por ejemplo 3.50',
+    )
+  })
+  // Fix round 1, M3: "S/" solo se acepta como prefijo opcional; solo se recorta el
+  // espacio exterior (y el que sigue a "S/"). No se aceptan números pegados por un espacio
+  // interno ni un "S/" en medio del texto.
+  it('M3: rechaza "S/" en medio del texto o dos números separados por un espacio', () => {
+    expect(() => Dinero.deTexto('3 S/ 5')).toThrow('Escribe un monto válido, por ejemplo 3.50')
+    expect(() => Dinero.deTexto('1 2')).toThrow('Escribe un monto válido, por ejemplo 3.50')
+  })
+  it('M3: acepta espacio exterior alrededor del monto', () => {
+    expect(Dinero.deTexto('  3.50  ').centimos).toBe(350)
+    expect(Dinero.deTexto('  S/ 3.50  ').centimos).toBe(350)
+  })
   // No está en el enunciado de la Tarea 3: completa la cobertura de los predicados y
   // comparadores restantes de Dinero (RN-SIS-02 exige 95% en el dominio).
   it('expone los predicados y comparadores restantes', () => {

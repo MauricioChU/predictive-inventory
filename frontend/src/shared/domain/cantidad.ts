@@ -11,14 +11,18 @@ export class Cantidad {
 
   static deMilesimas(milesimas: number): Cantidad {
     if (!Number.isSafeInteger(milesimas)) throw new Error(`Milésimas inválidas: ${milesimas}`)
-    return new Cantidad(milesimas)
+    // Fix round 1, M1: normaliza -0 a 0.
+    return new Cantidad(milesimas === 0 ? 0 : milesimas)
   }
 
   static cero(): Cantidad {
     return new Cantidad(0)
   }
 
+  // Fix round 1, M8: exige un entero; de lo contrario, Cantidad.deEntero(1.5) coló
+  // silenciosamente 1500 milésimas sin que nadie validara que fuera un número entero.
   static deEntero(n: number): Cantidad {
+    if (!Number.isInteger(n)) throw new Error(`Cantidad.deEntero espera un entero: ${n}`)
     return Cantidad.deMilesimas(n * 1000)
   }
 
@@ -41,6 +45,14 @@ export class Cantidad {
       throw new ErrorDeDominio('CANTIDAD_DECIMALES', 'Usa como máximo tres decimales')
     }
     const milesimas = Number(entero) * 1000 + Number(decimales.padEnd(3, '0'))
+    // Fix round 1, M2: una cantidad que desborda Number.isSafeInteger es una cantidad
+    // inválida para el usuario, no un error interno: usa el mismo mensaje de formato inválido.
+    if (!Number.isSafeInteger(milesimas)) {
+      throw new ErrorDeDominio(
+        'CANTIDAD_INVALIDA',
+        'Escribe una cantidad válida, por ejemplo 2 o 1.5',
+      )
+    }
     return Cantidad.deMilesimas(negativo ? -milesimas : milesimas)
   }
 
