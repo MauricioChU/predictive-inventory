@@ -32,7 +32,11 @@ export async function esperarSinDesplazamientoHorizontal(page: Page): Promise<vo
       ...(main ? Array.from(main.querySelectorAll('*')) : []),
       ...(nav ? Array.from(nav.querySelectorAll('*')) : []),
     ]
+    // Lo que está dentro de .solo-lector (p. ej. la tabla de datos de GraficoBarras) no se
+    // dibuja: va recortado a 1 px para que solo lo lea un lector de pantalla. Su caja de layout
+    // puede ser ancha, pero no se ve ni desplaza la página, así que no cuenta aquí.
     const fueraDeVista = elementos
+      .filter((el) => !el.closest('.solo-lector'))
       .map((el) => el.getBoundingClientRect())
       .filter((r) => r.width > 0 && r.height > 0)
       .some((r) => r.left < -1 || r.right > anchoVentana + 1)

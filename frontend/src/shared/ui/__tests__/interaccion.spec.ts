@@ -93,6 +93,20 @@ describe('GraficoBarras', () => {
       expect(fila.findAll(':scope > .etiqueta, :scope > .pista, :scope > .valor')).toHaveLength(3)
     }
   })
+  it('ronda 5: publica el largo del valor y de la etiqueta más largos (columnas fijas e iguales si no hay subgrid)', () => {
+    const w = mount(GraficoBarras, {
+      props: {
+        titulo: 'Ventas por mes',
+        barras: [
+          { etiqueta: 'Limpiavidrios', valor: 9.5, textoValor: 'S/ 9.50' },
+          { etiqueta: 'Desinfectante multiuso', valor: 12345.67, textoValor: 'S/ 12 345.67' },
+        ],
+      },
+    })
+    const filas = w.get('.filas').element as HTMLElement
+    expect(filas.style.getPropertyValue('--caracteres-valor')).toBe('12')
+    expect(filas.style.getPropertyValue('--caracteres-etiqueta')).toBe('22')
+  })
   it('hallazgo 2: la barra destacada se distingue también sin color (borde de acento + negrita)', () => {
     const w = mount(GraficoBarras, {
       props: {

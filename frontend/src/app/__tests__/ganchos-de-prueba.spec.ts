@@ -29,3 +29,21 @@ describe('m11: ganchos para las pruebas E2E (solo desarrollo o navegador automat
     expect(window.__pruebas).toBeUndefined()
   })
 })
+
+describe('ronda 5: gancho para medir GraficoBarras en las E2E', () => {
+  afterEach(() => {
+    delete window.__pruebas
+    document.body.innerHTML = ''
+  })
+
+  it('mostrarGrafico monta un GraficoBarras al final de #contenido', async () => {
+    document.body.innerHTML = '<main id="contenido"></main>'
+    const retirar = exponerGanchosDePrueba(crearContextoAvisoDeshacer(crearAnunciador()))
+    await window.__pruebas?.mostrarGrafico('Ventas por mes', [
+      { etiqueta: 'Limpiavidrios', valor: 9.5, textoValor: 'S/ 9.50' },
+    ])
+    const grafico = document.querySelector('#contenido .grafico-barras')
+    expect(grafico?.textContent).toContain('Limpiavidrios')
+    retirar()
+  })
+})
