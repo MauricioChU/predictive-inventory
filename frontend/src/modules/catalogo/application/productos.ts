@@ -260,6 +260,29 @@ export async function buscarProductos(
   )
 }
 
+/**
+ * RN-OP-14: Inventario la usa al aceptar el nuevo costo de un ingreso. Solo actualiza el
+ * precio de compra (el de venta no cambia) y publica `ProductoActualizado`.
+ */
+export async function actualizarPrecioCompra(
+  productoId: string,
+  precio: Dinero,
+  deps: DependenciasDeCatalogo,
+): Promise<void> {
+  if (precio.esNegativo()) {
+    throw new ErrorDeDominio('PRECIO_COMPRA_NEGATIVO', 'El precio de compra no puede ser negativo')
+  }
+  const registro = await obtenerRegistro(deps.productos, productoId)
+  const producto = Producto.desdeRegistro(registro)
+  const ahora = deps.reloj.ahora()
+  producto.cambiarPrecios(precio, producto.precioVenta, ahora)
+
+  await deps.uow.ejecutar(async () => {
+    await deps.productos.guardar(producto.aRegistro())
+  })
+  await deps.bus.publicar({ tipo: 'ProductoActualizado', productoId })
+}
+
 function leerOError<T>(fn: () => T): { valor: T } | { error: ErrorDeValidacion } {
   try {
     return { valor: fn() }

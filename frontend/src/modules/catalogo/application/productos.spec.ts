@@ -16,6 +16,7 @@ import {
 } from '../infrastructure/memoria/repositorios'
 import type { DependenciasDeCatalogo } from './modulo'
 import {
+  actualizarPrecioCompra,
   archivarProducto,
   buscarProductos,
   crearProducto,
@@ -712,5 +713,49 @@ describe('validarNuevo', () => {
       ctx.productos,
     )
     expect(error?.codigo).toBe('STOCK_INICIAL_NEGATIVO')
+  })
+})
+
+describe('actualizarPrecioCompra (RN-OP-14)', () => {
+  let ctx: ReturnType<typeof construirDependencias>
+  let productoId: string
+
+  beforeEach(async () => {
+    ctx = construirDependencias()
+    await crearCategoriaDePrueba(ctx.categorias, 'c1', 'Lejías y desinfectantes')
+    const creado = await crearProducto(
+      {
+        nombre: 'Lejía 1 L',
+        categoriaId: 'c1',
+        unidad: 'UNIDAD',
+        precioCompra: '2.40',
+        precioVenta: '3.50',
+        stockMinimo: '3',
+      },
+      ctx.deps,
+    )
+    if (creado.tipo !== 'hecho') throw new Error('se esperaba hecho')
+    productoId = creado.valor.productoId
+    ctx.eventosPublicados.length = 0
+  })
+
+  it('actualiza el precio de compra y publica ProductoActualizado', async () => {
+    await actualizarPrecioCompra(productoId, Dinero.deTexto('2.80'), ctx.deps)
+    const guardado = await ctx.productos.porId(productoId)
+    expect(guardado?.precioCompra).toBe(280)
+    expect(guardado?.precioVenta).toBe(350)
+    expect(ctx.eventosPublicados).toEqual([{ tipo: 'ProductoActualizado', productoId }])
+  })
+
+  it('rechaza un precio de compra negativo', async () => {
+    await expect(
+      actualizarPrecioCompra(productoId, Dinero.deTexto('-1.00'), ctx.deps),
+    ).rejects.toThrow('El precio de compra no puede ser negativo')
+  })
+
+  it('lanza "No encontramos ese producto" si no existe', async () => {
+    await expect(
+      actualizarPrecioCompra('no-existe', Dinero.deTexto('2.80'), ctx.deps),
+    ).rejects.toThrow('No encontramos ese producto')
   })
 })
