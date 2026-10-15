@@ -8,7 +8,10 @@ import { createPinia } from 'pinia'
 
 import App from './App.vue'
 import router from './router'
-import { aplicarTamanoDeLetra, leerTamanoDeLetraGuardado } from './shared/ui/preferencias/tamano-de-letra'
+import {
+  aplicarTamanoDeLetra,
+  leerTamanoDeLetraGuardado,
+} from './shared/ui/preferencias/tamano-de-letra'
 
 aplicarTamanoDeLetra(leerTamanoDeLetraGuardado())
 

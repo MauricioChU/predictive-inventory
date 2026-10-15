@@ -19,7 +19,9 @@ describe('RN-AL-05: cada estado con color, ícono y texto', () => {
 
 describe('RN-UX-10: estado vacío útil', () => {
   it('explica y ofrece la acción siguiente', async () => {
-    const w = mount(EstadoVacio, { props: { titulo: 'Aún no tienes productos.', accion: 'Agregar el primero' } })
+    const w = mount(EstadoVacio, {
+      props: { titulo: 'Aún no tienes productos.', accion: 'Agregar el primero' },
+    })
     await w.get('button').trigger('click')
     expect(w.emitted('accion')).toHaveLength(1)
   })

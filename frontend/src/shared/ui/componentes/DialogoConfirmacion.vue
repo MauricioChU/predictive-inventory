@@ -39,7 +39,12 @@ function alCancelarNativo(evento: Event) {
 </script>
 
 <template>
-  <dialog ref="dialogo" class="dialogo-confirmacion" :aria-labelledby="idTitulo" @cancel="alCancelarNativo">
+  <dialog
+    ref="dialogo"
+    class="dialogo-confirmacion"
+    :aria-labelledby="idTitulo"
+    @cancel="alCancelarNativo"
+  >
     <h2 :id="idTitulo">{{ titulo }}</h2>
     <p>{{ mensaje }}</p>
     <div class="acciones">

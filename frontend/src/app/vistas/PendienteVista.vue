@@ -7,7 +7,10 @@ const route = useRoute()
 
 <template>
   <div class="pendiente-vista">
-    <EncabezadoPagina :titulo="String(route.meta.titulo ?? '')" :volver="!route.meta.enNavegacion" />
+    <EncabezadoPagina
+      :titulo="String(route.meta.titulo ?? '')"
+      :volver="!route.meta.enNavegacion"
+    />
     <p>Esta pantalla se construye en la próxima etapa</p>
   </div>
 </template>
