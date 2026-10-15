@@ -55,14 +55,20 @@ const textoContador = computed(() => {
   width: 100%;
 }
 .lista {
-  display: flex;
+  /* S1: grid con minmax(0, 1fr) (NO 1fr a secas) en cada columna. Un 1fr sin minmax hereda el
+     ancho mínimo de contenido de la columna (el "min-content" de la etiqueta más larga sin
+     envolver), así que si esa etiqueta no entra en 320px, la COLUMNA se ensancha más allá del
+     viewport en vez de encogerse — y si algo "arriba" recorta ese desborde (overflow:hidden),
+     el contenido queda tapado sin que scrollWidth del documento lo delate. minmax(0, 1fr)
+     permite que la columna se encoja hasta 0 antes de preferir desbordar. */
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   list-style: none;
   margin: 0;
   padding: 0;
   gap: var(--separacion-toque);
 }
 .item {
-  flex: 1;
   min-width: 0;
 }
 .enlace {
@@ -73,39 +79,42 @@ const textoContador = computed(() => {
   justify-content: center;
   gap: var(--espacio-1);
   min-height: var(--alto-toque);
-  /* S1: padding horizontal mínimo abajo de 1024px — el ancho es escaso (5 destinos en 320 px)
-     y cada punto de relleno se lo quita a la etiqueta. */
+  min-width: 48px;
   padding-block: var(--espacio-2);
   padding-inline: 2px;
   text-decoration: none;
   color: var(--color-texto-suave);
-  font-weight: 600;
-  border: 2px solid transparent;
+  font-weight: 400;
   border-radius: var(--radio-chico);
   max-width: 100%;
+  overflow: visible;
+  /* S1: este enlace es el "contenedor de tamaño" (container query) que la etiqueta usa para
+     saber cuánto espacio tiene de verdad, sin adivinar el ancho del viewport. */
+  container-type: inline-size;
 }
 .etiqueta-texto {
-  /* S1: nunca en dos líneas ni partida a mitad de palabra (RN-UX-09/RN-UX-12). El tamaño
-     escala con la letra elegida (rem) pero queda acotado para que las 5 quepan en 320 px;
-     si aun así no entra completa, se recorta con puntos suspensivos en vez de desbordar
-     o envolver — nunca tapa el contenido ni rompe la palabra. */
+  /* S1: la palabra entera, siempre — nunca se envuelve ni se parte a media palabra, y nunca
+     se recorta con puntos suspensivos (sería ilegible: "Produc…"). El tamaño sigue el ajuste
+     de letra elegido (rem) MIENTRAS entre en el carril; si el carril es más angosto que eso
+     (320 px con letra Muy grande), se encoge con cqi (unidad relativa al ancho del propio
+     contenedor, no del viewport) justo lo necesario para que la palabra más larga ("Productos")
+     entre siempre en una sola línea. */
   display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  overflow: visible;
   overflow-wrap: normal;
   word-break: keep-all;
   hyphens: none;
-  font-size: clamp(11px, 0.7rem, 15px);
+  font-size: min(0.8rem, 20cqi);
 }
 .enlace.router-link-active {
   color: var(--color-primario);
   background: var(--color-primario-suave);
-  font-weight: 800;
+  font-weight: 700;
 }
-/* S2 (RN-UX-04): el destino activo no se distingue solo por color — además lleva un fondo,
-   más peso de letra y una barra de acento (abajo en celular, a la izquierda en el costado). */
+/* S2 (RN-UX-04): el destino activo no se distingue solo por color — además lleva un fondo
+   (tile), más peso de letra (400 → 700; solo esos dos pesos están cargados) y una barra de
+   acento (abajo en celular, a la izquierda en el costado). */
 .enlace.router-link-active::after {
   content: '';
   position: absolute;
@@ -117,14 +126,17 @@ const textoContador = computed(() => {
   background: var(--color-primario);
 }
 .icono {
-  width: clamp(20px, 1.3rem, 26px);
-  height: clamp(20px, 1.3rem, 26px);
+  /* RN-UX-03/ruling: tamaño real, no un clamp que podía bajar de los 24px recomendados. */
+  width: 1.5rem;
+  height: 1.5rem;
+  min-width: 24px;
+  min-height: 24px;
   flex: none;
 }
 .insignia {
   position: absolute;
-  top: 0;
-  right: calc(50% - 1.5rem);
+  top: 2px;
+  right: 4px;
   min-width: 1.25rem;
   height: 1.25rem;
   padding-inline: 0.25rem;
@@ -138,10 +150,8 @@ const textoContador = computed(() => {
 
 @media (min-width: 1024px) {
   .lista {
-    flex-direction: column;
-  }
-  .item {
-    flex: none;
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-flow: row;
   }
   .enlace {
     flex-direction: row;
@@ -149,8 +159,8 @@ const textoContador = computed(() => {
     padding-inline: var(--espacio-3);
   }
   .etiqueta-texto {
-    /* Más espacio horizontal disponible (barra lateral de 260px): la etiqueta puede crecer más. */
-    font-size: clamp(14px, 1rem, 18px);
+    /* Columna lateral de 260px: de sobra para cualquier destino, sigue la letra sin acotar. */
+    font-size: 1rem;
   }
   .insignia {
     position: static;

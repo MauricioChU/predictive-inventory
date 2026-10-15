@@ -33,17 +33,19 @@ test.describe('RN-SIS-06 y RN-SIS-07: responsive y accesibilidad', () => {
   })
 })
 
-// S1: la barra inferior usaba position:fixed con una altura "adivinada" en el padding de
-// <main> y en el desplazamiento del aviso Deshacer; si una etiqueta se envolvía (p. ej.
-// "Productos" partido a mitad de palabra con letra Muy grande), la barra crecía más de lo
-// previsto y tapaba el contenido. Ahora la barra es una fila de una grilla (ver LayoutApp) que
-// nunca se superpone, y las etiquetas nunca se envuelven (ver BarraNavegacion). Esto solo
+// S1 (ronda 2): la barra inferior usaba position:fixed con una altura "adivinada" en el
+// padding de <main>, y un <main> con su propio overflow-y rompía el scroll normal del
+// documento (gestos de borde de Android, barra de direcciones, scroll guardado del router).
+// Ahora LayoutApp vuelve al scroll normal de la ventana; la barra + el aviso Deshacer son un
+// solo contenedor "pie" sticky al final del flujo (nunca tapan nada porque reservan su propio
+// espacio real, no uno adivinado), y las etiquetas de la barra usan container queries
+// (BarraNavegacion) para no envolverse NI recortarse con puntos suspensivos nunca. Esto solo
 // aplica al layout de celular (barra inferior); desde 1024px la navegación es una columna
 // lateral y no hay nada que verificar aquí.
-test.describe('S1: la barra de navegación no tapa el contenido', () => {
-  for (const ancho of [320, 360]) {
+test.describe('S1: enlaces de navegación completos y dentro del viewport', () => {
+  for (const ancho of [320, 360, 412]) {
     for (const letra of ['NORMAL', 'GRANDE', 'MUY_GRANDE'] as const) {
-      test(`el último elemento de <main> es visible sobre la barra a ${ancho}px con letra ${letra}`, async ({
+      test(`a ${ancho}px con letra ${letra}: etiquetas completas, enlaces ≥48px y último elemento visible sobre la barra`, async ({
         page,
       }, testInfo) => {
         test.skip(
@@ -54,29 +56,44 @@ test.describe('S1: la barra de navegación no tapa el contenido', () => {
         await page.setViewportSize({ width: ancho, height: 800 })
         await page.goto('./')
 
-        const main = page.locator('#contenido')
-        await main.evaluate((el) => el.scrollTo({ top: el.scrollHeight }))
+        const datos = await page.evaluate(() => {
+          const anchoVentana = document.documentElement.clientWidth
+          const enlaces = Array.from(document.querySelectorAll('nav .enlace'))
+          return enlaces.map((enlace) => {
+            const etiqueta = enlace.querySelector('.etiqueta-texto')
+            const cajaEnlace = enlace.getBoundingClientRect()
+            return {
+              texto: etiqueta?.textContent?.trim() ?? '',
+              etiquetaScrollWidth: etiqueta?.scrollWidth ?? 0,
+              etiquetaClientWidth: etiqueta?.clientWidth ?? 0,
+              anchoEnlace: cajaEnlace.width,
+              dentroDelViewport: cajaEnlace.left >= -1 && cajaEnlace.right <= anchoVentana + 1,
+            }
+          })
+        })
 
+        expect(datos.map((d) => d.texto)).toEqual(['Inicio', 'Vender', 'Recibir', 'Productos', 'Control'])
+        for (const d of datos) {
+          // scrollWidth <= clientWidth: la etiqueta nunca se recorta (nowrap + overflow:visible,
+          // nunca ellipsis) ni se envuelve a una segunda línea.
+          expect(
+            d.etiquetaScrollWidth,
+            `la etiqueta "${d.texto}" no debe recortarse ni envolverse`,
+          ).toBeLessThanOrEqual(d.etiquetaClientWidth + 1)
+          expect(d.anchoEnlace, `el enlace "${d.texto}" debe medir al menos 48px de ancho`).toBeGreaterThanOrEqual(
+            48,
+          )
+          expect(d.dentroDelViewport, `el enlace "${d.texto}" debe quedar dentro del viewport`).toBe(true)
+        }
+
+        // último elemento de <main> visible sobre la barra tras desplazarse al final del documento
+        await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight }))
         const ultimo = page.locator('#contenido *').last()
         const cajaUltimo = await ultimo.boundingBox()
         const cajaNav = await page.getByRole('navigation').boundingBox()
         expect(cajaUltimo, 'el último elemento de <main> debe tener una caja visible').not.toBeNull()
         expect(cajaNav, 'la barra de navegación debe tener una caja visible').not.toBeNull()
-        // el borde inferior del último elemento no debe pasar del tope de la barra (+1px de margen de redondeo)
         expect(cajaUltimo!.y + cajaUltimo!.height).toBeLessThanOrEqual(cajaNav!.y + 1)
-
-        // ninguna etiqueta de la barra ocupa más de una línea (nunca se envuelve ni se parte a mitad de palabra)
-        const lineas = await page.locator('nav .etiqueta-texto').evaluateAll((nodos) =>
-          nodos.map((n) => {
-            const caja = n.getBoundingClientRect()
-            const estilo = getComputedStyle(n)
-            const altoDeLinea = Number.parseFloat(estilo.lineHeight) || caja.height
-            return { alto: caja.height, altoDeLinea }
-          }),
-        )
-        for (const { alto, altoDeLinea } of lineas) {
-          expect(alto).toBeLessThanOrEqual(altoDeLinea * 1.5)
-        }
       })
     }
   }
