@@ -27,8 +27,9 @@ function alVolver() {
     router.back()
   } else {
     // Primera pantalla de la sesión (p. ej. se abrió directo en /ajustes): no hay a dónde
-    // "volver", así que no dejamos un callejón sin salida (RN-UX-15) y vamos a Inicio.
-    void router.push({ name: 'inicio' })
+    // "volver", así que no dejamos un callejón sin salida (RN-UX-15) y vamos a Inicio. Con
+    // replace (no push) para no dejar esta pantalla sin salida en el historial tampoco.
+    void router.replace({ name: 'inicio' })
   }
 }
 </script>

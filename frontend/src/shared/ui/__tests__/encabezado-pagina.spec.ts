@@ -13,7 +13,7 @@ describe('EncabezadoPagina (Q3): volver', () => {
     const router = crearRouterDePrueba()
     await router.push('/ajustes')
     const espiaBack = vi.spyOn(router, 'back')
-    const espiaPush = vi.spyOn(router, 'push')
+    const espiaReplace = vi.spyOn(router, 'replace')
     const alVolver = vi.fn<() => void>()
 
     const w = mount(EncabezadoPagina, {
@@ -24,7 +24,7 @@ describe('EncabezadoPagina (Q3): volver', () => {
 
     expect(alVolver).toHaveBeenCalledTimes(1)
     expect(espiaBack).not.toHaveBeenCalled()
-    expect(espiaPush).not.toHaveBeenCalled()
+    expect(espiaReplace).not.toHaveBeenCalled()
   })
 
   it('sin listener y con historial previo, navega con router.back()', async () => {
@@ -32,7 +32,7 @@ describe('EncabezadoPagina (Q3): volver', () => {
     const router = crearRouterDePrueba()
     await router.push('/ajustes')
     const espiaBack = vi.spyOn(router, 'back').mockImplementation(() => {})
-    const espiaPush = vi.spyOn(router, 'push')
+    const espiaReplace = vi.spyOn(router, 'replace')
 
     const w = mount(EncabezadoPagina, {
       props: { titulo: 'Ajustes', volver: true },
@@ -41,15 +41,15 @@ describe('EncabezadoPagina (Q3): volver', () => {
     await w.get('button').trigger('click')
 
     expect(espiaBack).toHaveBeenCalledTimes(1)
-    expect(espiaPush).not.toHaveBeenCalled()
+    expect(espiaReplace).not.toHaveBeenCalled()
   })
 
-  it('sin listener y sin historial previo, va a Inicio en vez de dejar un callejón sin salida', async () => {
+  it('sin listener y sin historial previo, va a Inicio con replace (sin dejar un callejón sin salida en el historial)', async () => {
     window.history.replaceState(null, '', '/ajustes')
     const router = crearRouterDePrueba()
     await router.push('/ajustes')
     const espiaBack = vi.spyOn(router, 'back')
-    const espiaPush = vi.spyOn(router, 'push').mockImplementation(() => Promise.resolve())
+    const espiaReplace = vi.spyOn(router, 'replace').mockImplementation(() => Promise.resolve())
 
     const w = mount(EncabezadoPagina, {
       props: { titulo: 'Ajustes', volver: true },
@@ -58,6 +58,6 @@ describe('EncabezadoPagina (Q3): volver', () => {
     await w.get('button').trigger('click')
 
     expect(espiaBack).not.toHaveBeenCalled()
-    expect(espiaPush).toHaveBeenCalledWith({ name: 'inicio' })
+    expect(espiaReplace).toHaveBeenCalledWith({ name: 'inicio' })
   })
 })
