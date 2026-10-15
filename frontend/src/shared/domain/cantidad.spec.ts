@@ -1,0 +1,43 @@
+import { describe, expect, it } from 'vitest'
+import { Cantidad } from './cantidad'
+
+describe('Cantidad', () => {
+  it('se construye desde texto en milésimas', () => {
+    expect(Cantidad.deTexto('2', 'UNIDAD').milesimas).toBe(2000)
+    expect(Cantidad.deTexto('1.25', 'KILO').milesimas).toBe(1250)
+    expect(Cantidad.deTexto('0,125', 'KILO').milesimas).toBe(125)
+    expect(Cantidad.deTexto('3.0', 'UNIDAD').milesimas).toBe(3000)
+    expect(Cantidad.deTexto('-2', 'UNIDAD').milesimas).toBe(-2000)
+  })
+  it('RN-OP-04: UNIDAD solo acepta enteros', () => {
+    expect(() => Cantidad.deTexto('1.5', 'UNIDAD')).toThrow('Este producto se cuenta por unidades enteras')
+  })
+  it('RN-OP-04: KILO y LITRO aceptan hasta tres decimales', () => {
+    expect(() => Cantidad.deTexto('0.0005', 'KILO')).toThrow('Usa como máximo tres decimales')
+    expect(Cantidad.deTexto('0.333', 'LITRO').milesimas).toBe(333)
+  })
+  it('rechaza texto que no es una cantidad', () => {
+    expect(() => Cantidad.deTexto('', 'KILO')).toThrow('Escribe una cantidad válida, por ejemplo 2 o 1.5')
+    expect(() => Cantidad.deTexto('dos', 'UNIDAD')).toThrow('Escribe una cantidad válida, por ejemplo 2 o 1.5')
+  })
+  it('opera y compara', () => {
+    const a = Cantidad.deEntero(10)
+    const b = Cantidad.deMilesimas(2500)
+    expect(a.restar(b).milesimas).toBe(7500)
+    expect(b.restar(a).esNegativa()).toBe(true)
+    expect(b.negar().abs().igualA(b)).toBe(true)
+    expect(Cantidad.deEntero(1).esUno()).toBe(true)
+    expect(Cantidad.sumarTodas([a, b]).milesimas).toBe(12500)
+  })
+  it('valida precisión de valores ya construidos', () => {
+    expect(Cantidad.deMilesimas(1500).esValidaPara('UNIDAD')).toBe(false)
+    expect(Cantidad.deMilesimas(1500).esValidaPara('KILO')).toBe(true)
+  })
+  it('RN-AN-06: redondea hacia arriba al incremento de la unidad', () => {
+    expect(Cantidad.incrementoDe('UNIDAD').milesimas).toBe(1000)
+    expect(Cantidad.incrementoDe('LITRO').milesimas).toBe(500)
+    expect(Cantidad.deMilesimas(1250).redondearHaciaArribaA(Cantidad.incrementoDe('KILO')).milesimas).toBe(1500)
+    expect(Cantidad.deMilesimas(10200).redondearHaciaArribaA(Cantidad.incrementoDe('UNIDAD')).milesimas).toBe(11000)
+    expect(Cantidad.deMilesimas(1000).redondearHaciaArribaA(Cantidad.incrementoDe('UNIDAD')).milesimas).toBe(1000)
+  })
+})
