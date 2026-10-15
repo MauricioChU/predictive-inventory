@@ -51,7 +51,9 @@ describe('BusEnMemoria', () => {
     bus.suscribir('ProductoCreado', (e) => {
       recibidos.push(e.productoId)
     })
-    await expect(bus.publicar({ tipo: 'ProductoCreado', productoId: 'p1' })).resolves.toBeUndefined()
+    await expect(
+      bus.publicar({ tipo: 'ProductoCreado', productoId: 'p1' }),
+    ).resolves.toBeUndefined()
     expect(recibidos).toEqual(['p1'])
   })
 
@@ -64,7 +66,9 @@ describe('BusEnMemoria', () => {
     bus.suscribir('ProductoCreado', (e) => {
       recibidos.push(e.productoId)
     })
-    await expect(bus.publicar({ tipo: 'ProductoCreado', productoId: 'p1' })).resolves.toBeUndefined()
+    await expect(
+      bus.publicar({ tipo: 'ProductoCreado', productoId: 'p1' }),
+    ).resolves.toBeUndefined()
     expect(recibidos).toEqual(['p1'])
   })
 
@@ -79,9 +83,12 @@ describe('BusEnMemoria', () => {
     })
     await bus.publicar({ tipo: 'ProductoCreado', productoId: 'p1' })
     expect(fallos).toHaveLength(2)
-    expect((fallos[0]?.error as Error).message).toBe('falla 1')
-    expect((fallos[1]?.error as Error).message).toBe('falla 2')
-    expect(fallos[0]?.tipo).toBe('ProductoCreado')
+    const [primero, segundo] = fallos
+    expect(primero).toBeDefined()
+    expect(segundo).toBeDefined()
+    expect((primero!.error as Error).message).toBe('falla 1')
+    expect((segundo!.error as Error).message).toBe('falla 2')
+    expect(primero!.tipo).toBe('ProductoCreado')
   })
 
   it('suscribirse durante una publicación no recibe el evento en curso', async () => {
