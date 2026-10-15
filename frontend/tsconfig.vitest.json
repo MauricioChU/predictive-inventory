@@ -9,6 +9,9 @@
     "tests/**/*.ts",
     "scripts/**/*.spec.ts",
     "eslint-rules/**/*.ts",
+    // Fix round 2, M4: excluida de tsconfig.app.json (usa node:async_hooks); este proyecto
+    // sí tiene tipos de Node, así que la incluye explícitamente.
+    "src/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria.ts",
     "env.d.ts"
   ],
   "exclude": [],

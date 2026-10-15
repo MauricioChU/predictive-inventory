@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { AlmacenEnMemoria } from './almacen-en-memoria'
 import { UnidadDeTrabajoEnMemoria } from './unidad-de-trabajo-en-memoria'
+import { BusEnMemoria } from '../../domain/eventos'
 
 const existencia = (productoId: string, cantidad: number) => ({ productoId, cantidad })
 
@@ -80,5 +81,98 @@ describe('UnidadDeTrabajoEnMemoria', () => {
       }),
     ).rejects.toThrow()
     expect(almacen.obtener('existencias', 'p1')).toBeUndefined()
+  })
+
+  // Fix round 2, M4: con un simple contador de profundidad (ronda 1), una llamada
+  // INDEPENDIENTE que llega mientras otro trabajo ya está corriendo (tras su primer await)
+  // se confundía con una anidada y terminaba compartiendo su transacción: si esa transacción
+  // fallaba, su rollback borraba en silencio una escritura YA CONFIRMADA de la llamada
+  // independiente. AsyncLocalStorage distingue "estoy dentro del trabajo de ESTA instancia"
+  // (anidada) de "llegué mientras tanto, pero no soy parte de él" (independiente).
+  it('M4 (ronda 2): una llamada independiente que llega mientras otro trabajo está en curso conserva su escritura confirmada aunque el primero falle', async () => {
+    const almacen = new AlmacenEnMemoria()
+    const uow = new UnidadDeTrabajoEnMemoria(almacen)
+    let liberarPrimero: () => void = () => {}
+    const esperaDelPrimero = new Promise<void>((resolver) => {
+      liberarPrimero = resolver
+    })
+    let primeroArranco: () => void = () => {}
+    const senalPrimeroArranco = new Promise<void>((resolver) => {
+      primeroArranco = resolver
+    })
+
+    const primero = uow.ejecutar(async () => {
+      primeroArranco() // "primero" ya está corriendo (profundidad ya estaría incrementada con el contador viejo)
+      almacen.guardar('existencias', existencia('p1', 1000))
+      await esperaDelPrimero
+      throw new Error('falla tras esperar')
+    })
+
+    await senalPrimeroArranco
+
+    const segundo = uow.ejecutar(async () => {
+      almacen.guardar('existencias', existencia('p2', 2000))
+    })
+
+    liberarPrimero()
+    await expect(primero).rejects.toThrow('falla tras esperar')
+    await expect(segundo).resolves.toBeUndefined()
+
+    expect(almacen.obtener('existencias', 'p1')).toBeUndefined()
+    expect(almacen.obtener('existencias', 'p2')?.cantidad).toBe(2000)
+  })
+
+  it('M4 (ronda 2): una llamada independiente que lanza no deja ninguna escritura parcial', async () => {
+    const almacen = new AlmacenEnMemoria()
+    const uow = new UnidadDeTrabajoEnMemoria(almacen)
+    await expect(
+      uow.ejecutar(async () => {
+        almacen.guardar('existencias', existencia('parcial', 1))
+        throw new Error('falla')
+      }),
+    ).rejects.toThrow('falla')
+    expect(almacen.obtener('existencias', 'parcial')).toBeUndefined()
+  })
+
+  it('M4 (ronda 2): el manejador de un evento publicado tras confirmar y una operación de usuario concurrente no comparten transacción', async () => {
+    const almacen = new AlmacenEnMemoria()
+    const uow = new UnidadDeTrabajoEnMemoria(almacen)
+    const bus = new BusEnMemoria()
+    let liberarManejador: () => void = () => {}
+    const esperaDelManejador = new Promise<void>((resolver) => {
+      liberarManejador = resolver
+    })
+    let manejadorArranco: () => void = () => {}
+    const senalManejadorArranco = new Promise<void>((resolver) => {
+      manejadorArranco = resolver
+    })
+
+    bus.suscribir('ProductoCreado', async () => {
+      await uow.ejecutar(async () => {
+        manejadorArranco()
+        almacen.guardar('existencias', existencia('del-evento', 1))
+        await esperaDelManejador
+        throw new Error('el manejador del evento falla')
+      })
+    })
+
+    // ADR-0002: se publica DESPUÉS de confirmar la unidad de trabajo original.
+    await uow.ejecutar(async () => {
+      almacen.guardar('existencias', existencia('venta-original', 1))
+    })
+    const publicacion = bus.publicar({ tipo: 'ProductoCreado', productoId: 'p1' })
+
+    await senalManejadorArranco
+
+    const operacionDeUsuario = uow.ejecutar(async () => {
+      almacen.guardar('existencias', existencia('venta-de-usuario', 500))
+    })
+
+    liberarManejador()
+    await publicacion // publicar() nunca rechaza (BusEnMemoria ya aísla fallas de manejadores)
+    await operacionDeUsuario
+
+    expect(almacen.obtener('existencias', 'del-evento')).toBeUndefined()
+    expect(almacen.obtener('existencias', 'venta-de-usuario')?.cantidad).toBe(500)
   })
 })
