@@ -18,4 +18,4 @@ El usuario principal usa un celular Android, la tienda puede quedarse sin intern
 - ✅ Respuesta instantánea y funcionamiento en modo avión.
 - ✅ Un backend gratuito que "se duerme" no afecta al usuario.
 - ⚠️ Las reglas que protegen el stock deben ejecutarse en el celular (dominio en TypeScript) y, en la Fase 2, también en el servidor. Se mitiga con specs ejecutables compartidas ([ADR-0006](0006-specs-ejecutables.md)).
-- ⚠️ Los datos de IndexedDB pertenecen al **origen** (dominio) del sitio: cambiar de dominio deja los datos atrás. Ver [ADR-0007](0007-hosting-cloudflare-pages.md).
+- ⚠️ Los datos de IndexedDB pertenecen al **origen** (dominio) del sitio: cambiar de dominio deja los datos atrás. Ver [ADR-0007](0007-hosting-github-pages.md).

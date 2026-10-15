@@ -14,7 +14,7 @@ Este proyecto sigue **Spec-Driven Development**: ninguna funcionalidad se progra
 ## Convenciones
 
 - **Reglas de negocio**: `RN-<MÓDULO>-<NN>`. Módulos: `CAT` catálogo, `OP` operaciones de stock, `AL` alertas, `AN` análisis (torre de control), `RE` respaldo, `UX` experiencia de uso, `SIS` sistema.
-- Una regla **nunca se renumera**. Si se elimina, queda escrita con el estado *Retirada* y el motivo.
+- Una regla **nunca se renumera**. Si se elimina, queda escrita tachada con el estado *Retirada*, la fecha y el motivo: `| ~~RN-CAT-07~~ | **Retirada** (2026-10-15): … |`.
 - Cada regla tiene **al menos un escenario Gherkin** etiquetado con su id (`@RN-OP-05`) y al menos un test que la verifica.
 - Gherkin en español (`# language: es`): `Característica`, `Escenario`, `Dado`, `Cuando`, `Entonces`, `Y`.
 - Cambiar una regla = cambiar primero la spec, en su propia rama `docs/*`, y luego el código.

@@ -243,3 +243,75 @@ Característica: Operaciones de stock
     Cuando reviso los datos
     Entonces el stock de "Carbón" es "10"
     Y se informa "Corregimos el stock de 1 producto: Carbón (7 kg → 10 kg)"
+
+  @RN-OP-20
+  Escenario: Avisar cuando una compra alcanza para demasiados días
+    Dado que "Lejía 1 L" tiene venta promedio diaria "2"
+    Cuando llega mercadería:
+      | producto  | cantidad | costo |
+      | Lejía 1 L | 110      | 2.40  |
+    Entonces se avisa "Con esto tendrías Lejía 1 L para ~60 días. Te sugerimos ~7 unid."
+    Y se ofrecen las opciones "Registrar igual, Cambiar cantidad"
+
+  @RN-OP-20
+  Escenario: El aviso dice si no hacía falta comprar
+    Dado que "Carbón" tiene venta promedio diaria "0.25"
+    Cuando llega mercadería:
+      | producto | cantidad | costo |
+      | Carbón   | 5        | 2.75  |
+    Entonces se avisa "Con esto tendrías Carbón para ~60 días. Ahora no necesitabas comprar."
+
+  @RN-OP-20
+  Escenario: Avisar cuando se compra un producto parado
+    Dado los productos:
+      | nombre | categoría | unidad | compra | venta | mínimo |
+      | Escoba | Otros     | UNIDAD | 6.00   | 9.00  | 1      |
+    Y que "Escoba" tiene stock inicial "5" desde "2026-07-17"
+    Y el historial de ventas:
+      | fecha            | producto | cantidad |
+      | 2026-08-31 10:00 | Escoba   | 1        |
+    Cuando llega mercadería:
+      | producto | cantidad | costo |
+      | Escoba   | 2        | 6.00  |
+    Entonces se avisa "Escoba no se vende hace 45 días y aún tienes 4 unid."
+
+  @RN-OP-20
+  Escenario: Una compra razonable no genera aviso
+    Dado que "Lejía 1 L" tiene venta promedio diaria "2"
+    Cuando llega mercadería:
+      | producto  | cantidad | costo |
+      | Lejía 1 L | 20       | 2.40  |
+    Entonces no se muestra ningún aviso de sobrecompra
+    Y el stock de "Lejía 1 L" es "30"
+
+  @RN-OP-20
+  Escenario: El aviso no bloquea el registro
+    Dado que "Lejía 1 L" tiene venta promedio diaria "2"
+    Cuando llega mercadería:
+      | producto  | cantidad | costo |
+      | Lejía 1 L | 110      | 2.40  |
+    Y toco "Registrar igual"
+    Entonces el stock de "Lejía 1 L" es "120"
+
+  @RN-OP-21
+  Escenario: El conteo guiado recorre los productos y resume al terminar
+    Cuando empiezo a contar todo
+    Entonces el producto a contar es "Carbón"
+    Cuando respondo "10"
+    Entonces el producto a contar es "Detergente a granel"
+    Cuando salto el producto
+    Entonces el producto a contar es "Lejía 1 L"
+    Cuando respondo "8"
+    Entonces existe una operación "AJUSTE" de "-2" para "Lejía 1 L"
+    Y el resumen del conteo dice "Contaste 2 productos. 1 con diferencia: -S/ 4.80"
+    Y el resumen del conteo dice "Te faltó contar 1: Detergente a granel"
+
+  @RN-OP-21
+  Escenario: El conteo guiado se puede seguir después
+    Cuando empiezo a contar todo
+    Y respondo "10"
+    Y toco "Seguir después"
+    Y abro la app
+    Y continúo el conteo
+    Entonces el producto a contar es "Detergente a granel"
+    Y se muestra "Llevas 1 de 3"

@@ -9,7 +9,7 @@ Las mismas reglas de negocio deben vivir en el celular (Fase 1) y en el servidor
 ## Decisión
 
 - El código se organiza por **módulos de negocio** (`catalogo`, `inventario`, `alertas`, `analisis`, `respaldo`), cada uno con las capas `domain`, `application`, `infrastructure` y `ui`.
-- El **dominio es TypeScript puro**: no importa Vue, Pinia, Dexie ni APIs del navegador. Habla con el exterior mediante **puertos** (interfaces), por ejemplo `RepositorioDeProductos`, `UnidadDeTrabajo`, `Reloj`, `GeneradorDeIds`, `Notificador` y `EscanerDeCodigos`.
+- El **dominio es TypeScript puro**: no importa Vue, Pinia, Dexie ni APIs del navegador. Habla con el exterior mediante **puertos** (interfaces), por ejemplo `RepositorioDeProductos`, `UnidadDeTrabajo`, `Reloj`, `GeneradorDeIds`, `Notificador` y `ProcesadorDeFotos`.
 - Los **adaptadores** viven en `infrastructure`; la composición se hace en `src/app` (inyección de dependencias con `provide` / `inject`).
 - Los módulos se comunican solo por casos de uso y **eventos de dominio**, nunca por las tablas de otro módulo.
 - **ESLint `no-restricted-imports`** hace fallar el lint si el dominio importa algo prohibido o si un módulo importa el interior de otro.

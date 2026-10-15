@@ -289,3 +289,29 @@ Característica: Torre de control
     Y vendo "2" de "Lejía 1 L"
     Entonces la Torre de control muestra las secciones "Resumen, Atención, Para comprar, Más vendidos, Semana contra semana, Mejor día de la semana, Productos parados"
     Y las ventas de hoy son "S/ 7.00"
+
+  # ---------- Antes de comprar ----------
+
+  @RN-AN-16
+  Esquema del escenario: ¿Necesito comprar? responde con una sola frase
+    Dado que "<producto>" tiene stock "<stock>" y venta promedio diaria "<vpd>"
+    Cuando pregunto si necesito comprar "<producto>"
+    Entonces la respuesta es "<respuesta>"
+
+    Ejemplos:
+      | producto            | stock | vpd            | respuesta                                                                    |
+      | Lejía 1 L           | 5     | 2              | Sí, compra ~12 unid. (S/ 28.80)                                              |
+      | Detergente a granel | 20    | 0.5            | No hace falta: te alcanza para ~40 días                                      |
+      | Jabón               | 10    | sin predicción | Tienes 10 unid. Todavía no sé cuánto vendes; vuelve a preguntar en unos días |
+
+  @RN-AN-16
+  Escenario: ¿Necesito comprar? un producto parado
+    Dado los productos:
+      | nombre | categoría | unidad | compra | venta | mínimo |
+      | Escoba | Otros     | UNIDAD | 6.00   | 9.00  | 1      |
+    Y que "Escoba" tiene stock inicial "5" desde "2026-07-17"
+    Y el historial de ventas:
+      | fecha            | producto | cantidad |
+      | 2026-08-31 10:00 | Escoba   | 1        |
+    Cuando pregunto si necesito comprar "Escoba"
+    Entonces la respuesta es "No compres: no se vende hace 45 días y tienes 4 unid."

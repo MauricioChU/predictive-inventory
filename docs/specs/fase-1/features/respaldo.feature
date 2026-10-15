@@ -90,11 +90,11 @@ Característica: Respaldo, Excel e importación
   @RN-RE-07
   Escenario: Importar productos desde Excel con vista previa
     Dado un Excel de productos con las filas:
-      | fila | nombre           | categoría        | unidad | precio de compra | precio de venta | stock mínimo | stock inicial | código de barras |
-      | 2    | Jabón Bolívar    | Detergentes      | unid   | 1.20             | 2.00            | 5            | 24            |                  |
-      | 3    | Ambientador Glade | Ambientadores    | unid   | 6.50             | 9.00            | 2            | 6             | 7501032901234    |
-      | 4    | Cera roja        | Limpiadores      | L      | 8.00             |                 | 1            |               |                  |
-      | 5    | Bolsas chicas    | Bolsas           | unid   | 0.05             | 0.10            | 1.5          | 100           |                  |
+      | fila | nombre           | categoría        | unidad | precio de compra | precio de venta | stock mínimo | stock inicial |
+      | 2    | Jabón Bolívar    | Detergentes      | unid   | 1.20             | 2.00            | 5            | 24            |
+      | 3    | Ambientador Glade | Ambientadores    | unid   | 6.50             | 9.00            | 2            | 6             |
+      | 4    | Cera roja        | Limpiadores      | L      | 8.00             |                 | 1            |               |
+      | 5    | Bolsas chicas    | Bolsas           | unid   | 0.05             | 0.10            | 1.5          | 100           |
     Cuando cargo el Excel
     Entonces la vista previa muestra "2" filas válidas y "2" filas con problema
     Y la vista previa explica:
@@ -108,15 +108,15 @@ Característica: Respaldo, Excel e importación
   @RN-RE-07
   Escenario: Descargar la plantilla de importación
     Cuando descargo la plantilla de productos
-    Entonces el archivo tiene las columnas "nombre, categoría, unidad, precio de compra, precio de venta, stock mínimo, stock inicial, código de barras"
+    Entonces el archivo tiene las columnas "nombre, categoría, unidad, precio de compra, precio de venta, stock mínimo, stock inicial"
 
   @RN-RE-08
   Escenario: Repetidos contra el catálogo o dentro del archivo se rechazan, y las categorías nuevas se crean
     Dado un Excel de productos con las filas:
-      | fila | nombre      | categoría   | unidad | precio de compra | precio de venta | stock mínimo | stock inicial | código de barras |
-      | 2    | lejia 1 l   | Otros       | unid   | 2.40             | 3.50            | 3            |               |                  |
-      | 3    | Detergente  | Detergentes | kg     | 5.30             | 7.90            | 2            | 10            |                  |
-      | 4    | detergente  | Detergentes | kg     | 5.30             | 7.90            | 2            |               |                  |
+      | fila | nombre      | categoría   | unidad | precio de compra | precio de venta | stock mínimo | stock inicial |
+      | 2    | lejia 1 l   | Otros       | unid   | 2.40             | 3.50            | 3            |               |
+      | 3    | Detergente  | Detergentes | kg     | 5.30             | 7.90            | 2            | 10            |
+      | 4    | detergente  | Detergentes | kg     | 5.30             | 7.90            | 2            |               |
     Cuando cargo el Excel
     Entonces la vista previa explica:
       | fila | problema                                          |

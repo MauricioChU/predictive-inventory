@@ -16,6 +16,8 @@ Criterios de aceptación ejecutables: [features/operaciones.feature](features/op
 | HU-OP-06 | Como usuario principal quiero **deshacer** algo que registré mal. |
 | HU-OP-07 | Como usuario principal quiero **anotar una venta de ayer** que olvidé registrar. |
 | HU-OP-08 | Como administrador quiero ver el **historial** de todo lo que pasó con un producto. |
+| HU-OP-09 | Como usuario principal quiero que la app **me avise si estoy comprando de más**, porque suelo comprar mercadería que no se vende a tiempo. |
+| HU-OP-10 | Como usuario principal quiero **contar toda la tienda paso a paso**, porque la mercadería está desordenada y no sé cuánto tengo realmente. |
 
 ## Modelo
 
@@ -89,6 +91,7 @@ El inventario funciona como un **libro de operaciones**: cada hecho del negocio 
 | Id | Regla |
 |---|---|
 | **RN-OP-14** | Cada línea de ingreso lleva un **costo unitario**, prellenado con el precio de compra actual del producto. Si se cambia, al confirmar se pregunta "¿Actualizar el precio de compra a S/ X?" (opción por defecto: sí) y se muestra el nuevo margen contra el precio de venta. |
+| **RN-OP-20** | **Aviso de sobrecompra**: al confirmar un ingreso, cada línea se revisa con dos criterios. (a) Si el producto tiene predicción y (stock actual + cantidad) ÷ VPD **supera** el límite configurado (valor inicial: 30 días), se avisa: "Con esto tendrías Lejía 1 L para ~60 días. Te sugerimos ~7 unid." si el producto está en *Para comprar*, o "… Ahora no necesitabas comprar." si no lo está (días = (stock + cantidad) ÷ VPD, redondeado hacia abajo). (b) Si el producto está **parado** (RN-AN-11), se avisa: "Lejía 1 L no se vende hace 45 días y aún tienes 4 unid.". El aviso **no bloquea**: se puede *Registrar igual* o *Cambiar cantidad*. Sin predicción ni producto parado, no hay aviso. |
 
 ### Merma y ajuste
 
@@ -96,6 +99,7 @@ El inventario funciona como un **libro de operaciones**: cada hecho del negocio 
 |---|---|
 | **RN-OP-15** | La **merma** exige un motivo: *Se dañó o rompió*, *Se derramó*, *Se venció* u *Otro* (con nota obligatoria). Su costo es costo unitario × cantidad y cuenta como **pérdida**. |
 | **RN-OP-16** | **Contar stock**: el usuario escribe cuánto **hay realmente**. La app calcula la diferencia contra el stock actual. Si es 0, no se registra nada y se muestra "El stock ya estaba correcto". Si no, se registra un `AJUSTE` por la diferencia (positiva o negativa). Los ajustes no cuentan como ganancia ni como merma: se muestran aparte como *Diferencias de conteo*. |
+| **RN-OP-21** | **Conteo guiado** ("Contar todo"): recorre los productos activos agrupados por categoría y ordenados por nombre, uno por pantalla. Cada respuesta se registra **al momento** como en RN-OP-16, así que no se pierde nada si se interrumpe. Se puede *Saltar* un producto o *Seguir después*: el conteo recuerda en qué producto quedó y cuáles faltan. Al terminar muestra un resumen: productos contados, productos con diferencia y el valor total de las diferencias. |
 
 ### Anulación y deshacer
 

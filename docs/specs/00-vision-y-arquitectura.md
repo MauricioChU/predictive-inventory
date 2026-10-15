@@ -2,7 +2,7 @@
 
 ## 1. Problema
 
-Una tienda de productos de limpieza lleva el stock de memoria o en cuaderno. Los productos se acaban sin aviso, no se sabe cuánto se gana al día ni qué conviene reponer. La persona que atiende es mayor, usa principalmente un **celular Android** y tiene poca experiencia con aplicaciones.
+Una tienda de productos de limpieza lleva el stock de memoria o en cuaderno, con la mercadería desordenada y **sin códigos de barras**. Los productos se acaban sin aviso, **se compra mercadería de más** por no saber cuánto hay, y no se sabe cuánto se gana al día ni qué conviene reponer. La persona que atiende es mayor, usa principalmente un **celular Android** y tiene poca experiencia con aplicaciones.
 
 ## 2. Objetivo
 
@@ -10,7 +10,7 @@ Una aplicación que:
 
 1. Registre ventas y llegadas de mercadería en segundos, **con o sin internet**.
 2. Avise **antes** de que un producto se acabe.
-3. Muestre cuánto se ganó y qué conviene comprar, con datos reales de la tienda.
+3. Muestre cuánto se ganó y **qué conviene comprar y qué no**, con datos reales de la tienda, para dejar de comprar de más.
 4. Sea tan simple que se use sin ayuda después de una primera explicación.
 5. Nunca pierda datos.
 
@@ -33,7 +33,7 @@ Una aplicación que:
 
 | Fase | Entrega | Incluye |
 |---|---|---|
-| **1. App local** | PWA instalable en Android, 100 % offline | Catálogo, ventas con carrito y vuelto, llegada de mercadería, mermas, conteos, anulaciones, alertas en la app y notificaciones del sistema con la app abierta, Torre de control completa, Excel, respaldo/restauración, importación de productos, escáner de código de barras, fotos. |
+| **1. App local** | PWA instalable en Android, 100 % offline | Catálogo, ventas con carrito y vuelto, llegada de mercadería, mermas, conteos, anulaciones, alertas en la app y notificaciones del sistema con la app abierta, Torre de control completa, consulta "¿Necesito comprar?", aviso de sobrecompra, conteo guiado, Excel, respaldo/restauración, importación de productos, fotos. |
 | **2. Nube** | Backend FastAPI + Postgres (Neon) | Sincronización en segundo plano, notificaciones push **con la app cerrada**, resumen diario automático, respaldos nocturnos de la base en la nube con prueba de restauración. |
 | **3. Consulta a distancia** | La misma PWA en cualquier navegador | Inicio de sesión del administrador, modo consulta (solo lectura), avisos por Telegram (opcional), y luego escritura desde varios dispositivos. |
 
@@ -52,7 +52,7 @@ Cada fase tiene su propia spec, plan e implementación. Esta carpeta detalla la 
 │  Dominio (reglas de negocio, puro TS)  │ (Fase 2) │            │                  │
 │        │ puertos                       │          │  Postgres (Neon)              │
 │  Adaptadores: Dexie/IndexedDB,         │          │  Copias nocturnas (R2)        │
-│  notificaciones, cámara, Excel         │          └───────────────────────────────┘
+│  notificaciones, fotos, Excel          │          └───────────────────────────────┘
 └────────────────────────────────────────┘
 ```
 
@@ -68,7 +68,7 @@ ui  ──►  application  ──►  domain  ◄──  infrastructure
 |---|---|---|
 | `domain` | Entidades, objetos de valor, reglas, eventos de dominio, puertos (interfaces) | Solo `shared/domain` |
 | `application` | Casos de uso que orquestan el dominio a través de puertos | `domain` |
-| `infrastructure` | Adaptadores que implementan los puertos (Dexie, Notification API, cámara, Excel) | `domain`, `application`, librerías |
+| `infrastructure` | Adaptadores que implementan los puertos (Dexie, Notification API, fotos, Excel) | `domain`, `application`, librerías |
 | `ui` | Vistas, componentes y composables de Vue | `application`, `shared/ui` |
 
 La regla se **verifica automáticamente** con ESLint (`no-restricted-imports`): el dominio no puede importar Vue, Dexie ni nada de infraestructura. Ver [ADR-0005](../adr/0005-arquitectura-hexagonal-modular.md).
@@ -77,7 +77,7 @@ La regla se **verifica automáticamente** con ESLint (`no-restricted-imports`): 
 
 | Módulo | Responsabilidad | Agregados / modelos | Fase |
 |---|---|---|---|
-| **Catálogo** | Qué se vende: productos, precios, unidades, categorías, código de barras, foto | `Producto`, `Categoria` | 1 |
+| **Catálogo** | Qué se vende: productos, precios, unidades, categorías, foto | `Producto`, `Categoria` | 1 |
 | **Inventario** | Cuánto hay y por qué cambió: operaciones y stock | `Operacion` (con sus `Movimiento`s), `Existencia` (proyección) | 1 |
 | **Alertas** | Cuándo avisar: estado de stock y notificaciones | `EstadoDeStock`, `RegistroDeAviso` | 1 |
 | **Análisis** | Qué está pasando: ganancias, predicción, lista de compras, tendencias (solo lectura) | `ResumenDiario` (proyección), cálculos puros | 1 |
@@ -123,6 +123,8 @@ Se usan estos términos en código, specs y conversación. La columna *En pantal
 | Cantidad sugerida | "Compra 6 unid." | Nivel objetivo menos stock, redondeado. |
 | Lista para comprar | Para comprar | Productos que conviene reponer, con cantidades y costo estimado. |
 | Producto parado | Productos parados | Producto con stock que no se vende hace 30 días o más. |
+| Sobrecompra | "¿Seguro? Te alcanza para ~60 días" | Compra que deja stock para mucho más tiempo del razonable. |
+| Conteo guiado | Contar todo | Recorrido producto por producto para registrar lo que hay realmente. |
 | Torre de control | Control | Vista con todas las observaciones del negocio. |
 
 ## 8. Estructura del repositorio
@@ -157,6 +159,6 @@ predictive-inventory/
 | [0004](../adr/0004-costo-vigente-al-vender.md) | El costo de una venta es el precio de compra vigente al momento |
 | [0005](../adr/0005-arquitectura-hexagonal-modular.md) | Arquitectura hexagonal por módulos, verificada con ESLint |
 | [0006](../adr/0006-specs-ejecutables.md) | Specs Gherkin ejecutables, compartidas por frontend y backend |
-| [0007](../adr/0007-hosting-cloudflare-pages.md) | Frontend en Cloudflare Pages, con dominio propio y estable |
+| [0007](../adr/0007-hosting-github-pages.md) | Frontend publicado gratis en GitHub Pages |
 | [0008](../adr/0008-postgres-neon.md) | Postgres en Neon para la nube (Fase 2) |
 | [0009](../adr/0009-flujo-de-ramas-y-ci.md) | Flujo de ramas `main` / `develop` / `feat/*` con CI obligatorio |

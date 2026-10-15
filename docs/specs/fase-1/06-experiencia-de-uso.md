@@ -47,6 +47,7 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 │ └──────────────────────────┘ │
 │ [ 🛒  VENDER               ] │
 │ [ 📦  LLEGÓ MERCADERÍA     ] │
+│ [ 🤔  ¿NECESITO COMPRAR?   ] │
 │  Historial ›                 │
 ├──────────────────────────────┤
 │ Inicio Vender Recibir Prod. Control │
@@ -54,14 +55,20 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 ```
 
 ### Vender
-1. Buscar (campo grande arriba, con botón **Escanear**) → resultados con foto, nombre, precio y stock.
+1. Buscar (campo grande arriba) → resultados con **foto grande**, nombre, precio y stock; los más vendidos primero. Debajo del buscador, accesos rápidos a los 8 productos más vendidos.
 2. Tocar un producto lo agrega con cantidad 1; aparecen − / + grandes.
 3. Abajo, fijo: **Total S/ 14.63** y botón **Cobrar**.
 4. Cobrar: botones de billetes (S/ 10 · 20 · 50 · 100 · Exacto) o monto escrito → **Vuelto S/ 5.37** → **Confirmar venta**.
 5. Pantalla de éxito con ✓, resumen y **Deshacer** (10 s) → vuelve a Vender vacío.
 
 ### Recibir (Llegó mercadería)
-Igual que Vender, pero cada línea muestra **costo** editable en lugar del precio de venta. Se puede abrir prellenada desde *Para comprar*.
+Igual que Vender, pero cada línea muestra **costo** editable en lugar del precio de venta. Se puede abrir prellenada desde *Para comprar*. Al confirmar, avisa si algo es una **sobrecompra** (RN-OP-20).
+
+### ¿Necesito comprar?
+Buscador grande → al tocar un producto, una respuesta clara en letras grandes: **"Sí, compra ~12 unid."**, **"No hace falta: te alcanza para ~20 días"** o **"No compres: no se vende hace 45 días"** (RN-AN-16). Pensado para usarse en el mercado, sin internet.
+
+### Contar todo (conteo guiado)
+Un producto por pantalla, con foto grande, agrupados por categoría: "¿Cuántos hay?" → *Siguiente*. Barra de progreso ("Llevas 23 de 80"), botones *Saltar* y *Seguir después* (RN-OP-21).
 
 ### Productos
 Lista con buscador, filtros por categoría y por estado (Todos · Queda poco · Agotados · Archivados). Cada fila: foto, nombre, **stock con unidad**, estado (color + ícono + texto). El **detalle** muestra: stock, "se acaba en ~N días", precios y ganancia por unidad, tendencia de 8 semanas, últimos movimientos y botones *Editar*, *Contar stock*, *Registrar merma*, *Archivar*.
@@ -73,10 +80,10 @@ Tarjetas apiladas en el orden de [04](04-torre-de-control.md); desde 768 px en d
 Operaciones agrupadas por día ("Hoy", "Ayer", "Lunes 12"), con filtro por tipo. Tocar una muestra el detalle y el botón **Anular**.
 
 ### Ajustes
-Datos de la tienda, días entre compras, días de anticipación, tamaño de letra, notificaciones, categorías, **Guardar copia**, **Restaurar copia**, **Exportar a Excel**, **Importar productos**, **Revisar datos** y *Acerca de* (versión).
+Datos de la tienda, días entre compras, días de anticipación, aviso de sobrecompra, tamaño de letra, notificaciones, categorías, **Guardar copia**, **Restaurar copia**, **Exportar a Excel**, **Importar productos**, **Revisar datos** y *Acerca de* (versión).
 
 ### Primera vez
-1. Bienvenida → 2. Nombre de la tienda → 3. Tamaño de letra (con vista previa) → 4. "¿Cómo quieres cargar tus productos?": *Uno por uno* o *Desde Excel* → Inicio.
+1. Bienvenida → 2. Nombre de la tienda → 3. Tamaño de letra (con vista previa) → 4. "¿Cómo quieres cargar tus productos?": *Uno por uno* o *Desde Excel* → 5. "Ahora contemos lo que tienes" (conteo guiado; se puede dejar para después) → Inicio.
 
 ## Responsive
 
@@ -98,4 +105,5 @@ Se diseña **primero para 360 px** (el ancho más común en Android) y se verifi
 | Queda poco · Agotado · Bien | Stock crítico / bajo umbral |
 | Se acaba en ~4 días | Cobertura de 4 días |
 | Guardar copia | Backup / exportar JSON |
+| ¿Necesito comprar? | Consulta de cobertura |
 | Deshacer · Anular | Revertir / rollback |

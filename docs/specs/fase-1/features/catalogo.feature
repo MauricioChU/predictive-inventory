@@ -85,22 +85,6 @@ Característica: Catálogo de productos
       | KILO   | 0.0005 | error: Usa como máximo tres decimales          |
       | LITRO  | -1     | error: El stock mínimo no puede ser negativo    |
 
-  @RN-CAT-07
-  Esquema del escenario: El código de barras es opcional, válido y único
-    Dado los productos:
-      | nombre    | categoría               | unidad | compra | venta | mínimo | código        |
-      | Lejía 1 L | Lejías y desinfectantes | UNIDAD | 2.40   | 3.50  | 3      | 7751234567890 |
-    Cuando creo un producto con código de barras "<código>"
-    Entonces el resultado es "<resultado>"
-
-    Ejemplos:
-      | código        | resultado                                       |
-      |               | creado                                          |
-      | 7759876543210 | creado                                          |
-      | 7751234567890 | error: Ese código ya es de "Lejía 1 L"          |
-      | 775 123       | error: El código no puede tener espacios        |
-      | 123           | error: El código debe tener entre 4 y 32 caracteres |
-
   @RN-CAT-08
   Escenario: Crear un producto con stock inicial registra la operación
     Cuando creo el producto "Lejía 1 L" con unidad "UNIDAD", precio de compra "2.40", precio de venta "3.50", stock mínimo "3" y stock inicial "12"
@@ -148,10 +132,10 @@ Característica: Catálogo de productos
   @RN-CAT-12
   Esquema del escenario: La búsqueda encuentra por palabras en cualquier orden, sin tildes
     Dado los productos:
-      | nombre                 | categoría               | unidad | compra | venta | mínimo | código        |
-      | Lejía Tradicional 1 L  | Lejías y desinfectantes | UNIDAD | 2.40   | 3.50  | 3      | 7751234567890 |
-      | Lejía Tradicional 2 L  | Lejías y desinfectantes | UNIDAD | 4.30   | 6.20  | 3      |               |
-      | Carbón vegetal         | Carbón y combustibles   | KILO   | 2.75   | 4.00  | 3      |               |
+      | nombre                 | categoría               | unidad | compra | venta | mínimo |
+      | Lejía Tradicional 1 L  | Lejías y desinfectantes | UNIDAD | 2.40   | 3.50  | 3      |
+      | Lejía Tradicional 2 L  | Lejías y desinfectantes | UNIDAD | 4.30   | 6.20  | 3      |
+      | Carbón vegetal         | Carbón y combustibles   | KILO   | 2.75   | 4.00  | 3      |
     Cuando busco "<texto>"
     Entonces los resultados son "<resultados>"
 
@@ -161,29 +145,19 @@ Característica: Catálogo de productos
       | 1 l lejia      | Lejía Tradicional 1 L                        |
       | CARBON         | Carbón vegetal                               |
       | trad 2         | Lejía Tradicional 2 L                        |
-      | 7751234567890  | Lejía Tradicional 1 L                        |
       | detergente     |                                              |
 
-  @RN-CAT-13
-  Escenario: Escanear un código conocido selecciona el producto
+  @RN-CAT-12
+  Escenario: Los más vendidos aparecen primero en la búsqueda
     Dado los productos:
-      | nombre    | categoría               | unidad | compra | venta | mínimo | código        |
-      | Lejía 1 L | Lejías y desinfectantes | UNIDAD | 2.40   | 3.50  | 3      | 7751234567890 |
-    Cuando escaneo el código "7751234567890"
-    Entonces se selecciona el producto "Lejía 1 L"
-
-  @RN-CAT-13
-  Escenario: Escanear un código de un producto archivado ofrece reactivarlo
-    Dado los productos:
-      | nombre | categoría | unidad | compra | venta | mínimo | código   | archivado |
-      | Escoba | Otros     | UNIDAD | 6.00   | 9.00  | 2      | 77500011 | sí        |
-    Cuando escaneo el código "77500011"
-    Entonces se ofrece reactivar el producto "Escoba"
-
-  @RN-CAT-13
-  Escenario: Escanear un código desconocido ofrece crear el producto
-    Cuando escaneo el código "7750000000001"
-    Entonces se ofrece crear un producto con código de barras "7750000000001"
+      | nombre                 | categoría               | unidad | compra | venta | mínimo | stock |
+      | Lejía Tradicional 1 L  | Lejías y desinfectantes | UNIDAD | 2.40   | 3.50  | 3      | 20    |
+      | Lejía Tradicional 2 L  | Lejías y desinfectantes | UNIDAD | 4.30   | 6.20  | 3      | 20    |
+    Y vendo "1" de "Lejía Tradicional 1 L"
+    Y vendo "4" de "Lejía Tradicional 2 L"
+    Y vendo "2" de "Lejía Tradicional 2 L"
+    Cuando busco "lejia"
+    Entonces los resultados son "Lejía Tradicional 2 L, Lejía Tradicional 1 L"
 
   @RN-CAT-14
   Escenario: La foto se reduce y se comprime

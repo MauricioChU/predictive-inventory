@@ -15,6 +15,7 @@ Criterios de aceptación ejecutables: [features/torre-de-control.feature](featur
 | HU-AN-05 | Como administrador quiero ver **qué productos están parados** y cuánto dinero hay ahí. |
 | HU-AN-06 | Como administrador quiero que me avisen de **precios mal puestos**. |
 | HU-AN-07 | Como administrador quiero comparar **esta semana con la anterior** y saber **qué día se vende más**. |
+| HU-AN-08 | Como usuario principal quiero **preguntar a la app si necesito comprar** un producto cuando estoy en el mercado, para no comprar de más. |
 
 ## Secciones de la vista (en este orden)
 
@@ -73,6 +74,12 @@ Total estimado: S/ 32.93
 | **RN-AN-13** | **Mejor día de la semana**: promedio de ventas por día de la semana (lunes a domingo) en los **56 días completos** anteriores a hoy, contando solo desde el día de la primera operación de la tienda. Promedio = ventas de ese día de la semana ÷ cuántas veces ocurrió ese día en el rango (un día sin ventas cuenta como S/ 0). Requiere **al menos 14 días** de historia. Se marca el día con mayor promedio (empate: el primero de la semana). |
 | **RN-AN-14** | **Tendencia del producto** (en el detalle del producto): cantidad vendida en cada uno de los **últimos 8 bloques de 7 días completos**, como gráfico de barras, junto con la VPD y los días de cobertura. |
 | **RN-AN-15** | Todos los cálculos se hacen **en el celular, sin internet**, a partir del libro de operaciones. |
+
+### Antes de comprar
+
+| Id | Regla |
+|---|---|
+| **RN-AN-16** | **"¿Necesito comprar?"**: al elegir un producto, la app responde con **una sola frase** según el primer caso que se cumpla: (1) si está **parado** (RN-AN-11): "No compres: no se vende hace N días y tienes X"; (2) si está en **Para comprar** (RN-AN-07): "Sí, compra ~N" con la cantidad sugerida y su costo estimado; (3) si tiene predicción: "No hace falta: te alcanza para ~N días"; (4) si no: "Tienes X. Todavía no sé cuánto vendes; vuelve a preguntar en unos días". Debajo se muestra el stock actual y la última vez que llegó mercadería de ese producto. |
 
 ## Ejemplos
 
