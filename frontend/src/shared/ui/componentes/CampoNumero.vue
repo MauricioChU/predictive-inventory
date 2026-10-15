@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useId } from 'vue'
+import { computed, ref, useId, watch } from 'vue'
 import { Minus, Plus } from 'lucide-vue-next'
 
 const props = withDefaults(
@@ -19,14 +19,30 @@ const id = useId()
 const idError = `${id}-error`
 const idSufijo = `${id}-sufijo`
 const valorNumerico = computed(() => Number(props.modelValue.replace(',', '.')) || 0)
-// M10: botón "−" también deshabilitado de verdad al llegar al mínimo (antes solo lo
-// bloqueaba cambiar(), así que seguía pareciendo activo para quien usa el dedo o el mouse).
-const enMinimo = computed(() => valorNumerico.value <= props.minimo)
+// M10: botón "−" también deshabilitado de verdad (antes solo lo bloqueaba cambiar(), así que
+// seguía pareciendo activo para quien usa el dedo o el mouse). La condición es "el próximo
+// paso bajaría del mínimo" (valor - paso < minimo), no solo "ya estoy en el mínimo": con un
+// paso distinto de 1 (p. ej. 0.5) se puede estar POR ENCIMA del mínimo y que el siguiente
+// paso de todos modos lo cruce.
+const enMinimo = computed(() => valorNumerico.value - props.paso < props.minimo)
 const describedBy = computed(() => {
   const ids = [props.sufijo ? idSufijo : null, props.error ? idError : null].filter(
     (valor): valor is string => valor !== null,
   )
   return ids.length > 0 ? ids.join(' ') : undefined
+})
+
+const refInput = ref<HTMLInputElement>()
+const refBotonMenos = ref<HTMLButtonElement>()
+
+// M10: si el botón "−" tenía el foco y se deshabilita (el navegador le quita el foco al
+// deshabilitar un control), el foco no debe perderse (ir a <body>): lo movemos al input.
+// Se usa el flush por defecto ("pre"), que corre ANTES de que Vue aplique el `disabled` al
+// DOM real, así `document.activeElement` todavía es el botón en ese momento.
+watch(enMinimo, (ahoraDeshabilitado) => {
+  if (ahoraDeshabilitado && document.activeElement === refBotonMenos.value) {
+    refInput.value?.focus()
+  }
 })
 
 function cambiar(delta: number) {
@@ -41,6 +57,7 @@ function cambiar(delta: number) {
     <label :for="id" class="etiqueta">{{ etiqueta }}</label>
     <div class="fila">
       <button
+        ref="refBotonMenos"
         type="button"
         class="paso"
         aria-label="Quitar uno"
@@ -52,6 +69,7 @@ function cambiar(delta: number) {
       </button>
       <input
         :id="id"
+        ref="refInput"
         :value="modelValue"
         :inputmode="decimales ? 'decimal' : 'numeric'"
         :aria-invalid="error ? 'true' : undefined"

@@ -71,4 +71,24 @@ describe('CampoNumero (RN-UX-06)', () => {
     const idDescrito = input.attributes('aria-describedby')!
     expect(w.get(`#${idDescrito}`).text()).toBe('kg')
   })
+  it('M10: deshabilita cuando el próximo paso bajaría del mínimo, no solo al estar ya en él', () => {
+    const w = mount(CampoNumero, {
+      props: { etiqueta: 'Kilos', modelValue: '0.3', minimo: 0, paso: 0.5, decimales: true },
+    })
+    // 0.3 está por encima del mínimo (0), pero 0.3 - 0.5 = -0.2 lo cruzaría.
+    expect(w.get('[aria-label="Quitar uno"]').attributes('disabled')).toBeDefined()
+  })
+  it('M10: si el botón "−" tenía el foco y se deshabilita, el foco pasa al input', async () => {
+    const w = mount(CampoNumero, {
+      props: { etiqueta: 'Cantidad', modelValue: '1', minimo: 0 },
+      attachTo: document.body,
+    })
+    const boton = w.get('[aria-label="Quitar uno"]').element as HTMLButtonElement
+    boton.focus()
+    expect(document.activeElement).toBe(boton)
+
+    await w.setProps({ modelValue: '0' }) // ahora el próximo paso (0 - 1 < 0) lo deshabilita
+    expect(document.activeElement).toBe(w.get('input').element)
+    w.unmount()
+  })
 })
