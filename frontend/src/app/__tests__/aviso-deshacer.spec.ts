@@ -2,13 +2,15 @@ import { mount } from '@vue/test-utils'
 import { defineComponent, h, nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AvisoDeshacer from '../../shared/ui/componentes/AvisoDeshacer.vue'
+import { crearAnunciador } from '../anunciador'
 import { CLAVE_AVISO_DESHACER, crearContextoAvisoDeshacer } from '../aviso-deshacer'
 
 /** Arnés mínimo que reproduce cómo LayoutApp consume el contexto: monta <AvisoDeshacer>
  * con :key = activo.id, para que cada mostrar() dentro de los 10 s obtenga una instancia
  * (y un temporizador) nuevos en vez de reutilizar los del aviso anterior (Q1). */
 function montarArnes() {
-  const contexto = crearContextoAvisoDeshacer()
+  const anunciador = crearAnunciador()
+  const contexto = crearContextoAvisoDeshacer(anunciador)
   const Arnes = defineComponent({
     setup() {
       return () =>
@@ -29,7 +31,7 @@ function montarArnes() {
   const w = mount(Arnes, {
     global: { provide: { [CLAVE_AVISO_DESHACER as unknown as string]: contexto } },
   })
-  return { w, contexto }
+  return { w, contexto, anunciador }
 }
 
 describe('RN-OP-18: contexto de aviso Deshacer (Q1)', () => {
@@ -60,10 +62,20 @@ describe('RN-OP-18: contexto de aviso Deshacer (Q1)', () => {
     expect(contexto.activo.value).toBeUndefined()
   })
 
-  it('anuncio trae solo el mensaje (sin el número que cambia cada segundo) (Q2)', () => {
-    const { contexto } = montarArnes()
+  it('anuncia solo el mensaje (sin el número que cambia cada segundo) vía el anunciador compartido (Q2)', async () => {
+    const { contexto, anunciador } = montarArnes()
     contexto.mostrar({ mensaje: 'Venta registrada', alDeshacer: vi.fn<() => void>() })
-    expect(contexto.anuncio.value).toBe('Venta registrada. Puedes deshacer durante 10 segundos.')
+    await nextTick()
+    expect(anunciador.texto.value).toBe('Venta registrada. Puedes deshacer durante 10 segundos.')
+  })
+
+  it('cerrar() limpia el anunciador (hallazgo 3: no deja texto viejo)', async () => {
+    const { contexto, anunciador } = montarArnes()
+    contexto.mostrar({ mensaje: 'Venta registrada', alDeshacer: vi.fn<() => void>() })
+    await nextTick()
+    expect(anunciador.texto.value).toBe('Venta registrada. Puedes deshacer durante 10 segundos.')
+    contexto.cerrar()
+    expect(anunciador.texto.value).toBe('')
   })
 
   it('un segundo mostrar() dentro de los 10 s recibe los 10 s completos y no lo cierra el temporizador del primero', async () => {

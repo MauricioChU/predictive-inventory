@@ -1,4 +1,5 @@
 import { computed, inject, ref, type ComputedRef, type InjectionKey } from 'vue'
+import type { Anunciador } from './anunciador'
 
 export interface OpcionesAvisoDeshacer {
   mensaje: string
@@ -15,9 +16,6 @@ export interface AvisoDeshacerActivo extends OpcionesAvisoDeshacer {
 export interface ContextoAvisoDeshacer {
   /** Solo lectura: nadie fuera de este módulo puede mutar el aviso activo (Q1). */
   activo: ComputedRef<AvisoDeshacerActivo | undefined>
-  /** Texto para la región aria-live persistente de LayoutApp (Q2): solo el mensaje, sin el
-   * número que cambia cada segundo, para que no se vuelva a anunciar en cada tick. */
-  anuncio: ComputedRef<string>
   mostrar: (opciones: OpcionesAvisoDeshacer) => void
   cerrar: () => void
 }
@@ -27,28 +25,30 @@ export const CLAVE_AVISO_DESHACER: InjectionKey<ContextoAvisoDeshacer> = Symbol(
 
 let contadorId = 0
 
-function textoAnuncio(segundos: number): string {
+function textoAnuncio(mensaje: string, segundos: number): string {
   const resto = segundos === 1 ? '1 segundo' : `${segundos} segundos`
-  return `. Puedes deshacer durante ${resto}.`
+  return `${mensaje}. Puedes deshacer durante ${resto}.`
 }
 
-export function crearContextoAvisoDeshacer(): ContextoAvisoDeshacer {
+/** Hallazgo 3: el anuncio ahora lo hace el anunciador compartido (ver app/anunciador.ts), que
+ * ya resuelve "mismo mensaje dos veces" y "limpiar al cerrar" de forma genérica — este módulo
+ * ya no mantiene su propio texto de anuncio. */
+export function crearContextoAvisoDeshacer(anunciador: Anunciador): ContextoAvisoDeshacer {
   const estado = ref<AvisoDeshacerActivo>()
-  const anuncio = ref('')
 
   return {
     activo: computed(() => estado.value),
-    anuncio: computed(() => anuncio.value),
     mostrar(opciones: OpcionesAvisoDeshacer) {
       contadorId += 1
       // Cada llamada obtiene un id distinto: LayoutApp lo usa como :key para montar una
       // instancia de <AvisoDeshacer> completamente nueva (con su propio temporizador de 10 s),
       // en vez de reutilizar la anterior (que cerraría el aviso nuevo a mitad de camino).
       estado.value = { ...opciones, id: contadorId }
-      anuncio.value = `${opciones.mensaje}${textoAnuncio(opciones.segundos ?? 10)}`
+      anunciador.anunciar(textoAnuncio(opciones.mensaje, opciones.segundos ?? 10))
     },
     cerrar() {
       estado.value = undefined
+      anunciador.limpiar()
     },
   }
 }
