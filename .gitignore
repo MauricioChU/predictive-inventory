@@ -1,0 +1,13 @@
+# Worktrees locales para trabajo en paralelo por ramas
+.worktrees/
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# Entornos y secretos
+.env
+.env.*
+!.env.example
