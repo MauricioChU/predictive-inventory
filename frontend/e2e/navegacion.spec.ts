@@ -98,3 +98,48 @@ test.describe('S1: enlaces de navegación completos y dentro del viewport', () =
     }
   }
 })
+
+// Ronda 3: position: sticky solo "pega" cuando el documento es más alto que el viewport. En
+// una pantalla corta (p. ej. /ajustes, con poco contenido) no había nada empujando el pie
+// hacia abajo, así que quedaba a mitad de pantalla con hueco en blanco debajo — "último
+// elemento de <main> sobre la barra" (el chequeo de arriba) seguía pasando con ese bug, porque
+// solo exige que el contenido quede ARRIBA de la barra, no que la barra esté pegada al fondo
+// real del viewport. Este chequeo es ese: el borde inferior de la barra debe coincidir con el
+// alto del viewport, tanto antes como después de desplazarse (en una pantalla corta no hay
+// nada que desplazar, así que debe dar igual).
+test.describe('Ronda 3: la barra de navegación queda al fondo del viewport también en pantallas cortas', () => {
+  for (const ancho of [320, 360]) {
+    for (const letra of ['NORMAL', 'GRANDE', 'MUY_GRANDE'] as const) {
+      test(`a ${ancho}px con letra ${letra}: la barra está pegada al fondo en /ajustes (pantalla corta)`, async ({
+        page,
+      }, testInfo) => {
+        test.skip(
+          testInfo.project.name !== 'celular',
+          'La barra inferior solo existe por debajo de 1024px (proyecto celular)',
+        )
+        await usarLetra(page, letra)
+        const altoViewport = 800
+        await page.setViewportSize({ width: ancho, height: altoViewport })
+        await page.goto('./ajustes')
+
+        const cajaAntes = await page.getByRole('navigation').boundingBox()
+        expect(cajaAntes, 'la barra de navegación debe tener una caja visible').not.toBeNull()
+        const abajoAntes = cajaAntes!.y + cajaAntes!.height
+        expect(abajoAntes, 'el borde inferior de la barra debe coincidir con el alto del viewport').toBeGreaterThanOrEqual(
+          altoViewport - 1,
+        )
+        expect(abajoAntes).toBeLessThanOrEqual(altoViewport + 1)
+
+        await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight }))
+        const cajaDespues = await page.getByRole('navigation').boundingBox()
+        expect(cajaDespues, 'la barra de navegación debe tener una caja visible tras desplazarse').not.toBeNull()
+        const abajoDespues = cajaDespues!.y + cajaDespues!.height
+        expect(
+          abajoDespues,
+          'sigue pegada al fondo del viewport después de desplazarse',
+        ).toBeGreaterThanOrEqual(altoViewport - 1)
+        expect(abajoDespues).toBeLessThanOrEqual(altoViewport + 1)
+      })
+    }
+  }
+})

@@ -38,6 +38,14 @@ function alDeshacer() {
     Las columnas de la grilla usan minmax(0, 1fr), no 1fr a secas: un 1fr sin minmax hereda el
     tamaño mínimo de su contenido (el ancho mínimo de la barra sin partir palabras) y ensancha
     la columna más allá del viewport.
+
+    Ronda 3: position: sticky solo "pega" cuando el documento es más alto que el viewport. En
+    una pantalla corta (p. ej. /ajustes, con poco contenido), sin nada que empuje el pie hacia
+    abajo, quedaba a mitad de pantalla con hueco en blanco debajo. Por eso la fila de <main>
+    es minmax(0, 1fr): en una pantalla corta crece para llenar el alto mínimo del layout
+    (min-height: 100dvh) y empuja el pie al fondo real del viewport; en una pantalla larga el
+    contenido simplemente necesita más que ese 1fr y el documento crece más allá de 100dvh,
+    con el pie pegado (sticky) al fondo del viewport mientras se hace scroll.
   -->
   <div class="layout-app">
     <main id="contenido" class="contenido" tabindex="-1">
@@ -78,11 +86,16 @@ function alDeshacer() {
 .layout-app {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  /* Ronda 3: la fila de contenido es minmax(0, 1fr), no auto — así crece para llenar el
+     min-height cuando la página es corta (empuja el pie al fondo real del viewport) y cede
+     ante el contenido cuando la página es larga (el documento crece y el pie queda sticky). */
+  grid-template-rows: minmax(0, 1fr) auto;
   min-height: 100dvh;
 }
 
 .contenido {
   grid-column: 1;
+  grid-row: 1;
   min-width: 0;
   width: 100%;
   max-width: var(--ancho-contenido);
@@ -96,6 +109,7 @@ function alDeshacer() {
 
 .pie {
   grid-column: 1;
+  grid-row: 2;
   position: sticky;
   bottom: 0;
   z-index: 10;
@@ -118,14 +132,18 @@ function alDeshacer() {
 @media (min-width: 1024px) {
   .layout-app {
     grid-template-columns: 260px minmax(0, 1fr);
+    /* Una sola fila: columna lateral (pie) y contenido van lado a lado, no apilados. */
+    grid-template-rows: minmax(0, 1fr);
   }
   .contenido {
     grid-column: 2;
+    grid-row: 1;
     max-width: var(--ancho-contenido-pc);
     padding-block: var(--espacio-6);
   }
   .pie {
     grid-column: 1;
+    grid-row: 1;
     position: sticky;
     top: 0;
     bottom: auto;
