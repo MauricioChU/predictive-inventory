@@ -106,7 +106,7 @@ export async function crearEscenario(
   const operaciones = new RepositorioDeOperacionesEnMemoria(almacen)
   const existencias = new RepositorioDeExistenciasEnMemoria(almacen)
   const conteo = new RepositorioDeConteoEnMemoria(almacen)
-  const modulo = crearModuloInventario({
+  const dependencias = {
     operaciones,
     existencias,
     conteo,
@@ -118,7 +118,8 @@ export async function crearEscenario(
     analisis: () => analisis,
     tienda: () => tienda,
     proyecciones: () => [proyeccion],
-  })
+  }
+  const modulo = crearModuloInventario(dependencias)
 
   async function agregarProductos(lista: readonly ProductoDePrueba[]): Promise<void> {
     for (const producto of lista) {
@@ -152,6 +153,8 @@ export async function crearEscenario(
     conteo,
     modulo,
     agregarProductos,
+    /** "Y abro la app": un módulo nuevo sobre los mismos datos guardados. */
+    reabrir: () => crearModuloInventario(dependencias),
     stock: (productoId: string) => modulo.consultable.stockDe(productoId),
     tipos: async (productoId: string) =>
       (await operaciones.porProducto(productoId)).map((r) => r.tipo),

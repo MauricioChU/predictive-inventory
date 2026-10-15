@@ -3,6 +3,7 @@ import { Dinero } from '@/shared/domain/dinero'
 import { ErrorDeDominio } from '@/shared/domain/errores'
 import { diaDe, inicioDelDia, sumarDias, type Instante } from '@/shared/domain/fecha'
 import { MOTIVOS_DE_MERMA, type MotivoDeMerma } from '@/shared/contratos/operaciones'
+import type { OperacionRegistro } from '@/shared/contratos/registros'
 import { mensajeStockInsuficiente } from './mensajes'
 
 /** RN-OP-03: ningún movimiento pasa de 99 999 (en la unidad del producto). */
@@ -189,4 +190,55 @@ export function normalizarNota(nota: string | null | undefined): string | null {
     throw new ErrorDeDominio('NOTA_MUY_LARGA', 'La nota puede tener hasta 200 caracteres')
   }
   return recortada
+}
+
+/** RN-OP-17. */
+export function exigirOperacion<T>(registro: T | null): T {
+  if (!registro) {
+    throw new ErrorDeDominio('OPERACION_INEXISTENTE', 'No encontramos esa operación')
+  }
+  return registro
+}
+
+/** RN-OP-17: cualquier operación se anula una sola vez. */
+export function exigirSinAnular(anulacionExistente: unknown): void {
+  if (anulacionExistente) {
+    throw new ErrorDeDominio('OPERACION_YA_ANULADA', 'Esta operación ya fue anulada')
+  }
+}
+
+/** RN-OP-19 / ADR-0002: la existencia de cada producto es la suma de sus movimientos. */
+export function existenciasDelLibro(
+  operaciones: readonly OperacionRegistro[],
+): Map<string, Cantidad> {
+  const existencias = new Map<string, Cantidad>()
+  for (const movimiento of operaciones.flatMap((o) => o.movimientos)) {
+    const actual = existencias.get(movimiento.productoId) ?? Cantidad.cero()
+    existencias.set(movimiento.productoId, actual.sumar(Cantidad.deMilesimas(movimiento.cantidad)))
+  }
+  return existencias
+}
+
+export interface DiferenciaDeExistencia {
+  productoId: string
+  antes: Cantidad
+  despues: Cantidad
+}
+
+/**
+ * RN-OP-19: productos cuya existencia guardada no es la del libro (sin registro = 0), primero
+ * los que tienen existencia guardada.
+ */
+export function diferenciasDeExistencias(
+  guardadas: ReadonlyMap<string, Cantidad>,
+  delLibro: ReadonlyMap<string, Cantidad>,
+): DiferenciaDeExistencia[] {
+  const productos = new Set([...guardadas.keys(), ...delLibro.keys()])
+  return [...productos]
+    .map((productoId) => ({
+      productoId,
+      antes: guardadas.get(productoId) ?? Cantidad.cero(),
+      despues: delLibro.get(productoId) ?? Cantidad.cero(),
+    }))
+    .filter((d) => !d.antes.igualA(d.despues))
 }

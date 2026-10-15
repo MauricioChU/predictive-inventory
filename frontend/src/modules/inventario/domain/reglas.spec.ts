@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { Cantidad } from '@/shared/domain/cantidad'
 import { Dinero } from '@/shared/domain/dinero'
 import { instanteLocal } from '@/shared/domain/fecha'
+import type { OperacionRegistro } from '@/shared/contratos/registros'
 import {
+  diferenciasDeExistencias,
+  exigirOperacion,
   exigirProducto,
   exigirProductoActivo,
   fusionarLineas,
@@ -15,6 +18,8 @@ import {
   validarFecha,
   validarMotivoDeMerma,
   validarStock,
+  existenciasDelLibro,
+  exigirSinAnular,
 } from './reglas'
 import { resultadoDe } from '../__pruebas__/resultado'
 
@@ -270,5 +275,76 @@ describe('normalizarNota', () => {
     expect(() => normalizarNota('a'.repeat(201))).toThrow(
       'La nota puede tener hasta 200 caracteres',
     )
+  })
+})
+
+describe('anulaciones', () => {
+  it('RN-OP-17: una operación que no existe no se puede anular', () => {
+    expect(() => exigirOperacion(null)).toThrow('No encontramos esa operación')
+    const registro = { id: 'op-1' }
+    expect(exigirOperacion(registro)).toBe(registro)
+  })
+
+  it('RN-OP-17: una operación solo se anula una vez', () => {
+    expect(() => exigirSinAnular({ id: 'op-2' })).toThrow('Esta operación ya fue anulada')
+    expect(() => exigirSinAnular(null)).not.toThrow()
+  })
+})
+
+describe('integridad (RN-OP-19)', () => {
+  const operacion = (id: string, movimientos: [string, number][]): OperacionRegistro => ({
+    id,
+    tipo: 'AJUSTE',
+    movimientos: movimientos.map(([productoId, cantidad]) => ({
+      productoId,
+      cantidad,
+      costoUnitario: 100,
+      precioUnitario: null,
+    })),
+    productoIds: movimientos.map(([productoId]) => productoId),
+    ocurridaEn: '2026-10-15T15:00:00.000Z',
+    registradaEn: '2026-10-15T15:00:00.000Z',
+    motivo: null,
+    nota: null,
+    anulaA: null,
+    dispositivoId: 'd',
+  })
+
+  it('RN-OP-19: la existencia de cada producto es la suma de sus movimientos', () => {
+    expect(
+      existenciasDelLibro([
+        operacion('op-1', [
+          ['lejia', 10_000],
+          ['carbon', 10_000],
+        ]),
+        operacion('op-2', [['lejia', -3000]]),
+        operacion('op-3', [['carbon', -10_000]]),
+      ]),
+    ).toEqual(
+      new Map([
+        ['lejia', Cantidad.deEntero(7)],
+        ['carbon', Cantidad.cero()],
+      ]),
+    )
+  })
+
+  it('RN-OP-19: compara las existencias guardadas con las del libro (sin registro = 0)', () => {
+    const guardadas = new Map([
+      ['lejia', Cantidad.deEntero(10)],
+      ['carbon', Cantidad.deEntero(7)],
+      ['huerfano', Cantidad.deEntero(2)],
+      ['vacio', Cantidad.cero()],
+    ])
+    const delLibro = new Map([
+      ['lejia', Cantidad.deEntero(10)],
+      ['carbon', Cantidad.deEntero(10)],
+      ['detergente', Cantidad.deEntero(5)],
+    ])
+    expect(diferenciasDeExistencias(guardadas, delLibro)).toEqual([
+      { productoId: 'carbon', antes: Cantidad.deEntero(7), despues: Cantidad.deEntero(10) },
+      { productoId: 'huerfano', antes: Cantidad.deEntero(2), despues: Cantidad.cero() },
+      { productoId: 'detergente', antes: Cantidad.cero(), despues: Cantidad.deEntero(5) },
+    ])
+    expect(diferenciasDeExistencias(delLibro, delLibro)).toEqual([])
   })
 })

@@ -52,6 +52,11 @@ export class CatalogoEnMemoria implements CatalogoConsultable {
     if (producto) this.porId.set(id, { ...producto, activo: false })
   }
 
+  /** Solo para probar datos dañados: Catálogo nunca elimina productos (RN-CAT-10). */
+  olvidar(id: string): void {
+    this.porId.delete(id)
+  }
+
   async producto(id: string): Promise<ProductoResumido | null> {
     const producto = this.porId.get(id)
     return producto ? { ...producto } : null
