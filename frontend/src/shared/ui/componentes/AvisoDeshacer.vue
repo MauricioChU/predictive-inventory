@@ -34,10 +34,11 @@ function alDeshacer() {
 
 <template>
   <!--
-    Q2: este componente es puramente visual. El anuncio para lectores de pantalla lo hace
-    LayoutApp con una región aria-live persistente (ver app/aviso-deshacer.ts `anuncio`), para
-    no insertar contenido ya anunciado de golpe ni repetir el anuncio en cada segundo que
-    cambia `restante`. Por eso el número regresivo va con aria-hidden.
+    Q2: este componente es puramente visual. El anuncio para lectores de pantalla lo hace el
+    anunciador compartido (app/anunciador.ts) en la región aria-live persistente de LayoutApp;
+    el contexto del aviso (app/aviso-deshacer.ts, `mostrar`) le pasa el mensaje. Así no se
+    inserta contenido ya anunciado de golpe ni se repite el anuncio en cada segundo que cambia
+    `restante`. Por eso el número regresivo va con aria-hidden.
   -->
   <div class="aviso-deshacer">
     <p class="mensaje">{{ mensaje }}</p>

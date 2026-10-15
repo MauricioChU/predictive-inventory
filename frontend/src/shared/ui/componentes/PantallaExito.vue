@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, onMounted, ref } from 'vue'
+import { inject, onMounted, onUnmounted, ref } from 'vue'
 import { CircleCheck } from 'lucide-vue-next'
 import { CLAVE_ANUNCIADOR } from '@/app/anunciador'
 
@@ -10,13 +10,22 @@ const refEncabezado = ref<HTMLHeadingElement>()
 // monta este componente solo (p. ej. un test, o un uso futuro fuera de LayoutApp) sin proveerlo,
 // el componente no falla — simplemente no anuncia nada y sigue mostrando su contenido visual.
 const anunciador = inject(CLAVE_ANUNCIADOR, undefined)
+let idAnuncio: number | undefined
 
 onMounted(() => {
-  anunciador?.anunciar(props.detalle ? `${props.titulo}. ${props.detalle}` : props.titulo)
+  idAnuncio = anunciador?.anunciar(
+    props.detalle ? `${props.titulo}. ${props.detalle}` : props.titulo,
+  )
   const encabezado = refEncabezado.value
   if (!encabezado) return
   if (!encabezado.hasAttribute('tabindex')) encabezado.setAttribute('tabindex', '-1')
   encabezado.focus({ preventScroll: true })
+})
+
+// m7 (ronda 4): al irse, retira SU mensaje de la región viva para no dejar texto viejo. Si
+// otra pantalla ya anunció algo más nuevo, el anunciador no lo toca (N4).
+onUnmounted(() => {
+  if (idAnuncio !== undefined) anunciador?.limpiar(idAnuncio)
 })
 </script>
 

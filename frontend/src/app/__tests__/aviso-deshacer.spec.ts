@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils'
 import { defineComponent, h, nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AvisoDeshacer from '../../shared/ui/componentes/AvisoDeshacer.vue'
-import { crearAnunciador } from '../anunciador'
+import { crearAnunciador, ESPERA_ANUNCIO_MS } from '../anunciador'
 import { CLAVE_AVISO_DESHACER, crearContextoAvisoDeshacer } from '../aviso-deshacer'
 
 /** Arnés mínimo que reproduce cómo LayoutApp consume el contexto: monta <AvisoDeshacer>
@@ -65,17 +65,37 @@ describe('RN-OP-18: contexto de aviso Deshacer (Q1)', () => {
   it('anuncia solo el mensaje (sin el número que cambia cada segundo) vía el anunciador compartido (Q2)', async () => {
     const { contexto, anunciador } = montarArnes()
     contexto.mostrar({ mensaje: 'Venta registrada', alDeshacer: vi.fn<() => void>() })
-    await nextTick()
+    await vi.advanceTimersByTimeAsync(ESPERA_ANUNCIO_MS)
     expect(anunciador.texto.value).toBe('Venta registrada. Puedes deshacer durante 10 segundos.')
   })
 
   it('cerrar() limpia el anunciador (hallazgo 3: no deja texto viejo)', async () => {
     const { contexto, anunciador } = montarArnes()
     contexto.mostrar({ mensaje: 'Venta registrada', alDeshacer: vi.fn<() => void>() })
-    await nextTick()
+    await vi.advanceTimersByTimeAsync(ESPERA_ANUNCIO_MS)
     expect(anunciador.texto.value).toBe('Venta registrada. Puedes deshacer durante 10 segundos.')
     contexto.cerrar()
     expect(anunciador.texto.value).toBe('')
+  })
+
+  it('N4: si PantallaExito anuncia en el mismo flujo, se oyen los dos mensajes (no se pierde "Puedes deshacer")', async () => {
+    const { contexto, anunciador } = montarArnes()
+    contexto.mostrar({ mensaje: 'Venta registrada', alDeshacer: vi.fn<() => void>() })
+    anunciador.anunciar('Venta registrada. Total S/ 14.63') // lo que haría PantallaExito al montarse
+    await vi.advanceTimersByTimeAsync(ESPERA_ANUNCIO_MS)
+    expect(anunciador.texto.value).toBe(
+      'Venta registrada. Puedes deshacer durante 10 segundos. Venta registrada. Total S/ 14.63',
+    )
+  })
+
+  it('N4: al cerrarse a los 10 s no borra un anuncio más nuevo de otra pantalla', async () => {
+    const { contexto, anunciador } = montarArnes()
+    contexto.mostrar({ mensaje: 'Venta registrada', alDeshacer: vi.fn<() => void>() })
+    await vi.advanceTimersByTimeAsync(3000)
+    anunciador.anunciar('Producto guardado')
+    await vi.advanceTimersByTimeAsync(7000) // el aviso se cierra solo
+    expect(contexto.activo.value).toBeUndefined()
+    expect(anunciador.texto.value).toBe('Producto guardado')
   })
 
   it('un segundo mostrar() dentro de los 10 s recibe los 10 s completos y no lo cierra el temporizador del primero', async () => {

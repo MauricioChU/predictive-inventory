@@ -30,11 +30,17 @@ function textoAnuncio(mensaje: string, segundos: number): string {
   return `${mensaje}. Puedes deshacer durante ${resto}.`
 }
 
-/** Hallazgo 3: el anuncio ahora lo hace el anunciador compartido (ver app/anunciador.ts), que
- * ya resuelve "mismo mensaje dos veces" y "limpiar al cerrar" de forma genérica — este módulo
- * ya no mantiene su propio texto de anuncio. */
+/** El anuncio lo hace el anunciador compartido (ver app/anunciador.ts). Este módulo solo
+ * guarda el identificador de SU anuncio, para que al cerrarse retire únicamente ese mensaje
+ * y nunca borre un anuncio más nuevo de otra pantalla (N4). */
 export function crearContextoAvisoDeshacer(anunciador: Anunciador): ContextoAvisoDeshacer {
   const estado = ref<AvisoDeshacerActivo>()
+  let idAnuncio: number | undefined
+
+  function retirarAnuncio() {
+    if (idAnuncio !== undefined) anunciador.limpiar(idAnuncio)
+    idAnuncio = undefined
+  }
 
   return {
     activo: computed(() => estado.value),
@@ -44,11 +50,12 @@ export function crearContextoAvisoDeshacer(anunciador: Anunciador): ContextoAvis
       // instancia de <AvisoDeshacer> completamente nueva (con su propio temporizador de 10 s),
       // en vez de reutilizar la anterior (que cerraría el aviso nuevo a mitad de camino).
       estado.value = { ...opciones, id: contadorId }
-      anunciador.anunciar(textoAnuncio(opciones.mensaje, opciones.segundos ?? 10))
+      retirarAnuncio() // el aviso anterior (si lo había) queda reemplazado
+      idAnuncio = anunciador.anunciar(textoAnuncio(opciones.mensaje, opciones.segundos ?? 10))
     },
     cerrar() {
       estado.value = undefined
-      anunciador.limpiar()
+      retirarAnuncio()
     },
   }
 }
