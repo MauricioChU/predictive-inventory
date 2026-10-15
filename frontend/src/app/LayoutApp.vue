@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { provide } from 'vue'
+import { onBeforeUnmount, provide, ref } from 'vue'
 import AvisoDeshacer from '@/shared/ui/componentes/AvisoDeshacer.vue'
 import BarraNavegacion from '@/shared/ui/componentes/BarraNavegacion.vue'
+import { usarAltoComoVariable } from './alto-como-variable'
 import { CLAVE_ANUNCIADOR, crearAnunciador } from './anunciador'
 import { CLAVE_AVISO_DESHACER, crearContextoAvisoDeshacer } from './aviso-deshacer'
+import { exponerGanchosDePrueba } from './ganchos-de-prueba'
 
 const anunciador = crearAnunciador()
 provide(CLAVE_ANUNCIADOR, anunciador)
@@ -15,6 +17,14 @@ function alDeshacer() {
   contextoAvisoDeshacer.activo.value?.alDeshacer()
   contextoAvisoDeshacer.cerrar()
 }
+
+// m5: alto real de lo que queda pegado abajo, para scroll-padding-bottom (ver estilos).
+const refPie = ref<HTMLElement>()
+const refZonaAviso = ref<HTMLElement>()
+usarAltoComoVariable(refPie, '--alto-pie')
+usarAltoComoVariable(refZonaAviso, '--alto-aviso')
+
+onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
 </script>
 
 <template>
@@ -22,37 +32,37 @@ function alDeshacer() {
 
   <!--
     Región aria-live persistente y SIEMPRE presente (nunca se inserta ya llena). El anunciador
-    (ver app/anunciador.ts) resuelve "mismo mensaje dos veces" (lo vacía y lo vuelve a poner) y
-    lo usan tanto el aviso Deshacer como cualquier pantalla que lo inyecte (p. ej. PantallaExito).
+    (ver app/anunciador.ts) une los mensajes que llegan juntos, vuelve a anunciar un mensaje
+    repetido y retira solo el mensaje de quien limpia; lo usan el aviso Deshacer y cualquier
+    pantalla que lo inyecte (p. ej. PantallaExito).
   -->
   <p aria-live="polite" role="status" class="solo-lector">{{ anunciador.texto.value }}</p>
 
   <!--
-    S1: volvemos al scroll normal del documento (ventana), no uno adentro de <main>: un
-    contenedor con su propio overflow-y rompe los gestos de borde de Android, evita que la
-    barra de direcciones se recoja al bajar, y hace que la posición de scroll guardada por el
-    router nunca se aplique. La barra + el aviso Deshacer van en un solo contenedor "pie" al
-    FINAL del flujo normal, con position: sticky (abajo en celular, como columna izquierda y a
-    todo el alto desde 1024px): al ser sticky (no fixed) reservan su propio espacio en el
-    documento según su alto real — nunca una altura "adivinada" — así que nunca tapan nada.
-    Las columnas de la grilla usan minmax(0, 1fr), no 1fr a secas: un 1fr sin minmax hereda el
-    tamaño mínimo de su contenido (el ancho mínimo de la barra sin partir palabras) y ensancha
-    la columna más allá del viewport.
+    Scroll normal del documento (ventana), no uno adentro de <main>: un contenedor con su
+    propio overflow-y rompe los gestos de borde de Android, evita que la barra de direcciones
+    se recoja al bajar, y hace que la posición de scroll guardada por el router nunca se
+    aplique. Las columnas usan minmax(0, 1fr), no 1fr a secas: un 1fr sin minmax hereda el
+    ancho mínimo de su contenido y ensancha la columna más allá del viewport.
 
-    Ronda 3: position: sticky solo "pega" cuando el documento es más alto que el viewport. En
-    una pantalla corta (p. ej. /ajustes, con poco contenido), sin nada que empuje el pie hacia
-    abajo, quedaba a mitad de pantalla con hueco en blanco debajo. Por eso la fila de <main>
-    es minmax(0, 1fr): en una pantalla corta crece para llenar el alto mínimo del layout
-    (min-height: 100dvh) y empuja el pie al fondo real del viewport; en una pantalla larga el
-    contenido simplemente necesita más que ese 1fr y el documento crece más allá de 100dvh,
-    con el pie pegado (sticky) al fondo del viewport mientras se hace scroll.
+    Celular (< 1024 px): la barra + el aviso Deshacer van en un solo contenedor "pie" al FINAL
+    del flujo, con position: sticky abajo — al ser sticky (no fixed) reservan su propio espacio
+    según su alto real, así que al final de la página nunca tapan el último elemento. La fila
+    de <main> es minmax(0, 1fr) dentro de un min-height: 100dvh: en una pantalla corta crece y
+    empuja el pie al fondo real del viewport; en una larga el documento crece y el pie queda
+    pegado abajo mientras se desplaza.
+
+    PC (≥ 1024 px), N1 (ronda 4): el pie se vuelve display: contents — la navegación pasa a ser
+    la columna izquierda (sticky arriba, a todo el alto) y el aviso Deshacer se queda en la
+    COLUMNA DE CONTENIDO, sticky abajo y con el ancho del contenido (antes se dibujaba dentro
+    de la barra lateral de 260 px: una letra por línea y los enlaces empujados fuera).
   -->
   <div class="layout-app">
     <main id="contenido" class="contenido" tabindex="-1">
       <RouterView />
     </main>
-    <div class="pie">
-      <div v-if="contextoAvisoDeshacer.activo.value" class="zona-aviso-deshacer">
+    <div ref="refPie" class="pie">
+      <div v-if="contextoAvisoDeshacer.activo.value" ref="refZonaAviso" class="zona-aviso-deshacer">
         <AvisoDeshacer
           :key="contextoAvisoDeshacer.activo.value.id"
           :mensaje="contextoAvisoDeshacer.activo.value.mensaje"
@@ -83,12 +93,16 @@ function alDeshacer() {
   top: var(--espacio-2);
 }
 
+/* m5 (WCAG 2.4.11): lo que queda pegado abajo no tapa al elemento que recibe el foco por
+   teclado — el navegador desplaza la página dejando libre ese alto, medido en vivo
+   (alto-como-variable.ts), nunca adivinado. En celular es todo el pie (aviso + barra). */
+:global(html) {
+  scroll-padding-bottom: var(--alto-pie, 0px);
+}
+
 .layout-app {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  /* Ronda 3: la fila de contenido es minmax(0, 1fr), no auto — así crece para llenar el
-     min-height cuando la página es corta (empuja el pie al fondo real del viewport) y cede
-     ante el contenido cuando la página es larga (el documento crece y el pie queda sticky). */
   grid-template-rows: minmax(0, 1fr) auto;
   min-height: 100dvh;
 }
@@ -117,8 +131,9 @@ function alDeshacer() {
 }
 
 .zona-aviso-deshacer {
-  padding: var(--espacio-4);
-  padding-top: var(--espacio-2);
+  /* N5: el aviso (con este relleno) nunca pasa del 40 % del alto de la ventana. */
+  --aviso-alto-maximo: calc(40dvh - var(--espacio-2) - var(--espacio-3));
+  padding: var(--espacio-2) var(--espacio-3) var(--espacio-3);
   max-width: var(--ancho-contenido);
   margin-inline: auto;
   width: 100%;
@@ -130,10 +145,12 @@ function alDeshacer() {
 }
 
 @media (min-width: 1024px) {
+  /* En PC lo único pegado abajo es el aviso (la navegación está al costado). */
+  :global(html) {
+    scroll-padding-bottom: var(--alto-aviso, 0px);
+  }
   .layout-app {
     grid-template-columns: 260px minmax(0, 1fr);
-    /* Una sola fila: columna lateral (pie) y contenido van lado a lado, no apilados. */
-    grid-template-rows: minmax(0, 1fr);
   }
   .contenido {
     grid-column: 2;
@@ -142,26 +159,30 @@ function alDeshacer() {
     padding-block: var(--espacio-6);
   }
   .pie {
-    grid-column: 1;
-    grid-row: 1;
-    position: sticky;
-    top: 0;
-    bottom: auto;
-    height: 100dvh;
-    display: flex;
-    flex-direction: column;
+    display: contents;
   }
   .navegacion {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    align-self: start;
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    overflow-y: auto;
     border-top: none;
     border-right: 1px solid var(--color-borde);
     padding: var(--espacio-4);
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
   }
   .zona-aviso-deshacer {
-    max-width: none;
-    padding: var(--espacio-4);
+    --aviso-alto-maximo: calc(40dvh - var(--espacio-3) - var(--espacio-4));
+    grid-column: 2;
+    grid-row: 2;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background: var(--color-fondo);
+    max-width: var(--ancho-contenido-pc);
+    padding: var(--espacio-3) var(--espacio-4) var(--espacio-4);
   }
 }
 </style>
