@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Dinero, redondearMitadLejosDeCero } from './dinero'
 import { Cantidad } from './cantidad'
+import { formatearDinero } from './formato'
 
 describe('Dinero', () => {
   it('se construye desde texto con punto, coma o símbolo', () => {
@@ -65,6 +66,24 @@ describe('Dinero', () => {
   it('M3: acepta espacio exterior alrededor del monto', () => {
     expect(Dinero.deTexto('  3.50  ').centimos).toBe(350)
     expect(Dinero.deTexto('  S/ 3.50  ').centimos).toBe(350)
+  })
+  // Fix round 2, minor (dinero.ts:33-36): deTexto debe aceptar lo que la propia app ya
+  // produce con formatearDinero (miles agrupados con un espacio, y "-S/" con el signo
+  // antes del símbolo), sin dejar de rechazar "1 2", "3 S/ 5" ni espacios dobles.
+  it('ronda de ida y vuelta: deTexto(formatearDinero(x)) === x, incluidos miles agrupados y negativos', () => {
+    for (const centimos of [0, 5, 240, 125000, 9_999_999, -480, -9_999_999]) {
+      const dinero = Dinero.deCentimos(centimos)
+      expect(Dinero.deTexto(formatearDinero(dinero)).centimos).toBe(centimos)
+    }
+  })
+  it('acepta miles agrupados con un espacio y "-S/" con el signo antes del símbolo', () => {
+    expect(Dinero.deTexto('S/ 1 250.00').centimos).toBe(125000)
+    expect(Dinero.deTexto('-S/ 4.80').centimos).toBe(-480)
+  })
+  it('sigue rechazando "1 2", "3 S/ 5" y espacios dobles dentro del número', () => {
+    expect(() => Dinero.deTexto('1 2')).toThrow('Escribe un monto válido, por ejemplo 3.50')
+    expect(() => Dinero.deTexto('3 S/ 5')).toThrow('Escribe un monto válido, por ejemplo 3.50')
+    expect(() => Dinero.deTexto('1  250.00')).toThrow('Escribe un monto válido, por ejemplo 3.50')
   })
   // No está en el enunciado de la Tarea 3: completa la cobertura de los predicados y
   // comparadores restantes de Dinero (RN-SIS-02 exige 95% en el dominio).

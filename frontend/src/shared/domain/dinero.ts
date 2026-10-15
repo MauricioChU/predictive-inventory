@@ -1,7 +1,11 @@
 import type { Cantidad } from './cantidad'
 import { ErrorDeDominio } from './errores'
 
-const PATRON_NUMERO = /^-?\d+(\.\d+)?$/
+const PATRON_NUMERO = /^\d+(\.\d+)?$/
+// Fix round 2, minor: acepta los miles agrupados con UN espacio que produce el propio
+// formatearDinero (p. ej. "1 250.00", "99 999.99"), para que deTexto(formatearDinero(x))
+// siempre funcione. Un espacio doble o un espacio que no agrupe de 3 en 3 sigue sin matchear.
+const PATRON_NUMERO_AGRUPADO = /^\d{1,3}( \d{3})+(\.\d+)?$/
 
 /** Redondea numerador/divisor al entero más cercano; las mitades se alejan de cero. */
 export function redondearMitadLejosDeCero(numerador: number, divisor: number): number {
@@ -25,20 +29,23 @@ export class Dinero {
     return new Dinero(0)
   }
 
-  /** Acepta "2.40", "2,40", "S/ 2.40". Lanza ErrorDeDominio con el mensaje de la spec. */
+  /**
+   * Acepta "2.40", "2,40", "S/ 2.40", "-S/ 4.80" y lo que produce formatearDinero (miles
+   * agrupados con un espacio, p. ej. "S/ 1 250.00"). Lanza ErrorDeDominio con el mensaje
+   * de la spec. Fix round 1, M3: "S/" solo es un prefijo opcional (con a lo sumo un espacio
+   * detrás); solo se recorta el espacio EXTERIOR del texto completo, nunca espacios
+   * internos sueltos. Así "3 S/ 5" y "1 2" quedan con un espacio que no agrupa de a 3 y
+   * fallan el patrón numérico.
+   */
   static deTexto(texto: string): Dinero {
-    // Fix round 1, M3: "S/" solo es un prefijo opcional (con a lo sumo un espacio detrás);
-    // solo se recorta el espacio exterior del texto completo, nunca espacios internos. Así
-    // "3 S/ 5" y "1 2" quedan con un espacio en medio y fallan el patrón numérico.
-    const limpio = texto
-      .trim()
-      .replace(/^S\/\s?/i, '')
-      .replace(',', '.')
-    if (!PATRON_NUMERO.test(limpio)) {
+    const recortado = texto.trim()
+    const negativo = recortado.startsWith('-')
+    const sinSigno = negativo ? recortado.slice(1) : recortado
+    const numero = sinSigno.replace(/^S\/\s?/i, '').replace(',', '.')
+    if (!PATRON_NUMERO.test(numero) && !PATRON_NUMERO_AGRUPADO.test(numero)) {
       throw new ErrorDeDominio('DINERO_INVALIDO', 'Escribe un monto válido, por ejemplo 3.50')
     }
-    const negativo = limpio.startsWith('-')
-    const [entero = '0', decimales = ''] = limpio.replace('-', '').split('.')
+    const [entero = '0', decimales = ''] = numero.replace(/ /g, '').split('.')
     if (decimales.length > 2) {
       throw new ErrorDeDominio('DINERO_DECIMALES', 'Usa como máximo dos decimales')
     }
