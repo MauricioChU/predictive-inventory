@@ -87,4 +87,26 @@ describe('verificarSpecs (RN-SIS-01)', () => {
     const r = verificarSpecs(proyecto('| **RN-OP-12** | x |', feature))
     expect(r.errores).toContain('RN-OP-12 no tiene escenario Gherkin')
   })
+  // Fix round 3, minor 6: ni siquiera una línea de docstring que EMPIEZA con "@RN-…" cuenta
+  // como cita — un docstring nunca es un nodo con `tags`, por construcción del AST.
+  it('M7: una línea de docstring que empieza con "@RN-…" tampoco cuenta como cita', () => {
+    const feature = [
+      'Escenario: a',
+      '  Cuando anoto:',
+      '    """',
+      '    @RN-OP-12 ya no hace falta validar esto a mano',
+      '    """',
+    ].join('\n')
+    const r = verificarSpecs(proyecto('| **RN-OP-12** | x |', feature))
+    expect(r.errores).toContain('RN-OP-12 no tiene escenario Gherkin')
+  })
+  // Fix round 3, minor 8: un error de sintaxis de Gherkin debe nombrar el .feature que lo
+  // causó, para no tener que adivinar cuál de los archivos está roto.
+  it('M8: un .feature con sintaxis inválida se reporta nombrando el archivo', () => {
+    const raiz = proyecto('| **RN-OP-01** | x |', '@RN-OP-01\nEscenario: a')
+    // Sobrescribe el .feature con algo que el parser real de Gherkin no puede parsear
+    // (un Escenario sin el encabezado "Característica:" que antepone el helper `feature()`).
+    writeFileSync(join(raiz, 'fase-1', 'features', 'a.feature'), 'Escenario: roto sin encabezado')
+    expect(() => verificarSpecs(raiz)).toThrow(/a\.feature/)
+  })
 })

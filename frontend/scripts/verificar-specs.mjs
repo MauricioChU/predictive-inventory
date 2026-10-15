@@ -70,7 +70,6 @@ export function verificarSpecs(directorioSpecs) {
   const md = archivos(directorioSpecs, '.md')
     .map((f) => readFileSync(f, 'utf8'))
     .join('\n')
-  const features = archivos(directorioSpecs, '.feature').map((f) => readFileSync(f, 'utf8'))
 
   const enNegrita = new Set(
     [...md.matchAll(new RegExp(`\\*\\*(${PATRON_REGLA})\\*\\*`, 'g'))].map((m) => m[1]),
@@ -82,7 +81,17 @@ export function verificarSpecs(directorioSpecs) {
   const vigentes = new Set([...enNegrita].filter((regla) => !retiradas.has(regla)))
 
   const todasLasEtiquetas = new Set()
-  for (const texto of features) for (const e of etiquetasDeFeature(texto)) todasLasEtiquetas.add(e)
+  for (const ruta of archivos(directorioSpecs, '.feature')) {
+    let etiquetasDeEsteArchivo
+    try {
+      etiquetasDeEsteArchivo = etiquetasDeFeature(readFileSync(ruta, 'utf8'))
+    } catch (error) {
+      // Fix round 3, minor 8: nombra el .feature que no se pudo parsear, para no tener que
+      // adivinar cuál de los archivos está roto cuando hay varios.
+      throw new Error(`No se pudo parsear ${ruta}: ${error.message}`, { cause: error })
+    }
+    for (const e of etiquetasDeEsteArchivo) todasLasEtiquetas.add(e)
+  }
 
   const errores = []
   const etiquetasValidas = new Set()
