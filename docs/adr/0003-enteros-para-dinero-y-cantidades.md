@@ -17,4 +17,4 @@ En JavaScript `0.1 + 0.2` no es exactamente `0.3`. Una tienda no puede tener gan
 ## Consecuencias
 
 - ✅ Sumas exactas y deterministas en frontend y backend.
-- ⚠️ La conversión a texto (`S/ 3.50`, `1.25 kg`) se hace solo en la capa de UI.
+- ⚠️ La conversión a texto (`S/ 3.50`, `1.25 kg`) se centraliza en `shared/domain/formato.ts`, porque los mensajes de las reglas de negocio la necesitan; ningún otro archivo formatea montos ni cantidades.
