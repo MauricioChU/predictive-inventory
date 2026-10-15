@@ -57,4 +57,6 @@ src/modules/<modulo>/
 - **Tests:** cada regla tiene tests unitarios cuyo nombre empieza con su id (`RN-CAT-05: …`), usando repositorios en memoria y dobles simples de los otros módulos. Los escenarios Gherkin se conectan en la Ola 4; aquí se cubren las mismas reglas con tests unitarios y de casos de uso, **usando los mismos datos de ejemplo de los `.feature`**.
 - **Cobertura:** `domain` ≥ 95 %, `application` ≥ 90 % (`npm run test:cobertura`).
 - **No tocar** archivos de otros módulos, `src/shared/**` (salvo indicación del plan), `src/app/**`, `src/router/**`, `tests/aceptacion/**`.
+- **Rutas de archivos en tests:** usar `join(dirname(fileURLToPath(import.meta.url)), '…')`. No usar `new URL('…', import.meta.url)`: con el entorno jsdom, Vite lo reescribe como URL de recurso y `readFileSync` falla (aprendido en la Ola 1).
+- **Pantallas (olas siguientes):** `PantallaExito` trae su propio `<h1>`; no combinarla con `EncabezadoPagina` en la misma vista.
 - Verificación final de cada rama: `npm run lint:ci && npm run type-check && npm run test:cobertura && npm run build-only && npm run verificar-specs`.
