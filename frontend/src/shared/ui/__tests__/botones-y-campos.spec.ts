@@ -78,7 +78,7 @@ describe('CampoNumero (RN-UX-06)', () => {
     // 0.3 está por encima del mínimo (0), pero 0.3 - 0.5 = -0.2 lo cruzaría.
     expect(w.get('[aria-label="Quitar uno"]').attributes('disabled')).toBeDefined()
   })
-  it('M10: si el botón "−" tenía el foco y se deshabilita, el foco pasa al input', async () => {
+  it('N3: si el botón "−" tenía el foco y se deshabilita, el foco pasa al botón "+" (no al input: en Android abriría el teclado)', async () => {
     const w = mount(CampoNumero, {
       props: { etiqueta: 'Cantidad', modelValue: '1', minimo: 0 },
       attachTo: document.body,
@@ -88,7 +88,19 @@ describe('CampoNumero (RN-UX-06)', () => {
     expect(document.activeElement).toBe(boton)
 
     await w.setProps({ modelValue: '0' }) // ahora el próximo paso (0 - 1 < 0) lo deshabilita
-    expect(document.activeElement).toBe(w.get('input').element)
+    expect(document.activeElement).toBe(w.get('[aria-label="Agregar uno"]').element)
+    expect(document.activeElement).not.toBe(w.get('input').element)
     w.unmount()
+  })
+  it('m9: compara con el mismo redondeo que el paso (2.3 − 0.1 = 2.2 no cruza el mínimo 2.2)', async () => {
+    const w = mount(CampoNumero, {
+      props: { etiqueta: 'Kilos', modelValue: '2.3', minimo: 2.2, paso: 0.1, decimales: true },
+    })
+    const menos = w.get('[aria-label="Quitar uno"]')
+    expect(menos.attributes('disabled')).toBeUndefined()
+    await menos.trigger('click')
+    expect(w.emitted('update:modelValue')?.at(-1)).toEqual(['2.2'])
+    await w.setProps({ modelValue: '2.2' })
+    expect(w.get('[aria-label="Quitar uno"]').attributes('disabled')).toBeDefined()
   })
 })

@@ -19,12 +19,17 @@ const id = useId()
 const idError = `${id}-error`
 const idSufijo = `${id}-sufijo`
 const valorNumerico = computed(() => Number(props.modelValue.replace(',', '.')) || 0)
+
+/** Redondea a milésimas enteras: evita los restos de coma flotante (2.3 - 0.1 = 2.1999…). */
+const redondear = (valor: number): number => Math.round(valor * 1000) / 1000
 // M10: botón "−" también deshabilitado de verdad (antes solo lo bloqueaba cambiar(), así que
 // seguía pareciendo activo para quien usa el dedo o el mouse). La condición es "el próximo
 // paso bajaría del mínimo" (valor - paso < minimo), no solo "ya estoy en el mínimo": con un
 // paso distinto de 1 (p. ej. 0.5) se puede estar POR ENCIMA del mínimo y que el siguiente
-// paso de todos modos lo cruce.
-const enMinimo = computed(() => valorNumerico.value - props.paso < props.minimo)
+// paso de todos modos lo cruce. m9: con el MISMO redondeo que usa cambiar(); sin él, mínimo
+// 2.2, paso 0.1 y valor 2.3 se deshabilitaba (2.3 - 0.1 = 2.1999… < 2.2) aunque cambiar()
+// sí habría aceptado bajar a 2.2.
+const enMinimo = computed(() => redondear(valorNumerico.value - props.paso) < props.minimo)
 const describedBy = computed(() => {
   const ids = [props.sufijo ? idSufijo : null, props.error ? idError : null].filter(
     (valor): valor is string => valor !== null,
@@ -32,21 +37,23 @@ const describedBy = computed(() => {
   return ids.length > 0 ? ids.join(' ') : undefined
 })
 
-const refInput = ref<HTMLInputElement>()
 const refBotonMenos = ref<HTMLButtonElement>()
+const refBotonMas = ref<HTMLButtonElement>()
 
 // M10: si el botón "−" tenía el foco y se deshabilita (el navegador le quita el foco al
-// deshabilitar un control), el foco no debe perderse (ir a <body>): lo movemos al input.
-// Se usa el flush por defecto ("pre"), que corre ANTES de que Vue aplique el `disabled` al
-// DOM real, así `document.activeElement` todavía es el botón en ese momento.
+// deshabilitar un control), el foco no debe perderse (ir a <body>). N3 (ronda 4): va al botón
+// "+", no al input — en Android, enfocar el input abre el teclado numérico sobre media
+// pantalla sin que la persona lo haya pedido. Se usa el flush por defecto ("pre"), que corre
+// ANTES de que Vue aplique el `disabled` al DOM real, así `document.activeElement` todavía es
+// el botón en ese momento.
 watch(enMinimo, (ahoraDeshabilitado) => {
   if (ahoraDeshabilitado && document.activeElement === refBotonMenos.value) {
-    refInput.value?.focus()
+    refBotonMas.value?.focus()
   }
 })
 
 function cambiar(delta: number) {
-  const siguiente = Math.round((valorNumerico.value + delta) * 1000) / 1000
+  const siguiente = redondear(valorNumerico.value + delta)
   if (siguiente < props.minimo) return
   emit('update:modelValue', String(siguiente))
 }
@@ -69,7 +76,6 @@ function cambiar(delta: number) {
       </button>
       <input
         :id="id"
-        ref="refInput"
         :value="modelValue"
         :inputmode="decimales ? 'decimal' : 'numeric'"
         :aria-invalid="error ? 'true' : undefined"
@@ -80,7 +86,13 @@ function cambiar(delta: number) {
       <!-- M10: el sufijo (p. ej. "kg") se asocia al input por aria-describedby, si no un
            lector de pantalla solo anuncia el número y pierde la unidad. -->
       <span v-if="sufijo" :id="idSufijo" class="sufijo">{{ sufijo }}</span>
-      <button type="button" class="paso" aria-label="Agregar uno" @click="cambiar(paso)">
+      <button
+        ref="refBotonMas"
+        type="button"
+        class="paso"
+        aria-label="Agregar uno"
+        @click="cambiar(paso)"
+      >
         <Plus aria-hidden="true" />
       </button>
     </div>
