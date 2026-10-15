@@ -3,6 +3,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { AstBuilder, GherkinClassicTokenMatcher, Parser } from '@cucumber/gherkin'
+import { IdGenerator } from '@cucumber/messages'
 
 const MODULOS = '(?:CAT|OP|AL|AN|RE)'
 
@@ -14,22 +16,53 @@ function archivos(dir, extension) {
   })
 }
 
-// Fix round 1, M7: límite tras los dos dígitos para que "RN-OP-123" no se lea como
-// "RN-OP-12" (un tercer dígito pegado haría match parcial sin el (?!\d)).
+// Límite tras los dos dígitos para que "RN-OP-123" no se lea como "RN-OP-12" en el
+// markdown (Fix round 1, M7). Las etiquetas de los .feature se validan aparte (ver abajo),
+// porque ahí sí importa reportar una forma inválida en vez de solo ignorarla.
 const PATRON_REGLA = `RN-${MODULOS}-\\d{2}(?!\\d)`
 const PATRON_REGLA_RETIRADA = `RN-[A-Z]+-\\d{2}(?!\\d)`
 
-/** Etiquetas (@RN-XX-NN) de las líneas de etiqueta de un .feature: líneas cuyo contenido
- * recortado empieza con '@'. Una mención dentro de un docstring o del texto libre de un
- * paso no es una línea de etiqueta y no cuenta como cita (Fix round 1, M7). */
-function etiquetasDeLineasDeEtiqueta(texto) {
+// Fix round 2, M7: una etiqueta con "forma" de id de regla (RN-<módulo>-<dígitos>) pero con
+// una cantidad de dígitos distinta de 2 está mal escrita, no es "otra regla": se reporta
+// como error en vez de ignorarse en silencio (como pasaba al no encontrar coincidencia).
+const PATRON_FORMA_DE_REGLA = /^RN-[A-Z]+-\d+$/
+const PATRON_ID_VALIDO = /^RN-[A-Z]+-\d{2}$/
+
+function recolectarEtiquetas(nodo, etiquetas) {
+  for (const etiqueta of nodo?.tags ?? []) etiquetas.add(etiqueta.name.replace(/^@/, ''))
+}
+
+/**
+ * Fix round 2, M7: en vez de escanear el texto línea por línea buscando algo que empiece
+ * con '@', se usa el parser de Gherkin (ya es dependencia del proyecto) y se recorren los
+ * nodos del AST que de verdad llevan etiquetas (Feature, Rule, Scenario, Examples). Así una
+ * mención dentro de un docstring o del texto libre de un paso NUNCA puede contarse como
+ * cita: no son nodos con `tags`, por construcción del árbol, no por una heurística de texto.
+ */
+export function etiquetasDeFeature(contenidoDelArchivo) {
   const etiquetas = new Set()
-  for (const linea of texto.split('\n')) {
-    const recortada = linea.trim()
-    if (!recortada.startsWith('@')) continue
-    for (const m of recortada.matchAll(new RegExp(`@(${PATRON_REGLA_RETIRADA})`, 'g')))
-      etiquetas.add(m[1])
+  const nuevoId = IdGenerator.uuid()
+  const documento = new Parser(new AstBuilder(nuevoId), new GherkinClassicTokenMatcher('es')).parse(
+    contenidoDelArchivo,
+  )
+  const feature = documento.feature
+  if (!feature) return etiquetas
+  recolectarEtiquetas(feature, etiquetas)
+
+  const procesarHijos = (hijos) => {
+    for (const hijo of hijos ?? []) {
+      if (hijo.scenario) {
+        recolectarEtiquetas(hijo.scenario, etiquetas)
+        for (const ejemplos of hijo.scenario.examples ?? [])
+          recolectarEtiquetas(ejemplos, etiquetas)
+      }
+      if (hijo.rule) {
+        recolectarEtiquetas(hijo.rule, etiquetas)
+        procesarHijos(hijo.rule.children)
+      }
+    }
   }
+  procesarHijos(feature.children)
   return etiquetas
 }
 
@@ -47,13 +80,25 @@ export function verificarSpecs(directorioSpecs) {
   )
   // Fix round 1, M7: vigentes = reglas en negrita menos las retiradas explícitamente.
   const vigentes = new Set([...enNegrita].filter((regla) => !retiradas.has(regla)))
-  const etiquetas = new Set(features.flatMap((texto) => [...etiquetasDeLineasDeEtiqueta(texto)]))
+
+  const todasLasEtiquetas = new Set()
+  for (const texto of features) for (const e of etiquetasDeFeature(texto)) todasLasEtiquetas.add(e)
 
   const errores = []
-  for (const regla of [...vigentes].sort()) {
-    if (!etiquetas.has(regla)) errores.push(`${regla} no tiene escenario Gherkin`)
+  const etiquetasValidas = new Set()
+  for (const etiqueta of [...todasLasEtiquetas].sort()) {
+    if (!PATRON_FORMA_DE_REGLA.test(etiqueta)) continue // no parece un id de regla (p. ej. @wip): no es asunto de esta verificación
+    if (!PATRON_ID_VALIDO.test(etiqueta)) {
+      errores.push(`@${etiqueta} no es un id de regla válido`)
+      continue
+    }
+    etiquetasValidas.add(etiqueta)
   }
-  for (const etiqueta of [...etiquetas].sort()) {
+
+  for (const regla of [...vigentes].sort()) {
+    if (!etiquetasValidas.has(regla)) errores.push(`${regla} no tiene escenario Gherkin`)
+  }
+  for (const etiqueta of [...etiquetasValidas].sort()) {
     if (retiradas.has(etiqueta)) errores.push(`@${etiqueta} cita una regla retirada`)
     else if (!vigentes.has(etiqueta)) errores.push(`@${etiqueta} cita una regla que no existe`)
   }
