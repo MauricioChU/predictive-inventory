@@ -7,7 +7,13 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: 'jsdom',
-      include: ['src/**/*.spec.ts', 'src/**/__tests__/*.spec.ts', 'tests/**/*.spec.ts', 'scripts/**/*.spec.ts'],
+      include: [
+        'src/**/*.spec.ts',
+        'src/**/__tests__/*.spec.ts',
+        'tests/**/*.spec.ts',
+        'scripts/**/*.spec.ts',
+        'eslint-rules/**/*.spec.ts',
+      ],
       exclude: [...configDefaults.exclude, 'e2e/**'],
       root: fileURLToPath(new URL('./', import.meta.url)),
       coverage: {
