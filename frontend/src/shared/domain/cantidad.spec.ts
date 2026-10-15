@@ -10,15 +10,21 @@ describe('Cantidad', () => {
     expect(Cantidad.deTexto('-2', 'UNIDAD').milesimas).toBe(-2000)
   })
   it('RN-OP-04: UNIDAD solo acepta enteros', () => {
-    expect(() => Cantidad.deTexto('1.5', 'UNIDAD')).toThrow('Este producto se cuenta por unidades enteras')
+    expect(() => Cantidad.deTexto('1.5', 'UNIDAD')).toThrow(
+      'Este producto se cuenta por unidades enteras',
+    )
   })
   it('RN-OP-04: KILO y LITRO aceptan hasta tres decimales', () => {
     expect(() => Cantidad.deTexto('0.0005', 'KILO')).toThrow('Usa como máximo tres decimales')
     expect(Cantidad.deTexto('0.333', 'LITRO').milesimas).toBe(333)
   })
   it('rechaza texto que no es una cantidad', () => {
-    expect(() => Cantidad.deTexto('', 'KILO')).toThrow('Escribe una cantidad válida, por ejemplo 2 o 1.5')
-    expect(() => Cantidad.deTexto('dos', 'UNIDAD')).toThrow('Escribe una cantidad válida, por ejemplo 2 o 1.5')
+    expect(() => Cantidad.deTexto('', 'KILO')).toThrow(
+      'Escribe una cantidad válida, por ejemplo 2 o 1.5',
+    )
+    expect(() => Cantidad.deTexto('dos', 'UNIDAD')).toThrow(
+      'Escribe una cantidad válida, por ejemplo 2 o 1.5',
+    )
   })
   it('opera y compara', () => {
     const a = Cantidad.deEntero(10)
@@ -36,8 +42,14 @@ describe('Cantidad', () => {
   it('RN-AN-06: redondea hacia arriba al incremento de la unidad', () => {
     expect(Cantidad.incrementoDe('UNIDAD').milesimas).toBe(1000)
     expect(Cantidad.incrementoDe('LITRO').milesimas).toBe(500)
-    expect(Cantidad.deMilesimas(1250).redondearHaciaArribaA(Cantidad.incrementoDe('KILO')).milesimas).toBe(1500)
-    expect(Cantidad.deMilesimas(10200).redondearHaciaArribaA(Cantidad.incrementoDe('UNIDAD')).milesimas).toBe(11000)
-    expect(Cantidad.deMilesimas(1000).redondearHaciaArribaA(Cantidad.incrementoDe('UNIDAD')).milesimas).toBe(1000)
+    expect(
+      Cantidad.deMilesimas(1250).redondearHaciaArribaA(Cantidad.incrementoDe('KILO')).milesimas,
+    ).toBe(1500)
+    expect(
+      Cantidad.deMilesimas(10200).redondearHaciaArribaA(Cantidad.incrementoDe('UNIDAD')).milesimas,
+    ).toBe(11000)
+    expect(
+      Cantidad.deMilesimas(1000).redondearHaciaArribaA(Cantidad.incrementoDe('UNIDAD')).milesimas,
+    ).toBe(1000)
   })
 })

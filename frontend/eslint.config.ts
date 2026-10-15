@@ -33,6 +33,15 @@ export default defineConfigWithVueTs(
   },
 
   {
+    name: 'gherkin/pasos-fuera-de-un-bloque-it',
+    // Los manejadores de pasos usan `expect` dentro de callbacks que el runner invoca
+    // dentro de un `it()` generado en tiempo de ejecución (tests/gherkin/ejecutar-feature.ts),
+    // no de forma léxica: no-standalone-expect no puede verlo y da un falso positivo.
+    files: ['tests/gherkin/**/*.spec.ts', 'tests/aceptacion/**/*.spec.ts'],
+    rules: { 'vitest/no-standalone-expect': 'off' },
+  },
+
+  {
     name: 'arquitectura/importar-modulos-por-index',
     files: ['src/**/*.{ts,vue}', 'tests/**/*.ts'],
     rules: {

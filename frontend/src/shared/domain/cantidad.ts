@@ -26,7 +26,10 @@ export class Cantidad {
   static deTexto(texto: string, unidad: Unidad): Cantidad {
     const limpio = texto.trim().replace(',', '.')
     if (!PATRON_NUMERO.test(limpio)) {
-      throw new ErrorDeDominio('CANTIDAD_INVALIDA', 'Escribe una cantidad válida, por ejemplo 2 o 1.5')
+      throw new ErrorDeDominio(
+        'CANTIDAD_INVALIDA',
+        'Escribe una cantidad válida, por ejemplo 2 o 1.5',
+      )
     }
     const negativo = limpio.startsWith('-')
     const [entero = '0', crudos = ''] = limpio.replace('-', '').split('.')

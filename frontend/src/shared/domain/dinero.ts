@@ -24,7 +24,10 @@ export class Dinero {
 
   /** Acepta "2.40", "2,40", "S/ 2.40". Lanza ErrorDeDominio con el mensaje de la spec. */
   static deTexto(texto: string): Dinero {
-    const limpio = texto.replace(/S\/\s*/i, '').replace(/\s+/g, '').replace(',', '.')
+    const limpio = texto
+      .replace(/S\/\s*/i, '')
+      .replace(/\s+/g, '')
+      .replace(',', '.')
     if (!PATRON_NUMERO.test(limpio)) {
       throw new ErrorDeDominio('DINERO_INVALIDO', 'Escribe un monto válido, por ejemplo 3.50')
     }

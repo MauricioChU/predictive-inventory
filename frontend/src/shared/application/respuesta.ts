@@ -8,7 +8,10 @@ export type Respuesta<T> =
   | { tipo: 'reactivar'; productoId: string; nombre: string }
 
 export const hecho = <T>(valor: T): Respuesta<T> => ({ tipo: 'hecho', valor })
-export const confirmar = <T = never>(mensaje: string): Respuesta<T> => ({ tipo: 'confirmar', mensaje })
+export const confirmar = <T = never>(mensaje: string): Respuesta<T> => ({
+  tipo: 'confirmar',
+  mensaje,
+})
 export const ofrecerReactivar = <T = never>(productoId: string, nombre: string): Respuesta<T> => ({
   tipo: 'reactivar',
   productoId,

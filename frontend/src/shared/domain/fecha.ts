@@ -26,7 +26,9 @@ export function sumarDias(dia: Dia, n: number): Dia {
 }
 
 export function diasEntre(desde: Dia, hasta: Dia): number {
-  return Math.round((Date.parse(`${hasta}T00:00:00.000Z`) - Date.parse(`${desde}T00:00:00.000Z`)) / MS_POR_DIA)
+  return Math.round(
+    (Date.parse(`${hasta}T00:00:00.000Z`) - Date.parse(`${desde}T00:00:00.000Z`)) / MS_POR_DIA,
+  )
 }
 
 export function diaDeLaSemana(dia: Dia): number {

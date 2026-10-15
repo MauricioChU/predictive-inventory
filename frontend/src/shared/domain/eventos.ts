@@ -5,13 +5,20 @@ export type EventoDeDominio =
   | { tipo: 'ProductoActualizado'; productoId: string }
   | { tipo: 'ProductoArchivado'; productoId: string }
   | { tipo: 'ProductoReactivado'; productoId: string }
-  | { tipo: 'OperacionRegistrada'; operacionId: string; tipoOperacion: TipoDeOperacion; productoIds: string[] }
+  | {
+      tipo: 'OperacionRegistrada'
+      operacionId: string
+      tipoOperacion: TipoDeOperacion
+      productoIds: string[]
+    }
   | { tipo: 'OperacionAnulada'; operacionId: string; anulacionId: string; productoIds: string[] }
   | { tipo: 'ConfiguracionActualizada' }
 
 export type TipoDeEvento = EventoDeDominio['tipo']
 export type EventoDe<T extends TipoDeEvento> = Extract<EventoDeDominio, { tipo: T }>
-export type ManejadorDeEvento<T extends TipoDeEvento> = (evento: EventoDe<T>) => Promise<void> | void
+export type ManejadorDeEvento<T extends TipoDeEvento> = (
+  evento: EventoDe<T>,
+) => Promise<void> | void
 
 export interface BusDeEventos {
   publicar(evento: EventoDeDominio): Promise<void>
@@ -20,7 +27,10 @@ export interface BusDeEventos {
 
 /** Bus síncrono en el mismo proceso. Se publica DESPUÉS de confirmar la unidad de trabajo. */
 export class BusEnMemoria implements BusDeEventos {
-  private readonly manejadores = new Map<TipoDeEvento, Set<(e: EventoDeDominio) => Promise<void> | void>>()
+  private readonly manejadores = new Map<
+    TipoDeEvento,
+    Set<(e: EventoDeDominio) => Promise<void> | void>
+  >()
 
   async publicar(evento: EventoDeDominio): Promise<void> {
     for (const manejador of this.manejadores.get(evento.tipo) ?? []) {

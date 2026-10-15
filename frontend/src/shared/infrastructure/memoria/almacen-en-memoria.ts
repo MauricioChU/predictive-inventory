@@ -53,7 +53,9 @@ export class AlmacenEnMemoria {
   instantanea(): Tablas {
     const copia = AlmacenEnMemoria.vacias()
     for (const nombre of Object.keys(this.tablas) as NombreDeTabla[]) {
-      ;(copia[nombre] as Map<string, unknown>) = new Map(this.tablas[nombre] as Map<string, unknown>)
+      ;(copia[nombre] as Map<string, unknown>) = new Map(
+        this.tablas[nombre] as Map<string, unknown>,
+      )
     }
     return copia
   }

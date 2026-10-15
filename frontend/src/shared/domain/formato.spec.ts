@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { Cantidad } from './cantidad'
 import { Dinero } from './dinero'
-import { formatearCantidad, formatearDia, formatearDinero, formatearEntero, formatearNumero, plural } from './formato'
+import {
+  formatearCantidad,
+  formatearDia,
+  formatearDinero,
+  formatearEntero,
+  formatearNumero,
+  plural,
+} from './formato'
 
 describe('formato', () => {
   it('formatea soles con dos decimales y signo', () => {

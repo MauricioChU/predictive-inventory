@@ -12,7 +12,12 @@ describe('BusEnMemoria', () => {
       recibidos.push(`op:${e.operacionId}`)
     })
     await bus.publicar({ tipo: 'ProductoCreado', productoId: 'p1' })
-    await bus.publicar({ tipo: 'OperacionRegistrada', operacionId: 'o1', tipoOperacion: 'VENTA', productoIds: ['p1'] })
+    await bus.publicar({
+      tipo: 'OperacionRegistrada',
+      operacionId: 'o1',
+      tipoOperacion: 'VENTA',
+      productoIds: ['p1'],
+    })
     expect(recibidos).toEqual(['creado:p1', 'op:o1'])
   })
   it('permite cancelar la suscripción', async () => {

@@ -58,7 +58,11 @@ export interface InventarioConsultable {
 }
 
 export interface InventarioParaCatalogo extends InventarioConsultable {
-  registrarStockInicial(productoId: string, cantidad: Cantidad, costoUnitario: Dinero): Promise<void>
+  registrarStockInicial(
+    productoId: string,
+    cantidad: Cantidad,
+    costoUnitario: Dinero,
+  ): Promise<void>
   /** RN-CAT-11: AJUSTE hasta 0 con motivo "Producto retirado". */
   retirarStock(productoId: string): Promise<void>
 }

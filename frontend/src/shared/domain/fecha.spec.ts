@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { diaDe, diaDeLaSemana, diasEntre, inicioDelDia, instanteLocal, segundosEntre, sumarDias, sumarSegundos } from './fecha'
+import {
+  diaDe,
+  diaDeLaSemana,
+  diasEntre,
+  inicioDelDia,
+  instanteLocal,
+  segundosEntre,
+  sumarDias,
+  sumarSegundos,
+} from './fecha'
 
 describe('fecha de negocio (America/Lima, UTC−5)', () => {
   it('convierte hora local de la tienda a instante UTC', () => {
