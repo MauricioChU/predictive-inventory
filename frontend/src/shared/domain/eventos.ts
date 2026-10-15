@@ -53,7 +53,14 @@ export class BusEnMemoria implements BusDeEventos {
       try {
         await manejador(evento)
       } catch (error) {
-        this.alFallar(error, evento)
+        // Fix round 2, minor: si el propio alFallar lanza, no debe detener a los
+        // manejadores restantes ni hacer que publicar() rechace (mismo principio que el
+        // manejador original: un fallo aquí no puede tirar abajo una operación ya confirmada).
+        try {
+          this.alFallar(error, evento)
+        } catch (errorDeAlFallar) {
+          console.error('El manejador de fallas (alFallar) también falló:', errorDeAlFallar)
+        }
       }
     }
   }

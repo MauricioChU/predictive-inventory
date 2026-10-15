@@ -106,6 +106,25 @@ describe('BusEnMemoria', () => {
     expect(recibidos).toEqual(['primero:p1', 'primero:p2', 'nuevo:p2'])
   })
 
+  // Fix round 2, minor (eventos.ts:56): si el propio alFallar lanza, no debe detener a los
+  // manejadores restantes ni hacer que publicar() rechace.
+  it('si alFallar lanza, los manejadores restantes igual corren y publicar() no rechaza', async () => {
+    const bus = new BusEnMemoria(() => {
+      throw new Error('alFallar también falla')
+    })
+    const recibidos: string[] = []
+    bus.suscribir('ProductoCreado', () => {
+      throw new Error('falla del primero')
+    })
+    bus.suscribir('ProductoCreado', (e) => {
+      recibidos.push(e.productoId)
+    })
+    await expect(
+      bus.publicar({ tipo: 'ProductoCreado', productoId: 'p1' }),
+    ).resolves.toBeUndefined()
+    expect(recibidos).toEqual(['p1'])
+  })
+
   it('cancelar y volver a suscribirse dentro de un manejador no causa llamadas repetidas', async () => {
     const bus = new BusEnMemoria()
     const recibidos: string[] = []
