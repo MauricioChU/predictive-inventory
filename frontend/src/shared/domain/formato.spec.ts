@@ -15,7 +15,10 @@ describe('formato', () => {
     expect(formatearDinero(Dinero.deCentimos(1463))).toBe('S/ 14.63')
     expect(formatearDinero(Dinero.deCentimos(5))).toBe('S/ 0.05')
     expect(formatearDinero(Dinero.deCentimos(-480))).toBe('-S/ 4.80')
-    expect(formatearDinero(Dinero.deCentimos(125000))).toBe('S/ 1,250.00')
+    expect(formatearDinero(Dinero.deCentimos(125000))).toBe('S/ 1 250.00')
+  })
+  it('RN-CAT-04: agrupa miles con espacio, igual que el mensaje de la spec', () => {
+    expect(formatearDinero(Dinero.deCentimos(9_999_999))).toBe('S/ 99 999.99')
   })
   it('formatea cantidades sin ceros sobrantes y con su unidad', () => {
     expect(formatearNumero(Cantidad.deMilesimas(1250))).toBe('1.25')

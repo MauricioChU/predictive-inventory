@@ -10,7 +10,7 @@ function agrupar(entero: number, separador: string): string {
 
 export function formatearDinero(dinero: Dinero): string {
   const absoluto = Math.abs(dinero.centimos)
-  const texto = `S/ ${agrupar(Math.floor(absoluto / 100), ',')}.${String(absoluto % 100).padStart(2, '0')}`
+  const texto = `S/ ${agrupar(Math.floor(absoluto / 100), ' ')}.${String(absoluto % 100).padStart(2, '0')}`
   return dinero.centimos < 0 ? `-${texto}` : texto
 }
 
