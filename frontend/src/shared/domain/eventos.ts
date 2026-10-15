@@ -25,16 +25,36 @@ export interface BusDeEventos {
   suscribir<T extends TipoDeEvento>(tipo: T, manejador: ManejadorDeEvento<T>): () => void
 }
 
-/** Bus síncrono en el mismo proceso. Se publica DESPUÉS de confirmar la unidad de trabajo. */
+export type ManejadorDeFalla = (error: unknown, evento: EventoDeDominio) => void
+
+const alFallarPorDefecto: ManejadorDeFalla = (error, evento) => {
+  console.error(`Error en un manejador de "${evento.tipo}":`, error)
+}
+
+/**
+ * Bus síncrono en el mismo proceso. Se publica DESPUÉS de confirmar la unidad de trabajo,
+ * así que `publicar` nunca rechaza por culpa de un manejador: un manejador que falla no
+ * debe hacer que la UI reporte como fallida una operación que ya se guardó (ADR-0002).
+ * Cada fallo se entrega a `alFallar` (por defecto, un `console.error`).
+ */
 export class BusEnMemoria implements BusDeEventos {
   private readonly manejadores = new Map<
     TipoDeEvento,
     Set<(e: EventoDeDominio) => Promise<void> | void>
   >()
 
+  constructor(private readonly alFallar: ManejadorDeFalla = alFallarPorDefecto) {}
+
   async publicar(evento: EventoDeDominio): Promise<void> {
-    for (const manejador of this.manejadores.get(evento.tipo) ?? []) {
-      await manejador(evento)
+    // Copia los suscriptores ANTES de recorrerlos: lo que un manejador suscriba, cancele o
+    // vuelva a suscribir durante esta publicación no afecta a la entrega en curso.
+    const suscriptores = [...(this.manejadores.get(evento.tipo) ?? [])]
+    for (const manejador of suscriptores) {
+      try {
+        await manejador(evento)
+      } catch (error) {
+        this.alFallar(error, evento)
+      }
     }
   }
 
