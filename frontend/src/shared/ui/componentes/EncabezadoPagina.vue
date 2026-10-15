@@ -1,14 +1,35 @@
 <script setup lang="ts">
+import { getCurrentInstance } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeft } from 'lucide-vue-next'
 
 withDefaults(defineProps<{ titulo: string; volver?: boolean }>(), { volver: false })
 const emit = defineEmits<{ volver: [] }>()
 const router = useRouter()
+// `useAttrs()` no sirve aquí: Vue quita de $attrs los listeners que coinciden con un emit
+// declarado. El vnode "crudo" del padre sí conserva onVolver si lo pasó, y es lo que
+// necesitamos para saber si el padre quiere manejar el volver él mismo.
+const instancia = getCurrentInstance()
+
+function tieneListenerVolver(): boolean {
+  return instancia?.vnode.props?.onVolver !== undefined
+}
 
 function alVolver() {
-  emit('volver')
-  router.back()
+  // Q3: "router.back() o emit('volver')", no ambos. Si el padre escucha @volver, le dejamos
+  // el control (p. ej. para confirmar antes de salir); si no, navegamos nosotros.
+  if (tieneListenerVolver()) {
+    emit('volver')
+    return
+  }
+  const haySalidaPrevia = Boolean((window.history.state as { back?: string | null } | null)?.back)
+  if (haySalidaPrevia) {
+    router.back()
+  } else {
+    // Primera pantalla de la sesión (p. ej. se abrió directo en /ajustes): no hay a dónde
+    // "volver", así que no dejamos un callejón sin salida (RN-UX-15) y vamos a Inicio.
+    void router.push({ name: 'inicio' })
+  }
 }
 </script>
 
