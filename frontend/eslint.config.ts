@@ -29,7 +29,49 @@ export default defineConfigWithVueTs(
 
   {
     ...pluginVitest.configs.recommended,
-    files: ['src/**/__tests__/*'],
+    files: ['src/**/__tests__/*', 'src/**/*.spec.ts', 'tests/**/*.spec.ts'],
+  },
+
+  {
+    name: 'arquitectura/importar-modulos-por-index',
+    files: ['src/**/*.{ts,vue}', 'tests/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          group: ['@/modules/*/*', '@/modules/*/*/**'],
+          message: 'Importa otros módulos solo por su index (@/modules/<modulo>). Dentro del módulo usa rutas relativas (ADR-0005).',
+        }],
+      }],
+    },
+  },
+  {
+    name: 'arquitectura/dominio-puro',
+    files: ['src/shared/domain/**/*.ts', 'src/modules/*/domain/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [
+          { group: ['vue', 'vue-router', 'pinia', 'dexie', '@vueuse/*', 'lucide-vue-next'], message: 'El dominio es TypeScript puro (ADR-0005).' },
+          { group: ['**/application/**', '**/infrastructure/**', '**/ui/**', '@/app/**', '@/modules/**'], message: 'El dominio no depende de otras capas ni de otros módulos (ADR-0005).' },
+        ],
+      }],
+    },
+  },
+  {
+    name: 'arquitectura/aplicacion-sin-infraestructura',
+    files: ['src/shared/application/**/*.ts', 'src/modules/*/application/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [
+          { group: ['vue', 'vue-router', 'pinia', 'dexie', '@vueuse/*'], message: 'Los casos de uso no dependen de frameworks (ADR-0005).' },
+          { group: ['**/infrastructure/**', '**/ui/**', '@/app/**', '@/modules/*/*', '@/modules/*/*/**'], message: 'Los casos de uso solo usan dominio y puertos (ADR-0005).' },
+        ],
+      }],
+    },
+  },
+  {
+    name: 'calidad/sin-any',
+    files: ['src/**/*.{ts,vue}', 'tests/**/*.ts'],
+    rules: { '@typescript-eslint/no-explicit-any': 'error' },
   },
 
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),
