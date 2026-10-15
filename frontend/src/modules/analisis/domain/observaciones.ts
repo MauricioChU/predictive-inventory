@@ -68,6 +68,19 @@ export function masVendidos(
   }
 }
 
+/** Líneas de venta (no anuladas) de cada producto en el rango; solo productos con alguna. */
+export function vecesVendido(
+  filas: readonly ResumenDiario[],
+  rango: RangoDeDias,
+): Map<string, number> {
+  const veces = new Map<string, number>()
+  for (const fila of filas) {
+    if (!fila.tieneVentas || !estaEnRango(fila.dia, rango)) continue
+    veces.set(fila.productoId, (veces.get(fila.productoId) ?? 0) + fila.lineasVendidas)
+  }
+  return veces
+}
+
 // ───────────── Precios para revisar (RN-AN-10) ─────────────
 
 export interface PrecioParaRevisar {

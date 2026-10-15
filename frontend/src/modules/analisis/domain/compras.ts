@@ -1,7 +1,9 @@
 import type { Prediccion, SituacionDeProducto } from '@/shared/contratos/entre-modulos'
+import type { ListaDeComprasRegistro } from '@/shared/contratos/registros'
 import { GRAVEDAD_DE_ESTADO, type EstadoDeStock } from '@/shared/contratos/estado-de-stock'
 import { Cantidad, type Unidad } from '@/shared/domain/cantidad'
 import { Dinero } from '@/shared/domain/dinero'
+import { ErrorDeDominio } from '@/shared/domain/errores'
 import type { Dia } from '@/shared/domain/fecha'
 import { formatearCantidad, formatearDia, formatearDinero } from '@/shared/domain/formato'
 
@@ -127,6 +129,41 @@ export function aplicarCambiosALista(
     return cantidad ? [conCantidad(linea, cantidad)] : []
   })
   return conTotal(lineas)
+}
+
+/** RN-OP-03: lo que se pide se registrará como llegada de mercadería. */
+const CANTIDAD_MAXIMA = Cantidad.deEntero(99_999)
+
+/** RN-AN-08: valida la cantidad que el usuario escribe en una línea de la lista. */
+export function cantidadDeLista(texto: string, unidad: Unidad): Cantidad {
+  const cantidad = Cantidad.deTexto(texto, unidad)
+  if (!cantidad.esPositiva()) {
+    throw new ErrorDeDominio('CANTIDAD_NO_POSITIVA', 'La cantidad debe ser mayor que 0')
+  }
+  if (cantidad.mayorQue(CANTIDAD_MAXIMA)) {
+    throw new ErrorDeDominio('CANTIDAD_MAXIMA', 'La cantidad no puede pasar de 99 999')
+  }
+  return cantidad
+}
+
+export function cambiosDesdeRegistro(registro: ListaDeComprasRegistro | null): CambioEnLista[] {
+  return (registro?.cambios ?? []).map((c) => ({
+    productoId: c.productoId,
+    cantidad: c.cantidad === null ? null : Cantidad.deMilesimas(c.cantidad),
+  }))
+}
+
+export function cambiosARegistro(
+  dia: Dia,
+  cambios: readonly CambioEnLista[],
+): ListaDeComprasRegistro {
+  return {
+    dia,
+    cambios: cambios.map((c) => ({
+      productoId: c.productoId,
+      cantidad: c.cantidad === null ? null : c.cantidad.milesimas,
+    })),
+  }
 }
 
 /** Agrega un cambio a los del día; reemplaza el anterior del mismo producto. */

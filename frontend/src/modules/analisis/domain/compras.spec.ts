@@ -8,6 +8,9 @@ import { BOLSAS, CARBON, cant, DETERGENTE, JABON, LEJIA, producto } from './__pr
 import {
   aplicarCambiosALista,
   armarListaParaComprar,
+  cambiosARegistro,
+  cambiosDesdeRegistro,
+  cantidadDeLista,
   cantidadSugerida,
   entraEnLista,
   ordenarLista,
@@ -259,5 +262,41 @@ describe('RN-AN-08: texto para compartir', () => {
     expect(textoParaCompartir(vacia, 'Bodega Rosita', '2026-10-15')).toBe(
       'Lista de compras – Bodega Rosita – 15/10/2026\nTotal estimado: S/ 0.00',
     )
+  })
+})
+
+describe('RN-AN-08: cantidad escrita en la lista', () => {
+  it('RN-AN-08: acepta una cantidad válida para la unidad del producto', () => {
+    expect(cantidadDeLista('24', 'UNIDAD').milesimas).toBe(24000)
+    expect(cantidadDeLista('1,5', 'KILO').milesimas).toBe(1500)
+    expect(cantidadDeLista('99999', 'LITRO').milesimas).toBe(99_999_000)
+  })
+
+  it.each([
+    ['0', 'UNIDAD', 'La cantidad debe ser mayor que 0'],
+    ['-2', 'UNIDAD', 'La cantidad debe ser mayor que 0'],
+    ['100000', 'UNIDAD', 'La cantidad no puede pasar de 99 999'],
+    ['99999.5', 'KILO', 'La cantidad no puede pasar de 99 999'],
+    ['1.5', 'UNIDAD', 'Este producto se cuenta por unidades enteras'],
+    ['dos', 'KILO', 'Escribe una cantidad válida, por ejemplo 2 o 1.5'],
+  ] as const)('RN-AN-08: "%s" en %s → %s', (texto, unidad, mensaje) => {
+    expect(() => cantidadDeLista(texto, unidad)).toThrow(mensaje)
+  })
+
+  it('RN-AN-08: los cambios del día van y vuelven del registro en milésimas', () => {
+    const cambios = [
+      { productoId: 'lejia', cantidad: cant('24') },
+      { productoId: 'jabon', cantidad: null },
+    ]
+    const registro = cambiosARegistro('2026-10-15', cambios)
+    expect(registro).toEqual({
+      dia: '2026-10-15',
+      cambios: [
+        { productoId: 'lejia', cantidad: 24000 },
+        { productoId: 'jabon', cantidad: null },
+      ],
+    })
+    expect(cambiosDesdeRegistro(registro)).toEqual(cambios)
+    expect(cambiosDesdeRegistro(null)).toEqual([])
   })
 })

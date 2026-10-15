@@ -4,7 +4,7 @@ import { Cantidad } from '@/shared/domain/cantidad'
 import { sumarDias, type Dia } from '@/shared/domain/fecha'
 import { formatearCantidad, formatearDinero, formatearNumero } from '@/shared/domain/formato'
 import { historial } from './__pruebas__/historial'
-import { nuevaOperacion } from './__pruebas__/operaciones'
+import { anulacionDe, nuevaOperacion } from './__pruebas__/operaciones'
 import {
   BOLSAS,
   CARBON,
@@ -29,6 +29,7 @@ import {
   semanaContraSemana,
   tendencia,
   ultimoDiaConVenta,
+  vecesVendido,
 } from './observaciones'
 import { rangoDePeriodo } from './periodos'
 import { proyectarLibro, ResumenDiario } from './resumen-diario'
@@ -127,6 +128,27 @@ describe('RN-AN-09: más vendidos', () => {
   it('RN-AN-09: una fila de un producto que no está en el catálogo se ignora', () => {
     const { porVeces } = masVendidos(filas, [LEJIA], rangoDePeriodo('7_DIAS', HOY))
     expect(porVeces.map((f) => f.nombre)).toEqual(['Lejía 1 L'])
+  })
+})
+
+describe('veces vendido por producto', () => {
+  it('RN-AN-01: cuenta las líneas de venta no anuladas de cada producto en el rango', () => {
+    const venta = vender('2026-10-14 10:00', LEJIA, '3')
+    const filas = proyectarLibro([
+      stockInicial(CARBON, '10', '2026-10-01'),
+      vender('2026-10-15 09:00', LEJIA, '2'),
+      venta,
+      anulacionDe(venta, '2026-10-15 10:00'),
+      vender('2026-10-15 10:00', JABON, '1'),
+      vender('2026-10-15 11:00', JABON, '1'),
+      vender('2026-10-01 11:00', JABON, '1'),
+    ])
+    expect(vecesVendido(filas, rangoDePeriodo('7_DIAS', HOY))).toEqual(
+      new Map([
+        ['lejia', 1],
+        ['jabon', 2],
+      ]),
+    )
   })
 })
 

@@ -1,5 +1,12 @@
+import type { UnidadDeTrabajo } from '@/shared/application/unidad-de-trabajo'
+import type {
+  CatalogoConsultable,
+  InventarioConsultable,
+  TiendaConsultable,
+} from '@/shared/contratos/entre-modulos'
 import type { ListaDeComprasRegistro, ResumenDiarioRegistro } from '@/shared/contratos/registros'
 import type { Dia } from '@/shared/domain/fecha'
+import type { Reloj } from '@/shared/domain/reloj'
 
 /** Proyección `ResumenDiario` por producto y día (tabla `resumenes`, clave `productoId|dia`). */
 export interface RepositorioDeResumenes {
@@ -22,4 +29,15 @@ export interface RepositorioDeResumenes {
 export interface RepositorioDeListaDeCompras {
   delDia(dia: Dia): Promise<ListaDeComprasRegistro | null>
   guardar(r: ListaDeComprasRegistro): Promise<void>
+}
+
+/** Todo lo que el módulo necesita; los otros módulos llegan como funciones perezosas. */
+export interface DependenciasDeAnalisis {
+  resumenes: RepositorioDeResumenes
+  listaDeCompras: RepositorioDeListaDeCompras
+  uow: UnidadDeTrabajo
+  reloj: Reloj
+  catalogo: () => CatalogoConsultable
+  inventario: () => InventarioConsultable
+  tienda: () => TiendaConsultable
 }
