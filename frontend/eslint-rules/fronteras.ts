@@ -125,9 +125,14 @@ export function verificarFrontera(archivoImportador: string, especificador: stri
   if (destinoAbsoluto === null) return null // paquete suelto: no es asunto de esta regla
 
   // Fix round 2, M4: UnidadDeTrabajoEnMemoria usa AsyncLocalStorage (Node); solo pruebas.
+  // Fix round 4, R1: el guard original solo miraba ".spec.ts" o el área 'tests', así que un
+  // ayudante bajo __pruebas__/ (sin terminar en .spec.ts, p. ej. una fábrica de datos de
+  // prueba) quedaba bloqueado por error. Se usa esArchivoDePruebas() (que SÍ cubre
+  // __pruebas__/) y se conserva el área 'tests' aparte, porque esArchivoDePruebas() no
+  // cubre un archivo NO-spec dentro de tests/** (p. ej. tests/gherkin/ejecutar-feature.ts).
   if (
     basename(quitarExtension(destinoAbsoluto)) === 'unidad-de-trabajo-en-memoria' &&
-    !archivoImportador.endsWith('.spec.ts') &&
+    !esArchivoDePruebas(archivoImportador) &&
     clasificar(archivoImportador).area !== 'tests'
   ) {
     return MENSAJE_UOW_SOLO_PRUEBAS

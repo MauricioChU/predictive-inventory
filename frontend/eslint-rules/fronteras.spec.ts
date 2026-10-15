@@ -101,6 +101,13 @@ describe('arquitectura/fronteras', () => {
           code: "import { ProductoRepositorio } from '../infrastructure/memoria/repositorios'",
           filename: archivo('modules', 'catalogo', 'application', '__pruebas__', 'fabricas.ts'),
         },
+        // Fix round 4, R1: el guard de la UoW en memoria corría ANTES de la excepción de
+        // archivos de pruebas y solo miraba ".spec.ts"/área 'tests', así que un ayudante
+        // bajo __pruebas__/ (sin terminar en .spec.ts) quedaba bloqueado por error.
+        {
+          code: "import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'",
+          filename: archivo('modules', 'catalogo', 'application', '__pruebas__', 'fabricas.ts'),
+        },
         // Fix round 3, minor 6: export ... from también se revisa (intramódulo, válido).
         {
           code: "export { Producto } from '../domain/producto'",
@@ -184,6 +191,13 @@ describe('arquitectura/fronteras', () => {
         {
           code: "import { UnidadDeTrabajoEnMemoria } from '../shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'",
           filename: archivo('app', 'composicion.ts'),
+          errors: 1,
+        },
+        // Fix round 4, R1: un archivo de PRODUCCIÓN del módulo (ni .spec.ts ni __pruebas__/)
+        // sigue sin poder importar la UoW en memoria.
+        {
+          code: "import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'",
+          filename: archivo('modules', 'catalogo', 'application', 'crear.ts'),
           errors: 1,
         },
         // shared/domain no puede alcanzar shared/application.
