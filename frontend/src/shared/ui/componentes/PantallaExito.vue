@@ -1,21 +1,36 @@
 <script setup lang="ts">
+import { inject, onMounted, ref } from 'vue'
 import { CircleCheck } from 'lucide-vue-next'
+import { CLAVE_ANUNCIADOR } from '@/app/anunciador'
 
-defineProps<{ titulo: string; detalle?: string }>()
+const props = defineProps<{ titulo: string; detalle?: string }>()
+
+const refEncabezado = ref<HTMLHeadingElement>()
+// Hallazgo 4: el anunciador es opcional a propósito (segundo argumento de inject): si alguien
+// monta este componente solo (p. ej. un test, o un uso futuro fuera de LayoutApp) sin proveerlo,
+// el componente no falla — simplemente no anuncia nada y sigue mostrando su contenido visual.
+const anunciador = inject(CLAVE_ANUNCIADOR, undefined)
+
+onMounted(() => {
+  anunciador?.anunciar(props.detalle ? `${props.titulo}. ${props.detalle}` : props.titulo)
+  const encabezado = refEncabezado.value
+  if (!encabezado) return
+  if (!encabezado.hasAttribute('tabindex')) encabezado.setAttribute('tabindex', '-1')
+  encabezado.focus({ preventScroll: true })
+})
 </script>
 
 <template>
   <!--
-    Q2: sin role="status" aquí. Si una pantalla la monta dinámicamente (v-if) después de una
-    operación, el contenido llegaría "ya lleno" al lector de pantalla, que puede no anunciarlo
-    de forma confiable (el mismo problema que tenía el aviso Deshacer). La pantalla que la use
-    debe anunciar el resultado con una región aria-live persistente propia (como hace LayoutApp
-    con el aviso Deshacer) y/o mover el foco a este <h1> al mostrarla; este componente solo
-    presenta el contenido visual.
+    Hallazgo 4: sin role="status" (ver nota de la Ronda 1: insertar contenido "ya lleno" con
+    role="status" no es confiable). En su lugar, al montarse anuncia el resultado con el
+    anunciador global de LayoutApp (si hay uno provisto) y mueve el foco a su propio <h1> —
+    así un lector de pantalla lo nota de las dos formas: el anuncio y, al enfocar el título,
+    leerlo directamente.
   -->
   <div class="pantalla-exito">
     <CircleCheck aria-hidden="true" class="icono" />
-    <h1>{{ titulo }}</h1>
+    <h1 ref="refEncabezado">{{ titulo }}</h1>
     <p v-if="detalle" class="detalle">{{ detalle }}</p>
     <slot />
   </div>
@@ -39,6 +54,10 @@ h1 {
   font-size: 1.375rem;
   margin: 0;
   color: var(--color-texto);
+}
+h1:focus {
+  /* Foco programático, no interactivo (el usuario no lo tocó): sin anillo visible. */
+  outline: none;
 }
 .detalle {
   margin: 0;
