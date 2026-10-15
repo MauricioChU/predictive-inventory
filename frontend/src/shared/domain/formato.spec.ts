@@ -31,6 +31,12 @@ describe('formato', () => {
     expect(formatearEntero(3840)).toBe('3 840')
     expect(formatearEntero(152)).toBe('152')
   })
+  // Fix round 1, M8: formatearEntero es para conteos (líneas, productos); un decimal
+  // indicaría que se está usando para otra cosa (monto o cantidad), que tienen su propio
+  // formateador.
+  it('M8: formatearEntero exige un entero', () => {
+    expect(() => formatearEntero(1.5)).toThrow()
+  })
   it('formatea días como DD/MM/AAAA', () => {
     expect(formatearDia('2026-10-15')).toBe('15/10/2026')
   })

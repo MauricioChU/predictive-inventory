@@ -28,7 +28,9 @@ export function formatearCantidad(cantidad: Cantidad, unidad: Unidad): string {
   return `${formatearNumero(cantidad)} ${SIMBOLO_DE_UNIDAD[unidad]}`
 }
 
+// Fix round 1, M8: formatearEntero es para conteos (líneas, productos); exige un entero.
 export function formatearEntero(n: number): string {
+  if (!Number.isInteger(n)) throw new Error(`formatearEntero espera un entero: ${n}`)
   return agrupar(n, ' ')
 }
 
