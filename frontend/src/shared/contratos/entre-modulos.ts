@@ -7,6 +7,14 @@ import type { OperacionRegistro } from './registros'
 
 // ───────────── Catálogo ofrece ─────────────
 
+/** Error de validación con código, para que Respaldo redacte el mensaje de importación (RN-RE-08). */
+export interface ErrorDeValidacion {
+  codigo: string
+  mensaje: string
+  /** Solo en NOMBRE_DUPLICADO: el nombre tal como está guardado. */
+  nombreExistente?: string
+}
+
 export interface ProductoResumido {
   id: string
   nombre: string
@@ -40,8 +48,8 @@ export interface CatalogoConsultable {
 
 /** Lo que Respaldo necesita para importar desde Excel (RN-RE-07, RN-RE-08). */
 export interface CatalogoParaImportacion {
-  /** Devuelve el mensaje de error de la primera regla que falla, o null si es válido. No guarda nada. */
-  validarNuevo(datos: DatosDeProductoNuevo): Promise<string | null>
+  /** Devuelve el primer error de validación, o null si es válido. No guarda nada. */
+  validarNuevo(datos: DatosDeProductoNuevo): Promise<ErrorDeValidacion | null>
   crear(datos: DatosDeProductoNuevo): Promise<string>
   categoriaPorNombre(nombre: string): Promise<string | null>
   crearCategoria(nombre: string): Promise<string>
@@ -76,6 +84,17 @@ export interface ProyeccionDeOperaciones {
 
 // ───────────── Análisis ofrece ─────────────
 
+/** Totales de la tienda en un día (RN-AN-02). */
+export interface TotalesDeDia {
+  dia: Dia
+  ventas: Dinero
+  costoVendido: Dinero
+  gananciaBruta: Dinero
+  mermas: Dinero
+  gananciaNeta: Dinero
+  diferenciasDeConteo: Dinero
+}
+
 /** VPD = vendido ÷ diasValidos (RN-AN-04). Se guarda como fracción para no perder exactitud. */
 export interface Prediccion {
   vendido: Cantidad
@@ -101,7 +120,9 @@ export interface AnalisisConsultable {
   /** Solo productos activos. */
   situaciones(): Promise<SituacionDeProducto[]>
   vecesVendido(desde: Dia, hasta: Dia): Promise<Map<string, number>>
-  totalesDelDia(dia: Dia): Promise<{ ventas: Dinero; gananciaNeta: Dinero }>
+  totalesDelDia(dia: Dia): Promise<TotalesDeDia>
+  /** Días con alguna venta, merma o ajuste, en orden ascendente. */
+  resumenesDeTienda(desde: Dia, hasta: Dia): Promise<TotalesDeDia[]>
 }
 
 // ───────────── Tienda ofrece ─────────────
