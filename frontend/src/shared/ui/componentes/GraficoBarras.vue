@@ -10,68 +10,89 @@ interface Barra {
 
 const props = defineProps<{ barras: Barra[]; titulo: string }>()
 
+// Q4: id realmente usado (antes quedaba puesto en un <p> sin que nada lo referenciara).
 const idTitulo = useId()
 
-const ALTO = 180
-const ALTO_BARRAS = 120
-const ANCHO_BARRA = 40
-const SEPARACION = 16
-const ANCHO = computed(
-  () => props.barras.length * ANCHO_BARRA + Math.max(0, props.barras.length - 1) * SEPARACION + SEPARACION * 2,
-)
-const maximo = computed(() => Math.max(1, ...props.barras.map((b) => b.valor)))
+const ALTO_BARRAS = 100
+const ANCHO_BARRA = 10
+const SEPARACION = 4
 
+const maximo = computed(() => Math.max(1, ...props.barras.map((b) => b.valor)))
+const ancho = computed(
+  () => props.barras.length * ANCHO_BARRA + Math.max(0, props.barras.length - 1) * SEPARACION,
+)
 const barrasDibujadas = computed(() =>
   props.barras.map((barra, indice) => {
-    const alto = Math.round((barra.valor / maximo.value) * ALTO_BARRAS)
-    const x = SEPARACION + indice * (ANCHO_BARRA + SEPARACION)
-    const y = ALTO_BARRAS - alto
-    return { ...barra, x, y, alto, ancho: ANCHO_BARRA }
+    const alto = Math.max(Math.round((barra.valor / maximo.value) * ALTO_BARRAS), 2)
+    return {
+      x: indice * (ANCHO_BARRA + SEPARACION),
+      y: ALTO_BARRAS - alto,
+      alto,
+      ancho: ANCHO_BARRA,
+    }
   }),
 )
-
-const resumenAccesible = computed(() => {
-  const partes = props.barras.map((b) => `${b.etiqueta}: ${b.textoValor}${b.destacada ? ' (destacada)' : ''}`)
-  return `Gráfico de barras: ${props.titulo}. ${partes.join('. ')}.`
-})
 </script>
 
 <template>
-  <figure class="grafico-barras">
-    <p :id="idTitulo" class="titulo">{{ titulo }}</p>
-    <svg
-      role="img"
-      :aria-label="resumenAccesible"
-      :viewBox="`0 0 ${ANCHO} ${ALTO}`"
-      preserveAspectRatio="xMidYMid meet"
-    >
-      <line class="linea-base" x1="0" :y1="ALTO_BARRAS" :x2="ANCHO" :y2="ALTO_BARRAS" />
-      <g v-for="barra in barrasDibujadas" :key="barra.etiqueta">
+  <!--
+    Q4: el SVG solo dibuja las barras (sin <text> dentro: su tamaño de letra no sigue la
+    preferencia de la persona y a 360px queda minúsculo). Las etiquetas y valores van en HTML
+    normal, con rem, para que escalen con el tamaño de letra. role="img" lleva solo el título
+    (no un resumen de cada barra) para no anunciar el dato dos veces: la tabla .solo-lector es
+    la única fuente de datos para lectores de pantalla (el SVG y las etiquetas visuales quedan
+    aria-hidden).
+  -->
+  <figure class="grafico-barras" :aria-labelledby="idTitulo">
+    <figcaption :id="idTitulo" class="titulo">{{ titulo }}</figcaption>
+
+    <div class="visual" aria-hidden="true">
+      <div class="fila valores">
+        <span
+          v-for="(barra, indice) in barras"
+          :key="indice"
+          class="valor"
+          :class="{ 'valor--destacada': barra.destacada }"
+          >{{ barra.textoValor }}</span
+        >
+      </div>
+
+      <svg
+        role="img"
+        :aria-label="titulo"
+        class="barras-svg"
+        :viewBox="`0 0 ${ancho} ${ALTO_BARRAS}`"
+        preserveAspectRatio="none"
+      >
         <rect
+          v-for="(barra, indice) in barrasDibujadas"
+          :key="indice"
           class="barra"
-          :class="{ 'barra--destacada': barra.destacada }"
+          :class="{ 'barra--destacada': barras[indice]?.destacada }"
           :x="barra.x"
           :y="barra.y"
           :width="barra.ancho"
-          :height="Math.max(barra.alto, 2)"
-          rx="4"
+          :height="barra.alto"
         />
-        <text class="valor" :x="barra.x + barra.ancho / 2" :y="barra.y - 6" text-anchor="middle">
-          {{ barra.textoValor }}
-        </text>
-        <text
+      </svg>
+
+      <div class="fila etiquetas">
+        <span
+          v-for="(barra, indice) in barras"
+          :key="indice"
           class="etiqueta"
           :class="{ 'etiqueta--destacada': barra.destacada }"
-          :x="barra.x + barra.ancho / 2"
-          :y="ALTO_BARRAS + 20"
-          text-anchor="middle"
+          >{{ barra.etiqueta }}</span
         >
-          {{ barra.etiqueta }}
-        </text>
-      </g>
-    </svg>
+      </div>
+    </div>
+
     <table class="solo-lector">
-      <caption>{{ titulo }}</caption>
+      <caption>
+        {{
+          titulo
+        }}
+      </caption>
       <thead>
         <tr>
           <th scope="col">Etiqueta</th>
@@ -79,7 +100,7 @@ const resumenAccesible = computed(() => {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="barra in barras" :key="barra.etiqueta">
+        <tr v-for="(barra, indice) in barras" :key="indice">
           <th scope="row">{{ barra.etiqueta }}{{ barra.destacada ? ' (destacada)' : '' }}</th>
           <td>{{ barra.textoValor }}</td>
         </tr>
@@ -96,33 +117,51 @@ const resumenAccesible = computed(() => {
   font-weight: 700;
   margin: 0 0 var(--espacio-2);
 }
-svg {
-  width: 100%;
-  height: auto;
-  max-height: 220px;
-  overflow: visible;
+.visual {
+  display: flex;
+  flex-direction: column;
 }
-.linea-base {
-  stroke: var(--color-borde);
-  stroke-width: 1;
+.fila {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--espacio-1);
+  text-align: center;
+}
+.valor,
+.etiqueta {
+  /* Q4: texto normal en rem, escala con el tamaño de letra elegido; se envuelve por palabra
+     en vez de desbordar si un valor es largo (p. ej. "S/ 1,200.00"). */
+  font-size: 0.75rem;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+.valor {
+  color: var(--color-texto);
+  font-weight: 700;
+}
+.valor--destacada {
+  color: var(--color-advertencia);
+}
+.etiqueta {
+  color: var(--color-texto-suave);
+  margin-top: var(--espacio-1);
+}
+.etiqueta--destacada {
+  color: var(--color-texto);
+  font-weight: 700;
+}
+.barras-svg {
+  display: block;
+  width: 100%;
+  height: 120px;
+  margin-block: var(--espacio-1);
+  overflow: visible;
 }
 .barra {
   fill: var(--color-primario);
 }
 .barra--destacada {
   fill: var(--color-advertencia);
-}
-.valor {
-  fill: var(--color-texto);
-  font-size: 11px;
-  font-weight: 700;
-}
-.etiqueta {
-  fill: var(--color-texto-suave);
-  font-size: 11px;
-}
-.etiqueta--destacada {
-  fill: var(--color-texto);
-  font-weight: 700;
 }
 </style>
