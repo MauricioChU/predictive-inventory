@@ -29,15 +29,37 @@ import type { AlmacenEnMemoria } from './almacen-en-memoria'
  * `await` a un `ejecutar()` de nivel superior (no anidado) de esta MISMA instancia — se
  * bloquearía para siempre, porque ese `ejecutar()` independiente espera su turno en la cola
  * y la cola nunca avanza mientras el trabajo que lo está esperando no termine.
+ *
+ * Fix round 3, minor 1: el CONTEXTO de AsyncLocalStorage sobrevive a la transacción que lo
+ * creó. Si un trabajo arranca algo "fire-and-forget" sin esperarlo (p. ej. `setTimeout` o un
+ * `bus.publicar()` no esperado) y ESE callback, ya con la transacción terminada, llama a
+ * `ejecutar()`, Node sigue propagando el mismo contexto de ALS a ese callback (así funciona
+ * AsyncLocalStorage: sigue la cadena causal de continuaciones, no el tiempo de vida de
+ * `run()`). Con un simple `true` en el store no hay forma de distinguir "la transacción que
+ * me originó sigue viva" de "ya terminó, pero mi continuación todavía carga su contexto": esa
+ * llamada tardía se trataba por error como anidada, se saltaba la cola Y su propia foto del
+ * almacén, y quedaba escribiendo sin protección — si DESPUÉS otra transacción independiente
+ * (que ya estaba en curso) fallaba, su rollback restauraba una foto tomada ANTES de esa
+ * escritura tardía y se la llevaba por delante en silencio.
+ *
+ * Por eso el store ya no es `true`, sino un TOKEN por transacción (`{ activa: true }`) que
+ * `comoTransaccion` marca `activa = false` en su `finally`, apenas la transacción termina
+ * (éxito o fallo). `ejecutar()` solo trata una llamada como anidada si el token del store
+ * sigue `activa` — si la transacción que lo creó ya cerró, por más que el contexto de ALS
+ * siga "vivo" para esa continuación tardía, se encola como lo que de verdad es: independiente.
  */
+interface TokenDeTransaccion {
+  activa: boolean
+}
+
 export class UnidadDeTrabajoEnMemoria implements UnidadDeTrabajo {
-  private readonly contexto = new AsyncLocalStorage<true>()
+  private readonly contexto = new AsyncLocalStorage<TokenDeTransaccion>()
   private colaDeEjecucion: Promise<unknown> = Promise.resolve()
 
   constructor(private readonly almacen: AlmacenEnMemoria) {}
 
   async ejecutar<T>(trabajo: () => Promise<T>): Promise<T> {
-    if (this.contexto.getStore() === true) return trabajo()
+    if (this.contexto.getStore()?.activa) return trabajo()
 
     // No es anidada: reserva su turno en la cola antes de tocar el almacén. `.catch` evita
     // que el fallo de un turno anterior impida que este turno se ejecute.
@@ -50,11 +72,14 @@ export class UnidadDeTrabajoEnMemoria implements UnidadDeTrabajo {
 
   private async comoTransaccion<T>(trabajo: () => Promise<T>): Promise<T> {
     const antes = this.almacen.instantanea()
+    const token: TokenDeTransaccion = { activa: true }
     try {
-      return await this.contexto.run(true, trabajo)
+      return await this.contexto.run(token, trabajo)
     } catch (error) {
       this.almacen.restaurar(antes)
       throw error
+    } finally {
+      token.activa = false
     }
   }
 }

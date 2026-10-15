@@ -122,16 +122,93 @@ describe('UnidadDeTrabajoEnMemoria', () => {
     expect(almacen.obtener('existencias', 'p2')?.cantidad).toBe(2000)
   })
 
-  it('M4 (ronda 2): una llamada independiente que lanza no deja ninguna escritura parcial', async () => {
+  // Fix round 3, minor 6: la llamada independiente que lanza ahora llega de verdad
+  // mientras OTRA transacción está en curso (mid-flight), no sola.
+  it('M4 (ronda 2): una llamada independiente que lanza, disparada mientras otra está en curso, no deja ninguna escritura parcial', async () => {
     const almacen = new AlmacenEnMemoria()
     const uow = new UnidadDeTrabajoEnMemoria(almacen)
-    await expect(
-      uow.ejecutar(async () => {
-        almacen.guardar('existencias', existencia('parcial', 1))
-        throw new Error('falla')
-      }),
-    ).rejects.toThrow('falla')
+    let liberarPrimera: () => void = () => {}
+    const esperaDeLaPrimera = new Promise<void>((resolver) => {
+      liberarPrimera = resolver
+    })
+    let primeraArranco: () => void = () => {}
+    const senalPrimeraArranco = new Promise<void>((resolver) => {
+      primeraArranco = resolver
+    })
+
+    const primera = uow.ejecutar(async () => {
+      primeraArranco()
+      almacen.guardar('existencias', existencia('en-curso', 1))
+      await esperaDeLaPrimera
+    })
+
+    await senalPrimeraArranco
+
+    // Llega MIENTRAS la primera todavía está en curso (mid-flight).
+    const independienteQueFalla = uow.ejecutar(async () => {
+      almacen.guardar('existencias', existencia('parcial', 1))
+      throw new Error('falla')
+    })
+
+    liberarPrimera()
+    await primera
+    await expect(independienteQueFalla).rejects.toThrow('falla')
+
     expect(almacen.obtener('existencias', 'parcial')).toBeUndefined()
+    expect(almacen.obtener('existencias', 'en-curso')?.cantidad).toBe(1) // la primera no se vio afectada
+  })
+
+  // Fix round 3, minor 1: el contexto de AsyncLocalStorage sobrevive a la transacción si un
+  // trabajo arranca algo "fire-and-forget" (setTimeout, o un bus.publicar() sin esperar) que
+  // luego llama a ejecutar(): ese callback hereda el contexto de ALS aunque la transacción
+  // que lo originó YA haya terminado. Con un simple `true` en el store, ese ejecutar() tardío
+  // se trataba como anidado — se saltaba la cola y su propia foto — y quedaba viviendo sin
+  // protección en el almacén; si DESPUÉS otra transacción independiente (que ya estaba en
+  // curso) fallaba, su rollback restauraba una foto tomada ANTES de esa escritura tardía y se
+  // la llevaba por delante en silencio.
+  it('Fix round 3, minor 1: una escritura disparada por un fire-and-forget (setTimeout) de un trabajo ya terminado no se pierde con el rollback de otra transacción independiente', async () => {
+    const almacen = new AlmacenEnMemoria()
+    const uow = new UnidadDeTrabajoEnMemoria(almacen)
+
+    let seLlamoAEjecutarTardio: () => void = () => {}
+    const senalSeLlamo = new Promise<void>((resolver) => {
+      seLlamoAEjecutarTardio = resolver
+    })
+
+    // Transacción A: escribe algo y agenda un fire-and-forget (setTimeout, sin esperarlo)
+    // que llamará a ejecutar() DESPUÉS de que A ya haya terminado.
+    await uow.ejecutar(async () => {
+      almacen.guardar('existencias', existencia('a', 1))
+      setTimeout(() => {
+        // Este callback corre con el contexto de ALS de A todavía "vivo" (fue agendado
+        // dentro de A sin esperarlo), aunque comoTransaccion(A) ya haya vuelto.
+        void uow.ejecutar(async () => {
+          almacen.guardar('existencias', existencia('tardio', 1))
+        })
+        seLlamoAEjecutarTardio()
+      }, 0)
+    })
+
+    // Transacción B: genuinamente independiente, arranca y queda a mitad de camino
+    // (mid-flight) justo cuando el fire-and-forget llama a ejecutar() para "tardio".
+    let bArranco: () => void = () => {}
+    const senalBArranco = new Promise<void>((resolver) => {
+      bArranco = resolver
+    })
+    const b = uow.ejecutar(async () => {
+      bArranco()
+      await senalSeLlamo // justo cuando (o después de que) se llamó a ejecutar() para "tardio"
+      throw new Error('b falla')
+    })
+
+    await senalBArranco
+    await expect(b).rejects.toThrow('b falla')
+
+    // Deja que la cola drene lo que haya quedado pendiente ("tardio", si quedó encolada
+    // detrás de B en vez de ejecutarse de inmediato por error).
+    await uow.ejecutar(async () => {})
+
+    expect(almacen.obtener('existencias', 'tardio')?.cantidad).toBe(1)
   })
 
   it('M4 (ronda 2): el manejador de un evento publicado tras confirmar y una operación de usuario concurrente no comparten transacción', async () => {
