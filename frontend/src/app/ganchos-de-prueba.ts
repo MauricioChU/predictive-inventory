@@ -1,8 +1,9 @@
 import type { ContextoAvisoDeshacer } from './aviso-deshacer'
 
 export interface GanchosDePrueba {
-  /** Muestra el aviso Deshacer global (con un "deshacer" que no hace nada). */
-  mostrarAvisoDeshacer: (mensaje?: string, segundos?: number) => void
+  /** Muestra el aviso Deshacer global (con un "deshacer" que no hace nada), con los mismos
+   * 10 s de siempre (RN-OP-18): el gancho no puede cambiar el tiempo. */
+  mostrarAvisoDeshacer: (mensaje?: string) => void
 }
 
 declare global {
@@ -22,8 +23,8 @@ declare global {
 export function exponerGanchosDePrueba(aviso: ContextoAvisoDeshacer): () => void {
   if (!(import.meta.env.DEV || navigator.webdriver)) return () => {}
   window.__pruebas = {
-    mostrarAvisoDeshacer(mensaje = 'Venta registrada', segundos = 10) {
-      aviso.mostrar({ mensaje, segundos, alDeshacer: () => {} })
+    mostrarAvisoDeshacer(mensaje = 'Venta registrada') {
+      aviso.mostrar({ mensaje, alDeshacer: () => {} })
     },
   }
   return () => {

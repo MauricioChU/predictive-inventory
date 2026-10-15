@@ -1,9 +1,11 @@
 import { computed, inject, ref, type ComputedRef, type InjectionKey } from 'vue'
 import type { Anunciador } from '@/shared/ui/anunciador'
 
+/** RN-OP-18: "Deshacer" se ofrece durante 10 s — fijo, nadie lo cambia (ni pantallas ni pruebas). */
+export const SEGUNDOS_PARA_DESHACER = 10
+
 export interface OpcionesAvisoDeshacer {
   mensaje: string
-  segundos?: number
   alDeshacer: () => void
 }
 
@@ -25,9 +27,8 @@ export const CLAVE_AVISO_DESHACER: InjectionKey<ContextoAvisoDeshacer> = Symbol(
 
 let contadorId = 0
 
-function textoAnuncio(mensaje: string, segundos: number): string {
-  const resto = segundos === 1 ? '1 segundo' : `${segundos} segundos`
-  return `${mensaje}. Puedes deshacer durante ${resto}.`
+function textoAnuncio(mensaje: string): string {
+  return `${mensaje}. Puedes deshacer durante ${SEGUNDOS_PARA_DESHACER} segundos.`
 }
 
 /** El anuncio lo hace el anunciador compartido (ver app/anunciador.ts). Este módulo solo
@@ -49,9 +50,11 @@ export function crearContextoAvisoDeshacer(anunciador: Anunciador): ContextoAvis
       // Cada llamada obtiene un id distinto: LayoutApp lo usa como :key para montar una
       // instancia de <AvisoDeshacer> completamente nueva (con su propio temporizador de 10 s),
       // en vez de reutilizar la anterior (que cerraría el aviso nuevo a mitad de camino).
-      estado.value = { ...opciones, id: contadorId }
+      // Solo los campos conocidos: aunque alguien colara otra opción (p. ej. "segundos"),
+      // no llega al aviso (RN-OP-18: siempre SEGUNDOS_PARA_DESHACER).
+      estado.value = { mensaje: opciones.mensaje, alDeshacer: opciones.alDeshacer, id: contadorId }
       retirarAnuncio() // el aviso anterior (si lo había) queda reemplazado
-      idAnuncio = anunciador.anunciar(textoAnuncio(opciones.mensaje, opciones.segundos ?? 10))
+      idAnuncio = anunciador.anunciar(textoAnuncio(opciones.mensaje))
     },
     cerrar() {
       estado.value = undefined

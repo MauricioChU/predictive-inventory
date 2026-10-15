@@ -4,7 +4,12 @@ import {
   esperarSinViolacionesGraves,
   usarLetra,
 } from './utilidades/calidad'
-import { agregarContenidoLargo, caja, mostrarAvisoDeshacer } from './utilidades/escenarios'
+import {
+  agregarContenidoLargo,
+  caja,
+  esperarAvisoTodaviaVisible,
+  mostrarAvisoDeshacer,
+} from './utilidades/escenarios'
 
 const ALTO = 800
 /** Por debajo de 1024 px la navegación es una barra abajo; desde ahí, una columna lateral. */
@@ -28,9 +33,11 @@ async function abrirPaginaLarga(page: Page, ancho: number, conAviso: boolean): P
   if (conAviso) await mostrarAvisoDeshacer(page)
 }
 
-/** Lo que queda pegado abajo en PC: el aviso si está, si no nada (el borde de la ventana). */
-async function limiteInferiorPc(page: Page, conAviso: boolean): Promise<number> {
-  return conAviso ? (await caja(page, '.zona-aviso-deshacer')).top : ALTO
+/** Columna lateral a todo el alto (de 0 al fondo de la ventana). */
+async function esperarColumnaLateralCompleta(page: Page, posicion: string): Promise<void> {
+  const nav = await caja(page, 'nav')
+  expect(Math.abs(nav.top), `${posicion}: la columna lateral empieza arriba`).toBeLessThanOrEqual(1)
+  expect(Math.abs(nav.bottom - ALTO), `${posicion}: y llega al fondo`).toBeLessThanOrEqual(1)
 }
 
 // m11 (ronda 4): página larga. Se inyecta contenido alto en #contenido y se verifica la
@@ -57,33 +64,45 @@ test.describe('m11: página larga — la navegación queda en su lugar y no tapa
           pie.top + 1,
         )
         await esperarSinDesplazamientoHorizontal(page)
+        await expect(page.locator('.aviso-deshacer')).toHaveCount(conAviso ? 1 : 0)
       })
     }
   }
 
   for (const ancho of PC) {
-    for (const conAviso of [false, true]) {
-      test(`PC ${ancho}px, letra Muy grande${conAviso ? ', con aviso Deshacer' : ''}`, async ({
-        page,
-      }) => {
-        await abrirPaginaLarga(page, ancho, conAviso)
-        for (const posicion of POSICIONES) {
-          await desplazarA(page, posicion)
-          const nav = await caja(page, 'nav')
-          expect(
-            Math.abs(nav.top),
-            `${posicion}: la columna lateral empieza arriba`,
-          ).toBeLessThanOrEqual(1)
-          expect(Math.abs(nav.bottom - ALTO), `${posicion}: y llega al fondo`).toBeLessThanOrEqual(
-            1,
-          )
-        }
-        const ultimo = await caja(page, '#ultimo')
-        const limite = await limiteInferiorPc(page, conAviso)
-        expect(ultimo.bottom, 'el último elemento no queda tapado').toBeLessThanOrEqual(limite + 1)
-        await esperarSinDesplazamientoHorizontal(page)
-      })
-    }
+    test(`PC ${ancho}px, letra Muy grande`, async ({ page }) => {
+      await abrirPaginaLarga(page, ancho, false)
+      for (const posicion of POSICIONES) {
+        await desplazarA(page, posicion)
+        await esperarColumnaLateralCompleta(page, posicion)
+      }
+      const ultimo = await caja(page, '#ultimo')
+      expect(ultimo.bottom, 'el último elemento queda dentro de la ventana').toBeLessThanOrEqual(
+        ALTO + 1,
+      )
+      await esperarSinDesplazamientoHorizontal(page)
+    })
+
+    // Minor 4 (ronda 5): el aviso queda pegado al fondo de la ventana arriba, en medio y al final.
+    test(`PC ${ancho}px, letra Muy grande, con aviso Deshacer`, async ({ page }) => {
+      await abrirPaginaLarga(page, ancho, true)
+      for (const posicion of POSICIONES) {
+        await desplazarA(page, posicion)
+        await esperarColumnaLateralCompleta(page, posicion)
+        const zona = await caja(page, '.zona-aviso-deshacer')
+        expect(
+          Math.abs(zona.bottom - ALTO),
+          `${posicion}: el aviso va pegado al fondo de la ventana`,
+        ).toBeLessThanOrEqual(1)
+      }
+      const ultimo = await caja(page, '#ultimo')
+      const zona = await caja(page, '.zona-aviso-deshacer')
+      expect(ultimo.bottom, 'el último elemento queda sobre el aviso').toBeLessThanOrEqual(
+        zona.top + 1,
+      )
+      await esperarSinDesplazamientoHorizontal(page)
+      await esperarAvisoTodaviaVisible(page)
+    })
   }
 })
 
@@ -147,6 +166,7 @@ async function esperarAvisoBienArmado(page: Page, ancho: number): Promise<void> 
     expect(enlace.right).toBeLessThanOrEqual(ancho + 1)
   }
   await esperarSinDesplazamientoHorizontal(page)
+  await esperarAvisoTodaviaVisible(page)
 }
 
 // N1 + N5 + m11 (ronda 4): el aviso Deshacer en celular (encima de la barra) y en PC (en la
@@ -189,6 +209,7 @@ test('RN-SIS-07: sin violaciones graves de accesibilidad con el aviso Deshacer v
   await mostrarAvisoDeshacer(page)
   await expect(page.getByRole('button', { name: 'Deshacer' })).toBeVisible()
   await esperarSinViolacionesGraves(page)
+  await esperarAvisoTodaviaVisible(page)
 })
 
 /** Recorre con Tab y devuelve los elementos de #contenido que quedaron debajo de `selectorPegado`. */
@@ -233,6 +254,7 @@ test.describe('m5: el foco por teclado nunca queda tapado por lo que está pegad
       const { revisados, tapados } = await recorrerConTab(page, selectorPegado)
       expect(revisados, 'se recorrieron enlaces del contenido').toBeGreaterThan(10)
       expect(tapados, 'elementos enfocados que quedaron tapados').toEqual([])
+      await esperarAvisoTodaviaVisible(page)
     })
   }
 })

@@ -3,7 +3,12 @@ import { defineComponent, h, nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AvisoDeshacer from '../../shared/ui/componentes/AvisoDeshacer.vue'
 import { crearAnunciador, ESPERA_ANUNCIO_MS } from '@/shared/ui/anunciador'
-import { CLAVE_AVISO_DESHACER, crearContextoAvisoDeshacer } from '../aviso-deshacer'
+import {
+  CLAVE_AVISO_DESHACER,
+  crearContextoAvisoDeshacer,
+  SEGUNDOS_PARA_DESHACER,
+  type OpcionesAvisoDeshacer,
+} from '../aviso-deshacer'
 
 /** Arnés mínimo que reproduce cómo LayoutApp consume el contexto: monta <AvisoDeshacer>
  * con :key = activo.id, para que cada mostrar() dentro de los 10 s obtenga una instancia
@@ -18,7 +23,7 @@ function montarArnes() {
           ? h(AvisoDeshacer, {
               key: contexto.activo.value.id,
               mensaje: contexto.activo.value.mensaje,
-              segundos: contexto.activo.value.segundos,
+              segundos: SEGUNDOS_PARA_DESHACER,
               onDeshacer: () => {
                 contexto.activo.value?.alDeshacer()
                 contexto.cerrar()
@@ -37,6 +42,24 @@ function montarArnes() {
 describe('RN-OP-18: contexto de aviso Deshacer (Q1)', () => {
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())
+
+  it('RN-OP-18: el tiempo para deshacer es siempre 10 s y mostrar() no deja cambiarlo', async () => {
+    expect(SEGUNDOS_PARA_DESHACER).toBe(10)
+    const { contexto } = montarArnes()
+    // Aunque alguien colara un "segundos" (el tipo ya no lo permite), no cambia nada.
+    contexto.mostrar({
+      mensaje: 'Venta registrada',
+      alDeshacer: vi.fn<() => void>(),
+      segundos: 3,
+    } as unknown as OpcionesAvisoDeshacer)
+    expect(contexto.activo.value).not.toHaveProperty('segundos')
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(contexto.activo.value, 'sigue a los 3 s').toBeDefined()
+    await vi.advanceTimersByTimeAsync(6900)
+    expect(contexto.activo.value, 'sigue a los 9.9 s').toBeDefined()
+    await vi.advanceTimersByTimeAsync(100)
+    expect(contexto.activo.value, 'se cierra a los 10 s').toBeUndefined()
+  })
 
   it('activo empieza indefinido y mostrar() lo activa con un id', () => {
     const { contexto } = montarArnes()

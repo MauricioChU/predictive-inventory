@@ -4,7 +4,11 @@ import AvisoDeshacer from '@/shared/ui/componentes/AvisoDeshacer.vue'
 import BarraNavegacion from '@/shared/ui/componentes/BarraNavegacion.vue'
 import { usarAltoComoVariable } from './alto-como-variable'
 import { CLAVE_ANUNCIADOR, crearAnunciador } from '@/shared/ui/anunciador'
-import { CLAVE_AVISO_DESHACER, crearContextoAvisoDeshacer } from './aviso-deshacer'
+import {
+  CLAVE_AVISO_DESHACER,
+  crearContextoAvisoDeshacer,
+  SEGUNDOS_PARA_DESHACER,
+} from './aviso-deshacer'
 import { exponerGanchosDePrueba } from './ganchos-de-prueba'
 
 const anunciador = crearAnunciador()
@@ -66,7 +70,7 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
         <AvisoDeshacer
           :key="contextoAvisoDeshacer.activo.value.id"
           :mensaje="contextoAvisoDeshacer.activo.value.mensaje"
-          :segundos="contextoAvisoDeshacer.activo.value.segundos"
+          :segundos="SEGUNDOS_PARA_DESHACER"
           @deshacer="alDeshacer"
           @cerrar="contextoAvisoDeshacer.cerrar"
         />
