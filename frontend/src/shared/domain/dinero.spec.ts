@@ -42,4 +42,21 @@ describe('Dinero', () => {
   it('exige céntimos enteros', () => {
     expect(() => Dinero.deCentimos(1.5)).toThrow()
   })
+  // No está en el enunciado de la Tarea 3: completa la cobertura de los predicados y
+  // comparadores restantes de Dinero (RN-SIS-02 exige 95% en el dominio).
+  it('expone los predicados y comparadores restantes', () => {
+    const cero = Dinero.cero()
+    const a = Dinero.deCentimos(350)
+    const b = Dinero.deCentimos(240)
+    expect(cero.esCero()).toBe(true)
+    expect(a.esCero()).toBe(false)
+    expect(a.esPositivo()).toBe(true)
+    expect(cero.esPositivo()).toBe(false)
+    expect(a.negar().centimos).toBe(-350)
+    expect(a.compararCon(b)).toBeGreaterThan(0)
+    expect(a.igualA(Dinero.deCentimos(350))).toBe(true)
+    expect(a.igualA(b)).toBe(false)
+    expect(b.menorQue(a)).toBe(true)
+    expect(a.menorQue(b)).toBe(false)
+  })
 })

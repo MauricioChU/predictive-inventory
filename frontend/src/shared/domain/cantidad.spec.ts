@@ -52,4 +52,24 @@ describe('Cantidad', () => {
       Cantidad.deMilesimas(1000).redondearHaciaArribaA(Cantidad.incrementoDe('UNIDAD')).milesimas,
     ).toBe(1000)
   })
+  // No está en el enunciado de la Tarea 4: completa la cobertura de los predicados y
+  // comparadores restantes de Cantidad (RN-SIS-02 exige 95% en el dominio).
+  it('expone los predicados y comparadores restantes', () => {
+    const cero = Cantidad.cero()
+    const a = Cantidad.deEntero(10)
+    const b = Cantidad.deMilesimas(2500)
+    expect(cero.esCero()).toBe(true)
+    expect(a.esCero()).toBe(false)
+    expect(a.esPositiva()).toBe(true)
+    expect(cero.esPositiva()).toBe(false)
+    expect(a.compararCon(b)).toBeGreaterThan(0)
+    expect(a.mayorQue(b)).toBe(true)
+    expect(b.mayorQue(a)).toBe(false)
+    expect(b.menorQue(a)).toBe(true)
+    expect(a.menorQue(b)).toBe(false)
+    expect(a.mayorOIgualQue(a)).toBe(true)
+    expect(b.mayorOIgualQue(a)).toBe(false)
+    expect(b.menorOIgualQue(a)).toBe(true)
+    expect(a.menorOIgualQue(b)).toBe(false)
+  })
 })
