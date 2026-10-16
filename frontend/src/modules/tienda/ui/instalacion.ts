@@ -68,11 +68,15 @@ export function usarInstalacion(): Instalacion {
     async instalar() {
       const pedido = estado.pedido
       if (!pedido) return
-      // El pedido solo sirve una vez, la acepte o no.
+      // El pedido solo sirve una vez, la acepte o no (si falla, quedan los pasos).
       estado.pedido = null
-      await pedido.prompt()
-      const { outcome } = await pedido.userChoice
-      if (outcome === 'accepted') estado.instalada = true
+      try {
+        await pedido.prompt()
+        const { outcome } = await pedido.userChoice
+        if (outcome === 'accepted') estado.instalada = true
+      } catch (error) {
+        console.error('No se pudo abrir la instalación del navegador:', error)
+      }
     },
     cerrar() {
       estado.cerrada = true

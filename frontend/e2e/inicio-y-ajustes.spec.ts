@@ -294,6 +294,76 @@ test.describe('Inicio', () => {
   })
 })
 
+/**
+ * Inicio en celular con TODAS las tarjetas (primera apertura del día: resumen del día, aviso de
+ * lo que se acaba, recordatorio de copia y tarjeta de instalación).
+ */
+async function abrirInicioCompleto(page: Page, letra: 'GRANDE' | 'MUY_GRANDE', ancho: number, alto: number) {
+  await usarLetra(page, letra)
+  await page.setViewportSize({ width: ancho, height: alto })
+  await abrirTiendaLista(page, './ajustes')
+  await crearProducto(page, { nombre: 'Lejía 1 L', compra: '2.40', venta: '3.50', minimo: '3', stock: '2' })
+  await crearProducto(page, { nombre: 'Carbón', compra: '2.75', venta: '4.00', stock: '0' })
+  await abrir(page, './')
+  await expect(page.getByRole('region', { name: 'Resumen del día' })).toBeVisible()
+  await expect(page.getByText('2 productos se acaban')).toBeVisible()
+  await expect(page.getByText('Todavía no guardas una copia de tus datos')).toBeVisible()
+  await expect(page.getByText('Instala la app en tu celular')).toBeVisible()
+  await page.evaluate(() => document.fonts.ready)
+}
+
+test.describe('Inicio en celular: la acción principal, a la vista', () => {
+  for (const [ancho, alto] of [
+    [320, 700],
+    [360, 740],
+  ] as const) {
+    for (const letra of ['MUY_GRANDE', 'GRANDE'] as const) {
+      test(`${ancho}×${alto}, letra ${letra}: "Vender" entero dentro de la pantalla y sobre la navegación`, async ({
+        page,
+      }, testInfo) => {
+        test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
+        await abrirInicioCompleto(page, letra, ancho, alto)
+
+        const vender = await page.getByRole('button', { name: 'Vender' }).boundingBox()
+        const navegacion = await page.getByRole('navigation').boundingBox()
+        expect(vender, '"Vender" tiene caja').not.toBeNull()
+        expect(vender!.y, '"Vender" no empieza arriba de la pantalla').toBeGreaterThanOrEqual(0)
+        expect(vender!.y + vender!.height, '"Vender" termina sobre la navegación').toBeLessThanOrEqual(
+          navegacion!.y + 1,
+        )
+      })
+    }
+  }
+
+  test('320×700 Muy grande: al recorrer con Tab, nada enfocado queda tapado por "Vender" ni por la navegación', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
+    await abrirInicioCompleto(page, 'MUY_GRANDE', 320, 700)
+
+    const tapados: string[] = []
+    let revisados = 0
+    for (let i = 0; i < 30; i += 1) {
+      await page.keyboard.press('Tab')
+      const medida = await page.evaluate(() => {
+        const activo = document.activeElement
+        if (!activo?.closest('#contenido')) return null
+        const caja = activo.getBoundingClientRect()
+        const encima = [document.querySelector('nav'), document.querySelector('.vender-fijo')]
+          .filter((el): el is Element => el !== null && !el.contains(activo))
+          .map((el) => el.getBoundingClientRect())
+          .some((otra) => caja.bottom > otra.top + 1 && caja.top < otra.bottom - 1)
+        return { texto: activo.textContent?.trim() ?? '', encima }
+      })
+      if (!medida) continue
+      revisados += 1
+      if (medida.encima) tapados.push(medida.texto)
+    }
+    expect(revisados, 'se recorrió Inicio con Tab').toBeGreaterThanOrEqual(8)
+    expect(tapados, 'nada enfocado queda debajo de lo que está pegado abajo').toEqual([])
+  })
+})
+
 /** Las pantallas del plan 14 (la bienvenida, con la primera vez sin hacer, va aparte). */
 const PANTALLAS = [
   './',

@@ -34,7 +34,8 @@ const titulo = ref<HTMLHeadingElement>()
 const nombreTienda = ref('')
 const deHoy = ref<{ ganancia: Dinero; ventas: Dinero } | null>(null)
 const atencion = ref<ResumenDeAtencion | null>(null)
-const hayProductos = ref(true)
+/** `null` mientras se lee. */
+const hayProductos = ref<boolean | null>(null)
 const fallo = ref(false)
 
 const saludo = computed(() => (nombreTienda.value ? `Hola, ${nombreTienda.value}` : 'Hola'))
@@ -130,56 +131,45 @@ function ir(nombre: PantallaDeOtraRama): void {
       ayuda="Cierra la app y vuelve a abrirla. Tus datos siguen guardados."
     />
 
+    <!--
+      Celular: lo de hoy (cifras y lo que se acaba) → las acciones → el resto (resumen del día,
+      recordatorio de copia, instalación). "Vender" queda pegado sobre la navegación mientras su
+      lugar está más abajo: siempre a la vista. PC: lo que hay que saber a la izquierda y lo que
+      hay que hacer a la derecha.
+    -->
     <div class="cuerpo">
-      <div class="informacion">
-        <!-- RN-AL-09: una vez al día; se cierra con un toque. -->
-        <section
-          v-if="estadoGlobal.resumenDelDia"
-          class="resumen-del-dia"
-          data-resumen-del-dia
-          :aria-labelledby="idResumen"
-        >
-          <h2 :id="idResumen">Resumen del día</h2>
-          <ul>
-            <li v-for="linea in estadoGlobal.resumenDelDia.lineas" :key="linea">{{ linea }}</li>
-          </ul>
-          <Boton
-            texto="Cerrar"
-            :icono="X"
-            @click="despuesDeCerrar(estadoGlobal.cerrarResumenDelDia)"
-          />
-        </section>
+      <TarjetaDeCifra
+        v-if="cifraDeHoy"
+        class="cifra"
+        :titulo="cifraDeHoy.titulo"
+        :texto-valor="cifraDeHoy.valor"
+        :texto-detalle="cifraDeHoy.detalle"
+        :tono="cifraDeHoy.tono"
+      />
 
-        <TarjetaDeCifra
-          v-if="cifraDeHoy"
-          :titulo="cifraDeHoy.titulo"
-          :texto-valor="cifraDeHoy.valor"
-          :texto-detalle="cifraDeHoy.detalle"
-          :tono="cifraDeHoy.tono"
+      <div v-if="atencion" class="atencion">
+        <EstadoVacio
+          v-if="hayProductos === false"
+          titulo="Aún no tienes productos"
+          descripcion="Agrégalos para llevar tu stock y saber qué comprar."
+          accion="Agregar el primero"
+          @accion="ir('producto-nuevo')"
         />
-
-        <template v-if="atencion">
-          <EstadoVacio
-            v-if="!hayProductos"
-            titulo="Aún no tienes productos"
-            descripcion="Agrégalos para llevar tu stock y saber qué comprar."
-            accion="Agregar el primero"
-            @accion="ir('producto-nuevo')"
-          />
-          <AvisoEnPagina
-            v-else-if="atencion.contador > 0"
-            tono="atencion"
-            :titulo="tituloDeAtencion"
-            :texto="atencion.texto"
-            texto-accion="Ver qué comprar"
-            @accion="ir('para-comprar')"
-          />
-          <AvisoEnPagina v-else tono="exito" :titulo="atencion.texto" />
-        </template>
+        <AvisoEnPagina
+          v-else-if="atencion.contador > 0"
+          tono="atencion"
+          :titulo="tituloDeAtencion"
+          :texto="atencion.texto"
+          texto-accion="Ver qué comprar"
+          @accion="ir('para-comprar')"
+        />
+        <AvisoEnPagina v-else tono="exito" :titulo="atencion.texto" />
       </div>
 
       <div class="acciones">
-        <BotonPrincipal texto="Vender" :icono="ShoppingCart" @click="ir('vender')" />
+        <div class="vender-fijo">
+          <BotonPrincipal texto="Vender" :icono="ShoppingCart" @click="ir('vender')" />
+        </div>
         <BotonPrincipal
           texto="Llegó mercadería"
           variante="secundario"
@@ -198,6 +188,24 @@ function ir(nombre: PantallaDeOtraRama): void {
           <ChevronRight aria-hidden="true" class="icono" />
         </RouterLink>
       </div>
+
+      <!-- RN-AL-09: una vez al día; se cierra con un toque. Sin productos no hay qué resumir. -->
+      <section
+        v-if="estadoGlobal.resumenDelDia && hayProductos === true"
+        class="resumen-del-dia"
+        data-resumen-del-dia
+        :aria-labelledby="idResumen"
+      >
+        <h2 :id="idResumen">Resumen del día</h2>
+        <ul>
+          <li v-for="linea in estadoGlobal.resumenDelDia.lineas" :key="linea">{{ linea }}</li>
+        </ul>
+        <Boton
+          texto="Cerrar"
+          :icono="X"
+          @click="despuesDeCerrar(estadoGlobal.cerrarResumenDelDia)"
+        />
+      </section>
 
       <div v-if="estadoGlobal.recordatorioDeCopia || instalacion.mostrar.value" class="extras">
         <!-- RN-RE-06 -->
@@ -286,18 +294,31 @@ h1 {
 .cuerpo {
   display: flex;
   flex-direction: column;
-  gap: var(--espacio-5);
+  gap: var(--espacio-4);
 }
-.informacion,
 .extras {
   display: flex;
   flex-direction: column;
   gap: var(--espacio-4);
 }
+/* Celular: sin caja propia, así "Vender" se pega abajo dentro de todo el cuerpo de Inicio (un
+   elemento pegajoso no sale de la caja de su padre). */
 .acciones {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espacio-3);
+  display: contents;
+}
+/* Celular: "Vender" queda pegado sobre la navegación (--alto-pie, medido en vivo) mientras su
+   lugar está más abajo; al llegar a él, sigue en su sitio. */
+.vender-fijo {
+  position: sticky;
+  bottom: var(--alto-pie, 0px);
+  z-index: 5;
+  margin-block: calc(-1 * var(--espacio-2));
+  padding-block: var(--espacio-2);
+  background: var(--color-fondo);
+}
+/* Lo enfocado con el teclado no queda debajo de "Vender" pegado (WCAG 2.4.11). */
+.vista-inicio :is(a, button) {
+  scroll-margin-bottom: calc(var(--alto-boton-principal) + 2 * var(--espacio-2));
 }
 
 .resumen-del-dia {
@@ -322,26 +343,51 @@ h1 {
   margin-top: var(--espacio-1);
 }
 
-/* PC: lo que hay que saber a la izquierda y lo que hay que hacer a la derecha. */
+/* PC: lo que hay que saber a la izquierda y lo que hay que hacer a la derecha (sin filas vacías:
+   la separación es el margen de cada tarjeta, no el espacio entre filas). */
 @media (min-width: 1024px) {
   .cuerpo {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto auto 1fr;
     grid-template-areas:
-      'informacion acciones'
+      'resumen acciones'
+      'cifra acciones'
+      'atencion acciones'
       'extras acciones';
     align-items: start;
-    column-gap: var(--espacio-6);
+    gap: 0 var(--espacio-6);
   }
-  .informacion {
-    grid-area: informacion;
+  .resumen-del-dia {
+    grid-area: resumen;
   }
-  .acciones {
-    grid-area: acciones;
+  .cifra {
+    grid-area: cifra;
+  }
+  .atencion {
+    grid-area: atencion;
+  }
+  .resumen-del-dia,
+  .cifra,
+  .atencion {
+    margin-bottom: var(--espacio-4);
   }
   .extras {
     grid-area: extras;
+  }
+  .acciones {
+    grid-area: acciones;
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-3);
+  }
+  .vender-fijo {
+    position: static;
+    margin-block: 0;
+    padding-block: 0;
+  }
+  .vista-inicio :is(a, button) {
+    scroll-margin-bottom: 0;
   }
 }
 </style>

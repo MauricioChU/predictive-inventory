@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { instanteLocal } from '@/shared/domain/fecha'
 import { olvidarInstalacionParaPruebas } from '@/modules/tienda'
 import { crearAplicacionDePrueba, type AplicacionDePrueba } from '../soporte/aplicacion-de-prueba'
@@ -170,12 +170,44 @@ describe('Inicio', () => {
 
   it('RN-UX-15: al cerrar el resumen del día el foco no se pierde: va al saludo', async () => {
     await tiendaLista()
+    await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '10' })
     const { wrapper } = await abrirInicio()
 
     await botonCon('Cerrar').trigger('click')
     await esperarPantalla()
 
     expect(document.activeElement).toBe(wrapper.get('h1').element)
+  })
+
+  it('celular: Vender y las otras acciones van antes del resumen del día, el recordatorio y la instalación', async () => {
+    await tiendaLista()
+    await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '0' })
+    const { wrapper } = await abrirInicio()
+
+    const html = wrapper.html()
+    const posicion = (marca: string) => {
+      const i = html.indexOf(marca)
+      if (i < 0) throw new Error(`No está "${marca}"`)
+      return i
+    }
+    const orden = [
+      posicion('tarjeta-de-cifra'),
+      posicion('aviso-en-pagina--atencion'),
+      posicion('class="vender-fijo"'),
+      posicion('class="enlace-historial"'),
+      posicion('data-resumen-del-dia'),
+      posicion('Todavía no guardas una copia'),
+      posicion('Instala la app en tu celular'),
+    ]
+    expect(orden).toEqual([...orden].sort((a, b) => a - b))
+  })
+
+  it('sin productos no muestra el resumen del día (no hay nada que resumir)', async () => {
+    await tiendaLista()
+    const { wrapper } = await abrirInicio()
+
+    expect(wrapper.text()).toContain('Aún no tienes productos')
+    expect(wrapper.find('[data-resumen-del-dia]').exists()).toBe(false)
   })
 
   describe('RN-UX-13: tarjeta de instalación', () => {
@@ -207,6 +239,22 @@ describe('Inicio', () => {
       expect(evento.pedidas).toBe(1)
       expect(evento.defaultPrevented).toBe(true)
       expect(wrapper.text()).not.toContain('Instala la app en tu celular')
+    })
+
+    it('si el diálogo del navegador falla, se registra y quedan los pasos', async () => {
+      await tiendaLista()
+      const { wrapper } = await abrirInicio()
+      const evento = ofrecerInstalacion('accepted')
+      evento.prompt = () => Promise.reject(new Error('El navegador no lo permitió'))
+      const registro = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      await esperarPantalla()
+
+      await botonCon('Instalar').trigger('click')
+      await esperarPantalla()
+
+      expect(registro).toHaveBeenCalled()
+      expect(wrapper.text()).toContain('Agregar a la pantalla principal')
+      registro.mockRestore()
     })
 
     it('si el navegador no la ofrece, muestra los pasos', async () => {
