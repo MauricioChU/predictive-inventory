@@ -43,6 +43,24 @@ describe('FotoDeProducto', () => {
     expect(urls.crear).toHaveBeenCalledTimes(2)
   })
 
+  it('ronda 1: al pasar de un Blob a "sin foto" revoca la URL y muestra el ícono', async () => {
+    const w = mount(FotoDeProducto, {
+      props: { imagen: new Blob(['a']), nombre: 'Lejía', tamano: 'chica' },
+    })
+    await w.setProps({ imagen: undefined })
+    expect(urls.revocar).toHaveBeenCalledWith('blob:prueba-1')
+    expect(w.find('img').exists()).toBe(false)
+    expect(w.get('.foto-de-producto').attributes('aria-label')).toBe('Lejía')
+  })
+
+  it('ronda 1: la foto se carga y decodifica sin trabar la lista (lazy + async)', () => {
+    const w = mount(FotoDeProducto, {
+      props: { imagen: 'https://ejemplo.pe/l.jpg', nombre: 'Lejía', tamano: 'chica' },
+    })
+    expect(w.get('img').attributes('loading')).toBe('lazy')
+    expect(w.get('img').attributes('decoding')).toBe('async')
+  })
+
   it('con un string lo usa directo, sin crear URLs de objeto', () => {
     const w = mount(FotoDeProducto, {
       props: { imagen: 'data:image/png;base64,AAAA', nombre: 'Bolsa', tamano: 'chica' },

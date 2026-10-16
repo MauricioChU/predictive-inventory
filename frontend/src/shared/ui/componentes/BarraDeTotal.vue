@@ -57,8 +57,11 @@ const emit = defineEmits<{ accion: [] }>()
   border-radius: var(--radio);
   background: var(--color-fondo);
   /* Sombra hacia arriba: se nota que flota sobre la lista que pasa por debajo. */
-  box-shadow: 0 -6px 16px -8px color-mix(in srgb, var(--color-texto) 35%, transparent);
+  box-shadow: var(--sombra-flotante);
 }
+/* Mismo corte que LayoutApp.vue (@media (min-width: 1024px), línea 151): desde ahí la
+   navegación va al costado y lo único pegado abajo es el aviso Deshacer. Si ese corte cambia,
+   cambiar este también. */
 @media (min-width: 1024px) {
   .barra-de-total {
     bottom: var(--alto-aviso, 0px);

@@ -36,6 +36,21 @@ describe('iconoDeCategoria (FotoDeProducto sin foto)', () => {
     expect(iconoDeCategoria('Bolsas y envoltorios')).toBe(ShoppingBag)
   })
 
+  it('ronda 1: compara inicios de PALABRA, no pedazos sueltos del texto', () => {
+    // "vela" está dentro de "novela" y "carbon" dentro de "carbonatadas": no son esas categorías.
+    expect(iconoDeCategoria('novela')).toBe(Package)
+    expect(iconoDeCategoria('Bebidas carbonatadas')).toBe(Package)
+    // Plurales y raíces sí: "Velas", "Carbones", "Desinfectantes".
+    expect(iconoDeCategoria('Velas y fósforos')).toBe(Flame)
+    expect(iconoDeCategoria('Carbones')).toBe(Flame)
+    expect(iconoDeCategoria('Desinfectantes')).toBe(Droplets)
+  })
+
+  it('ronda 1: la raíz más específica gana ("Lavavajillas y jabones" es lavavajillas)', () => {
+    expect(iconoDeCategoria('Lavavajillas y jabones')).toBe(Utensils)
+    expect(iconoDeCategoria('Jabones y lavavajillas')).toBe(Utensils)
+  })
+
   it('"Otros", una categoría desconocida o ninguna usan el ícono genérico', () => {
     expect(ICONO_DE_CATEGORIA_GENERICO).toBe(Package)
     expect(iconoDeCategoria('Otros')).toBe(Package)

@@ -17,16 +17,20 @@ import { normalizar } from '@/shared/domain/texto'
 export const ICONO_DE_CATEGORIA_GENERICO: Component = Package
 
 /**
- * Palabras (ya normalizadas: sin tildes, en minúsculas) que reconocen cada categoría inicial de
- * la tienda (catalogo/domain/categoria.ts). Se busca por raíz de palabra y no por el nombre
- * exacto: la persona puede renombrar "Bolsas" a "Bolsas y envoltorios" o crear "Jabón de ropa"
- * y el ícono sigue teniendo sentido. El orden importa: gana la primera que coincide.
+ * Raíces (ya normalizadas: sin tildes, en minúsculas) que reconocen cada categoría inicial de la
+ * tienda (catalogo/domain/categoria.ts). Se comparan con el INICIO de cada palabra del nombre, y
+ * lo que sigue a la raíz solo puede ser un plural ("bolsa" → "bolsas", "jabon" → "jabones"):
+ * así "Velas" es vela pero "novela" no, y "Carbones" es carbón pero "carbonatadas" no. Una raíz
+ * con "*" acepta cualquier final ("desinfect*" → "desinfectante", "desinfectantes").
+ * Ronda 1: el orden importa y va de lo más específico a lo más general: gana el primer grupo
+ * con alguna palabra que coincida ("Jabones y lavavajillas" es lavavajillas, no jabón).
  */
-const PALABRAS_POR_ICONO: readonly (readonly [readonly string[], Component])[] = [
-  [['lejia', 'desinfect', 'cloro'], Droplets],
-  [['detergente', 'jabon'], WashingMachine],
+const RAICES_POR_ICONO: readonly (readonly [readonly string[], Component])[] = [
   [['lavavajilla', 'vajilla'], Utensils],
-  [['limpiador', 'cera', 'limpiavidrio'], SprayCan],
+  [['limpiavidrio'], SprayCan],
+  [['lejia', 'desinfect*', 'cloro'], Droplets],
+  [['detergente', 'jabon'], WashingMachine],
+  [['limpiador', 'cera'], SprayCan],
   [['papel', 'descartable', 'servilleta'], Scroll],
   [['bolsa'], ShoppingBag],
   [['escoba', 'trapeador', 'recogedor', 'accesorio'], BrushCleaning],
@@ -34,12 +38,20 @@ const PALABRAS_POR_ICONO: readonly (readonly [readonly string[], Component])[] =
   [['carbon', 'combustible', 'fosforo', 'vela'], Flame],
 ]
 
+const FINALES_DE_PLURAL = ['', 's', 'es']
+
+function coincide(palabra: string, raiz: string): boolean {
+  if (raiz.endsWith('*')) return palabra.startsWith(raiz.slice(0, -1))
+  return palabra.startsWith(raiz) && FINALES_DE_PLURAL.includes(palabra.slice(raiz.length))
+}
+
 /** Ícono lucide que representa a `categoria` cuando el producto no tiene foto. */
 export function iconoDeCategoria(categoria: string | undefined): Component {
-  const nombre = normalizar(categoria ?? '')
-  if (nombre === '') return ICONO_DE_CATEGORIA_GENERICO
-  const encontrado = PALABRAS_POR_ICONO.find(([palabras]) =>
-    palabras.some((palabra) => nombre.includes(palabra)),
+  const palabras = normalizar(categoria ?? '')
+    .split(/[^a-z0-9]+/)
+    .filter((palabra) => palabra !== '')
+  const encontrado = RAICES_POR_ICONO.find(([raices]) =>
+    raices.some((raiz) => palabras.some((palabra) => coincide(palabra, raiz))),
   )
   return encontrado?.[1] ?? ICONO_DE_CATEGORIA_GENERICO
 }

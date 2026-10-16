@@ -75,6 +75,16 @@ describe('CampoFoto', () => {
     ])
   })
 
+  it('ronda 1: un archivo sin tipo (MIME vacío) se acepta; si no es foto, lo dirá quien la procesa', async () => {
+    const w = mount(CampoFoto, { props: { etiqueta: 'Foto del producto', modelValue: null } })
+    const input = w.get('input[type="file"]:not([capture])')
+    const sinTipo = new File(['x'], 'IMG_0001.HEIC', { type: '' })
+    elegirArchivo(input.element as HTMLInputElement, sinTipo)
+    await input.trigger('change')
+    expect(w.emitted('update:modelValue')).toEqual([[sinTipo]])
+    expect(w.emitted('error')).toBeUndefined()
+  })
+
   it('si la persona cierra la cámara sin tomar nada, no pasa nada', async () => {
     const w = mount(CampoFoto, { props: { etiqueta: 'Foto del producto', modelValue: null } })
     const input = w.get('input[capture]')
@@ -98,15 +108,35 @@ describe('CampoFoto', () => {
   })
 
   it('al quitar la foto el foco no se pierde: va a "Tomar foto"', async () => {
+    // v-model como lo usa una pantalla: actualiza el valor en el mismo handler.
     const w = mount(CampoFoto, {
-      props: { etiqueta: 'Foto del producto', modelValue: new Blob(['x']) },
+      props: {
+        etiqueta: 'Foto del producto',
+        modelValue: new Blob(['x']),
+        'onUpdate:modelValue': (foto: Blob | null) => void w.setProps({ modelValue: foto }),
+      },
       attachTo: document.body,
     })
     const quitar = boton(w, 'Quitar foto')
     ;(quitar.element as HTMLButtonElement).focus()
     await quitar.trigger('click')
-    await w.setProps({ modelValue: null })
+    expect(w.findAll('button').some((b) => b.text() === 'Quitar foto')).toBe(false)
     expect(document.activeElement).toBe(boton(w, 'Tomar foto').element)
+  })
+
+  it('ronda 1: si la pantalla no acepta quitarla, un null posterior (de otra cosa) no roba el foco', async () => {
+    const w = mount(CampoFoto, {
+      props: { etiqueta: 'Foto del producto', modelValue: new Blob(['x']) },
+      attachTo: document.body,
+    })
+    await boton(w, 'Quitar foto').trigger('click') // la pantalla ignora el pedido
+    await w.vm.$nextTick()
+    const otro = document.createElement('button')
+    document.body.append(otro)
+    otro.focus()
+    // Mucho después, la pantalla carga otro producto sin foto.
+    await w.setProps({ modelValue: null })
+    expect(document.activeElement).toBe(otro)
   })
 
   it('sin foto no ofrece "Quitar foto" y la vista previa dice que aún no hay foto', () => {

@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { Camera, Images, Trash2 } from 'lucide-vue-next'
 import Boton from './Boton.vue'
 import FotoDeProducto from './FotoDeProducto.vue'
 
 const props = withDefaults(
   defineProps<{
-    /** v-model: la foto elegida tal cual (la reduce quien lo usa), o null si no hay. */
+    /** v-model: la foto elegida tal cual (la reduce quien lo usa), o null si no hay. Quien lo
+     * usa lo actualiza en el mismo handler de `update:modelValue` (sincrónico): así, al quitar
+     * la foto, el foco pasa a "Tomar foto" antes de que desaparezca "Quitar foto". */
     modelValue?: Blob | null
     /** "Foto del producto" */
     etiqueta: string
@@ -34,7 +36,9 @@ function alElegir(evento: Event) {
   // Se vacía para que elegir otra vez el mismo archivo también dispare "change".
   input.value = ''
   if (!archivo) return // cerró la cámara o la galería sin elegir nada
-  if (!archivo.type.startsWith('image/')) {
+  // Ronda 1: un tipo vacío NO es "no es foto": algunos celulares no lo informan (p. ej. HEIC).
+  // Se acepta y, si de verdad no es una imagen, lo dirá quien la procesa (decodificar/reducir).
+  if (archivo.type !== '' && !archivo.type.startsWith('image/')) {
     emit('error', MENSAJE_NO_ES_FOTO)
     return
   }
@@ -44,6 +48,12 @@ function alElegir(evento: Event) {
 function quitar() {
   devolverFoco = true
   emit('update:modelValue', null)
+  // Ronda 1: el pedido vale solo para ESTE cambio. Si la pantalla lo atiende, el watcher corre
+  // antes de este nextTick; si no lo atiende, la marca se borra igual y un null posterior (otro
+  // producto sin foto, mucho después) no se lleva el foco.
+  void nextTick(() => {
+    devolverFoco = false
+  })
 }
 
 // Corre antes de que Vue saque "Quitar foto" del DOM ("Tomar foto" siempre está): el foco pasa
@@ -52,8 +62,9 @@ function quitar() {
 watch(
   () => props.modelValue,
   (foto) => {
-    if (foto || !devolverFoco) return
-    devolverFoco = false
+    const pedido = devolverFoco
+    devolverFoco = false // se consume en cada cambio, se haya quitado o no
+    if (foto || !pedido) return
     ;(refTomarFoto.value?.$el as HTMLElement | undefined)?.focus()
   },
 )

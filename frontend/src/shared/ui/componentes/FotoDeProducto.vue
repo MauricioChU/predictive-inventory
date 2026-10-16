@@ -70,6 +70,7 @@ const atributosDelContenedor = computed(() => {
       :src="src"
       :alt="decorativa ? '' : nombre"
       class="imagen"
+      loading="lazy"
       decoding="async"
       draggable="false"
       @error="fallo = true"
@@ -95,9 +96,8 @@ const atributosDelContenedor = computed(() => {
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: var(--radio-chico);
-  /* Borde fino que separa una foto clara del fondo blanco (derivado del texto, sin color suelto). */
-  border: 1px solid var(--color-superficie);
-  border-color: color-mix(in srgb, var(--color-texto) 16%, transparent);
+  /* Borde fino que separa una foto clara del fondo blanco. */
+  border: 1px solid var(--color-borde-foto);
   background: var(--color-superficie);
 }
 .foto-de-producto--chica {
