@@ -243,3 +243,25 @@ describe('RelojDePrueba', () => {
     expect(reloj.ahora()).toBe('2026-10-16T13:00:00.000Z')
   })
 })
+
+describe.each(ALMACENES)('AplicacionDePrueba.sinEventos (%s)', (almacen) => {
+  it('lo registrado en silencio queda guardado, pero no evalúa avisos ni notifica', async () => {
+    const app = crearAplicacionDePrueba({ ahora: HOY, almacen })
+    await app.tienda.actualizarConfiguracion({ notificacionesActivas: true })
+
+    const id = await app.sinEventos(async () => {
+      const nuevo = await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '5' })
+      await app.inventario.registrarVenta({ lineas: [{ productoId: nuevo, cantidad: '3' }] })
+      return nuevo
+    })
+
+    expect((await app.inventario.consultable.stockDe(id)).milesimas).toBe(2000)
+    expect(app.notificador.mostradas).toEqual([])
+    expect(await app.infraestructura.repositorios.avisos.todos()).toEqual([])
+    // Después del silencio, los eventos vuelven a llegar.
+    await app.inventario.registrarVenta({ lineas: [{ productoId: id, cantidad: '2' }] })
+    await app.esperarTareasPendientes()
+    expect(app.notificador.mostradas.map((n) => n.texto)).toEqual(['Se acabó: Lejía 1 L'])
+    await app.cerrar()
+  })
+})
