@@ -9,14 +9,20 @@ import type { Notificacion } from './puertos'
  * último aviso; limpia el registro de los productos archivados; guarda SIEMPRE el estado
  * actual (para poder rearmar el aviso si luego vuelve a empeorar, RN-AL-04); y notifica por
  * el canal del sistema solo si la configuración y el permiso del navegador lo permiten.
+ *
+ * Ola 3, ruling 1: las notificaciones salen con `uow.alConfirmar`, después de confirmar la
+ * unidad de trabajo MÁS EXTERNA; si esa falla, no se muestra nada (y el registro tampoco quedó).
+ * Devuelve lo que de verdad se notificó; dentro de otra unidad de trabajo todavía no salió nada
+ * al volver, así que devuelve `[]` y las notificaciones salen al confirmar la externa.
  */
 export async function evaluarAvisos(
   d: Pick<DependenciasDeAlertas, 'avisos' | 'notificador' | 'uow' | 'analisis' | 'tienda'>,
 ): Promise<Notificacion[]> {
   const situaciones = await d.analisis().situaciones()
   const idsActivos = new Set(situaciones.map((s) => s.productoId))
+  const mostradas: Notificacion[] = []
 
-  const notificaciones = await d.uow.ejecutar(async () => {
+  await d.uow.ejecutar(async () => {
     const registrados = await d.avisos.todos()
     const estadoAnteriorDe = new Map(registrados.map((r) => [r.productoId, r.ultimoEstadoAvisado]))
 
@@ -41,12 +47,16 @@ export async function evaluarAvisos(
       }
     }
 
-    return agruparAvisos(empeoraron)
+    const notificaciones = agruparAvisos(empeoraron)
+    if (notificaciones.length === 0) return
+    d.uow.alConfirmar(async () => {
+      if (!(await notificacionesPermitidas(d))) return
+      for (const notificacion of notificaciones) {
+        await d.notificador.mostrar(notificacion)
+        mostradas.push(notificacion)
+      }
+    })
   })
 
-  if (notificaciones.length === 0) return []
-  if (!(await notificacionesPermitidas(d))) return []
-
-  for (const notificacion of notificaciones) await d.notificador.mostrar(notificacion)
-  return notificaciones
+  return [...mostradas]
 }

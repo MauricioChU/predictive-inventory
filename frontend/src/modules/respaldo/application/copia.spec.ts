@@ -256,6 +256,46 @@ describe('prepararRestauracion / restaurarCopia (RN-RE-03)', () => {
   })
 })
 
+// Ola 3, ruling 1: lo que la reconstrucción deja con alConfirmar (en la composición, lo que
+// publiquen Inventario o Análisis) sale solo si la restauración entera confirma.
+describe('restaurarCopia en una sola unidad de trabajo', () => {
+  async function prepararConPendientes() {
+    const contexto = crearContexto()
+    const { deps, seedProductosYOperaciones, reconstructor } = contexto
+    seedProductosYOperaciones()
+    await reconstructor.reconstruirTodo()
+    const respaldo = JSON.parse(await (await guardarCopia(deps)).contenido.text())
+    const pendientes: string[] = []
+    const reconstruir = reconstructor.reconstruirTodo.bind(reconstructor)
+    reconstructor.reconstruirTodo = async () => {
+      await reconstruir()
+      deps.uow.alConfirmar(() => {
+        pendientes.push('después de reconstruir')
+      })
+    }
+    return { ...contexto, respaldo, pendientes }
+  }
+
+  it('RN-RE-04: si el control no cuadra, se revierte todo y no corre nada de lo pendiente', async () => {
+    const { deps, respaldo, pendientes } = await prepararConPendientes()
+    respaldo.control.stockPorProducto.carbon = 99000
+
+    await expect(
+      restaurarCopia(deps, JSON.stringify(respaldo), { confirmaciones: 2 }),
+    ).rejects.toThrow('La copia tiene datos que no cuadran. No se cambió nada')
+
+    expect(pendientes).toEqual([])
+  })
+
+  it('ADR-0002: si la restauración confirma, lo pendiente corre después', async () => {
+    const { deps, respaldo, pendientes } = await prepararConPendientes()
+
+    await restaurarCopia(deps, JSON.stringify(respaldo), { confirmaciones: 2 })
+
+    expect(pendientes).toEqual(['después de reconstruir'])
+  })
+})
+
 describe('copia consistente (RN-RE-02/03/04)', () => {
   it('el nombre usa la hora de Lima: 2026-10-16T03:00Z es 15/10 a las 22:00', async () => {
     const { deps, reloj } = crearContexto()
@@ -385,6 +425,7 @@ describe('guardarCopia lee dentro de la unidad de trabajo', () => {
             dentro = false
           }
         },
+        alConfirmar: (accion) => uow.alConfirmar(accion),
       },
       almacen: {
         leerTodo: async () => {

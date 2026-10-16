@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { AlmacenEnMemoria } from './almacen-en-memoria'
 import { UnidadDeTrabajoEnMemoria } from './unidad-de-trabajo-en-memoria'
 import { BusEnMemoria } from '../../domain/eventos'
@@ -251,5 +251,212 @@ describe('UnidadDeTrabajoEnMemoria', () => {
 
     expect(almacen.obtener('existencias', 'del-evento')).toBeUndefined()
     expect(almacen.obtener('existencias', 'venta-de-usuario')?.cantidad).toBe(500)
+  })
+})
+
+// Ola 3, ruling 1 (ADR-0002): los eventos y el Deshacer se disparan tras el commit de la
+// transacción MÁS EXTERNA; si hay rollback, se descartan.
+describe('UnidadDeTrabajoEnMemoria.alConfirmar', () => {
+  it('ADR-0002: fuera de una transacción, la acción corre enseguida', () => {
+    const uow = new UnidadDeTrabajoEnMemoria(new AlmacenEnMemoria())
+    const bitacora: string[] = []
+    uow.alConfirmar(() => {
+      bitacora.push('accion')
+    })
+    expect(bitacora).toEqual(['accion'])
+  })
+
+  it('ADR-0002: dentro de una transacción, las acciones corren después del commit y en orden', async () => {
+    const almacen = new AlmacenEnMemoria()
+    const uow = new UnidadDeTrabajoEnMemoria(almacen)
+    const bitacora: string[] = []
+    const resultado = await uow.ejecutar(async () => {
+      uow.alConfirmar(() => {
+        bitacora.push(
+          `primera (p1 guardado: ${almacen.obtener('existencias', 'p1') !== undefined})`,
+        )
+      })
+      uow.alConfirmar(async () => {
+        await Promise.resolve()
+        bitacora.push('segunda')
+      })
+      uow.alConfirmar(() => {
+        bitacora.push('tercera')
+      })
+      almacen.guardar('existencias', existencia('p1', 1000))
+      bitacora.push('fin del trabajo')
+      return 'listo'
+    })
+    expect(resultado).toBe('listo')
+    // ejecutar() resuelve cuando ya corrieron (y terminaron) todas las acciones, en orden:
+    // la segunda es asíncrona y la tercera espera a que termine.
+    expect(bitacora).toEqual([
+      'fin del trabajo',
+      'primera (p1 guardado: true)',
+      'segunda',
+      'tercera',
+    ])
+  })
+
+  it('ADR-0002: una acción registrada en una llamada anidada espera al commit de la externa', async () => {
+    const uow = new UnidadDeTrabajoEnMemoria(new AlmacenEnMemoria())
+    const bitacora: string[] = []
+    await uow.ejecutar(async () => {
+      await uow.ejecutar(async () => {
+        uow.alConfirmar(() => {
+          bitacora.push('accion anidada')
+        })
+      })
+      bitacora.push('la anidada terminó')
+      uow.alConfirmar(() => {
+        bitacora.push('accion externa')
+      })
+      bitacora.push('la externa terminó')
+    })
+    expect(bitacora).toEqual([
+      'la anidada terminó',
+      'la externa terminó',
+      'accion anidada',
+      'accion externa',
+    ])
+  })
+
+  it('RN-OP-06: si la transacción externa falla después de la anidada, se descartan todas las acciones', async () => {
+    const almacen = new AlmacenEnMemoria()
+    const uow = new UnidadDeTrabajoEnMemoria(almacen)
+    const bitacora: string[] = []
+    await expect(
+      uow.ejecutar(async () => {
+        await uow.ejecutar(async () => {
+          almacen.guardar('existencias', existencia('p1', 1000))
+          uow.alConfirmar(() => {
+            bitacora.push('accion anidada')
+          })
+        })
+        uow.alConfirmar(() => {
+          bitacora.push('accion externa')
+        })
+        throw new Error('falla externa')
+      }),
+    ).rejects.toThrow('falla externa')
+    expect(bitacora).toEqual([])
+    expect(almacen.obtener('existencias', 'p1')).toBeUndefined()
+
+    // Las acciones descartadas no reaparecen en la transacción siguiente.
+    await uow.ejecutar(async () => {
+      uow.alConfirmar(() => {
+        bitacora.push('siguiente')
+      })
+    })
+    expect(bitacora).toEqual(['siguiente'])
+  })
+
+  it('ADR-0002: una acción que lanza se registra con console.error y no impide las demás', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const uow = new UnidadDeTrabajoEnMemoria(new AlmacenEnMemoria())
+      const bitacora: string[] = []
+      const resultado = await uow.ejecutar(async () => {
+        uow.alConfirmar(() => {
+          throw new Error('falla síncrona')
+        })
+        uow.alConfirmar(async () => {
+          throw new Error('falla asíncrona')
+        })
+        uow.alConfirmar(() => {
+          bitacora.push('la última corre igual')
+        })
+        return 42
+      })
+      expect(resultado).toBe(42)
+      expect(bitacora).toEqual(['la última corre igual'])
+      expect(error).toHaveBeenCalledTimes(2)
+      expect(error.mock.calls.map((llamada) => (llamada[1] as Error).message)).toEqual([
+        'falla síncrona',
+        'falla asíncrona',
+      ])
+    } finally {
+      error.mockRestore()
+    }
+  })
+
+  it('ADR-0002: fuera de una transacción, una acción que lanza también se registra sin propagarse', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const uow = new UnidadDeTrabajoEnMemoria(new AlmacenEnMemoria())
+      expect(() =>
+        uow.alConfirmar(() => {
+          throw new Error('falla síncrona')
+        }),
+      ).not.toThrow()
+      uow.alConfirmar(() => Promise.reject(new Error('falla asíncrona')))
+      await vi.waitFor(() => expect(error).toHaveBeenCalledTimes(2))
+    } finally {
+      error.mockRestore()
+    }
+  })
+
+  it('ADR-0002: las acciones corren fuera de la transacción: un ejecutar() dentro de una acción es independiente', async () => {
+    const almacen = new AlmacenEnMemoria()
+    const uow = new UnidadDeTrabajoEnMemoria(almacen)
+    const bitacora: string[] = []
+    // Como el manejador de un evento: escribe en su propia transacción y registra la suya.
+    await uow.ejecutar(async () => {
+      almacen.guardar('existencias', existencia('venta', 1))
+      uow.alConfirmar(async () => {
+        await expect(
+          uow.ejecutar(async () => {
+            almacen.guardar('existencias', existencia('del-manejador', 1))
+            uow.alConfirmar(() => {
+              bitacora.push('accion del manejador')
+            })
+            throw new Error('el manejador falla')
+          }),
+        ).rejects.toThrow('el manejador falla')
+        bitacora.push('manejador terminado')
+      })
+    })
+    // Si la acción hubiera corrido dentro de la transacción original, su ejecutar() se habría
+    // unido a ella (y su rollback no habría deshecho "del-manejador").
+    expect(almacen.obtener('existencias', 'venta')?.cantidad).toBe(1)
+    expect(almacen.obtener('existencias', 'del-manejador')).toBeUndefined()
+    expect(bitacora).toEqual(['manejador terminado'])
+  })
+
+  it('ADR-0002: una continuación tardía (fire-and-forget) de una transacción ya cerrada corre su acción enseguida', async () => {
+    const uow = new UnidadDeTrabajoEnMemoria(new AlmacenEnMemoria())
+    const bitacora: string[] = []
+    let tardia: Promise<void> = Promise.resolve()
+    await uow.ejecutar(async () => {
+      tardia = new Promise<void>((resolver) => {
+        setTimeout(() => {
+          uow.alConfirmar(() => {
+            bitacora.push('accion tardía')
+          })
+          resolver()
+        }, 0)
+      })
+    })
+    await tardia
+    expect(bitacora).toEqual(['accion tardía'])
+  })
+
+  it('ADR-0002: dos transacciones independientes concurrentes no se mezclan las acciones', async () => {
+    const uow = new UnidadDeTrabajoEnMemoria(new AlmacenEnMemoria())
+    const bitacora: string[] = []
+    const primera = uow.ejecutar(async () => {
+      uow.alConfirmar(() => {
+        bitacora.push('de la primera')
+      })
+      throw new Error('falla la primera')
+    })
+    const segunda = uow.ejecutar(async () => {
+      uow.alConfirmar(() => {
+        bitacora.push('de la segunda')
+      })
+    })
+    await expect(primera).rejects.toThrow('falla la primera')
+    await segunda
+    expect(bitacora).toEqual(['de la segunda'])
   })
 })

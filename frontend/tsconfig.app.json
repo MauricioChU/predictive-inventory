@@ -4,6 +4,8 @@
   "exclude": [
     "src/**/__tests__/*",
     "src/**/*.spec.ts",
+    // Ola 3, ruling 3: los ayudantes de prueba no son código de la app (pueden usar Node).
+    "src/**/__pruebas__/**",
     // Fix round 2, M4: usa node:async_hooks (no existe en el navegador). Solo *.spec.ts y
     // tests/** pueden importarla (eslint-rules/fronteras.ts); el proyecto de la app no la
     // type-checa para no necesitar tipos de Node en un proyecto con lib solo de navegador.
