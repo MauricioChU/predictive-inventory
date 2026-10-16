@@ -7,6 +7,9 @@ import { onBeforeUnmount, watch, type Ref } from 'vue'
  * en `scroll-padding-bottom` y el foco por teclado nunca queda tapado por la barra pegada abajo
  * (WCAG 2.4.11), sin adivinar alturas. Vale 0px mientras el elemento no exista y se quita al
  * desmontar.
+ *
+ * Plan 12: vive en shared/ui (antes en src/app) porque también la usa un componente del kit:
+ * BarraDeTotal publica así su alto (--alto-barra-de-total) y LayoutApp lo suma al pie.
  */
 export function usarAltoComoVariable(
   elemento: Readonly<Ref<HTMLElement | null | undefined>>,

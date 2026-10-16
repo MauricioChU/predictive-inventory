@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { Component } from 'vue'
+import { ref, type Component } from 'vue'
+import { usarAltoComoVariable } from '../alto-como-variable'
 import BotonPrincipal from './BotonPrincipal.vue'
 
 withDefaults(
@@ -16,6 +17,12 @@ withDefaults(
   { icono: undefined, deshabilitado: false },
 )
 const emit = defineEmits<{ accion: [] }>()
+
+// Plan 12 (WCAG 2.4.11): publica su alto real en <html> (--alto-barra-de-total) mientras está
+// montada. LayoutApp lo suma a scroll-padding-bottom: el elemento que recibe el foco por teclado
+// (p. ej. el "+" de una línea del carrito) nunca queda escondido debajo de esta barra.
+const refBarra = ref<HTMLElement>()
+usarAltoComoVariable(refBarra, '--alto-barra-de-total')
 </script>
 
 <template>
@@ -27,7 +34,7 @@ const emit = defineEmits<{ accion: [] }>()
     --alto-pie; desde 1024 px la navegación va al costado y lo único abajo es el aviso Deshacer
     (--alto-aviso).
   -->
-  <div class="barra-de-total">
+  <div ref="refBarra" class="barra-de-total">
     <p class="resumen">
       <span class="etiqueta">{{ etiqueta }}</span>
       <span class="total">{{ textoTotal }}</span>

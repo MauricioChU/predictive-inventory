@@ -1,8 +1,13 @@
 import { computed, inject, ref, type ComputedRef, type InjectionKey } from 'vue'
+import { SEGUNDOS_PARA_DESHACER } from '@/modules/inventario'
 import type { Anunciador } from '@/shared/ui/anunciador'
 
-/** RN-OP-18: "Deshacer" se ofrece durante 10 s — fijo, nadie lo cambia (ni pantallas ni pruebas). */
-export const SEGUNDOS_PARA_DESHACER = 10
+/**
+ * RN-OP-18: "Deshacer" se ofrece durante 10 s — fijo, nadie lo cambia (ni pantallas ni pruebas).
+ * M9 (plan 12): es LA constante del módulo de inventario (la que usa `deshacer.disponible()`),
+ * reexportada para LayoutApp: el aviso que se ve y la regla nunca se desfasan.
+ */
+export { SEGUNDOS_PARA_DESHACER }
 
 export interface OpcionesAvisoDeshacer {
   mensaje: string

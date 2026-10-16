@@ -2,7 +2,7 @@
 import { onBeforeUnmount, provide, ref } from 'vue'
 import AvisoDeshacer from '@/shared/ui/componentes/AvisoDeshacer.vue'
 import BarraNavegacion from '@/shared/ui/componentes/BarraNavegacion.vue'
-import { usarAltoComoVariable } from './alto-como-variable'
+import { usarAltoComoVariable } from '@/shared/ui/alto-como-variable'
 import { CLAVE_ANUNCIADOR, crearAnunciador } from '@/shared/ui/anunciador'
 import {
   CLAVE_AVISO_DESHACER,
@@ -104,9 +104,11 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
 
 /* m5 (WCAG 2.4.11): lo que queda pegado abajo no tapa al elemento que recibe el foco por
    teclado — el navegador desplaza la página dejando libre ese alto, medido en vivo
-   (alto-como-variable.ts), nunca adivinado. En celular es todo el pie (aviso + barra). */
+   (alto-como-variable.ts), nunca adivinado. En celular es todo el pie (aviso + barra).
+   Plan 12: más la BarraDeTotal de Vender/Recibir (pegada justo encima del pie), que publica
+   su alto en --alto-barra-de-total mientras está en pantalla (0px si no hay ninguna). */
 :global(html) {
-  scroll-padding-bottom: var(--alto-pie, 0px);
+  scroll-padding-bottom: calc(var(--alto-pie, 0px) + var(--alto-barra-de-total, 0px));
 }
 
 .layout-app {
@@ -154,9 +156,10 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
 }
 
 @media (min-width: 1024px) {
-  /* En PC lo único pegado abajo es el aviso (la navegación está al costado). */
+  /* En PC lo único pegado abajo es el aviso (la navegación está al costado), y la BarraDeTotal
+     si la pantalla tiene una (plan 12). */
   :global(html) {
-    scroll-padding-bottom: var(--alto-aviso, 0px);
+    scroll-padding-bottom: calc(var(--alto-aviso, 0px) + var(--alto-barra-de-total, 0px));
   }
   .layout-app {
     grid-template-columns: 260px minmax(0, 1fr);

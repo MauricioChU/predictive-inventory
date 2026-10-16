@@ -291,6 +291,47 @@ describe('BarraDeTotal', () => {
     await w.get('button').trigger('click')
     expect(w.emitted('accion')).toBeUndefined()
   })
+
+  describe('plan 12 (WCAG 2.4.11): publica su alto para que el foco nunca quede tapado', () => {
+    const variable = () =>
+      document.documentElement.style.getPropertyValue('--alto-barra-de-total')
+    let observados: Element[] = []
+
+    beforeEach(() => {
+      observados = []
+      // jsdom no trae ResizeObserver: uno que solo recuerda qué observa.
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          observe(el: Element) {
+            observados.push(el)
+          }
+          unobserve() {}
+          disconnect() {}
+        },
+      )
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+        () => ({ height: 131.4 }) as DOMRect,
+      )
+    })
+    afterEach(() => {
+      vi.unstubAllGlobals()
+      vi.restoreAllMocks()
+      document.documentElement.style.removeProperty('--alto-barra-de-total')
+    })
+
+    it('mientras está montada, --alto-barra-de-total vale su alto real; al desmontarse se quita', async () => {
+      const w = mount(BarraDeTotal, {
+        props: { etiqueta: 'Total', textoTotal: 'S/ 14.63', textoAccion: 'Cobrar' },
+        attachTo: document.body,
+      })
+      await flushPromises()
+      expect(variable()).toBe('132px')
+      expect(observados).toContain(w.get('.barra-de-total').element)
+      w.unmount()
+      expect(variable()).toBe('')
+    })
+  })
 })
 
 describe('SelectorDeBilletes', () => {
