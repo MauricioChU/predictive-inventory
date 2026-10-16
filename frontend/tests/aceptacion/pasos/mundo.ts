@@ -1,5 +1,5 @@
 import { vi, type MockInstance } from 'vitest'
-import { abrirApp, type InicioDeLaApp } from '@/app/abrir-app'
+import { abrirApp, pedirAlmacenamientoPersistente, type InicioDeLaApp } from '@/app/abrir-app'
 import type { Notificacion } from '@/modules/alertas'
 import { ProcesadorDeFotosCanvas } from '@/modules/catalogo'
 import {
@@ -298,10 +298,16 @@ export class Mundo {
     }
   }
 
-  /** "Abro la app": lo mismo que hace main.ts (sin DOM: la letra no se aplica a ningún <html>). */
+  /**
+   * "Abro la app": lo mismo que hace el arranque (src/app/arranque.ts), sin DOM (la letra no se
+   * aplica a ningún <html>): abrir los datos, "montar" y pedir el almacenamiento persistente
+   * (RN-RE-09). El arranque real no espera ese pedido; aquí se espera para que el escenario sea
+   * determinista.
+   */
   async abrirLaApp(): Promise<void> {
     this.inicio = await abrirApp(this.app, { aplicarTamanoDeLetra: () => undefined })
     this.pantalla = 'Inicio'
+    await pedirAlmacenamientoPersistente(this.app)
   }
 
   // ───────────── Lo que muestran las pantallas ─────────────
