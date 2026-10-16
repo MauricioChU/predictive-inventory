@@ -10,9 +10,16 @@ const HOY = '2026-10-15'
 const PRESUPUESTO_TORRE_MS = 1000
 const PRESUPUESTO_VENTA_MS = 300
 
+/** Ventas de la ráfaga: una tras otra, cada una esperada, sin pausa entre ellas. */
+const VENTAS_EN_RAFAGA = 10
+
 function mediana(valores: readonly number[]): number {
   const orden = [...valores].sort((a, b) => a - b)
   return orden[Math.floor(orden.length / 2)]!
+}
+
+function peor(valores: readonly number[]): number {
+  return Math.max(...valores)
 }
 
 async function medir<T>(trabajo: () => Promise<T>): Promise<{ ms: number; valor: T }> {
@@ -26,7 +33,7 @@ interface Medicion {
   reconstruir: number
   torre: number[]
   ventaEnCalma: number[]
-  ventaSeguida: number[]
+  ventaEnRafaga: number[]
   situaciones: number
   evaluarAvisos: number
 }
@@ -48,7 +55,7 @@ describe('RN-SIS-09: rendimiento con datos realistas (Dexie)', () => {
     reconstruir: 0,
     torre: [],
     ventaEnCalma: [],
-    ventaSeguida: [],
+    ventaEnRafaga: [],
     situaciones: 0,
     evaluarAvisos: 0,
   }
@@ -75,11 +82,12 @@ describe('RN-SIS-09: rendimiento con datos realistas (Dexie)', () => {
 
   afterAll(async () => {
     await app.cerrar()
+    const rafaga = medicion.ventaEnRafaga
     console.log(
       `RN-SIS-09 (ms, Dexie + fake-indexeddb): carga ${medicion.carga}, ` +
         `reconstruir ${medicion.reconstruir}, torre [${medicion.torre.join(', ')}], ` +
         `venta en calma [${medicion.ventaEnCalma.join(', ')}], ` +
-        `venta seguida de otra [${medicion.ventaSeguida.join(', ')}], ` +
+        `venta en ráfaga [${rafaga.join(', ')}] (mediana ${mediana(rafaga)}, peor ${peor(rafaga)}), ` +
         `situaciones ${medicion.situaciones}, evaluarAvisos ${medicion.evaluarAvisos}`,
     )
   })
@@ -99,30 +107,28 @@ describe('RN-SIS-09: rendimiento con datos realistas (Dexie)', () => {
   }, 60_000)
 
   it(`RN-SIS-09: una venta se confirma en menos de ${PRESUPUESTO_VENTA_MS} ms`, async () => {
-    const productos = datos.productos.filter((p) => p.unidad === 'UNIDAD').slice(0, 15)
+    const productos = datos.productos.filter((p) => p.unidad === 'UNIDAD').slice(0, 30)
+    const lineas = (i: number) =>
+      productos.slice(i * 3, i * 3 + 3).map((p) => ({ productoId: p.id, cantidad: '1' }))
     // En calma: entre una venta y otra ya terminó la re-evaluación de avisos (la persona tarda
     // segundos en armar la siguiente).
     for (let i = 0; i < 5; i += 1) {
-      const lineas = productos
-        .slice(i * 3, i * 3 + 3)
-        .map((p) => ({ productoId: p.id, cantidad: '1' }))
-      const { ms } = await medir(() => app.inventario.registrarVenta({ lineas }))
+      const { ms } = await medir(() => app.inventario.registrarVenta({ lineas: lineas(i) }))
       medicion.ventaEnCalma.push(ms)
       await app.esperarTareasPendientes()
     }
-    // Seguidas (informativo, sin presupuesto): la venta espera a que termine la evaluación de
-    // avisos que disparó la anterior (sus lecturas abren transacciones sobre las mismas tablas).
-    for (let i = 0; i < 5; i += 1) {
-      const lineas = productos
-        .slice(i * 3, i * 3 + 3)
-        .map((p) => ({ productoId: p.id, cantidad: '1' }))
-      const { ms } = await medir(() => app.inventario.registrarVenta({ lineas }))
-      medicion.ventaSeguida.push(ms)
+    // En ráfaga (informativo, sin presupuesto): cada venta llega apenas confirmó la anterior
+    // ("confirmar" = hasta que `registrarVenta` resuelve), con los avisos y el contador que
+    // disparó la anterior todavía pendientes.
+    for (let i = 0; i < VENTAS_EN_RAFAGA; i += 1) {
+      const { ms } = await medir(() => app.inventario.registrarVenta({ lineas: lineas(i) }))
+      medicion.ventaEnRafaga.push(ms)
     }
     await app.esperarTareasPendientes()
     medicion.situaciones = (await medir(() => app.analisis.consultable.situaciones())).ms
     medicion.evaluarAvisos = (await medir(() => app.alertas.evaluarAvisos())).ms
 
+    expect(medicion.ventaEnRafaga).toHaveLength(VENTAS_EN_RAFAGA)
     expect(mediana(medicion.ventaEnCalma)).toBeLessThan(PRESUPUESTO_VENTA_MS)
   }, 60_000)
 })

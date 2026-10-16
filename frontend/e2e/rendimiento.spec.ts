@@ -18,6 +18,14 @@ interface AplicacionEnLaPagina {
 }
 type VentanaConAplicacion = Window & { __aplicacion?: AplicacionEnLaPagina }
 
+/** Ventas de la ráfaga: una tras otra, cada una esperada, sin pausa entre ellas. */
+const VENTAS_EN_RAFAGA = 10
+
+function mediana(valores: readonly number[]): number {
+  const orden = [...valores].sort((a, b) => a - b)
+  return orden[Math.floor(orden.length / 2)]!
+}
+
 /** El "hoy" de la tienda (America/Lima, UTC−5) para que la historia termine ayer. */
 function hoyEnLima(): string {
   return new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString().slice(0, 10)
@@ -50,7 +58,7 @@ function copiaConHistoria(): { texto: string; productos: string[] } {
     },
   })
   const productos = datos.productos.filter((p) => p.unidad === 'UNIDAD').map((p) => p.id)
-  return { texto, productos: productos.slice(0, 15) }
+  return { texto, productos: productos.slice(0, 3 * VENTAS_EN_RAFAGA) }
 }
 
 /** Emula una CPU `veces` más lenta (Chromium, por el protocolo de DevTools). */
@@ -78,7 +86,7 @@ test.describe('RN-SIS-09: rendimiento en el navegador real (medición opcional)'
       await frenarCpu(page, lentitud)
 
       const medicion = await page.evaluate(
-        async ({ copia, ids }) => {
+        async ({ copia, ids, rafaga }) => {
           const app = (window as VentanaConAplicacion).__aplicacion
           if (!app) throw new Error('La app no expuso window.__aplicacion')
           const medir = async (trabajo: () => Promise<unknown>) => {
@@ -99,22 +107,28 @@ test.describe('RN-SIS-09: rendimiento en el navegador real (medición opcional)'
             await app.esperarTareasPendientes()
             await new Promise((resolver) => setTimeout(resolver, 300))
           }
-          const ventaSeguida: number[] = []
-          for (let i = 0; i < 5; i += 1) {
-            ventaSeguida.push(await medir(() => app.inventario.registrarVenta({ lineas: lineas(i) })))
+          // Ráfaga: cada venta llega apenas confirmó la anterior (con los avisos y el contador
+          // que disparó la anterior todavía pendientes).
+          const ventaEnRafaga: number[] = []
+          for (let i = 0; i < rafaga; i += 1) {
+            ventaEnRafaga.push(await medir(() => app.inventario.registrarVenta({ lineas: lineas(i) })))
           }
           await app.esperarTareasPendientes()
           const situaciones = await medir(() => app.analisis.consultable.situaciones())
           const evaluarAvisos = await medir(() => app.alertas.evaluarAvisos())
-          return { restaurar, torre, ventaEnCalma, ventaSeguida, situaciones, evaluarAvisos }
+          return { restaurar, torre, ventaEnCalma, ventaEnRafaga, situaciones, evaluarAvisos }
         },
-        { copia: texto, ids: productos },
+        { copia: texto, ids: productos, rafaga: VENTAS_EN_RAFAGA },
       )
 
-      const resumen = `RN-SIS-09 en Chromium (CPU x${lentitud}, ms): ${JSON.stringify(medicion)}`
+      const { ventaEnRafaga } = medicion
+      const resumen =
+        `RN-SIS-09 en Chromium (CPU x${lentitud}, ms): ${JSON.stringify(medicion)}; ` +
+        `ráfaga: mediana ${mediana(ventaEnRafaga)}, peor ${Math.max(...ventaEnRafaga)}`
       console.log(resumen)
       await testInfo.attach(`rendimiento-cpu-x${lentitud}`, { body: resumen, contentType: 'text/plain' })
       expect(medicion.torre).toHaveLength(3)
+      expect(medicion.ventaEnRafaga).toHaveLength(VENTAS_EN_RAFAGA)
     })
   }
 })
