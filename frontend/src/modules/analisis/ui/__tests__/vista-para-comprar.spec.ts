@@ -132,6 +132,20 @@ describe('Para comprar', () => {
     expect(await listaGuardada(tienda)).toContainEqual(['Carbón', '1.5'])
   })
 
+  it('borrar el número para escribir otro no es un error: no se guarda nada hasta que haya uno', async () => {
+    const tienda = await tiendaConLista()
+    const { envoltura } = await abrir(tienda)
+    await escribirCantidad(envoltura, 'Jabón', '')
+    await vi.advanceTimersByTimeAsync(500)
+    await esperarCarga()
+    expect(linea(envoltura, 'Jabón').find('[role="alert"]').exists()).toBe(false)
+    expect(await listaGuardada(tienda)).toContainEqual(['Jabón', '4'])
+    await escribirCantidad(envoltura, 'Jabón', '8')
+    await vi.advanceTimersByTimeAsync(500)
+    await esperarCarga()
+    expect(await listaGuardada(tienda)).toContainEqual(['Jabón', '8'])
+  })
+
   it('RN-UX-07: si el producto ya no está (archivado), lo dice con el mensaje del dominio', async () => {
     const tienda = await tiendaConLista()
     const { envoltura } = await abrir(tienda)

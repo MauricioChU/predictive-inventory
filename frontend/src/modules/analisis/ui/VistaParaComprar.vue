@@ -102,6 +102,12 @@ function alCambiarCantidad(linea: LineaParaComprar, texto: string): void {
   const id = linea.productoId
   escritas.value = { ...escritas.value, [id]: texto }
   errorGeneral.value = null
+  if (texto.trim() === '') {
+    // Borró el número para escribir otro: todavía no hay nada que guardar ni que corregir.
+    pendientes.delete(id)
+    quitarError(id)
+    return
+  }
   try {
     cantidadDeLista(texto, linea.unidad)
   } catch (error) {
