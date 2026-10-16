@@ -99,7 +99,12 @@ watch(
  * en la página).
  */
 async function despuesDeCerrar(cerrar: () => unknown): Promise<void> {
-  await cerrar()
+  try {
+    await cerrar()
+  } catch (error) {
+    console.error('No se pudo cerrar la tarjeta de Inicio:', error)
+    return
+  }
   await nextTick()
   titulo.value?.focus({ preventScroll: true })
 }
