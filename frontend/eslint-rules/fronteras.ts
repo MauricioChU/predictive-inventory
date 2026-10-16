@@ -166,11 +166,14 @@ export function verificarFrontera(archivoImportador: string, especificador: stri
       importador.area === 'modules' &&
       destino.area === 'modules' &&
       destino.modulo === importador.modulo
+    // Ola 4: también tests/** (p. ej. tests/soporte/aplicacion-de-prueba.ts), para que la spec
+    // de una pantalla pruebe con la aplicación de prueba compuesta.
     if (
       mismoModulo ||
       destino.area === 'shared' ||
       destino.area === 'router' ||
-      destino.area === 'app'
+      destino.area === 'app' ||
+      destino.area === 'tests'
     ) {
       return null
     }

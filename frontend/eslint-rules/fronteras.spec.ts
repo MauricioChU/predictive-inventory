@@ -289,12 +289,23 @@ describe('arquitectura/fronteras', () => {
           code: "import { useAplicacion } from '../../../../app/proveer-aplicacion'",
           filename: archivo('modules', 'analisis', 'ui', 'componentes', 'TarjetaResumen.vue'),
         },
+        // La spec de una pantalla prueba con la aplicación de prueba compuesta (tests/soporte).
+        {
+          code: "import { crearAplicacionDePrueba } from '../../../../../tests/soporte/aplicacion-de-prueba'",
+          filename: archivo('modules', 'analisis', 'ui', '__tests__', 'vista-control.spec.ts'),
+        },
       ],
       invalid: [
         // El resto de src/app sigue fuera del alcance de las pantallas.
         { code: "import { crearAplicacion } from '@/app/composicion'", filename: vista, errors: 1 },
         {
           code: "import { exponerGanchosDePrueba } from '@/app/ganchos-de-prueba'",
+          filename: vista,
+          errors: 1,
+        },
+        // tests/** sigue prohibido para el código de la app (solo las specs lo usan).
+        {
+          code: "import { crearAplicacionDePrueba } from '../../../../tests/soporte/aplicacion-de-prueba'",
           filename: vista,
           errors: 1,
         },
