@@ -19,7 +19,7 @@ export default mergeConfig(
       coverage: {
         provider: 'v8',
         include: ['src/**/*.ts'],
-        exclude: ['src/**/*.spec.ts', 'src/**/ui/**', 'src/app/**', 'src/main.ts', 'src/router/**'],
+        exclude: ['src/**/*.spec.ts', 'src/**/__pruebas__/**', 'src/**/ui/**', 'src/app/**', 'src/main.ts', 'src/router/**'],
         thresholds: {
           'src/**/domain/**': { lines: 95, branches: 95, functions: 95, statements: 95 },
           'src/**/application/**': { lines: 90, branches: 90, functions: 90, statements: 90 },
