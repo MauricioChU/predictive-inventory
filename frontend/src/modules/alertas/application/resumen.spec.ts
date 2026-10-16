@@ -12,7 +12,7 @@ function prepararContexto(ahora?: string) {
 }
 
 describe('resumenDeAtencion (RN-AL-06)', () => {
-  it('cuenta agotados y por acabarse de los productos activos; NORMAL no cuenta', async () => {
+  it('RN-AL-06: cuenta agotados y por acabarse de los productos activos; NORMAL no cuenta', async () => {
     const { dependencias, analisisFalso } = prepararContexto()
     analisisFalso.situacionesActuales = [
       crearSituacion({
@@ -45,7 +45,7 @@ describe('resumenDeAtencion (RN-AL-06)', () => {
     })
   })
 
-  it('sin nada que atender: Todo bien', async () => {
+  it('RN-AL-06: sin nada que atender: Todo bien', async () => {
     const { dependencias, analisisFalso } = prepararContexto()
     analisisFalso.situacionesActuales = [
       crearSituacion({
@@ -68,7 +68,7 @@ describe('resumenDeAtencion (RN-AL-06)', () => {
 })
 
 describe('resumenDelDia y cerrarResumenDelDia (RN-AL-09)', () => {
-  it('se muestra la primera vez del día con las tres líneas exactas', async () => {
+  it('RN-AL-09: se muestra la primera vez del día con las tres líneas exactas', async () => {
     const { dependencias, analisisFalso } = prepararContexto('2026-10-15T15:00:00.000Z')
     analisisFalso.situacionesActuales = [
       crearSituacion({
@@ -99,7 +99,7 @@ describe('resumenDelDia y cerrarResumenDelDia (RN-AL-09)', () => {
     expect(resumen).toEqual({ lineas: ['1 agotado', '1 por acabarse', 'Ayer ganaste S/ 48.20'] })
   })
 
-  it('tras cerrarlo, no vuelve a aparecer el mismo día', async () => {
+  it('RN-AL-09: tras cerrarlo, no vuelve a aparecer el mismo día', async () => {
     const { dependencias } = prepararContexto('2026-10-15T15:00:00.000Z')
 
     await cerrarResumenDelDia(dependencias)
@@ -108,7 +108,7 @@ describe('resumenDelDia y cerrarResumenDelDia (RN-AL-09)', () => {
     expect(resumen).toBeNull()
   })
 
-  it('al día siguiente vuelve a aparecer', async () => {
+  it('RN-AL-09: al día siguiente vuelve a aparecer', async () => {
     const { dependencias, reloj } = prepararContexto('2026-10-15T15:00:00.000Z')
 
     await cerrarResumenDelDia(dependencias)
@@ -116,5 +116,25 @@ describe('resumenDelDia y cerrarResumenDelDia (RN-AL-09)', () => {
     const resumen = await resumenDelDia(dependencias)
 
     expect(resumen).not.toBeNull()
+  })
+
+  it('RN-AL-09: el día de negocio es el de Lima, no el de UTC', async () => {
+    const { dependencias, reloj } = prepararContexto('2026-10-15T15:00:00.000Z')
+    await cerrarResumenDelDia(dependencias)
+
+    reloj.fijar('2026-10-16T03:00:00.000Z') // 22:00 del 15 en Lima
+    expect(await resumenDelDia(dependencias)).toBeNull()
+
+    reloj.fijar('2026-10-16T05:00:00.000Z') // 00:00 del 16 en Lima
+    expect(await resumenDelDia(dependencias)).not.toBeNull()
+  })
+
+  it('RN-AL-08: resumenDelDia y resumenDeAtencion nunca piden permiso', async () => {
+    const { dependencias, notificador } = prepararContexto()
+
+    await resumenDelDia(dependencias)
+    await resumenDeAtencion(dependencias)
+
+    expect(notificador.solicitudes).toBe(0)
   })
 })

@@ -65,31 +65,31 @@ describe('textoDeAviso', () => {
     const texto = textoDeAviso(situacion({ estado: 'AGOTADO', stock: Cantidad.cero() }))
     expect(texto).toBe('Se acabó: Lejía 1 L')
   })
-  it('un producto NORMAL no debería pedir un texto de aviso', () => {
+  it('RN-AL-03: un producto NORMAL no debería pedir un texto de aviso', () => {
     expect(() => textoDeAviso(situacion({ estado: 'NORMAL' }))).toThrow()
   })
 })
 
 describe('rutaDeProducto y RUTA_PARA_COMPRAR', () => {
-  it('rutaDeProducto construye la ruta del producto', () => {
+  it('RN-AL-07: rutaDeProducto construye la ruta del producto', () => {
     expect(rutaDeProducto('abc-123')).toBe('/productos/abc-123')
   })
-  it('RUTA_PARA_COMPRAR apunta a la lista de para comprar', () => {
+  it('RN-AL-07: RUTA_PARA_COMPRAR apunta a la lista de para comprar', () => {
     expect(RUTA_PARA_COMPRAR).toBe('/control/para-comprar')
   })
 })
 
 describe('agruparAvisos (RN-AL-07)', () => {
-  it('sin avisos no genera notificaciones', () => {
+  it('RN-AL-07: sin avisos no genera notificaciones', () => {
     expect(agruparAvisos([])).toEqual([])
   })
-  it('un solo aviso usa la ruta del producto', () => {
+  it('RN-AL-07: un solo aviso usa la ruta del producto', () => {
     const s = situacion({ productoId: 'p1', estado: 'POR_ACABARSE', stock: Cantidad.deEntero(3) })
     expect(agruparAvisos([s])).toEqual([
       { texto: 'Queda poco: Lejía 1 L (3 unid.)', url: '/productos/p1' },
     ])
   })
-  it('tres avisos a la vez se agrupan en una sola notificación con RUTA_PARA_COMPRAR', () => {
+  it('RN-AL-07: tres avisos a la vez se agrupan en una sola notificación con RUTA_PARA_COMPRAR', () => {
     const s1 = situacion({ productoId: 'p1', estado: 'POR_ACABARSE' })
     const s2 = situacion({ productoId: 'p2', estado: 'AGOTADO' })
     const s3 = situacion({ productoId: 'p3', estado: 'POR_ACABARSE' })

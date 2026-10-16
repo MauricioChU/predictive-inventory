@@ -30,7 +30,7 @@ describe('evaluarAvisos', () => {
     expect(notificador.mostradas).toEqual(notificaciones)
   })
 
-  it('RN-AL-03: evaluar otra vez sin cambio de estado no genera una nueva notificación', async () => {
+  it('RN-AL-03: no se repite el aviso si el estado no mejora (5, vendo 2, vendo 1)', async () => {
     const { dependencias, analisisFalso, notificador } = prepararContexto()
     analisisFalso.situacionesActuales = [
       crearSituacion({
@@ -40,8 +40,16 @@ describe('evaluarAvisos', () => {
         stock: Cantidad.deEntero(3),
       }),
     ]
-
     await evaluarAvisos(dependencias)
+
+    analisisFalso.situacionesActuales = [
+      crearSituacion({
+        productoId: 'p1',
+        nombre: 'Lejía 1 L',
+        estado: 'POR_ACABARSE',
+        stock: Cantidad.deEntero(2),
+      }),
+    ]
     const segunda = await evaluarAvisos(dependencias)
 
     expect(segunda).toEqual([])
@@ -153,7 +161,8 @@ describe('evaluarAvisos', () => {
   })
 
   it('RN-AL-06: sin notificaciones activas en la configuración, tampoco se muestra nada', async () => {
-    const { dependencias, analisisFalso, notificador, tiendaFalsa } = prepararContexto()
+    const { dependencias, analisisFalso, notificador, tiendaFalsa, avisosAlmacen } =
+      prepararContexto()
     tiendaFalsa.configuracionActual = {
       ...tiendaFalsa.configuracionActual,
       notificacionesActivas: false,
@@ -171,6 +180,9 @@ describe('evaluarAvisos', () => {
 
     expect(notificaciones).toEqual([])
     expect(notificador.mostradas).toEqual([])
+    expect(avisosAlmacen.todos('avisos')).toEqual([
+      { productoId: 'p1', ultimoEstadoAvisado: 'AGOTADO' },
+    ])
   })
 
   it('RN-AL-07: tres productos empeoran a la vez: una sola notificación agrupada', async () => {
