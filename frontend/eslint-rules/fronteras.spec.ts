@@ -277,4 +277,50 @@ describe('arquitectura/fronteras', () => {
       ],
     })
   })
+
+  it('Ola 4: la UI de un módulo usa la app solo por sus tres puertas', () => {
+    const vista = archivo('modules', 'analisis', 'ui', 'VistaControl.vue')
+    ruleTester.run('fronteras', pluginArquitectura.rules.fronteras, {
+      valid: [
+        { code: "import { useAplicacion } from '@/app/proveer-aplicacion'", filename: vista },
+        { code: "import { useEstadoGlobal } from '@/app/estado-global'", filename: vista },
+        { code: "import { useAvisoDeshacer } from '@/app/aviso-deshacer'", filename: vista },
+        {
+          code: "import { useAplicacion } from '../../../../app/proveer-aplicacion'",
+          filename: archivo('modules', 'analisis', 'ui', 'componentes', 'TarjetaResumen.vue'),
+        },
+        // La spec de una pantalla prueba con la aplicación de prueba compuesta (tests/soporte).
+        {
+          code: "import { crearAplicacionDePrueba } from '../../../../../tests/soporte/aplicacion-de-prueba'",
+          filename: archivo('modules', 'analisis', 'ui', '__tests__', 'vista-control.spec.ts'),
+        },
+      ],
+      invalid: [
+        // El resto de src/app sigue fuera del alcance de las pantallas.
+        { code: "import { crearAplicacion } from '@/app/composicion'", filename: vista, errors: 1 },
+        {
+          code: "import { exponerGanchosDePrueba } from '@/app/ganchos-de-prueba'",
+          filename: vista,
+          errors: 1,
+        },
+        // tests/** sigue prohibido para el código de la app (solo las specs lo usan).
+        {
+          code: "import { crearAplicacionDePrueba } from '../../../../tests/soporte/aplicacion-de-prueba'",
+          filename: vista,
+          errors: 1,
+        },
+        // Las puertas son solo para la UI: los casos de uso y el dominio no dependen de la app.
+        {
+          code: "import { useAplicacion } from '@/app/proveer-aplicacion'",
+          filename: archivo('modules', 'analisis', 'application', 'torre.ts'),
+          errors: 1,
+        },
+        {
+          code: "import { useEstadoGlobal } from '@/app/estado-global'",
+          filename: archivo('modules', 'analisis', 'domain', 'vpd.ts'),
+          errors: 1,
+        },
+      ],
+    })
+  })
 })
