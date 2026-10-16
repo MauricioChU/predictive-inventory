@@ -28,7 +28,12 @@ describe('Guardar copia', () => {
   beforeEach(async () => {
     app = crearAplicacionDePrueba({ ahora: HOY })
     await app.tienda.completarPrimeraVez({ nombreTienda: 'Bodega Rosita', tamanoDeLetra: 'GRANDE' })
-    await crearProductoDePrueba(app, { nombre: 'Lejía 1 L', compra: '2.40', venta: '3.50', stockInicial: '10' })
+    await crearProductoDePrueba(app, {
+      nombre: 'Lejía 1 L',
+      compra: '2.40',
+      venta: '3.50',
+      stockInicial: '10',
+    })
     descargas = capturarDescargas()
   })
 
@@ -48,7 +53,9 @@ describe('Guardar copia', () => {
     await tocar('Guardar copia ahora')
 
     expect(descargas.map((d) => d.nombre)).toEqual(['respaldo-bodega-rosita-2026-10-15-2030.json'])
-    const { resumen } = await app.respaldo.prepararRestauracion(await leerTexto(descargas[0]!.contenido))
+    const { resumen } = await app.respaldo.prepararRestauracion(
+      await leerTexto(descargas[0]!.contenido),
+    )
     expect(resumen.texto).toBe('1 producto, 1 movimiento, del 15/10/2026 al 15/10/2026')
     expect((await app.tienda.consultable.estadoDelSistema()).ultimoRespaldoEn).not.toBeNull()
     expect(await app.respaldo.recordatorioDeCopia()).toBeNull()

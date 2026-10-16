@@ -120,7 +120,10 @@ describe('Primera vez', () => {
 
   describe('después de guardar el nombre y la letra', () => {
     beforeEach(async () => {
-      await app.tienda.completarPrimeraVez({ nombreTienda: 'Bodega Rosita', tamanoDeLetra: 'GRANDE' })
+      await app.tienda.completarPrimeraVez({
+        nombreTienda: 'Bodega Rosita',
+        tamanoDeLetra: 'GRANDE',
+      })
     })
 
     it.each([

@@ -23,7 +23,11 @@ describe('Ajustes', () => {
   function control(texto: string) {
     const encontrado = pantalla!.wrapper
       .findAll('button, a')
-      .find((b) => b.text().trim() === texto || b.find('.titulo').exists() && b.get('.titulo').text() === texto)
+      .find(
+        (b) =>
+          b.text().trim() === texto ||
+          (b.find('.titulo').exists() && b.get('.titulo').text() === texto),
+      )
     if (!encontrado) throw new Error(`No hay "${texto}" en: ${pantalla!.wrapper.text()}`)
     return encontrado
   }
@@ -104,7 +108,12 @@ describe('Ajustes', () => {
   })
 
   it('RN-RE-01: exporta el inventario a Excel y lo entrega', async () => {
-    await crearProductoDePrueba(app, { nombre: 'Lejía 1 L', compra: '2.40', venta: '3.50', stockInicial: '10' })
+    await crearProductoDePrueba(app, {
+      nombre: 'Lejía 1 L',
+      compra: '2.40',
+      venta: '3.50',
+      stockInicial: '10',
+    })
     pantalla = await montarPantalla(app, '/ajustes')
 
     await tocar('Exportar a Excel')
@@ -182,7 +191,9 @@ describe('Datos de la tienda', () => {
     pantalla = await montarPantalla(app, '/ajustes/tienda')
     expect(pantalla.wrapper.get('h1').text()).toBe('Datos de la tienda')
     expect((campo('Nombre de la tienda').element as HTMLInputElement).value).toBe('Bodega Rosita')
-    expect((campo('¿Cada cuántos días compras mercadería?').element as HTMLInputElement).value).toBe('7')
+    expect(
+      (campo('¿Cada cuántos días compras mercadería?').element as HTMLInputElement).value,
+    ).toBe('7')
 
     await campo('Nombre de la tienda').setValue('Bodega Rosita 2')
     await campo('¿Cada cuántos días compras mercadería?').setValue('10')

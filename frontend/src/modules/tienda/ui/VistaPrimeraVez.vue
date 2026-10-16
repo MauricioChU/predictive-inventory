@@ -62,7 +62,10 @@ void aplicacion.tienda.obtenerConfiguracion().then((configuracion) => {
 })
 
 function irA(destino: Paso, como: 'push' | 'replace' = 'push'): void {
-  const ubicacion = { name: 'primera-vez', query: destino === 'bienvenida' ? {} : { paso: destino } }
+  const ubicacion = {
+    name: 'primera-vez',
+    query: destino === 'bienvenida' ? {} : { paso: destino },
+  }
   void (como === 'push' ? router.push(ubicacion) : router.replace(ubicacion))
 }
 
@@ -108,15 +111,15 @@ async function guardarPrimeraVez(): Promise<void> {
 
 <template>
   <div class="vista-primera-vez">
-    <EncabezadoPagina
-      v-if="numero > 1"
-      :titulo="TITULOS[paso]"
-      volver
-      @volver="alVolver"
-    />
+    <EncabezadoPagina v-if="numero > 1" :titulo="TITULOS[paso]" volver @volver="alVolver" />
     <EncabezadoPagina v-else :titulo="TITULOS[paso]" />
 
-    <BarraDeProgreso :actual="numero" :total="PASOS.length" :texto="`Paso ${numero} de 5`" etiqueta="Primera vez" />
+    <BarraDeProgreso
+      :actual="numero"
+      :total="PASOS.length"
+      :texto="`Paso ${numero} de 5`"
+      etiqueta="Primera vez"
+    />
 
     <!-- 1. Bienvenida -->
     <template v-if="paso === 'bienvenida'">
@@ -134,7 +137,12 @@ async function guardarPrimeraVez(): Promise<void> {
     </template>
 
     <!-- 2. Nombre de la tienda -->
-    <form v-else-if="paso === 'nombre'" class="formulario" novalidate @submit.prevent="seguirConElNombre">
+    <form
+      v-else-if="paso === 'nombre'"
+      class="formulario"
+      novalidate
+      @submit.prevent="seguirConElNombre"
+    >
       <div class="cuerpo">
         <CampoTexto
           v-model="nombre"
@@ -178,8 +186,8 @@ async function guardarPrimeraVez(): Promise<void> {
     <template v-else-if="paso === 'productos'">
       <div class="cuerpo">
         <p>
-          Si ya tienes una lista en Excel, cárgala de una vez. Si no, agrégalos uno por uno aquí
-          en el celular.
+          Si ya tienes una lista en Excel, cárgala de una vez. Si no, agrégalos uno por uno aquí en
+          el celular.
         </p>
       </div>
       <div class="acciones">
@@ -202,8 +210,7 @@ async function guardarPrimeraVez(): Promise<void> {
     <template v-else>
       <div class="cuerpo">
         <p>
-          Cuenta cuántos hay de cada producto, uno por uno. Así la app sabe tu stock real desde
-          hoy.
+          Cuenta cuántos hay de cada producto, uno por uno. Así la app sabe tu stock real desde hoy.
         </p>
         <p>Puedes dejarlo para después y seguir cuando quieras.</p>
       </div>

@@ -7,7 +7,13 @@ import { crearProductoDePrueba } from '../soporte/productos-de-prueba'
 
 const HOY = instanteLocal('2026-10-15 10:00')
 const LEJIA = { nombre: 'Lejía 1 L', compra: '2.40', venta: '3.50', minimo: '3' }
-const CARBON = { nombre: 'Carbón', unidad: 'KILO' as const, compra: '2.75', venta: '4.00', minimo: '3' }
+const CARBON = {
+  nombre: 'Carbón',
+  unidad: 'KILO' as const,
+  compra: '2.75',
+  venta: '4.00',
+  minimo: '3',
+}
 
 describe('Inicio', () => {
   let app: AplicacionDePrueba

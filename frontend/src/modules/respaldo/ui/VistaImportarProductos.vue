@@ -150,7 +150,9 @@ function despuesDeCargar(): void {
       />
 
       <section v-if="problemas > 0" class="problemas" :aria-labelledby="idProblemas">
-        <h2 :id="idProblemas">{{ cuantos(problemas, 'fila con problema', 'filas con problema') }}</h2>
+        <h2 :id="idProblemas">
+          {{ cuantos(problemas, 'fila con problema', 'filas con problema') }}
+        </h2>
         <p>Estas filas no se cargan. Corrígelas en el Excel y vuelve a elegirlo.</p>
         <ul>
           <li v-for="problema in vista.conProblemas" :key="problema.fila">

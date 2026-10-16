@@ -65,7 +65,9 @@ describe('Restaurar copia', () => {
   it('RN-RE-03/04: muestra qué contiene y reemplaza los datos tras dos confirmaciones', async () => {
     await elegir(copia)
 
-    expect(pantalla!.wrapper.text()).toContain('1 producto, 1 movimiento, del 15/10/2026 al 15/10/2026')
+    expect(pantalla!.wrapper.text()).toContain(
+      '1 producto, 1 movimiento, del 15/10/2026 al 15/10/2026',
+    )
     expect(dialogoAbierto()).toBeUndefined()
 
     await tocar('Restaurar esta copia')
@@ -100,7 +102,9 @@ describe('Restaurar copia', () => {
     const texto = pantalla!.wrapper.text()
     expect(texto).toContain('Este archivo no es una copia válida de la app')
     expect(texto).toContain('Elige el archivo que guardaste con «Guardar copia»')
-    expect(pantalla!.wrapper.findAll('button').some((b) => b.text() === 'Restaurar esta copia')).toBe(false)
+    expect(
+      pantalla!.wrapper.findAll('button').some((b) => b.text() === 'Restaurar esta copia'),
+    ).toBe(false)
     expect(await stockDeLejia()).toBe(5000)
   })
 
@@ -119,7 +123,9 @@ describe('Restaurar copia', () => {
     await tocar('Sí, continuar')
     await tocar('Sí, restaurar')
 
-    expect(pantalla!.wrapper.text()).toContain('La copia tiene datos que no cuadran. No se cambió nada')
+    expect(pantalla!.wrapper.text()).toContain(
+      'La copia tiene datos que no cuadran. No se cambió nada',
+    )
     expect(await stockDeLejia()).toBe(5000)
   })
 })

@@ -62,8 +62,8 @@ function volver(): void {
     <div class="explicacion">
       <span class="sello" aria-hidden="true"><Bell class="sello-icono" /></span>
       <p class="destacado">
-        Te avisamos en tu celular cuando un producto se acaba o está por acabarse, para que
-        compres a tiempo.
+        Te avisamos en tu celular cuando un producto se acaba o está por acabarse, para que compres
+        a tiempo.
       </p>
       <p>Los avisos llegan mientras usas la app o justo después de usarla.</p>
       <p>Si prefieres no recibirlos, igual verás lo que se acaba en Inicio y en Control.</p>
@@ -87,7 +87,12 @@ function volver(): void {
     />
 
     <div v-if="estado === 'pregunta' || estado === 'rechazado'" class="acciones">
-      <BotonPrincipal texto="Sí, avísame" :icono="Bell" :deshabilitado="pidiendo" @click="siAvisame" />
+      <BotonPrincipal
+        texto="Sí, avísame"
+        :icono="Bell"
+        :deshabilitado="pidiendo"
+        @click="siAvisame"
+      />
       <BotonPrincipal texto="Ahora no" variante="secundario" @click="volver" />
     </div>
     <div v-else-if="estado === 'activados'" class="acciones">

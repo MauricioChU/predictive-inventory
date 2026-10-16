@@ -34,7 +34,15 @@ const aplicacion = useAplicacion()
 const estadoGlobal = useEstadoGlobal()
 const router = useRouter()
 const anunciador = useAnunciador()
-const ids = { tienda: useId(), letra: useId(), avisos: useId(), copia: useId(), excel: useId(), revisar: useId(), acerca: useId() }
+const ids = {
+  tienda: useId(),
+  letra: useId(),
+  avisos: useId(),
+  copia: useId(),
+  excel: useId(),
+  revisar: useId(),
+  acerca: useId(),
+}
 
 const VERSION = __VERSION_DE_LA_APP__
 
@@ -112,7 +120,9 @@ function exportar(): void {
     const entrega = await entregarArchivo(archivo)
     if (entrega === 'cancelado') return
     exportado.value =
-      entrega === 'compartido' ? `Mandaste ${archivo.nombre}` : `Quedó en Descargas: ${archivo.nombre}`
+      entrega === 'compartido'
+        ? `Mandaste ${archivo.nombre}`
+        : `Quedó en Descargas: ${archivo.nombre}`
     anunciador.anunciar(exportado.value)
   })
 }
@@ -222,7 +232,10 @@ function revisarDatos(): void {
 
       <section :aria-labelledby="ids.revisar" class="seccion">
         <h2 :id="ids.revisar">Revisar datos</h2>
-        <p>Revisa que el stock de cada producto cuadre con sus movimientos y lo corrige si hace falta.</p>
+        <p>
+          Revisa que el stock de cada producto cuadre con sus movimientos y lo corrige si hace
+          falta.
+        </p>
         <Boton
           texto="Revisar datos"
           :icono="ListChecks"

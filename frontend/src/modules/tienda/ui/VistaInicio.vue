@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, useId, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { ChevronRight, CircleHelp, History, PackagePlus, Settings, ShoppingCart, X } from 'lucide-vue-next'
+import {
+  ChevronRight,
+  CircleHelp,
+  History,
+  PackagePlus,
+  Settings,
+  ShoppingCart,
+  X,
+} from 'lucide-vue-next'
 import { useEstadoGlobal } from '@/app/estado-global'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import type { ResumenDeAtencion } from '@/modules/alertas'
@@ -171,10 +179,7 @@ function ir(nombre: PantallaDeOtraRama): void {
         </RouterLink>
       </div>
 
-      <div
-        v-if="estadoGlobal.recordatorioDeCopia || instalacion.mostrar.value"
-        class="extras"
-      >
+      <div v-if="estadoGlobal.recordatorioDeCopia || instalacion.mostrar.value" class="extras">
         <!-- RN-RE-06 -->
         <AvisoEnPagina
           v-if="estadoGlobal.recordatorioDeCopia"

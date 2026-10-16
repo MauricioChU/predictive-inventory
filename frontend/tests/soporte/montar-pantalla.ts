@@ -67,7 +67,10 @@ export interface PantallaMontada {
  * Monta la app como main.ts (abrirApp → estado global conectado → router → `useAplicacion`) y
  * navega a `ruta`. Para probar pantallas con la aplicación de prueba real.
  */
-export async function montarPantalla(app: AplicacionDePrueba, ruta: string): Promise<PantallaMontada> {
+export async function montarPantalla(
+  app: AplicacionDePrueba,
+  ruta: string,
+): Promise<PantallaMontada> {
   const pinia = createPinia()
   setActivePinia(pinia)
   const inicio = await abrirApp(app, { aplicarTamanoDeLetra: () => undefined })

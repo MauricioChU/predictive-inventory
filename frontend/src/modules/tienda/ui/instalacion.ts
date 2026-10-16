@@ -24,7 +24,10 @@ let escuchando = false
 /** Abierta desde el ícono de la pantalla principal (Android/Chrome) o desde el de iOS. */
 function abiertaComoApp(ventana: Window): boolean {
   const navegador = ventana.navigator as Navigator & { standalone?: boolean }
-  return Boolean(ventana.matchMedia?.('(display-mode: standalone)').matches) || navegador.standalone === true
+  return (
+    Boolean(ventana.matchMedia?.('(display-mode: standalone)').matches) ||
+    navegador.standalone === true
+  )
 }
 
 /**

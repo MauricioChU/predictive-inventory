@@ -83,8 +83,8 @@ async function guardar(modo: 'compartir' | 'descargar'): Promise<void> {
         mercadería.
       </p>
       <p>
-        Mándala por WhatsApp a alguien de confianza o guárdala en Drive. Si pierdes el celular o
-        se malogra, con esa copia recuperas todo en otro.
+        Mándala por WhatsApp a alguien de confianza o guárdala en Drive. Si pierdes el celular o se
+        malogra, con esa copia recuperas todo en otro.
       </p>
       <FilaDeDato etiqueta="Tu última copia" :texto-valor="textoUltimaCopia" />
     </div>

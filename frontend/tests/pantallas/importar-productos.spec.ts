@@ -109,13 +109,17 @@ describe('Importar productos', () => {
     await cargarExcel([ENCABEZADOS, ['Cera roja', 'Limpiadores', 'L', '8.00', '', '1', '']])
 
     expect(pantalla!.wrapper.text()).toContain('Ninguna fila se puede cargar')
-    expect(pantalla!.wrapper.findAll('button').some((b) => b.text().startsWith('Cargar'))).toBe(false)
+    expect(pantalla!.wrapper.findAll('button').some((b) => b.text().startsWith('Cargar'))).toBe(
+      false,
+    )
   })
 
   it('un archivo sin las columnas de la plantilla se rechaza con su mensaje', async () => {
     await cargarExcel([['nombre', 'precio']])
 
-    expect(pantalla!.wrapper.text()).toContain('El archivo no tiene la columna "categoría". Usa la plantilla')
+    expect(pantalla!.wrapper.text()).toContain(
+      'El archivo no tiene la columna "categoría". Usa la plantilla',
+    )
     expect(await nombresEnElCatalogo()).toEqual([])
   })
 })

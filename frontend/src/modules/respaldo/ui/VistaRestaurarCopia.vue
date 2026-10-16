@@ -79,7 +79,11 @@ async function restaurar(): Promise<void> {
 </script>
 
 <template>
-  <PantallaExito v-if="restaurada" titulo="Copia restaurada" :detalle="`Ahora tienes ${restaurada}.`">
+  <PantallaExito
+    v-if="restaurada"
+    titulo="Copia restaurada"
+    :detalle="`Ahora tienes ${restaurada}.`"
+  >
     <BotonPrincipal texto="Ir al inicio" @click="router.push({ name: 'inicio' })" />
   </PantallaExito>
 

@@ -2,11 +2,7 @@ import { getActivePinia } from 'pinia'
 import type { RouteRecordRaw } from 'vue-router'
 import { useEstadoGlobal } from '@/app/estado-global'
 import { VistaAvisos } from '@/modules/alertas'
-import {
-  VistaGuardarCopia,
-  VistaImportarProductos,
-  VistaRestaurarCopia,
-} from '@/modules/respaldo'
+import { VistaGuardarCopia, VistaImportarProductos, VistaRestaurarCopia } from '@/modules/respaldo'
 import {
   escucharInstalacion,
   VistaAjustes,
