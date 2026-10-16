@@ -43,6 +43,8 @@ Que la tienda pueda llevar **todo su inventario desde el celular, sin internet**
 | Tamaño de letra | Grande | Normal / Grande / Muy grande | Legibilidad |
 | Notificaciones del sistema | Desactivadas hasta que el usuario acepte | Sí / No | Avisos fuera de la pantalla actual |
 
+Los rangos valen para lo que escribe el usuario. Mientras no se complete la primera vez, el nombre de la tienda queda **vacío** (valor inicial) aunque se cambie otro ajuste; un respaldo con el nombre vacío es válido y se puede restaurar (RN-RE-03).
+
 ## Supuestos
 
 - Zona horaria de la tienda: la del celular (Perú, `America/Lima`, UTC−5). Un "día" va de 00:00 a 23:59 en esa zona.

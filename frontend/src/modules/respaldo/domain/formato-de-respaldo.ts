@@ -273,9 +273,12 @@ function invariantesDelLibro(d: DatosDelRespaldo): boolean {
     d.fotos.every((f) => idsDeProductos.has(f.productoId))
 
   const c = d.configuracion
+  // El nombre puede estar vacío: es el de CONFIGURACION_INICIAL, que la app guarda tal cual si
+  // se cambia otra cosa antes de completar la primera vez (y la copia de ese estado vale).
+  const nombreTienda = { min: 0, max: RANGOS_DE_CONFIGURACION.nombreTienda.max }
   const configuracionOk =
     c === null ||
-    (enRango(c.nombreTienda.length, RANGOS_DE_CONFIGURACION.nombreTienda) &&
+    (enRango(c.nombreTienda.length, nombreTienda) &&
       enRango(c.diasEntreCompras, RANGOS_DE_CONFIGURACION.diasEntreCompras) &&
       enRango(c.diasAnticipacion, RANGOS_DE_CONFIGURACION.diasAnticipacion) &&
       enRango(c.diasMaximosDeCompra, RANGOS_DE_CONFIGURACION.diasMaximosDeCompra))

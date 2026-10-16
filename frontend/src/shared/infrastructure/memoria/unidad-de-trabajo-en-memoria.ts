@@ -76,6 +76,8 @@ async function correrSinPropagar(accion: AccionAlConfirmar): Promise<void> {
 export class UnidadDeTrabajoEnMemoria implements UnidadDeTrabajo {
   private readonly contexto = new AsyncLocalStorage<TokenDeTransaccion>()
   private colaDeEjecucion: Promise<unknown> = Promise.resolve()
+  /** Acciones que nadie espera: las de fuera de una transacción (igual que en la de Dexie). */
+  private readonly accionesSueltas = new Set<Promise<void>>()
 
   constructor(private readonly almacen: AlmacenEnMemoria) {}
 
@@ -99,7 +101,17 @@ export class UnidadDeTrabajoEnMemoria implements UnidadDeTrabajo {
       token.alConfirmar.push(accion)
       return
     }
-    void correrSinPropagar(accion)
+    const enCurso = correrSinPropagar(accion)
+    this.accionesSueltas.add(enCurso)
+    void enCurso.finally(() => this.accionesSueltas.delete(enCurso))
+  }
+
+  /**
+   * Para pruebas y la composición (`esperarTareasPendientes`): espera las acciones sueltas, en
+   * bucle hasta que no quede ninguna (una acción puede registrar otra), como la de Dexie.
+   */
+  async esperarAcciones(): Promise<void> {
+    while (this.accionesSueltas.size > 0) await Promise.all(this.accionesSueltas)
   }
 
   private async comoTransaccion<T>(

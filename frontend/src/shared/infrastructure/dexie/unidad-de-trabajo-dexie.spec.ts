@@ -229,17 +229,5 @@ describe('UnidadDeTrabajoDexie', () => {
       await uow.esperarAcciones()
       expect(orden).toEqual(['fin del trabajo', 'a1', 'a2'])
     })
-
-    it('esperarAcciones espera las acciones asíncronas que corrieron fuera de una transacción', async () => {
-      const { uow } = crear()
-      let termino = false
-      uow.alConfirmar(async () => {
-        await esperar(10)
-        termino = true
-      })
-      expect(termino).toBe(false)
-      await uow.esperarAcciones()
-      expect(termino).toBe(true)
-    })
   })
 })

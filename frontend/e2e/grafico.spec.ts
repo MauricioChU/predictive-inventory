@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { esperarSinDesplazamientoHorizontal, usarLetra } from './utilidades/calidad'
+import { abrir } from './utilidades/navegacion'
 
 type VentanaConGanchos = Window & {
   __pruebas?: {
@@ -64,10 +65,10 @@ async function medirFilas(page: Page, titulo: string) {
   )
 }
 
-async function abrir(page: Page, ancho: number): Promise<void> {
+async function abrirControl(page: Page, ancho: number): Promise<void> {
   await usarLetra(page, 'MUY_GRANDE')
   await page.setViewportSize({ width: ancho, height: 800 })
-  await page.goto('./control')
+  await abrir(page, './control')
   await page.evaluate(() => document.fonts.ready)
 }
 
@@ -77,7 +78,7 @@ test.describe('N2: GraficoBarras con escala común y etiquetas enteras', () => {
     test(`celular ${ancho}px, letra Muy grande: etiqueta sola arriba, pista · valor abajo`, async ({
       page,
     }) => {
-      await abrir(page, ancho)
+      await abrirControl(page, ancho)
       await mostrarGrafico(page, 'Ventas por producto', VENTAS)
       const filas = await medirFilas(page, 'Ventas por producto')
       expect(filas).toHaveLength(VENTAS.length)
@@ -110,7 +111,7 @@ test.describe('N2: GraficoBarras con escala común y etiquetas enteras', () => {
     test(`celular ${ancho}px, letra Muy grande: una palabra más ancha que la fila se parte sin salirse`, async ({
       page,
     }) => {
-      await abrir(page, ancho)
+      await abrirControl(page, ancho)
       await mostrarGrafico(page, 'Palabra larguísima', [
         { etiqueta: PALABRA_LARGUISIMA, valor: 5, textoValor: '5 u' },
         { etiqueta: 'Lejía', valor: 3, textoValor: '3 u' },
@@ -125,7 +126,7 @@ test.describe('N2: GraficoBarras con escala común y etiquetas enteras', () => {
   test('PC 1280px, letra Muy grande: una sola grilla, misma pista en todas las filas', async ({
     page,
   }) => {
-    await abrir(page, 1280)
+    await abrirControl(page, 1280)
     await mostrarGrafico(page, 'Ventas por producto', VENTAS)
     const filas = await medirFilas(page, 'Ventas por producto')
     expect(filas.flatMap((f) => f.partidas)).toEqual([])
