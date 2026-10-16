@@ -4,7 +4,7 @@ import type { BusDeEventos } from '@/shared/domain/eventos'
 import type { Instante } from '@/shared/domain/fecha'
 import type { ProyeccionDeOperaciones } from '@/shared/contratos/entre-modulos'
 import type { Operacion } from '../domain/operacion'
-import { validarStock, type DatosDeProducto } from '../domain/reglas'
+import { exigirSinAnular, validarStock, type DatosDeProducto } from '../domain/reglas'
 import type { RepositorioDeExistencias, RepositorioDeOperaciones } from './puertos'
 
 export interface DependenciasDelLibro {
@@ -59,6 +59,9 @@ export class LibroDeOperaciones {
         if (anulacion.anulaA !== original.id) {
           throw new Error(`La anulación ${anulacion.id} no revierte a ${original.id}`)
         }
+        // RN-OP-17: una sola vez. Se verifica aquí, en la misma transacción que escribe, para
+        // que ningún camino pueda registrar una segunda anulación.
+        exigirSinAnular(await this.d.operaciones.anulacionDe(original.id))
         const registro = anulacion.aRegistro()
         await this.escribir(anulacion, productos)
         const registroOriginal = original.aRegistro()

@@ -1,6 +1,6 @@
 import type { ProductoResumido } from '@/shared/contratos/entre-modulos'
 import { Operacion } from '../domain/operacion'
-import { exigirOperacion, exigirSinAnular } from '../domain/reglas'
+import { exigirOperacion } from '../domain/reglas'
 import {
   datosDeProductos,
   datosDeRegistro,
@@ -14,9 +14,9 @@ export interface DatosDeAnulacion {
 }
 
 /**
- * RN-OP-02 / RN-OP-17: invierte todos los movimientos de la operación; una sola vez y nunca
- * sobre una ANULACION. Se rechaza si dejaría stock negativo (RN-OP-05). Vale también para
- * operaciones de productos ya archivados (excepción de RN-OP-08).
+ * RN-OP-02 / RN-OP-17: invierte todos los movimientos de la operación; una sola vez (lo
+ * verifica el libro) y nunca sobre una ANULACION. Se rechaza si dejaría stock negativo
+ * (RN-OP-05). Vale también para operaciones de productos ya archivados (excepción de RN-OP-08).
  */
 export async function anularOperacion(
   ctx: ContextoDeInventario,
@@ -30,10 +30,8 @@ export async function anularOperacion(
     motivo: datos.motivo,
   })
   const productos = await productosConocidos(ctx, original.productoIds)
-  await ctx.libro.enTransaccion(async (escritura) => {
-    exigirSinAnular(await ctx.operaciones.anulacionDe(original.id))
-    await escritura.anular(original, anulacion, datosDeProductos(productos))
-  })
+  // "Esta operación ya fue anulada" lo verifica el libro al escribir (RN-OP-17).
+  await ctx.libro.anular(original, anulacion, datosDeProductos(productos))
   return { anulacionId: anulacion.id }
 }
 

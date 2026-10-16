@@ -195,6 +195,21 @@ describe('LibroDeOperaciones.anular', () => {
     expect(ofertas.map((o) => o.operacionId)).toEqual(['op-1', 'op-2'])
   })
 
+  it('RN-OP-17: el libro no deja registrar una segunda anulación de la misma operación', async () => {
+    const { libro, operaciones, existencias, eventos, proyeccion } = preparar()
+    await libro.registrar(stockInicial('op-1', 'lejia', 10))
+    const original = venta('op-2', ['lejia', 2])
+    await libro.registrar(original, PRODUCTOS)
+    await libro.anular(original, Operacion.anulacionDe(original, datos('op-3')), PRODUCTOS)
+    await expect(
+      libro.anular(original, Operacion.anulacionDe(original, datos('op-4')), PRODUCTOS),
+    ).rejects.toThrow('Esta operación ya fue anulada')
+    expect((await operaciones.todas()).map((r) => r.id)).toEqual(['op-1', 'op-2', 'op-3'])
+    expect(await existencias.obtener('lejia')).toEqual(unidades(10))
+    expect(eventos.filter((e) => e.tipo === 'OperacionAnulada')).toHaveLength(1)
+    expect(proyeccion.anuladas).toHaveLength(1)
+  })
+
   it('RN-OP-17: se rechaza si dejaría stock negativo', async () => {
     const { libro, existencias } = preparar()
     const ingreso = stockInicial('op-1', 'lejia', 3)
