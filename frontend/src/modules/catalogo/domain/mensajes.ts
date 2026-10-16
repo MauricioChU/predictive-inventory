@@ -3,7 +3,11 @@ import type { Unidad } from '@/shared/domain/cantidad'
 import type { Dinero } from '@/shared/domain/dinero'
 import { formatearCantidad, formatearDinero } from '@/shared/domain/formato'
 
-const NOMBRE_DE_UNIDAD: Record<Unidad, string> = {
+/** Sin categoría (o con una que ya no existe) al crear o editar un producto. */
+export const MENSAJE_ELIGE_CATEGORIA = 'Elige una categoría'
+
+/** "unidad", "kilo" o "litro": cómo se nombra la unidad en "por cada …" (RN-CAT-05). */
+export const NOMBRE_DE_UNIDAD: Record<Unidad, string> = {
   UNIDAD: 'unidad',
   KILO: 'kilo',
   LITRO: 'litro',
