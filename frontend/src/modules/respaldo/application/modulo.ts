@@ -3,6 +3,7 @@ import type { HojaDeExcel } from '../domain/hojas-de-excel'
 import {
   CONFIRMACIONES_PARA_RESTAURAR,
   guardarCopia,
+  marcarCopiaGuardada,
   prepararRestauracion,
   restaurarCopia,
 } from './copia'
@@ -15,6 +16,8 @@ export type { Previsualizacion }
 
 export interface ModuloRespaldo {
   guardarCopia(): Promise<ArchivoGenerado>
+  /** La interfaz lo llama cuando la copia ya se descargó o compartió (RN-RE-06). */
+  marcarCopiaGuardada(): Promise<void>
   prepararRestauracion(
     texto: string,
   ): Promise<{ resumen: ResumenDeCopia; confirmaciones: readonly [string, string] }>
@@ -30,6 +33,7 @@ export interface ModuloRespaldo {
 export function crearModuloRespaldo(dependencias: DependenciasDeRespaldo): ModuloRespaldo {
   return {
     guardarCopia: () => guardarCopia(dependencias),
+    marcarCopiaGuardada: () => marcarCopiaGuardada(dependencias),
     prepararRestauracion: (texto) => prepararRestauracion(dependencias, texto),
     restaurarCopia: (texto, d) => restaurarCopia(dependencias, texto, d),
     exportarExcel: () => exportarExcel(dependencias),

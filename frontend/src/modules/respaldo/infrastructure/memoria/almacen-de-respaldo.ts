@@ -44,10 +44,9 @@ export class AlmacenDeRespaldoEnMemoria implements AlmacenDeRespaldo {
     this.almacen.vaciar('listaDeCompras')
     this.almacen.vaciar('conteo')
 
+    // Sin configuración en la copia se conserva la actual; con ella, siempre bajo la clave 'negocio'.
     if (datos.configuracion) {
-      this.almacen.guardar('configuracion', datos.configuracion)
-    } else {
-      this.almacen.eliminar('configuracion', 'negocio')
+      this.almacen.guardar('configuracion', { ...datos.configuracion, clave: 'negocio' })
     }
     for (const categoria of datos.categorias) this.almacen.guardar('categorias', categoria)
     for (const producto of datos.productos) this.almacen.guardar('productos', producto)

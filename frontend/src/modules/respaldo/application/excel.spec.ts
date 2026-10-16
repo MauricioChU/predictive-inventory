@@ -64,7 +64,7 @@ function crearContexto() {
     tienda: () => tienda,
   }
 
-  return { deps, almacenEnMemoria, catalogo, analisis }
+  return { deps, almacenEnMemoria, catalogo, analisis, reloj }
 }
 
 describe('exportarExcel (RN-RE-01)', () => {
@@ -159,8 +159,8 @@ describe('exportarExcel (RN-RE-01)', () => {
       { valor: 'unid.' },
       { valor: 2.4, formato: '0.00' },
       { valor: 3.5, formato: '0.00' },
-      { valor: 8, formato: '0.###' },
-      { valor: 3, formato: '0.###' },
+      { valor: 8 },
+      { valor: 3 },
       { valor: 'Bien' },
       { valor: 'activo' },
     ])
@@ -206,5 +206,117 @@ describe('descargarPlantilla (RN-RE-07)', () => {
       'stock mínimo',
       'stock inicial',
     ])
+  })
+})
+
+describe('exportarExcel: movimientos y productos archivados', () => {
+  it('muestra tipo como en pantalla, importe, anulada y nota de cada movimiento', async () => {
+    const { deps, almacenEnMemoria, catalogo } = crearContexto()
+    catalogo.agregarProducto({
+      id: 'lejia',
+      nombre: 'Lejía 1 L',
+      categoriaId: 'c',
+      categoriaNombre: 'Otros',
+    })
+    const op = (id: string, parciales: Partial<OperacionRegistro>) =>
+      almacenEnMemoria.guardar('operaciones', venta({ id, productoIds: ['lejia'], ...parciales }))
+    op('v1', {
+      movimientos: [
+        { productoId: 'lejia', cantidad: -2000, costoUnitario: 240, precioUnitario: 350 },
+      ],
+    })
+    op('a1', {
+      tipo: 'ANULACION',
+      anulaA: 'v1',
+      movimientos: [
+        { productoId: 'lejia', cantidad: 2000, costoUnitario: 240, precioUnitario: null },
+      ],
+    })
+    op('i1', {
+      tipo: 'INGRESO',
+      nota: 'Del mayorista',
+      movimientos: [
+        { productoId: 'lejia', cantidad: 5500, costoUnitario: 240, precioUnitario: null },
+      ],
+    })
+    op('m1', {
+      tipo: 'MERMA',
+      motivo: 'Se derramó',
+      movimientos: [
+        { productoId: 'lejia', cantidad: -500, costoUnitario: 240, precioUnitario: null },
+      ],
+    })
+    op('x1', {
+      movimientos: [
+        { productoId: 'desconocido', cantidad: -1000, costoUnitario: 100, precioUnitario: 150 },
+      ],
+    })
+
+    const filas = (await exportarExcel(deps)).hojas[1]!.filas
+    const resumen = filas.map((f) => ({
+      tipo: f[1]!.valor,
+      producto: f[2]!.valor,
+      cantidad: f[3]!.valor,
+      importe: f[6]!.valor,
+      anulada: f[7]!.valor,
+      nota: f[8]!.valor,
+    }))
+    expect(resumen).toEqual([
+      { tipo: 'Venta', producto: 'Lejía 1 L', cantidad: -2, importe: 7, anulada: 'sí', nota: '' },
+      {
+        tipo: 'Anulado',
+        producto: 'Lejía 1 L',
+        cantidad: 2,
+        importe: 4.8,
+        anulada: 'no',
+        nota: '',
+      },
+      {
+        tipo: 'Llegó mercadería',
+        producto: 'Lejía 1 L',
+        cantidad: 5.5,
+        importe: 13.2,
+        anulada: 'no',
+        nota: 'Del mayorista',
+      },
+      {
+        tipo: 'Se derramó',
+        producto: 'Lejía 1 L',
+        cantidad: -0.5,
+        importe: 1.2,
+        anulada: 'no',
+        nota: '',
+      },
+      { tipo: 'Venta', producto: '', cantidad: -1, importe: 1.5, anulada: 'no', nota: '' },
+    ])
+    expect(filas[0]![3]).toEqual({ valor: -2 })
+  })
+
+  it('un producto archivado sale sin estado de stock y con stock 0 si no tiene existencia', async () => {
+    const { deps, catalogo } = crearContexto()
+    catalogo.agregarProducto({
+      id: 'viejo',
+      nombre: 'Viejo',
+      categoriaId: 'c',
+      categoriaNombre: 'Otros',
+      activo: false,
+    })
+    const fila = (await exportarExcel(deps)).hojas[0]!.filas[0]!
+    expect(fila[5]).toEqual({ valor: 0 })
+    expect(fila[7]).toEqual({ valor: '' })
+    expect(fila[8]).toEqual({ valor: 'archivado' })
+  })
+
+  it('usa el día de Lima: 2026-10-16T03:00Z es el 15/10 (nombre y rango de 90 días)', async () => {
+    const { deps, analisis, reloj } = crearContexto()
+    reloj.fijar('2026-10-16T03:00:00.000Z')
+    let rango: [string, string] | null = null
+    analisis.resumenesDeTienda = async (desde: string, hasta: string) => {
+      rango = [desde, hasta]
+      return []
+    }
+    const archivo = await exportarExcel(deps)
+    expect(archivo.nombre).toBe('inventario-bodega-rosita-2026-10-15.xlsx')
+    expect(rango).toEqual(['2026-07-18', '2026-10-15'])
   })
 })

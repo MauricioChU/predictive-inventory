@@ -10,7 +10,8 @@ import { horaLocal } from './nombres-de-archivo'
 /** Celda de una hoja de Excel: texto o número, con el formato de celda si aplica (RN-RE-01). */
 export interface CeldaDeExcel {
   valor: string | number
-  formato?: '0.00' | '0.###'
+  /** Solo los montos llevan formato; las cantidades van sin formato (General: "8", no "8."). */
+  formato?: '0.00'
 }
 
 export interface HojaDeExcel {
@@ -30,7 +31,25 @@ function celdaDeDinero(dinero: Dinero): CeldaDeExcel {
 }
 
 function celdaDeCantidad(cantidad: Cantidad): CeldaDeExcel {
-  return { valor: cantidad.milesimas / 1000, formato: '0.###' }
+  return { valor: cantidad.milesimas / 1000 }
+}
+
+/** Lo que el usuario ve en pantalla para cada tipo (spec 02): mermas y ajustes muestran su motivo. */
+function etiquetaDeTipo(tipo: TipoDeOperacion, motivo: string | null): string {
+  switch (tipo) {
+    case 'STOCK_INICIAL':
+      return 'Stock inicial'
+    case 'INGRESO':
+      return 'Llegó mercadería'
+    case 'VENTA':
+      return 'Venta'
+    case 'MERMA':
+      return motivo ?? 'Merma'
+    case 'AJUSTE':
+      return motivo ?? 'Ajuste'
+    case 'ANULACION':
+      return 'Anulado'
+  }
 }
 
 function fechaHoraLocal(instante: Instante): string {
@@ -86,6 +105,8 @@ export function hojaDeProductos(filas: readonly FilaDeProductoParaExcel[]): Hoja
 export interface FilaDeMovimientoParaExcel {
   ocurridaEn: Instante
   tipo: TipoDeOperacion
+  /** Motivo de la operación: es la etiqueta de las mermas y de los ajustes. */
+  motivo: string | null
   productoNombre: string
   cantidad: Cantidad
   /** Solo en VENTA; en el resto de tipos no hay precio de venta. */
@@ -114,7 +135,7 @@ export function hojaDeMovimientos(filas: readonly FilaDeMovimientoParaExcel[]): 
     columnas: [...COLUMNAS_MOVIMIENTOS],
     filas: filas.map((f) => [
       { valor: fechaHoraLocal(f.ocurridaEn) },
-      { valor: f.tipo },
+      { valor: etiquetaDeTipo(f.tipo, f.motivo) },
       { valor: f.productoNombre },
       celdaDeCantidad(f.cantidad),
       f.precioUnitario ? celdaDeDinero(f.precioUnitario) : { valor: '' },

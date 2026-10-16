@@ -150,3 +150,22 @@ describe('leerFilas: filas vacías, requeridos y unidades', () => {
     expect(validas[0]?.stockInicial).toBeUndefined()
   })
 })
+
+describe('leerFilas: columna "stock inicial" opcional y "unid."', () => {
+  it('una hoja sin la columna "stock inicial" se acepta y no trae stock inicial', () => {
+    const sinStock = ENCABEZADOS.filter((c) => c !== 'stock inicial')
+    const { validas, conProblemas } = leerFilas([sinStock, ['X', 'Otros', 'unid', '1', '2', '1']])
+    expect(conProblemas).toEqual([])
+    expect(validas[0]?.stockInicial).toBeUndefined()
+  })
+
+  it('una fila más corta (sin la celda de stock inicial) se acepta', () => {
+    const { validas } = leerFilas([ENCABEZADOS, ['X', 'Otros', 'unid', '1', '2', '1']])
+    expect(validas).toHaveLength(1)
+  })
+
+  it.each(['unid.', 'Unid.', 'UNID'])('acepta "%s" como unidad', (texto) => {
+    const { validas } = leerFilas([ENCABEZADOS, ['X', 'Otros', texto, '1', '2', '1', '']])
+    expect(validas[0]?.unidad).toBe('UNIDAD')
+  })
+})

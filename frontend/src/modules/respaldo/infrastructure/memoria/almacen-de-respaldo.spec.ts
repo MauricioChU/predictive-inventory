@@ -175,7 +175,7 @@ describe('AlmacenDeRespaldoEnMemoria', () => {
     expect(negocio?.nombreTienda).toBe('Nueva')
   })
 
-  it('reemplazarTodo con configuracion null quita la configuración del negocio', async () => {
+  it('reemplazarTodo con configuracion null conserva la configuración actual del negocio', async () => {
     const memoria = new AlmacenEnMemoria()
     memoria.guardar('configuracion', {
       clave: 'negocio',
@@ -190,7 +190,7 @@ describe('AlmacenDeRespaldoEnMemoria', () => {
     const almacen = new AlmacenDeRespaldoEnMemoria(memoria)
     await almacen.reemplazarTodo(DATOS_VACIOS)
 
-    expect(memoria.obtener('configuracion', 'negocio')).toBeUndefined()
+    expect(memoria.obtener('configuracion', 'negocio')).toMatchObject({ nombreTienda: 'Vieja' })
   })
 
   it('ida y vuelta: reemplazarTodo con fotos de leerTodo conserva el contenido', async () => {
@@ -211,5 +211,34 @@ describe('AlmacenDeRespaldoEnMemoria', () => {
     expect(foto?.imagen.type).toBe('image/png')
     const bytes = new Uint8Array(await foto!.imagen.arrayBuffer())
     expect([...bytes]).toEqual([9, 8, 7])
+  })
+
+  it('reemplazarTodo fuerza la clave "negocio" en la configuración (nunca pisa el sistema)', async () => {
+    const memoria = new AlmacenEnMemoria()
+    memoria.guardar('configuracion', {
+      clave: 'sistema',
+      dispositivoId: 'dispositivo-1',
+      primeraVezCompletada: true,
+      ultimoRespaldoEn: null,
+      almacenamientoPersistente: 'CONCEDIDO',
+      ultimoResumenDelDiaMostrado: null,
+    })
+    const almacen = new AlmacenDeRespaldoEnMemoria(memoria)
+    await almacen.reemplazarTodo({
+      ...DATOS_VACIOS,
+      configuracion: {
+        clave: 'sistema',
+        nombreTienda: 'Nueva',
+        diasEntreCompras: 7,
+        diasAnticipacion: 3,
+        diasMaximosDeCompra: 30,
+        tamanoDeLetra: 'GRANDE',
+        notificacionesActivas: false,
+      } as unknown as NonNullable<DatosDelRespaldo['configuracion']>,
+    })
+    expect(memoria.obtener('configuracion', 'sistema')).toMatchObject({
+      dispositivoId: 'dispositivo-1',
+    })
+    expect(memoria.obtener('configuracion', 'negocio')).toMatchObject({ nombreTienda: 'Nueva' })
   })
 })

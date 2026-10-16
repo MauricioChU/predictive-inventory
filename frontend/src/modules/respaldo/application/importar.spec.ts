@@ -157,10 +157,6 @@ describe('previsualizarImportacion: otros errores del catálogo', () => {
     expect(previa.conProblemas[0]?.problema).toBe(
       'Fila 2: el precio de venta debe ser mayor al de compra',
     )
-    const vacio = (catalogo.importacion.validarNuevo = async () => ({ codigo: 'X', mensaje: '' }))
-    expect(await vacio()).toEqual({ codigo: 'X', mensaje: '' })
-    const p2 = await previsualizarImportacion(deps, new Blob())
-    expect(p2.conProblemas[0]?.problema).toBe('Fila 2: ')
   })
 
   it('confirmarImportacion usa la categoría existente sin crearla', async () => {

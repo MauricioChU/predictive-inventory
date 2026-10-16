@@ -24,6 +24,7 @@ function crearContexto() {
   const tienda = new TiendaDePrueba()
   const almacenamiento = new AlmacenamientoPersistenteEnMemoria()
 
+  const reloj = new RelojFijo(instanteLocal('2026-10-15 20:30'))
   const deps: DependenciasDeRespaldo = {
     almacen: new AlmacenDeRespaldoEnMemoria(almacenEnMemoria),
     reconstructor: new ReconstructorDePrueba(almacenEnMemoria),
@@ -31,14 +32,14 @@ function crearContexto() {
     lectorDeExcel: new LectorDeExcelEnMemoria(),
     almacenamiento,
     uow: new UnidadDeTrabajoEnMemoria(almacenEnMemoria),
-    reloj: new RelojFijo(instanteLocal('2026-10-15 20:30')),
+    reloj,
     catalogo: () => new CatalogoDePrueba(),
     inventario: () => new InventarioDePrueba(almacenEnMemoria),
     analisis: () => new AnalisisDePrueba(),
     tienda: () => tienda,
   }
 
-  return { deps, tienda, almacenamiento }
+  return { deps, tienda, almacenamiento, reloj }
 }
 
 describe('recordatorioDeCopia (RN-RE-06/09)', () => {
@@ -72,6 +73,28 @@ describe('recordatorioDeCopia (RN-RE-06/09)', () => {
       almacenamientoPersistente: 'RECHAZADO',
     })
     expect(await recordatorioDeCopia(deps)).toBe('Hace 3 días que no guardas una copia')
+  })
+})
+
+describe('recordatorioDeCopia: día de Lima', () => {
+  it('2026-10-16T03:00Z es el 15/10 en Lima: una copia del 9/10 (Lima) lleva 6 días, sin aviso', async () => {
+    const { deps, tienda, reloj } = crearContexto()
+    reloj.fijar('2026-10-16T03:00:00.000Z')
+    tienda.fijarEstado({
+      ultimoRespaldoEn: '2026-10-09T10:00:00.000Z',
+      almacenamientoPersistente: 'CONCEDIDO',
+    })
+    expect(await recordatorioDeCopia(deps)).toBeNull()
+  })
+
+  it('la misma copia un día antes (8/10 en Lima, 2026-10-09T03:00Z) sí avisa: 7 días', async () => {
+    const { deps, tienda, reloj } = crearContexto()
+    reloj.fijar('2026-10-16T03:00:00.000Z')
+    tienda.fijarEstado({
+      ultimoRespaldoEn: '2026-10-09T03:00:00.000Z',
+      almacenamientoPersistente: 'CONCEDIDO',
+    })
+    expect(await recordatorioDeCopia(deps)).toBe('Hace 7 días que no guardas una copia')
   })
 })
 

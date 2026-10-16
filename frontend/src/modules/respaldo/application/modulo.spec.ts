@@ -47,10 +47,13 @@ function crearModulo(): {
 }
 
 describe('ModuloRespaldo', () => {
-  it('guardarCopia produce el archivo y actualiza el estado del sistema', async () => {
+  it('guardarCopia produce el archivo; marcarCopiaGuardada actualiza el estado del sistema', async () => {
     const { modulo, tienda } = crearModulo()
     const archivo = await modulo.guardarCopia()
     expect(archivo.nombre).toBe('respaldo-bodega-rosita-2026-10-15-2030.json')
+    expect((await tienda.estadoDelSistema()).ultimoRespaldoEn).toBeNull()
+
+    await modulo.marcarCopiaGuardada()
     expect((await tienda.estadoDelSistema()).ultimoRespaldoEn).not.toBeNull()
   })
 

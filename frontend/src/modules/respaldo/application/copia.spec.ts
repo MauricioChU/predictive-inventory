@@ -21,6 +21,7 @@ import type { DependenciasDeRespaldo } from './puertos'
 import {
   CONFIRMACIONES_PARA_RESTAURAR,
   guardarCopia,
+  marcarCopiaGuardada,
   prepararRestauracion,
   restaurarCopia,
 } from './copia'
@@ -113,11 +114,11 @@ function crearContexto() {
     )
   }
 
-  return { deps, almacenEnMemoria, reconstructor, tienda, reloj, seedProductosYOperaciones }
+  return { deps, almacenEnMemoria, reconstructor, tienda, reloj, uow, seedProductosYOperaciones }
 }
 
 describe('guardarCopia (RN-RE-02)', () => {
-  it('genera "respaldo-bodega-rosita-2026-10-15-2030.json" y actualiza ultimoRespaldoEn', async () => {
+  it('genera "respaldo-bodega-rosita-2026-10-15-2030.json" y NO marca todavía el último respaldo', async () => {
     const { deps, seedProductosYOperaciones, reconstructor, tienda, reloj } = crearContexto()
     seedProductosYOperaciones()
     await reconstructor.reconstruirTodo()
@@ -128,7 +129,8 @@ describe('guardarCopia (RN-RE-02)', () => {
     expect(archivo.tipo).toBe('application/json')
 
     const estado = await tienda.estadoDelSistema()
-    expect(estado.ultimoRespaldoEn).toBe(reloj.ahora())
+    expect(estado.ultimoRespaldoEn).toBeNull()
+    expect(reloj.ahora()).toBeTruthy()
   })
 
   it('el contenido tiene el control con 2 productos, 2 operaciones y el stock de Carbón', async () => {
@@ -247,5 +249,118 @@ describe('prepararRestauracion / restaurarCopia (RN-RE-03)', () => {
         .sort(),
     ).toEqual(['carbon', 'lejia'])
     expect(almacenEnMemoria.todos('operaciones')).toHaveLength(2)
+  })
+})
+
+describe('copia consistente (RN-RE-02/03/04)', () => {
+  it('el nombre usa la hora de Lima: 2026-10-16T03:00Z es 15/10 a las 22:00', async () => {
+    const { deps, reloj } = crearContexto()
+    reloj.fijar('2026-10-16T03:00:00.000Z')
+    const archivo = await guardarCopia(deps)
+    expect(archivo.nombre).toBe('respaldo-bodega-rosita-2026-10-15-2200.json')
+  })
+
+  it('si la proyección de existencias se desvió, la copia guardada igual se puede restaurar', async () => {
+    const { deps, almacenEnMemoria, seedProductosYOperaciones, reconstructor } = crearContexto()
+    seedProductosYOperaciones()
+    await reconstructor.reconstruirTodo()
+    almacenEnMemoria.guardar('existencias', { productoId: 'lejia', cantidad: 5000 })
+
+    const archivo = await guardarCopia(deps)
+    const texto = await archivo.contenido.text()
+    expect(JSON.parse(texto).control.stockPorProducto.lejia).toBe(10000)
+
+    await expect(restaurarCopia(deps, texto, { confirmaciones: 2 })).resolves.toBeUndefined()
+    expect(almacenEnMemoria.obtener('existencias', 'lejia')?.cantidad).toBe(10000)
+  })
+
+  it('una operación confirmada al mismo tiempo no deja un archivo incoherente', async () => {
+    const { deps, almacenEnMemoria, uow, seedProductosYOperaciones, reconstructor } =
+      crearContexto()
+    seedProductosYOperaciones()
+    await reconstructor.reconstruirTodo()
+
+    const [archivo] = await Promise.all([
+      guardarCopia(deps),
+      uow.ejecutar(async () => {
+        almacenEnMemoria.guardar(
+          'operaciones',
+          stockInicial({
+            id: 'op-nueva',
+            tipo: 'INGRESO',
+            productoIds: ['lejia'],
+            movimientos: [
+              { productoId: 'lejia', cantidad: 4000, costoUnitario: 240, precioUnitario: null },
+            ],
+          }),
+        )
+      }),
+    ])
+    const texto = await archivo.contenido.text()
+    const respaldo = JSON.parse(texto)
+    const suma = respaldo.datos.operaciones
+      .flatMap((o: OperacionRegistro) => o.movimientos)
+      .filter((m: { productoId: string }) => m.productoId === 'lejia')
+      .reduce((total: number, m: { cantidad: number }) => total + m.cantidad, 0)
+    expect(respaldo.control.stockPorProducto.lejia).toBe(suma)
+    await expect(restaurarCopia(deps, texto, { confirmaciones: 2 })).resolves.toBeUndefined()
+  })
+
+  it('marcarCopiaGuardada guarda el momento como último respaldo', async () => {
+    const { deps, tienda, reloj } = crearContexto()
+    await marcarCopiaGuardada(deps)
+    expect((await tienda.estadoDelSistema()).ultimoRespaldoEn).toBe(reloj.ahora())
+  })
+
+  it('RN-RE-04: tras restaurar, las existencias reconstruidas igualan la suma de movimientos', async () => {
+    const { deps, almacenEnMemoria, seedProductosYOperaciones, reconstructor } = crearContexto()
+    seedProductosYOperaciones()
+    await reconstructor.reconstruirTodo()
+    const texto = await (await guardarCopia(deps)).contenido.text()
+
+    almacenEnMemoria.guardar(
+      'operaciones',
+      stockInicial({
+        id: 'venta-despues',
+        tipo: 'VENTA',
+        productoIds: ['lejia'],
+        movimientos: [
+          { productoId: 'lejia', cantidad: -5000, costoUnitario: 240, precioUnitario: 350 },
+        ],
+      }),
+    )
+    await reconstructor.reconstruirTodo()
+    expect(almacenEnMemoria.obtener('existencias', 'lejia')?.cantidad).toBe(5000)
+
+    await restaurarCopia(deps, texto, { confirmaciones: 2 })
+
+    expect(almacenEnMemoria.obtener('existencias', 'lejia')?.cantidad).toBe(10000)
+    expect(almacenEnMemoria.obtener('existencias', 'carbon')?.cantidad).toBe(12500)
+  })
+
+  it('RN-RE-04: un producto con stock reconstruido que falta en el control revierte todo', async () => {
+    const { deps, almacenEnMemoria, seedProductosYOperaciones, reconstructor } = crearContexto()
+    seedProductosYOperaciones()
+    await reconstructor.reconstruirTodo()
+    const respaldo = JSON.parse(await (await guardarCopia(deps)).contenido.text())
+    delete respaldo.control.stockPorProducto.lejia
+    almacenEnMemoria.guardar('productos', producto({ id: 'agregado-despues', nombre: 'Nuevo' }))
+
+    await expect(
+      restaurarCopia(deps, JSON.stringify(respaldo), { confirmaciones: 2 }),
+    ).rejects.toThrow('La copia tiene datos que no cuadran. No se cambió nada')
+    expect(almacenEnMemoria.todos('productos')).toHaveLength(3)
+  })
+
+  it('una copia con datos mal formados se rechaza al preparar, antes de pedir confirmaciones', async () => {
+    const { deps, seedProductosYOperaciones, reconstructor } = crearContexto()
+    seedProductosYOperaciones()
+    await reconstructor.reconstruirTodo()
+    const respaldo = JSON.parse(await (await guardarCopia(deps)).contenido.text())
+    respaldo.datos.productos[0].precioVenta = 'tres soles'
+
+    await expect(prepararRestauracion(deps, JSON.stringify(respaldo))).rejects.toThrow(
+      'Este archivo no es una copia válida de la app',
+    )
   })
 })

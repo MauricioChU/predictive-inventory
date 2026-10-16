@@ -39,8 +39,8 @@ describe('hojaDeProductos (RN-RE-01)', () => {
         { valor: 'unid.' },
         { valor: 2.4, formato: '0.00' },
         { valor: 3.5, formato: '0.00' },
-        { valor: 8, formato: '0.###' },
-        { valor: 3, formato: '0.###' },
+        { valor: 8 },
+        { valor: 3 },
         { valor: 'Bien' },
         { valor: 'activo' },
       ],
@@ -91,6 +91,7 @@ describe('hojaDeMovimientos', () => {
       {
         ocurridaEn: '2026-10-15T20:30:00.000Z',
         tipo: 'VENTA',
+        motivo: null,
         productoNombre: 'Lejía 1 L',
         cantidad: Cantidad.deEntero(-2),
         precioUnitario: Dinero.deTexto('3.50'),
@@ -102,6 +103,7 @@ describe('hojaDeMovimientos', () => {
       {
         ocurridaEn: '2026-10-01T05:00:00.000Z',
         tipo: 'STOCK_INICIAL',
+        motivo: null,
         productoNombre: 'Lejía 1 L',
         cantidad: Cantidad.deEntero(10),
         precioUnitario: null,
@@ -127,9 +129,9 @@ describe('hojaDeMovimientos', () => {
     expect(hoja.filas).toHaveLength(2)
     expect(hoja.filas[0]).toEqual([
       { valor: '15/10/2026 15:30' },
-      { valor: 'VENTA' },
+      { valor: 'Venta' },
       { valor: 'Lejía 1 L' },
-      { valor: -2, formato: '0.###' },
+      { valor: -2 },
       { valor: 3.5, formato: '0.00' },
       { valor: 2.4, formato: '0.00' },
       { valor: 7, formato: '0.00' },
@@ -144,6 +146,7 @@ describe('hojaDeMovimientos', () => {
       {
         ocurridaEn: '2026-10-15T20:30:00.000Z',
         tipo: 'VENTA',
+        motivo: null,
         productoNombre: 'X',
         cantidad: Cantidad.deEntero(-1),
         precioUnitario: Dinero.cero(),
@@ -206,5 +209,33 @@ describe('PLANTILLA (RN-RE-07)', () => {
     expect(instrucciones?.filas).toHaveLength(7)
     const filaUnidad = instrucciones?.filas.find((f) => f[0]?.valor === 'unidad')
     expect(String(filaUnidad?.[1]?.valor)).toMatch(/unid.*kg.*L/i)
+  })
+})
+
+describe('etiquetas de la columna "tipo" (como se ven en pantalla)', () => {
+  const base = {
+    ocurridaEn: '2026-10-15T20:30:00.000Z',
+    productoNombre: 'X',
+    cantidad: Cantidad.deEntero(1),
+    precioUnitario: null,
+    costoUnitario: Dinero.cero(),
+    importe: Dinero.cero(),
+    anulada: false,
+    nota: null,
+  }
+
+  it.each([
+    ['STOCK_INICIAL', null, 'Stock inicial'],
+    ['INGRESO', null, 'Llegó mercadería'],
+    ['VENTA', null, 'Venta'],
+    ['MERMA', 'Se derramó', 'Se derramó'],
+    ['AJUSTE', 'Conteo de stock', 'Conteo de stock'],
+    ['AJUSTE', 'Producto retirado', 'Producto retirado'],
+    ['ANULACION', null, 'Anulado'],
+    ['MERMA', null, 'Merma'],
+    ['AJUSTE', null, 'Ajuste'],
+  ] as const)('%s con motivo %s → %s', (tipo, motivo, etiqueta) => {
+    const hoja = hojaDeMovimientos([{ ...base, tipo, motivo }])
+    expect(hoja.filas[0]?.[1]).toEqual({ valor: etiqueta })
   })
 })

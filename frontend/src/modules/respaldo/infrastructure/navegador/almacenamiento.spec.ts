@@ -13,4 +13,15 @@ describe('AlmacenamientoPersistenteDelNavegador', () => {
     vi.stubGlobal('navigator', {})
     expect(await new AlmacenamientoPersistenteDelNavegador().solicitar()).toBe(false)
   })
+
+  it('RN-RE-09: si persist() falla, se toma como no concedido', async () => {
+    vi.stubGlobal('navigator', {
+      storage: {
+        persist: async () => {
+          throw new Error('no permitido')
+        },
+      },
+    })
+    expect(await new AlmacenamientoPersistenteDelNavegador().solicitar()).toBe(false)
+  })
 })

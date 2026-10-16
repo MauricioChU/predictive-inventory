@@ -66,6 +66,7 @@ export async function exportarExcel(
       return {
         ocurridaEn: op.ocurridaEn,
         tipo: op.tipo,
+        motivo: op.motivo,
         productoNombre: nombrePorProducto.get(movimiento.productoId) ?? '',
         cantidad,
         precioUnitario,

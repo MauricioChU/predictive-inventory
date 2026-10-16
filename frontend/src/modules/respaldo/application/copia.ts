@@ -1,4 +1,3 @@
-import { Cantidad } from '../../../shared/domain/cantidad'
 import { ErrorDeDominio } from '../../../shared/domain/errores'
 import {
   crearRespaldo,
@@ -17,20 +16,27 @@ export const CONFIRMACIONES_PARA_RESTAURAR = [
 
 const TIPO_JSON = 'application/json'
 
-/** RN-RE-02: respaldo completo. Guarda el momento como "último respaldo" del dispositivo. */
+/**
+ * RN-RE-02: respaldo completo. Se lee todo en una sola unidad de trabajo (una foto
+ * coherente) y el control sale del libro de operaciones de esa misma foto (ADR-0002).
+ * No marca el último respaldo: eso lo hace marcarCopiaGuardada() cuando la copia ya salió.
+ */
 export async function guardarCopia(deps: DependenciasDeRespaldo): Promise<ArchivoGenerado> {
-  const datos = await deps.almacen.leerTodo()
-  const existencias = await deps.inventario().existencias()
   const ahora = deps.reloj.ahora()
-  const respaldo = crearRespaldo(datos, existencias, ahora)
+  const respaldo = await deps.uow.ejecutar(async () =>
+    crearRespaldo(await deps.almacen.leerTodo(), ahora),
+  )
 
   const configuracion = await deps.tienda().configuracion()
   const nombre = nombreDeArchivoCopia(configuracion.nombreTienda, ahora)
   const contenido = new Blob([JSON.stringify(respaldo)], { type: TIPO_JSON })
 
-  await deps.tienda().actualizarEstadoDelSistema({ ultimoRespaldoEn: ahora })
-
   return { nombre, tipo: TIPO_JSON, contenido }
+}
+
+/** RN-RE-06: la interfaz lo llama cuando la copia ya se descargó o compartió. */
+export async function marcarCopiaGuardada(deps: DependenciasDeRespaldo): Promise<void> {
+  await deps.tienda().actualizarEstadoDelSistema({ ultimoRespaldoEn: deps.reloj.ahora() })
 }
 
 /** RN-RE-03: valida la copia y arma lo que hay que mostrarle al usuario antes de restaurar. */
@@ -64,16 +70,19 @@ export async function restaurarCopia(
     await deps.reconstructor.reconstruirTodo()
 
     const existencias = await deps.inventario().existencias()
-    for (const [productoId, milesimasEsperadas] of Object.entries(
-      respaldo.control.stockPorProducto,
-    )) {
-      const real = existencias.get(productoId) ?? Cantidad.cero()
-      if (real.milesimas !== milesimasEsperadas) {
-        throw new ErrorDeDominio(
-          'COPIA_NO_CUADRA',
-          'La copia tiene datos que no cuadran. No se cambió nada',
-        )
-      }
+    const esperado = respaldo.control.stockPorProducto
+    const hayDiferencia =
+      Object.entries(esperado).some(
+        ([productoId, milesimas]) => (existencias.get(productoId)?.milesimas ?? 0) !== milesimas,
+      ) ||
+      [...existencias].some(
+        ([productoId, cantidad]) => !cantidad.esCero() && !(productoId in esperado),
+      )
+    if (hayDiferencia) {
+      throw new ErrorDeDominio(
+        'COPIA_NO_CUADRA',
+        'La copia tiene datos que no cuadran. No se cambió nada',
+      )
     }
   })
 }

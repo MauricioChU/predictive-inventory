@@ -9,13 +9,16 @@ const COLUMNAS_REQUERIDAS = [
   'precio de compra',
   'precio de venta',
   'stock mínimo',
-  'stock inicial',
 ] as const
 
-type Columna = (typeof COLUMNAS_REQUERIDAS)[number]
+/** La columna "stock inicial" es opcional, igual que sus celdas. */
+const COLUMNA_OPCIONAL = 'stock inicial'
+
+type Columna = (typeof COLUMNAS_REQUERIDAS)[number] | typeof COLUMNA_OPCIONAL
 
 const UNIDADES_VALIDAS: Record<string, Unidad> = {
   unid: 'UNIDAD',
+  'unid.': 'UNIDAD',
   unidad: 'UNIDAD',
   unidades: 'UNIDAD',
   u: 'UNIDAD',
@@ -74,6 +77,8 @@ function mapearEncabezados(encabezados: readonly string[]): Record<Columna, numb
     }
     indices[columna] = indice
   }
+  // Si falta la columna opcional, queda en -1 y sus celdas se leen como vacías.
+  indices[COLUMNA_OPCIONAL] = indiceDeColumna(encabezados, COLUMNA_OPCIONAL)
   return indices
 }
 

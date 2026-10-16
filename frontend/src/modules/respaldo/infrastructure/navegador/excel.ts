@@ -1,3 +1,5 @@
+import { ErrorDeDominio } from '../../../../shared/domain/errores'
+import { normalizar } from '../../../../shared/domain/texto'
 import readXlsxFile from 'read-excel-file/browser'
 import writeXlsxFile from 'write-excel-file/browser'
 import type { CeldaDeExcel, HojaDeExcel } from '../../domain/hojas-de-excel'
@@ -24,13 +26,21 @@ export class GeneradorDeExcelDelNavegador implements GeneradorDeExcel {
   }
 }
 
-/** Lee la primera hoja de un .xlsx con read-excel-file; cada celda se devuelve como texto. */
+/** Lee la hoja "Productos" (o la primera si no existe) de un .xlsx; cada celda como texto. */
 export class LectorDeExcelDelNavegador implements LectorDeExcel {
   async leerPrimeraHoja(archivo: Blob): Promise<string[][]> {
-    const hojas = await readXlsxFile(archivo)
-    const primera = hojas[0]
-    if (!primera) return []
-    return primera.data.map((fila) =>
+    let hojas
+    try {
+      hojas = await readXlsxFile(archivo)
+    } catch {
+      throw new ErrorDeDominio(
+        'EXCEL_INVALIDO',
+        'Este archivo no es un Excel (.xlsx). Usa la plantilla.',
+      )
+    }
+    const hoja = hojas.find((h) => normalizar(h.sheet) === 'productos') ?? hojas[0]
+    if (!hoja) return []
+    return hoja.data.map((fila) =>
       fila.map((valor) => (valor === null || valor === undefined ? '' : String(valor))),
     )
   }

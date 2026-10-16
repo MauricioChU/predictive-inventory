@@ -21,4 +21,12 @@ describe('blobABase64 / base64ABlob', () => {
     const reconstruido = await base64ABlob(base64, 'image/png')
     expect(reconstruido.size).toBe(0)
   })
+
+  it('soporta imágenes grandes (varios cientos de KB) sin desbordar la pila', async () => {
+    const bytes = new Uint8Array(600_000).map((_, n) => n % 251)
+    const base64 = await blobABase64(new Blob([bytes], { type: 'image/jpeg' }))
+    const vuelta = new Uint8Array(await (await base64ABlob(base64, 'image/jpeg')).arrayBuffer())
+    expect(vuelta.length).toBe(bytes.length)
+    expect(vuelta[599_999]).toBe(bytes[599_999])
+  })
 })
