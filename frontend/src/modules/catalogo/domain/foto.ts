@@ -10,8 +10,8 @@ export function dimensionesReducidas(
   if (ladoMayor <= maximo) return { ancho: anchoOriginal, alto: altoOriginal }
   const factor = maximo / ladoMayor
   return {
-    ancho: Math.round(anchoOriginal * factor),
-    alto: Math.round(altoOriginal * factor),
+    ancho: Math.max(1, Math.round(anchoOriginal * factor)),
+    alto: Math.max(1, Math.round(altoOriginal * factor)),
   }
 }
 

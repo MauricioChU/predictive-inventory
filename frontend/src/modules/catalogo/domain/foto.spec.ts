@@ -12,6 +12,10 @@ describe('dimensionesReducidas (RN-CAT-14)', () => {
   it('no agranda una foto ya chica', () => {
     expect(dimensionesReducidas(300, 200, 512)).toEqual({ ancho: 300, alto: 200 })
   })
+  it('nunca devuelve un lado de 0 px (mínimo 1)', () => {
+    expect(dimensionesReducidas(4000, 1, 512)).toEqual({ ancho: 512, alto: 1 })
+    expect(dimensionesReducidas(1, 4000, 512)).toEqual({ ancho: 1, alto: 512 })
+  })
   it('el máximo por defecto es 512 px', () => {
     expect(dimensionesReducidas(4000, 3000)).toEqual({ ancho: 512, alto: 384 })
   })
