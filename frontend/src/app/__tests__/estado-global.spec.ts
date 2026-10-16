@@ -165,6 +165,30 @@ describe('estado global (Pinia)', () => {
     expect(leer).not.toHaveBeenCalled()
   })
 
+  it('una actualización pedida mientras otra está en curso no se pierde si la que corría falla', async () => {
+    const estado = await conectar()
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    let fallar: (error: Error) => void = () => undefined
+    const leer = vi
+      .spyOn(app.alertas, 'resumenDeAtencion')
+      .mockImplementationOnce(
+        () =>
+          new Promise((_resolver, rechazar) => {
+            fallar = rechazar
+          }),
+      )
+      .mockResolvedValue({ agotados: 1, porAcabarse: 0, contador: 1, texto: '1 agotado' })
+
+    const primera = estado.refrescarAtencion()
+    // Llega otro evento mientras la primera lectura sigue en curso.
+    await app.bus.publicar({ tipo: 'ProductoCreado', productoId: 'x' })
+    fallar(new Error('falla la primera'))
+    await primera
+
+    expect(leer).toHaveBeenCalledTimes(2)
+    expect(estado.contadorDeAtencion).toBe(1)
+  })
+
   it('un error al leer el contador se registra y no rompe a quien publicó', async () => {
     const estado = await conectar()
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)

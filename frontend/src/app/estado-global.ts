@@ -20,8 +20,8 @@ const EVENTOS_QUE_CAMBIAN_LA_ATENCION: readonly TipoDeEvento[] = [
 
 /**
  * Corre `tarea` de a una: si la piden mientras corre, vuelve a correr UNA vez más al terminar
- * (varios eventos seguidos se juntan en una sola lectura). La promesa resuelve cuando ya no
- * queda nada pendiente y nunca rechaza (el error se registra).
+ * (varios eventos seguidos se juntan en una sola lectura), también si la que corría falló. La
+ * promesa resuelve cuando ya no queda nada pendiente y nunca rechaza (cada error se registra).
  */
 function deAUna(nombre: string, tarea: () => Promise<void>): () => Promise<void> {
   let enCurso: Promise<void> | null = null
@@ -32,16 +32,15 @@ function deAUna(nombre: string, tarea: () => Promise<void>): () => Promise<void>
       return enCurso
     }
     enCurso = (async () => {
-      try {
-        do {
-          otraVez = false
+      do {
+        otraVez = false
+        try {
           await tarea()
-        } while (otraVez)
-      } catch (error) {
-        console.error(`No se pudo actualizar ${nombre}:`, error)
-      } finally {
-        enCurso = null
-      }
+        } catch (error) {
+          console.error(`No se pudo actualizar ${nombre}:`, error)
+        }
+      } while (otraVez)
+      enCurso = null
     })()
     return enCurso
   }
