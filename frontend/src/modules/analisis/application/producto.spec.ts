@@ -57,6 +57,25 @@ describe('RN-AN-16: ¿Necesito comprar?', () => {
     )
   })
 
+  // Ola 3 (ruling de la Ola 2): no contradecir la lista que el usuario acaba de editar.
+  it('RN-AN-16: usa la cantidad de la lista de hoy y, si se quitó, sigue con el caso 3', async () => {
+    const e = entorno([LEJIA])
+    await e.cargar(
+      historial('lejia')
+        .primerMovimiento('2026-08-01', 61)
+        .vendio(56, '2026-09-17', '2026-10-14')
+        .construir(),
+    )
+    const respuesta = async () => (await e.modulo.necesitoComprar('lejia')).respuesta
+    await e.modulo.cambiarCantidadEnLista('lejia', '24')
+    expect(await respuesta()).toBe('Sí, compra ~24 unid. (S/ 57.60)')
+    await e.modulo.quitarDeLista('lejia')
+    expect(await respuesta()).toBe('No hace falta: te alcanza para ~2 días')
+    // Al día siguiente los cambios ya no valen.
+    e.reloj.fijar('2026-10-16T13:00:00.000Z')
+    expect(await respuesta()).toMatch(/^Sí, compra ~/)
+  })
+
   it('RN-AN-16: debajo se muestra el stock actual y la última llegada de mercadería', async () => {
     const e = entorno([LEJIA])
     await e.registrar(
@@ -79,8 +98,8 @@ describe('RN-AN-16: ¿Necesito comprar?', () => {
 
   it('RN-AN-16: un producto archivado o que no existe no se puede consultar', async () => {
     const e = entorno([{ ...ESCOBA, activo: false }])
-    await expect(e.modulo.necesitoComprar('escoba')).rejects.toThrow('No encontré ese producto')
-    await expect(e.modulo.necesitoComprar('nada')).rejects.toThrow('No encontré ese producto')
+    await expect(e.modulo.necesitoComprar('escoba')).rejects.toThrow('No encontramos ese producto')
+    await expect(e.modulo.necesitoComprar('nada')).rejects.toThrow('No encontramos ese producto')
   })
 })
 

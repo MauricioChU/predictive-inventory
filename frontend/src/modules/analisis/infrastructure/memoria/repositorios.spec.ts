@@ -6,6 +6,7 @@ import {
   RepositorioDeResumenesEnMemoria,
 } from './repositorios'
 
+/** Sin ventas, la fila es de un ingreso (+1): toda fila guardada es un movimiento real. */
 function fila(productoId: string, dia: string, lineasVendidas = 0): ResumenDiarioRegistro {
   return {
     clave: `${productoId}|${dia}`,
@@ -17,8 +18,13 @@ function fila(productoId: string, dia: string, lineasVendidas = 0): ResumenDiari
     costoVendido: lineasVendidas * 240,
     costoMermas: 0,
     valorAjustes: 0,
-    cambioNeto: -lineasVendidas * 1000,
+    cambioNeto: lineasVendidas > 0 ? -lineasVendidas * 1000 : 1000,
   }
+}
+
+/** Lo que queda de una operación anulada el mismo día: todo en cero. */
+function sinMovimiento(productoId: string, dia: string): ResumenDiarioRegistro {
+  return { ...fila(productoId, dia), cambioNeto: 0 }
 }
 
 describe('RepositorioDeResumenesEnMemoria', () => {
@@ -62,6 +68,19 @@ describe('RepositorioDeResumenesEnMemoria', () => {
     expect(await repo.primerDiaDeLaTienda()).toBe('2026-08-01')
     expect(await repo.ultimoDiaConVentaDe('lejia')).toBe('2026-10-14')
     expect(await repo.ultimoDiaConVentaDe('jabon')).toBeNull()
+  })
+
+  // Ola 3 (revisión de la Ola 2): una operación anulada el mismo día deja su fila en cero;
+  // esa fila no es "el primer movimiento" del producto (RN-OP-17: no cuenta en ningún cálculo).
+  it('RN-AN-04: primerDiaDe ignora las filas que solo quedaron por operaciones anuladas', async () => {
+    const repo = await conFilas()
+    await repo.guardar(sinMovimiento('lejia', '2026-07-01'))
+    await repo.guardar(sinMovimiento('jabon', '2026-07-01'))
+    await repo.guardar(fila('jabon', '2026-07-02'))
+    expect(await repo.primerDiaDe('lejia')).toBe('2026-08-01')
+    expect(await repo.primerDiaDe('jabon')).toBe('2026-07-02')
+    await repo.guardar(sinMovimiento('escoba', '2026-07-01'))
+    expect(await repo.primerDiaDe('escoba')).toBeNull()
   })
 
   it('vaciar borra todas las filas', async () => {

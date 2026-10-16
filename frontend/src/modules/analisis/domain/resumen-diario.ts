@@ -7,6 +7,22 @@ export function claveDeResumen(productoId: string, dia: Dia): string {
   return `${productoId}|${dia}`
 }
 
+/**
+ * Una fila con todo en cero: solo quedó porque una operación se anuló el mismo día (sus aportes
+ * se restaron). No es un movimiento del producto (RN-OP-17): `primerDiaDe` la ignora.
+ */
+export function esFilaSinMovimiento(r: ResumenDiarioRegistro): boolean {
+  return (
+    r.lineasVendidas === 0 &&
+    r.cantidadVendida === 0 &&
+    r.ventas === 0 &&
+    r.costoVendido === 0 &&
+    r.costoMermas === 0 &&
+    r.valorAjustes === 0 &&
+    r.cambioNeto === 0
+  )
+}
+
 /** Campos de una fila de la proyección `ResumenDiario` (04-torre-de-control, Modelo). */
 export interface DatosDeResumen {
   productoId: string

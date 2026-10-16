@@ -133,10 +133,7 @@ export interface EntornoDeAnalisis {
   cargar(...historiales: HistorialDePrueba[]): Promise<void>
 }
 
-/**
- * Entorno de pruebas del módulo con dobles de Catálogo, Inventario y Tienda. La UoW se
- * recibe del spec: la UoW en memoria usa APIs de Node y no puede importarse desde aquí.
- */
+/** Entorno de pruebas del módulo con dobles de Catálogo, Inventario y Tienda. La UoW la elige el spec. */
 export function crearEntorno(opciones: {
   productos: readonly ProductoResumido[]
   uow: (almacen: AlmacenEnMemoria) => UnidadDeTrabajo

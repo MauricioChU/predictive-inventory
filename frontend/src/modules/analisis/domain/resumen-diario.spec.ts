@@ -6,6 +6,7 @@ import {
   aportesDeAnulacion,
   aportesDeOperacion,
   claveDeResumen,
+  esFilaSinMovimiento,
   proyectarLibro,
   ResumenDiario,
 } from './resumen-diario'
@@ -53,6 +54,24 @@ describe('ResumenDiario', () => {
     expect(fila.gananciaBruta.centimos).toBe(330)
     expect(fila.tieneVentas).toBe(true)
     expect(vacia.tieneVentas).toBe(false)
+  })
+
+  it('RN-OP-17: una fila es "sin movimiento" solo si todo está en cero (lo que deja una anulación del mismo día)', () => {
+    const venta = nuevaOperacion('VENTA', '2026-10-15 10:00', [{ ...LEJIA, cantidad: '2' }])
+    const filas = proyectarLibro([venta, anulacionDe(venta, '2026-10-15 10:05')])
+    expect(filas.map((f) => esFilaSinMovimiento(f.aRegistro()))).toEqual([true])
+    const cero = ResumenDiario.vacio('lejia', '2026-10-15').aRegistro()
+    for (const campo of [
+      'lineasVendidas',
+      'cantidadVendida',
+      'ventas',
+      'costoVendido',
+      'costoMermas',
+      'valorAjustes',
+      'cambioNeto',
+    ] as const) {
+      expect(esFilaSinMovimiento({ ...cero, [campo]: 1 })).toBe(false)
+    }
   })
 
   it('no suma filas de distinto producto o día', () => {

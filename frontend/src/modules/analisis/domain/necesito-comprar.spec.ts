@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { ProductoResumido } from '@/shared/contratos/entre-modulos'
 import { prediccionCon } from './__pruebas__/historial'
 import { cant, CARBON, DETERGENTE, ESCOBA, JABON, LEJIA } from './__pruebas__/productos'
+import type { CambioEnLista } from './compras'
 import { respuestaNecesitoComprar } from './necesito-comprar'
 import { evaluarSituacion } from './situacion'
 
@@ -10,6 +11,7 @@ function preguntar(
   stock: string,
   vpd: string | null,
   parado: { diasSinVender: number } | null = null,
+  cambioDelDia?: CambioEnLista,
 ) {
   const situacion = evaluarSituacion({
     producto: p,
@@ -19,7 +21,7 @@ function preguntar(
     diasAnticipacion: 3,
     parado,
   })
-  return respuestaNecesitoComprar(situacion, p.precioCompra)
+  return respuestaNecesitoComprar(situacion, p.precioCompra, cambioDelDia)
 }
 
 describe('RN-AN-16: ¿Necesito comprar?', () => {
@@ -54,6 +56,22 @@ describe('RN-AN-16: ¿Necesito comprar?', () => {
 
   it('RN-AN-16: en Para comprar, el costo estimado se redondea al céntimo', () => {
     expect(preguntar(CARBON, '2.5', null)).toBe('Sí, compra ~3.5 kg (S/ 9.63)')
+  })
+
+  // Ola 3 (ruling de la Ola 2): no contradecir la lista que el usuario acaba de editar.
+  it('RN-AN-16: en Para comprar, usa la cantidad que el usuario dejó hoy en la lista', () => {
+    const cambio = { productoId: 'lejia', cantidad: cant('20') }
+    expect(preguntar(LEJIA, '5', '2', null, cambio)).toBe('Sí, compra ~20 unid. (S/ 48.00)')
+  })
+
+  it('RN-AN-16: si el usuario lo quitó de la lista de hoy, sigue con el caso 3 (o el 4)', () => {
+    const quitado = (productoId: string) => ({ productoId, cantidad: null })
+    expect(preguntar(LEJIA, '5', '2', null, quitado('lejia'))).toBe(
+      'No hace falta: te alcanza para ~2 días',
+    )
+    expect(preguntar(CARBON, '2.5', null, null, quitado('carbon'))).toBe(
+      'Tienes 2.5 kg. Todavía no sé cuánto vendes; vuelve a preguntar en unos días',
+    )
   })
 
   it('RN-AN-16: con predicción pero sin ventas en 4 semanas, no hace falta', () => {

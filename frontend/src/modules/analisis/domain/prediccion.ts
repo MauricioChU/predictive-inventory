@@ -65,9 +65,9 @@ export function diasDeCobertura(prediccion: Prediccion, stock: Cantidad): number
   return Math.floor((stock.milesimas * prediccion.diasValidos) / prediccion.vendido.milesimas)
 }
 
-/** RN-AN-05: "Se acaba en ~N días"; null sin predicción. */
+/** RN-AN-05: "Se acaba en ~N días"; null sin predicción o con stock 0 (el estado ya dice Agotado). */
 export function textoCobertura(prediccion: Prediccion | null, stock: Cantidad): string | null {
-  if (prediccion === null) return null
+  if (prediccion === null || !stock.esPositiva()) return null
   const dias = diasDeCobertura(prediccion, stock)
   if (dias === null) return 'Sin ventas en las últimas 4 semanas'
   if (dias === 0) return 'Se acaba hoy'
@@ -83,8 +83,18 @@ export function ventaDiariaAproximada(prediccion: Prediccion): Cantidad {
   return Cantidad.deMilesimas(decimas * 100)
 }
 
-/** "Vendes ~2 unid. al día" (detalle del producto, RN-AN-14); null sin predicción. */
+/** Lo menos que se muestra de la VPD (un decimal). */
+const VENTA_DIARIA_MINIMA_VISIBLE = Cantidad.deMilesimas(100)
+
+/**
+ * "Vendes ~2 unid. al día" (detalle del producto, RN-AN-14); null sin predicción. Una VPD menor
+ * que 0.05 se redondearía a "~0": se dice "Vendes menos de 0.1 unid. al día".
+ */
 export function textoVentaDiaria(prediccion: Prediccion | null, unidad: Unidad): string | null {
   if (prediccion === null) return null
-  return `Vendes ~${formatearCantidad(ventaDiariaAproximada(prediccion), unidad)} al día`
+  const aproximada = ventaDiariaAproximada(prediccion)
+  if (aproximada.esCero()) {
+    return `Vendes menos de ${formatearCantidad(VENTA_DIARIA_MINIMA_VISIBLE, unidad)} al día`
+  }
+  return `Vendes ~${formatearCantidad(aproximada, unidad)} al día`
 }

@@ -16,7 +16,7 @@ export interface RepositorioDeResumenes {
   entre(desde: Dia, hasta: Dia): Promise<ResumenDiarioRegistro[]>
   /** Filas de un producto entre dos días (inclusive), por día (índice [productoId+dia]). */
   deProductoEntre(productoId: string, desde: Dia, hasta: Dia): Promise<ResumenDiarioRegistro[]>
-  /** Día del primer movimiento del producto. */
+  /** Día del primer movimiento del producto; ignora las filas sin movimiento (`esFilaSinMovimiento`). */
   primerDiaDe(productoId: string): Promise<Dia | null>
   /** Día de la primera operación de la tienda. */
   primerDiaDeLaTienda(): Promise<Dia | null>
