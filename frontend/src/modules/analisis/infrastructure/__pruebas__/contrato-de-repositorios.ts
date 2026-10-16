@@ -118,6 +118,22 @@ export function probarRepositorioDeResumenes(crear: () => RepositorioDeResumenes
     expect(await repo.primerDiaDe('escoba')).toBeNull()
   })
 
+  it('RN-AN-04: las filas en cero no fijan el primer día, pero siguen guardadas', async () => {
+    const repo = crear()
+    await repo.guardar(filaSinMovimiento('lejia', '2026-08-01'))
+    await repo.guardar(fila('lejia', '2026-09-20', 1))
+    await repo.guardar(filaSinMovimiento('carbon', '2026-07-01'))
+    await repo.guardar(fila('carbon', '2026-10-01'))
+    expect(await repo.primerDiaDe('lejia')).toBe('2026-09-20')
+    expect(await repo.primerDiaDe('carbon')).toBe('2026-10-01')
+    expect(await repo.obtener('lejia', '2026-08-01')).toEqual(
+      filaSinMovimiento('lejia', '2026-08-01'),
+    )
+    expect(
+      (await repo.deProductoEntre('carbon', '0000-01-01', '9999-12-31')).map((r) => r.dia),
+    ).toEqual(['2026-07-01', '2026-10-01'])
+  })
+
   it('primerDiaDeLaTienda cuenta el primer día con filas, aunque solo tenga una venta anulada ese mismo día', async () => {
     const repo = crear()
     await repo.guardar(filaSinMovimiento('lejia', '2026-08-01'))

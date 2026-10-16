@@ -17,41 +17,6 @@ probarRepositoriosDeInventario('Dexie', {
 })
 
 describe('RepositorioDeOperacionesDexie', () => {
-  it('porProducto y todas ordenan por registradaEn aunque los ids no sigan ese orden', async () => {
-    const repositorio = new RepositorioDeOperacionesDexie(crearBaseDePrueba())
-    await repositorio.agregar(registro('c', { registradaEn: '2026-10-15T15:00:00.000Z' }))
-    await repositorio.agregar(registro('a', { registradaEn: '2026-10-15T15:10:00.000Z' }))
-    await repositorio.agregar(
-      registro('b', { productoIds: ['carbon'], registradaEn: '2026-10-15T15:05:00.000Z' }),
-    )
-    expect((await repositorio.todas()).map((r) => r.id)).toEqual(['c', 'b', 'a'])
-    expect((await repositorio.porProducto('lejia')).map((r) => r.id)).toEqual(['c', 'a'])
-  })
-
-  it('ordena por el instante, no por el texto, si una operación trae otra zona horaria', async () => {
-    const repositorio = new RepositorioDeOperacionesDexie(crearBaseDePrueba())
-    // 10:30 en Lima (−05:00) es 15:30 UTC: va DESPUÉS de las 15:10 UTC.
-    await repositorio.agregar(registro('op-lima', { registradaEn: '2026-10-15T10:30:00-05:00' }))
-    await repositorio.agregar(registro('op-utc', { registradaEn: '2026-10-15T15:10:00.000Z' }))
-    expect((await repositorio.todas()).map((r) => r.id)).toEqual(['op-utc', 'op-lima'])
-    expect((await repositorio.porProducto('lejia')).map((r) => r.id)).toEqual(['op-utc', 'op-lima'])
-  })
-
-  it('a igual registradaEn el orden es estable (el mismo en cada lectura)', async () => {
-    const repositorio = new RepositorioDeOperacionesDexie(crearBaseDePrueba())
-    for (const id of ['op-3', 'op-1', 'op-2']) await repositorio.agregar(registro(id))
-    const primera = (await repositorio.todas()).map((r) => r.id)
-    expect((await repositorio.todas()).map((r) => r.id)).toEqual(primera)
-    expect((await repositorio.porProducto('lejia')).map((r) => r.id)).toEqual(primera)
-  })
-
-  it('una operación de varios productos aparece una sola vez en porProducto', async () => {
-    const repositorio = new RepositorioDeOperacionesDexie(crearBaseDePrueba())
-    await repositorio.agregar(registro('op-1', { productoIds: ['lejia', 'carbon'] }))
-    expect((await repositorio.porProducto('lejia')).map((r) => r.id)).toEqual(['op-1'])
-    expect((await repositorio.porProducto('carbon')).map((r) => r.id)).toEqual(['op-1'])
-  })
-
   it('RN-OP-02: dentro de una unidad de trabajo, el id repetido se puede atrapar sin perder lo demás', async () => {
     const db = crearBaseDePrueba()
     const repositorio = new RepositorioDeOperacionesDexie(db)

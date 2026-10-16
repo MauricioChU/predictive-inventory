@@ -4,30 +4,12 @@ import type { Dia } from '@/shared/domain/fecha'
 import type { BaseDeDatos } from '@/shared/infrastructure/dexie/base-de-datos'
 import { enTransaccion } from '@/shared/infrastructure/dexie/unidad-de-trabajo-dexie'
 import type { RepositorioDeListaDeCompras, RepositorioDeResumenes } from '../../application/puertos'
+import { esFilaSinMovimiento } from '../../domain/resumen-diario'
 
 /** Mismo orden que la implementación en memoria: por día y, a igual día, por id del producto. */
 function enOrdenDeDia(a: ResumenDiarioRegistro, b: ResumenDiarioRegistro): number {
   if (a.dia !== b.dia) return a.dia < b.dia ? -1 : 1
   return a.productoId < b.productoId ? -1 : a.productoId > b.productoId ? 1 : 0
-}
-
-/**
- * Una fila sin ningún movimiento (todas las métricas y el cambio neto en cero), como la que
- * queda de un día cuya única venta se anuló ese mismo día: no cuenta como primer día de un
- * producto (`primerDiaDe`; `primerDiaDeLaTienda` sí la cuenta, igual que en memoria).
- * Misma regla que `esFilaSinMovimiento` (analisis/domain/resumen-diario.ts, rama
- * feat/eventos-diferidos); al integrar, este predicado se reemplaza por ese.
- */
-function esFilaSinMovimiento(r: ResumenDiarioRegistro): boolean {
-  return (
-    r.lineasVendidas === 0 &&
-    r.cantidadVendida === 0 &&
-    r.ventas === 0 &&
-    r.costoVendido === 0 &&
-    r.costoMermas === 0 &&
-    r.valorAjustes === 0 &&
-    r.cambioNeto === 0
-  )
 }
 
 /**
@@ -67,6 +49,7 @@ export class RepositorioDeResumenesDexie implements RepositorioDeResumenes {
       .toArray()
   }
 
+  /** Ignora las filas en cero que deja una anulación del mismo día (`esFilaSinMovimiento`). */
   async primerDiaDe(productoId: string): Promise<Dia | null> {
     const fila = await this.delProducto(productoId)
       .filter((r) => !esFilaSinMovimiento(r))
