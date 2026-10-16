@@ -26,6 +26,19 @@ const props = withDefaults(
     valorPrecio?: string
     /** En Recibir la línea lleva el costo en vez del precio de venta. */
     concepto?: 'precio' | 'costo'
+    /** RN-UX-07 / RN-OP-04: qué pasó con la cantidad y qué hacer ("Solo quedan 2 unid. de
+     * Lejía 1 L. Cambia la cantidad o registra la llegada de mercadería."), junto al campo. */
+    errorCantidad?: string
+    /**
+     * Error del precio escrito en la edición en línea, junto a ese campo. Contrato: al guardar
+     * (botón o Enter) la fila emite `cambiarPrecio(texto)` y espera un nextTick; si para
+     * entonces hay `errorPrecio`, la edición queda abierta con lo escrito y el foco en el campo;
+     * si no, se cierra. Por eso la pantalla debe validar SINCRÓNICAMENTE en su handler de
+     * `cambiarPrecio` (leer el texto con el dominio es sincrónico) y fijar o borrar este error
+     * ahí mismo, sin await antes. Al cancelar, la fila emite `cancelarPrecio`: la pantalla
+     * borra el error para que no aparezca viejo la próxima vez.
+     */
+    errorPrecio?: string
   }>(),
   {
     imagen: undefined,
@@ -34,12 +47,17 @@ const props = withDefaults(
     textoPrecioEspecial: undefined,
     valorPrecio: undefined,
     concepto: 'precio',
+    errorCantidad: undefined,
+    errorPrecio: undefined,
   },
 )
 const emit = defineEmits<{
   'update:cantidad': [valor: string]
-  /** Lo escrito en la edición en línea, sin validar: lo valida quien usa la fila. */
+  /** Lo escrito en la edición en línea, sin validar: lo valida quien usa la fila (ver
+   * errorPrecio). */
   cambiarPrecio: [precio: string]
+  /** Se cerró la edición sin guardar (Cancelar, Escape o "Cambiar precio" otra vez). */
+  cancelarPrecio: []
   quitar: []
 }>()
 
@@ -69,7 +87,7 @@ function enfocarCambiar() {
 
 function alternarEdicion() {
   if (editando.value) {
-    cerrarEdicion()
+    cancelar()
     return
   }
   precioNuevo.value = props.valorPrecio ?? ''
@@ -78,15 +96,40 @@ function alternarEdicion() {
   void nextTick(() => refEdicion.value?.querySelector('input')?.focus())
 }
 
+function enfocarCampoDePrecio() {
+  refEdicion.value?.querySelector('input')?.focus()
+}
+
 function cerrarEdicion() {
   // Primero el foco y después se cierra: el botón que tenía el foco desaparece.
   enfocarCambiar()
   editando.value = false
 }
 
-function guardar() {
-  emit('cambiarPrecio', precioNuevo.value)
+function cancelar() {
   cerrarEdicion()
+  emit('cancelarPrecio')
+}
+
+/** Ronda 1: emite y, ya con la respuesta de la pantalla (errorPrecio), decide si cerrar. */
+async function guardar() {
+  emit('cambiarPrecio', precioNuevo.value)
+  await nextTick()
+  if (props.errorPrecio) {
+    // Precio inválido: queda abierta con lo escrito para corregirlo; el error ya se ve y se
+    // anuncia (role="alert" de CampoNumero).
+    enfocarCampoDePrecio()
+    return
+  }
+  cerrarEdicion()
+}
+
+/** Enter en el campo (la tecla "Ir" del teclado numérico) guarda. En un botón, Enter ya lo
+ * activa con su propio click: no se guarda dos veces ni se guarda al tocar "Cancelar". */
+function alPresionarEnter(evento: KeyboardEvent) {
+  if (!(evento.target instanceof HTMLInputElement)) return
+  evento.preventDefault()
+  void guardar()
 }
 </script>
 
@@ -121,6 +164,7 @@ function guardar() {
         :model-value="cantidad"
         :decimales="!porUnidades"
         :minimo="minimo"
+        :error="errorCantidad"
         @update:model-value="emit('update:cantidad', $event)"
       />
       <p class="importe">
@@ -158,9 +202,10 @@ function guardar() {
       :id="idEdicion"
       ref="refEdicion"
       class="edicion-precio"
-      @keydown.esc="cerrarEdicion"
+      @keydown.esc="cancelar"
+      @keydown.enter="alPresionarEnter"
     >
-      <CampoNumero v-model="precioNuevo" :etiqueta="textos.nuevo" decimales />
+      <CampoNumero v-model="precioNuevo" :etiqueta="textos.nuevo" decimales :error="errorPrecio" />
       <div class="acciones">
         <Boton
           class="accion"
@@ -169,7 +214,7 @@ function guardar() {
           :icono="Check"
           @click="guardar"
         />
-        <Boton class="accion" texto="Cancelar" @click="cerrarEdicion" />
+        <Boton class="accion" texto="Cancelar" @click="cancelar" />
       </div>
     </div>
   </div>
@@ -273,5 +318,13 @@ function guardar() {
   padding: var(--espacio-3);
   border-radius: var(--radio-chico);
   background: var(--color-primario-suave);
+}
+/* Fila angosta (320–360 px con letra Muy grande): menos relleno a los costados de la edición,
+   para que el campo del precio tenga lugar para "12.50". */
+@container (max-width: 13rem) {
+  .edicion-precio {
+    padding-inline: var(--espacio-2);
+    margin-inline: calc(-1 * var(--espacio-1));
+  }
 }
 </style>

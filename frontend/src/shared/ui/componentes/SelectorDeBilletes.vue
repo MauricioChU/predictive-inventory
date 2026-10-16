@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useId } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
 import { Banknote, CircleCheck, Coins, TriangleAlert } from 'lucide-vue-next'
 import type { Billete } from '../tipos-de-productos'
 import CampoNumero from './CampoNumero.vue'
@@ -15,8 +15,11 @@ const props = withDefaults(
     mensaje?: string
     /** Acompaña al mensaje con ícono y color; el texto ya lo dice solo (RN-UX-04). */
     tonoMensaje?: 'normal' | 'exito' | 'atencion'
+    /** Pausa de escritura tras la cual se anuncia el mensaje (ms). Al tocar un billete o
+     * "Exacto" se anuncia en el acto. */
+    esperaAnuncioMs?: number
   }>(),
-  { mensaje: '', tonoMensaje: 'normal' },
+  { mensaje: '', tonoMensaje: 'normal', esperaAnuncioMs: 600 },
 )
 const emit = defineEmits<{ 'update:modelValue': [valor: string]; exacto: [] }>()
 
@@ -24,6 +27,51 @@ const id = useId()
 const idPregunta = `${id}-pregunta`
 const ICONOS = { normal: Coins, exito: CircleCheck, atencion: TriangleAlert } as const
 const iconoDelMensaje = computed(() => ICONOS[props.tonoMensaje])
+/** Un monto nunca se parte de su "S/" al envolver ("Vuelto S/" | "5.37" se lee mal): espacio
+ * duro entre los dos. Solo en lo que se ve; la región viva lleva el texto tal cual. */
+const mensajeVisible = computed(() => props.mensaje.replace(/S\/ /g, 'S/\u00a0'))
+
+/*
+  Ronda 1: el mensaje se VE al instante, pero se ANUNCIA (región viva aparte) recién cuando la
+  persona deja de escribir el monto: si no, TalkBack leería "Faltan S/ 13.63", "Faltan S/
+  4.63"… en cada tecla. Un toque (billete o "Exacto") es una decisión: se anuncia en el acto.
+*/
+const anunciado = ref(props.mensaje)
+let temporizador: ReturnType<typeof setTimeout> | undefined
+/** El próximo cambio de mensaje viene de un toque (vale solo para ese cambio). */
+let anunciarEnElActo = false
+
+function cancelarAnuncio() {
+  if (temporizador === undefined) return
+  clearTimeout(temporizador)
+  temporizador = undefined
+}
+
+watch(
+  () => props.mensaje,
+  (mensaje) => {
+    cancelarAnuncio()
+    if (anunciarEnElActo || mensaje === '') {
+      anunciado.value = mensaje
+      return
+    }
+    temporizador = setTimeout(() => {
+      temporizador = undefined
+      anunciado.value = mensaje
+    }, props.esperaAnuncioMs)
+  },
+)
+onBeforeUnmount(cancelarAnuncio)
+
+/** Un toque: la pantalla recalcula el mensaje en su handler (sincrónico) y el watcher, que corre
+ * antes de este nextTick, lo anuncia sin esperar. */
+function alTocar(accion: () => void) {
+  anunciarEnElActo = true
+  accion()
+  void nextTick(() => {
+    anunciarEnElActo = false
+  })
+}
 </script>
 
 <template>
@@ -41,12 +89,16 @@ const iconoDelMensaje = computed(() => ICONOS[props.tonoMensaje])
           :key="billete.valor"
           type="button"
           class="billete"
-          @click="emit('update:modelValue', billete.valor)"
+          @click="alTocar(() => emit('update:modelValue', billete.valor))"
         >
           <Banknote aria-hidden="true" class="icono" />
           <span>{{ billete.etiqueta }}</span>
         </button>
-        <button type="button" class="billete billete--exacto" @click="emit('exacto')">
+        <button
+          type="button"
+          class="billete billete--exacto"
+          @click="alTocar(() => emit('exacto'))"
+        >
           <Coins aria-hidden="true" class="icono" />
           <span>Exacto</span>
         </button>
@@ -60,14 +112,16 @@ const iconoDelMensaje = computed(() => ICONOS[props.tonoMensaje])
       />
     </div>
 
-    <!-- RN-UX-15: la región viva existe desde el principio (vacía) y solo cambia su texto; así
-         el lector de pantalla anuncia el vuelto o lo que falta cada vez que cambia. -->
-    <p class="mensaje" :class="`mensaje--${tonoMensaje}`" aria-live="polite" aria-atomic="true">
+    <!-- Lo que se ve, al instante. Oculto al lector: él lo recibe de la región de abajo. -->
+    <p class="mensaje" :class="`mensaje--${tonoMensaje}`" aria-hidden="true">
       <template v-if="mensaje">
         <component :is="iconoDelMensaje" aria-hidden="true" class="icono-mensaje" />
-        <span>{{ mensaje }}</span>
+        <span>{{ mensajeVisible }}</span>
       </template>
     </p>
+    <!-- RN-UX-15: la región viva existe desde el principio y solo cambia su texto (tras la pausa
+         de escritura, o en el acto con un toque): así se anuncia el vuelto o lo que falta. -->
+    <p class="solo-lector" aria-live="polite" aria-atomic="true">{{ anunciado }}</p>
   </div>
 </template>
 

@@ -1,5 +1,6 @@
-import { mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, h, ref } from 'vue'
 import BarraDeTotal from '../componentes/BarraDeTotal.vue'
 import BotonPrincipal from '../componentes/BotonPrincipal.vue'
 import CampoNumero from '../componentes/CampoNumero.vue'
@@ -108,6 +109,7 @@ describe('FilaDeCarrito', () => {
     await boton(w, 'Cambiar precio').trigger('click')
     await w.findAllComponents(CampoNumero)[1]!.get('input').setValue('4,20')
     await boton(w, 'Guardar precio').trigger('click')
+    await flushPromises()
     expect(w.emitted('cambiarPrecio')).toEqual([['4,20']])
     expect(w.findAllComponents(CampoNumero)).toHaveLength(1)
     expect(document.activeElement).toBe(boton(w, 'Cambiar precio').element)
@@ -131,6 +133,114 @@ describe('FilaDeCarrito', () => {
     await w.get('.edicion-precio').trigger('keydown', { key: 'Escape' })
     expect(w.findAllComponents(CampoNumero)).toHaveLength(1)
     expect(w.emitted('cambiarPrecio')).toBeUndefined()
+    // Ronda 1: los dos cierres avisan, para que la pantalla borre su error de precio.
+    expect(w.emitted('cancelarPrecio')).toEqual([[], []])
+  })
+
+  it('ronda 1 (RN-UX-07): errorCantidad se muestra junto al campo de cantidad y lo marca inválido', () => {
+    const error =
+      'Solo quedan 2 unid. de Lejía Clorox 1 L. Cambia la cantidad o registra la llegada de mercadería.'
+    const w = mount(FilaDeCarrito, { props: { ...LINEA, cantidad: '5', errorCantidad: error } })
+    const campo = w.getComponent(CampoNumero)
+    expect(campo.props('error')).toBe(error)
+    expect(campo.get('input').attributes('aria-invalid')).toBe('true')
+    expect(w.get('[role="alert"]').text()).toBe(error)
+  })
+
+  describe('ronda 1: errores de precio junto al campo (RN-UX-07, RN-OP-04)', () => {
+    const ERROR = 'Escribe un precio válido, por ejemplo 4.50'
+    /** Una pantalla como la de Vender: valida en el acto (sincrónico, como el dominio) y, si el
+     * precio no sirve, deja su mensaje en errorPrecio; al cancelar, lo borra. */
+    function montarEnPantalla() {
+      const recibidos: string[] = []
+      let cancelados = 0
+      const Pantalla = defineComponent({
+        setup() {
+          const errorPrecio = ref<string>()
+          const precio = ref('4.50')
+          return () =>
+            h(FilaDeCarrito, {
+              ...LINEA,
+              precioEditable: true,
+              valorPrecio: precio.value,
+              errorPrecio: errorPrecio.value,
+              onCambiarPrecio: (texto: string) => {
+                recibidos.push(texto)
+                if (!/^\d+([.,]\d{1,2})?$/.test(texto.trim())) {
+                  errorPrecio.value = ERROR
+                  return
+                }
+                errorPrecio.value = undefined
+                precio.value = texto
+              },
+              onCancelarPrecio: () => {
+                cancelados += 1
+                errorPrecio.value = undefined
+              },
+            })
+        },
+      })
+      const w = mount(Pantalla, { attachTo: document.body })
+      const campoPrecio = () => w.findAllComponents(CampoNumero)[1]
+      return { w, recibidos, cancelados: () => cancelados, campoPrecio }
+    }
+
+    it('precio inválido: queda abierta con lo escrito, el error anunciado y el foco en el campo', async () => {
+      const { w, recibidos, campoPrecio } = montarEnPantalla()
+      await boton(w, 'Cambiar precio').trigger('click')
+      await campoPrecio()!.get('input').setValue('4..5')
+      await boton(w, 'Guardar precio').trigger('click')
+      await flushPromises()
+      expect(recibidos).toEqual(['4..5'])
+      const input = campoPrecio()!.get('input')
+      expect((input.element as HTMLInputElement).value).toBe('4..5')
+      expect(input.attributes('aria-invalid')).toBe('true')
+      expect(w.get('.edicion-precio [role="alert"]').text()).toBe(ERROR)
+      expect(document.activeElement).toBe(input.element)
+    })
+
+    it('precio válido: cierra la edición y devuelve el foco a "Cambiar precio"', async () => {
+      const { w, recibidos, campoPrecio } = montarEnPantalla()
+      await boton(w, 'Cambiar precio').trigger('click')
+      await campoPrecio()!.get('input').setValue('4..5')
+      await boton(w, 'Guardar precio').trigger('click')
+      await flushPromises()
+      await campoPrecio()!.get('input').setValue('4,20')
+      await boton(w, 'Guardar precio').trigger('click')
+      await flushPromises()
+      expect(recibidos).toEqual(['4..5', '4,20'])
+      expect(campoPrecio()).toBeUndefined()
+      expect(document.activeElement).toBe(boton(w, 'Cambiar precio').element)
+    })
+
+    it('Enter en el campo guarda (la tecla del teclado numérico); Enter en un botón, no', async () => {
+      const { w, recibidos, campoPrecio } = montarEnPantalla()
+      await boton(w, 'Cambiar precio').trigger('click')
+      await boton(w, 'Cancelar').trigger('keydown', { key: 'Enter' })
+      expect(recibidos).toEqual([])
+      const input = campoPrecio()!.get('input')
+      await input.setValue('5')
+      await input.trigger('keydown', { key: 'Enter' })
+      await flushPromises()
+      expect(recibidos).toEqual(['5'])
+      expect(campoPrecio()).toBeUndefined()
+    })
+
+    it('Cancelar y Escape emiten cancelarPrecio: la pantalla borra el error y no queda viejo', async () => {
+      const { w, cancelados, campoPrecio } = montarEnPantalla()
+      await boton(w, 'Cambiar precio').trigger('click')
+      await campoPrecio()!.get('input').setValue('abc')
+      await boton(w, 'Guardar precio').trigger('click')
+      await flushPromises()
+      expect(w.find('.edicion-precio [role="alert"]').exists()).toBe(true)
+      await boton(w, 'Cancelar').trigger('click')
+      expect(cancelados()).toBe(1)
+      expect(campoPrecio()).toBeUndefined()
+      await boton(w, 'Cambiar precio').trigger('click')
+      expect(w.find('.edicion-precio [role="alert"]').exists()).toBe(false)
+      await w.get('.edicion-precio').trigger('keydown', { key: 'Escape' })
+      expect(cancelados()).toBe(2)
+    })
   })
 
   it('en Recibir edita el costo: los textos dicen "costo"', async () => {
@@ -224,13 +334,86 @@ describe('SelectorDeBilletes', () => {
     expect(w.emitted('update:modelValue')?.at(-1)).toEqual(['25,50'])
   })
 
-  it('RN-UX-15: el mensaje (vuelto o lo que falta) se anuncia en una región aria-live presente desde el inicio', async () => {
-    const w = mount(SelectorDeBilletes, { props: PROPS })
-    const region = w.get('[aria-live="polite"]')
-    expect(region.text()).toBe('')
-    await w.setProps({ mensaje: 'Vuelto S/ 5.37', tonoMensaje: 'exito' })
-    expect(w.get('[aria-live="polite"]').text()).toBe('Vuelto S/ 5.37')
-    expect(w.get('[aria-live="polite"]').element).toBe(region.element)
+  describe('ronda 1: el mensaje anunciado (aria-live) no se repite en cada tecla', () => {
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => vi.useRealTimers())
+
+    const TOTAL = 14.63
+    const calcular = (pagado: string): string => {
+      if (pagado.trim() === '') return ''
+      const diferencia = Math.round((Number(pagado.replace(',', '.')) - TOTAL) * 100) / 100
+      return diferencia < 0
+        ? `Faltan S/ ${(-diferencia).toFixed(2)}`
+        : `Vuelto S/ ${diferencia.toFixed(2)}`
+    }
+    /** Una pantalla de cobro que recalcula el mensaje en el acto con cada cambio del monto. */
+    function montarEnPantalla(esperaAnuncioMs?: number) {
+      const Pantalla = defineComponent({
+        setup() {
+          const pagado = ref('')
+          return () =>
+            h(SelectorDeBilletes, {
+              ...PROPS,
+              modelValue: pagado.value,
+              mensaje: calcular(pagado.value),
+              ...(esperaAnuncioMs === undefined ? {} : { esperaAnuncioMs }),
+              'onUpdate:modelValue': (valor: string) => {
+                pagado.value = valor
+              },
+              onExacto: () => {
+                pagado.value = String(TOTAL)
+              },
+            })
+        },
+      })
+      const w = mount(Pantalla)
+      const region = () => w.get('[aria-live="polite"]')
+      return { w, region }
+    }
+
+    it('la región viva existe desde el inicio y el mensaje visible no la duplica', () => {
+      const { w, region } = montarEnPantalla()
+      expect(region().text()).toBe('')
+      expect(region().classes()).toContain('solo-lector')
+      expect(w.get('.mensaje').attributes('aria-hidden')).toBe('true')
+    })
+
+    it('al escribir, se ve enseguida pero se anuncia recién tras una pausa de 600 ms', async () => {
+      const { w, region } = montarEnPantalla()
+      const input = w.get('input')
+      await input.setValue('1')
+      await input.setValue('10')
+      // Se ve al instante; "S/" y el monto van unidos (espacio duro): nunca "S/" | "4.63".
+      expect(w.get('.mensaje').text()).toBe('Faltan S/\u00a04.63')
+      await vi.advanceTimersByTimeAsync(599)
+      expect(region().text()).toBe('')
+      await vi.advanceTimersByTimeAsync(1)
+      expect(region().text()).toBe('Faltan S/ 4.63')
+    })
+
+    it('la pausa se puede cambiar (esperaAnuncioMs)', async () => {
+      const { w, region } = montarEnPantalla(100)
+      await w.get('input').setValue('20')
+      await vi.advanceTimersByTimeAsync(100)
+      expect(region().text()).toBe('Vuelto S/ 5.37')
+    })
+
+    it('al tocar un billete o "Exacto" se anuncia en el acto', async () => {
+      const { w, region } = montarEnPantalla()
+      await boton(w, 'S/ 20').trigger('click')
+      expect(region().text()).toBe('Vuelto S/ 5.37')
+      await boton(w, 'Exacto').trigger('click')
+      expect(region().text()).toBe('Vuelto S/ 0.00')
+    })
+
+    it('un toque anula el anuncio pendiente de lo que se estaba escribiendo', async () => {
+      const { w, region } = montarEnPantalla()
+      await w.get('input').setValue('10')
+      await boton(w, 'S/ 50').trigger('click')
+      expect(region().text()).toBe('Vuelto S/ 35.37')
+      await vi.advanceTimersByTimeAsync(600)
+      expect(region().text()).toBe('Vuelto S/ 35.37')
+    })
   })
 
   it('RN-UX-04: "Faltan…" lleva ícono además del color (el texto lo dice)', async () => {
