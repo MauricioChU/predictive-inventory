@@ -180,3 +180,32 @@ describe('resumenDeCopia (RN-RE-03)', () => {
     expect(resumen.hasta).toBeNull()
   })
 })
+
+describe('leerRespaldo: casos límite', () => {
+  const base = () =>
+    crearRespaldo(DATOS_VACIOS, new Map(), '2026-10-15T20:30:00-05:00') as unknown as Record<
+      string,
+      unknown
+    >
+
+  it('versionDeFormato que no es número no es válida', () => {
+    expect(() => leerRespaldo(JSON.stringify({ ...base(), versionDeFormato: 'uno' }))).toThrow(
+      'Este archivo no es una copia válida de la app',
+    )
+  })
+
+  it('JSON que no es un objeto no es válido', () => {
+    expect(() => leerRespaldo('[1,2]')).toThrow('Este archivo no es una copia válida de la app')
+  })
+
+  it('datos sin arreglos de productos u operaciones no es válida', () => {
+    expect(() =>
+      leerRespaldo(JSON.stringify({ ...base(), datos: { productos: 1, operaciones: 2 } })),
+    ).toThrow('Este archivo no es una copia válida de la app')
+  })
+
+  it('RN-RE-05: una versión anterior se migra (identidad) y sigue validando', () => {
+    const r = leerRespaldo(JSON.stringify({ ...base(), versionDeFormato: 0 }))
+    expect(r.control.productos).toBe(0)
+  })
+})
