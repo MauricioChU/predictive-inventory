@@ -19,23 +19,25 @@ function globDeWorkbox(): GlobSync {
   return (desdeWorkbox('glob') as { globSync: GlobSync }).globSync
 }
 
-/** Lo que podría dejar un build: la app, sus chunks y las páginas de catálogo de prueba. */
+/** Lo que podría dejar un build: la app, sus chunks (también los del módulo Catálogo) y el kit. */
 const ARCHIVOS = [
   'index.html',
   'assets/index-abc12345.js',
   'assets/index-abc12345.css',
   'assets/GraficoBarras-def67890.js',
   'assets/GraficoBarras-def67890.css',
-  'assets/CatalogoBotones-0a1b2c3d.js',
-  'assets/CatalogoBotones-0a1b2c3d.css',
-  'assets/CatalogoTarjetas-4e5f6a7b.js',
+  'assets/CatalogoVista-9c8d7e6f.js',
+  'assets/CatalogoVista-9c8d7e6f.css',
+  'assets/CatalogoKitBotones-0a1b2c3d.js',
+  'assets/CatalogoKitBotones-0a1b2c3d.css',
+  'assets/CatalogoKitTarjetas-4e5f6a7b.js',
   'node_modules/algo/index.js',
 ]
 
 /**
- * RN-SIS-09 (primera carga): las páginas de catálogo de prueba (`src/shared/ui/__catalogo__/
- * Catalogo*.vue`) no van al precache del service worker; el chunk de GraficoBarras sí (la Torre
- * lo usa). Se aplica `PRECACHE` (vite.config.ts) igual que workbox-build: `glob` con `ignore`.
+ * RN-SIS-09 (primera carga): las páginas del kit de pantallas de prueba (chunks `CatalogoKit*`)
+ * no van al precache del service worker; las pantallas reales sí, también las del módulo
+ * Catálogo (p. ej. `CatalogoVista-*`) y el chunk de GraficoBarras (la Torre lo usa). Se aplica `PRECACHE` (vite.config.ts) igual que workbox-build: `glob` con `ignore`.
  */
 describe('precache del service worker', () => {
   let dist = ''
@@ -61,8 +63,10 @@ describe('precache del service worker', () => {
       .sort()
   }
 
-  it('RN-SIS-09: deja afuera las páginas de catálogo de prueba (Catalogo*) y node_modules', () => {
+  it('RN-SIS-09: deja afuera solo el kit de prueba (CatalogoKit*) y node_modules', () => {
     expect(precacheados()).toEqual([
+      'assets/CatalogoVista-9c8d7e6f.css',
+      'assets/CatalogoVista-9c8d7e6f.js',
       'assets/GraficoBarras-def67890.css',
       'assets/GraficoBarras-def67890.js',
       'assets/index-abc12345.css',

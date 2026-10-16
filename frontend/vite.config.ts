@@ -6,14 +6,15 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 /**
  * Lo que el service worker guarda para usar sin conexión (RN-UX-14 / RN-SIS-08): todo lo que
- * la app necesita, letra incluida. Afuera (RN-SIS-09, primera carga más liviana): las páginas de
- * catálogo de prueba (`src/shared/ui/__catalogo__/Catalogo*.vue`, chunks `Catalogo*`) y, como
- * por defecto en workbox, node_modules. El chunk de GraficoBarras SÍ va: la Torre lo usa.
+ * la app necesita, letra incluida. Afuera (RN-SIS-09, primera carga más liviana): las páginas
+ * del kit de pantallas de prueba (`src/shared/ui/__catalogo__/CatalogoKit*.vue`, chunks
+ * `CatalogoKit*`) y, como por defecto en workbox, node_modules. Lo demás SÍ va: las pantallas del
+ * módulo Catálogo (p. ej. `CatalogoVista-*`) y el chunk de GraficoBarras (la Torre lo usa).
  * Workbox agrega solo `sw.js` y `workbox-*.js` a lo ignorado.
  */
 export const PRECACHE = {
   globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-  globIgnores: ['**/node_modules/**/*', '**/Catalogo*'],
+  globIgnores: ['**/node_modules/**/*', '**/CatalogoKit*'],
 }
 
 // https://vite.dev/config/
