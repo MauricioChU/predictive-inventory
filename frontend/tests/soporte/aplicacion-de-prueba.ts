@@ -23,7 +23,13 @@ import {
 import { RepositorioDeConfiguracionEnMemoria } from '@/modules/tienda'
 import { crearAplicacion, type Aplicacion, type Infraestructura } from '@/app/composicion'
 import { crearPersistenciaDexie, type PersistenciaDeLaApp } from '@/app/persistencia-dexie'
-import { BusEnMemoria } from '@/shared/domain/eventos'
+import {
+  BusEnMemoria,
+  type BusDeEventos,
+  type EventoDeDominio,
+  type ManejadorDeEvento,
+  type TipoDeEvento,
+} from '@/shared/domain/eventos'
 import { sumarSegundos, type Instante } from '@/shared/domain/fecha'
 import { IdsSecuenciales } from '@/shared/domain/ids'
 import type { Reloj } from '@/shared/domain/reloj'
@@ -71,11 +77,31 @@ export class ProcesadorDeFotosDePrueba implements ProcesadorDeFotos {
   }
 }
 
+/**
+ * El bus en memoria con un interruptor: mientras está en silencio, lo publicado no llega a
+ * nadie. Solo lo usa `sinEventos`, para fabricar historia.
+ */
+class BusDePrueba implements BusDeEventos {
+  private readonly bus = new BusEnMemoria()
+  silencios = 0
+
+  async publicar(evento: EventoDeDominio): Promise<void> {
+    if (this.silencios > 0) return
+    await this.bus.publicar(evento)
+  }
+
+  suscribir<T extends TipoDeEvento>(tipo: T, manejador: ManejadorDeEvento<T>): () => void {
+    return this.bus.suscribir(tipo, manejador)
+  }
+}
+
 export interface OpcionesDeAplicacionDePrueba {
   /** "Hoy" del escenario (instante ISO; ver `instanteLocal`). */
   ahora: Instante
   /** Por defecto, memoria. Con 'dexie', una base fake-indexeddb nueva y aislada. */
   almacen?: Almacen
+  /** Por defecto, `ProcesadorDeFotosDePrueba` (no reduce nada). */
+  procesadorDeFotos?: ProcesadorDeFotos
 }
 
 /** La aplicación real (`crearAplicacion`) con dobles a la vista para que las pruebas los manejen. */
@@ -83,12 +109,19 @@ export interface AplicacionDePrueba extends Aplicacion {
   readonly almacen: Almacen
   readonly reloj: RelojDePrueba
   readonly notificador: NotificadorEnMemoria
-  readonly procesadorDeFotos: ProcesadorDeFotosDePrueba
+  readonly procesadorDeFotos: ProcesadorDeFotos
   readonly generadorDeExcel: GeneradorDeExcelEnMemoria
   readonly lectorDeExcel: LectorDeExcelEnMemoria
   readonly almacenamiento: AlmacenamientoPersistenteEnMemoria
   /** Lo que recibió la composición: para pasos que alteran datos "por fuera" (RN-OP-19). */
   readonly infraestructura: Infraestructura
+  /**
+   * Para fabricar historia con los casos de uso reales (pasos Gherkin "vendió 56 entre …"): los
+   * eventos de dominio que se publiquen mientras corre `trabajo` no llegan a nadie, así que
+   * Alertas no evalúa (no guarda avisos ni notifica), como si esa historia hubiera llegado en
+   * una copia. Antes y después espera las tareas pendientes.
+   */
+  sinEventos<T>(trabajo: () => Promise<T>): Promise<T>
   /** Espera lo pendiente y, con Dexie, cierra la base. */
   cerrar(): Promise<void>
 }
@@ -133,16 +166,17 @@ export function crearAplicacionDePrueba(
 
   const reloj = new RelojDePrueba(opciones.ahora)
   const notificador = new NotificadorEnMemoria()
-  const procesadorDeFotos = new ProcesadorDeFotosDePrueba()
+  const procesadorDeFotos = opciones.procesadorDeFotos ?? new ProcesadorDeFotosDePrueba()
   const generadorDeExcel = new GeneradorDeExcelEnMemoria()
   const lectorDeExcel = new LectorDeExcelEnMemoria()
   const almacenamiento = new AlmacenamientoPersistenteEnMemoria()
+  const bus = new BusDePrueba()
 
   const infraestructura: Infraestructura = {
     ...persistencia,
     reloj,
     ids: new IdsSecuenciales(),
-    bus: new BusEnMemoria(),
+    bus,
     notificador,
     procesadorDeFotos,
     generadorDeExcel,
@@ -161,6 +195,16 @@ export function crearAplicacionDePrueba(
     lectorDeExcel,
     almacenamiento,
     infraestructura,
+    async sinEventos(trabajo) {
+      await aplicacion.esperarTareasPendientes()
+      bus.silencios += 1
+      try {
+        return await trabajo()
+      } finally {
+        await aplicacion.esperarTareasPendientes()
+        bus.silencios -= 1
+      }
+    },
     async cerrar() {
       await aplicacion.esperarTareasPendientes()
       db?.close()
