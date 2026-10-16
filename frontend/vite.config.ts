@@ -18,6 +18,10 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png', 'logo.svg'],
       workbox: {
         navigateFallback: 'index.html',
+        // RN-UX-14 / RN-SIS-08: todo lo que la app necesita sin conexión, letra incluida.
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Ola 3, ruling 5: tocar una notificación abre su pantalla (public/sw-notificaciones.js).
+        importScripts: ['sw-notificaciones.js'],
       },
       manifest: {
         id: '/predictive-inventory/',

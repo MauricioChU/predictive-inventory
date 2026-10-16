@@ -1,5 +1,6 @@
 import { createApp } from 'vue'
 import type { ContextoAvisoDeshacer } from './aviso-deshacer'
+import type { Aplicacion } from './composicion'
 
 export interface BarraDePrueba {
   etiqueta: string
@@ -20,7 +21,13 @@ export interface GanchosDePrueba {
 declare global {
   interface Window {
     __pruebas?: GanchosDePrueba
+    /** La aplicación real (solo en desarrollo o con el navegador automatizado). */
+    __aplicacion?: Aplicacion
   }
+}
+
+function hayPruebas(): boolean {
+  return import.meta.env.DEV || navigator.webdriver
 }
 
 /**
@@ -32,7 +39,7 @@ declare global {
  * función que los retira.
  */
 export function exponerGanchosDePrueba(aviso: ContextoAvisoDeshacer): () => void {
-  if (!(import.meta.env.DEV || navigator.webdriver)) return () => {}
+  if (!hayPruebas()) return () => {}
   window.__pruebas = {
     mostrarAvisoDeshacer(mensaje = 'Venta registrada') {
       aviso.mostrar({ mensaje, alDeshacer: () => {} })
@@ -48,5 +55,18 @@ export function exponerGanchosDePrueba(aviso: ContextoAvisoDeshacer): () => void
   }
   return () => {
     delete window.__pruebas
+  }
+}
+
+/**
+ * Ola 3: las E2E preparan datos y completan operaciones (p. ej. la venta sin conexión de
+ * RN-SIS-08) por los casos de uso reales, mientras no existan las pantallas. Mismas
+ * condiciones que los ganchos de arriba; devuelve la función que la retira.
+ */
+export function exponerAplicacionParaPruebas(aplicacion: Aplicacion): () => void {
+  if (!hayPruebas()) return () => {}
+  window.__aplicacion = aplicacion
+  return () => {
+    delete window.__aplicacion
   }
 }

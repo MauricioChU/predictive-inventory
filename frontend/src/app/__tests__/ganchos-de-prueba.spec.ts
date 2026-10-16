@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { crearAnunciador } from '@/shared/ui/anunciador'
 import { crearContextoAvisoDeshacer } from '../aviso-deshacer'
-import { exponerGanchosDePrueba } from '../ganchos-de-prueba'
+import type { Aplicacion } from '../composicion'
+import { exponerAplicacionParaPruebas, exponerGanchosDePrueba } from '../ganchos-de-prueba'
 
 describe('m11: ganchos para las pruebas E2E (solo desarrollo o navegador automatizado)', () => {
   afterEach(() => {
@@ -45,5 +46,15 @@ describe('ronda 5: gancho para medir GraficoBarras en las E2E', () => {
     const grafico = document.querySelector('#contenido .grafico-barras')
     expect(grafico?.textContent).toContain('Limpiavidrios')
     retirar()
+  })
+})
+
+describe('Ola 3: la aplicación al alcance de las E2E (solo desarrollo o navegador automatizado)', () => {
+  it('expone la aplicación real en window.__aplicacion y la retira al llamar a la limpieza', () => {
+    const aplicacion = { bus: {} } as unknown as Aplicacion
+    const retirar = exponerAplicacionParaPruebas(aplicacion)
+    expect(window.__aplicacion).toBe(aplicacion)
+    retirar()
+    expect(window.__aplicacion).toBeUndefined()
   })
 })

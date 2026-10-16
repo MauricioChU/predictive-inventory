@@ -10,6 +10,10 @@ import {
   SEGUNDOS_PARA_DESHACER,
 } from './aviso-deshacer'
 import { exponerGanchosDePrueba } from './ganchos-de-prueba'
+import { useEstadoGlobal } from './estado-global'
+
+// RN-AL-06b: el número del botón Control sale del estado global (se refresca con los eventos).
+const estadoGlobal = useEstadoGlobal()
 
 const anunciador = crearAnunciador()
 provide(CLAVE_ANUNCIADOR, anunciador)
@@ -75,7 +79,7 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
           @cerrar="contextoAvisoDeshacer.cerrar"
         />
       </div>
-      <BarraNavegacion class="navegacion" />
+      <BarraNavegacion class="navegacion" :contador-control="estadoGlobal.contadorDeAtencion" />
     </div>
   </div>
 </template>
