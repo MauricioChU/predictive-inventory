@@ -168,6 +168,16 @@ describe('Inicio', () => {
     expect(await app.alertas.resumenDelDia()).toBeNull()
   })
 
+  it('RN-UX-15: al cerrar el resumen del día el foco no se pierde: va al saludo', async () => {
+    await tiendaLista()
+    const { wrapper } = await abrirInicio()
+
+    await botonCon('Cerrar').trigger('click')
+    await esperarPantalla()
+
+    expect(document.activeElement).toBe(wrapper.get('h1').element)
+  })
+
   describe('RN-UX-13: tarjeta de instalación', () => {
     function ofrecerInstalacion(resultado: 'accepted' | 'dismissed') {
       const evento = new Event('beforeinstallprompt', { cancelable: true }) as Event & {
@@ -216,6 +226,7 @@ describe('Inicio', () => {
       await esperarPantalla()
 
       expect(wrapper.text()).not.toContain('Instala la app en tu celular')
+      expect(document.activeElement).toBe(wrapper.get('h1').element)
     })
 
     it('instalada (abierta como app) no aparece', async () => {

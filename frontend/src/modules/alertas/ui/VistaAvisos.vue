@@ -22,7 +22,12 @@ const pidiendo = ref(false)
 const fallo = ref(false)
 
 onMounted(async () => {
-  estado.value = (await aplicacion.alertas.notificacionesPermitidas()) ? 'activados' : 'pregunta'
+  try {
+    estado.value = (await aplicacion.alertas.notificacionesPermitidas()) ? 'activados' : 'pregunta'
+  } catch (error) {
+    console.error('No se pudo saber si los avisos están activados:', error)
+    estado.value = 'pregunta'
+  }
 })
 
 async function siAvisame(): Promise<void> {

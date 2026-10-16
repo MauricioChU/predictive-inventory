@@ -37,7 +37,11 @@ const textoUltimaCopia = computed(() =>
 )
 
 onMounted(async () => {
-  ultimaCopia.value = (await aplicacion.tienda.consultable.estadoDelSistema()).ultimoRespaldoEn
+  try {
+    ultimaCopia.value = (await aplicacion.tienda.consultable.estadoDelSistema()).ultimoRespaldoEn
+  } catch (causa) {
+    console.error('No se pudo leer la fecha de la última copia:', causa)
+  }
 })
 
 async function guardar(modo: 'compartir' | 'descargar'): Promise<void> {

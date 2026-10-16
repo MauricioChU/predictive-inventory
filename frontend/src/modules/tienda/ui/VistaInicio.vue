@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, useId, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, useId, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import {
   ChevronRight,
@@ -29,6 +29,7 @@ const estadoGlobal = useEstadoGlobal()
 const router = useRouter()
 const instalacion = usarInstalacion()
 const idResumen = useId()
+const titulo = ref<HTMLHeadingElement>()
 
 const nombreTienda = ref('')
 const deHoy = ref<{ ganancia: Dinero; ventas: Dinero } | null>(null)
@@ -93,6 +94,16 @@ watch(
   },
 )
 
+/**
+ * RN-UX-15: el botón que se tocó desaparece con su tarjeta; el foco va al saludo (no se pierde
+ * en la página).
+ */
+async function despuesDeCerrar(cerrar: () => unknown): Promise<void> {
+  await cerrar()
+  await nextTick()
+  titulo.value?.focus({ preventScroll: true })
+}
+
 function ir(nombre: PantallaDeOtraRama): void {
   void router.push(haciaPantalla(router, nombre))
 }
@@ -101,7 +112,7 @@ function ir(nombre: PantallaDeOtraRama): void {
 <template>
   <div class="vista-inicio">
     <header class="saludo">
-      <h1>{{ saludo }} <span aria-hidden="true">👋</span></h1>
+      <h1 ref="titulo" tabindex="-1">{{ saludo }} <span aria-hidden="true">👋</span></h1>
       <RouterLink :to="{ name: 'ajustes' }" class="enlace-ajustes">
         <Settings aria-hidden="true" class="icono" />
         <span>Ajustes</span>
@@ -127,7 +138,11 @@ function ir(nombre: PantallaDeOtraRama): void {
           <ul>
             <li v-for="linea in estadoGlobal.resumenDelDia.lineas" :key="linea">{{ linea }}</li>
           </ul>
-          <Boton texto="Cerrar" :icono="X" @click="estadoGlobal.cerrarResumenDelDia()" />
+          <Boton
+            texto="Cerrar"
+            :icono="X"
+            @click="despuesDeCerrar(estadoGlobal.cerrarResumenDelDia)"
+          />
         </section>
 
         <TarjetaDeCifra
@@ -199,7 +214,7 @@ function ir(nombre: PantallaDeOtraRama): void {
             texto-accion="Instalar"
             texto-cerrar="Ahora no"
             @accion="instalacion.instalar()"
-            @cerrar="instalacion.cerrar()"
+            @cerrar="despuesDeCerrar(instalacion.cerrar)"
           />
           <AvisoEnPagina
             v-else
@@ -207,7 +222,7 @@ function ir(nombre: PantallaDeOtraRama): void {
             titulo="Instala la app en tu celular"
             texto="En Chrome, toca el menú ⋮ (arriba a la derecha) y elige «Agregar a la pantalla principal» o «Instalar app»."
             texto-cerrar="Ahora no"
-            @cerrar="instalacion.cerrar()"
+            @cerrar="despuesDeCerrar(instalacion.cerrar)"
           />
         </template>
       </div>
@@ -231,6 +246,7 @@ function ir(nombre: PantallaDeOtraRama): void {
 }
 h1 {
   margin: 0;
+  outline: none;
   font-size: 1.5rem;
   line-height: 1.2;
 }

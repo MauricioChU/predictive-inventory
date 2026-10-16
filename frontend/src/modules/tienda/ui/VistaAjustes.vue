@@ -17,7 +17,7 @@ import { useAplicacion } from '@/app/proveer-aplicacion'
 import type { ConfiguracionDeNegocio, TamanoDeLetra } from '@/shared/contratos/configuracion'
 import { esErrorDeDominio } from '@/shared/domain/errores'
 import { diaDe } from '@/shared/domain/fecha'
-import { formatearDia } from '@/shared/domain/formato'
+import { formatearDia, plural } from '@/shared/domain/formato'
 import { useAnunciador } from '@/shared/ui/anunciador'
 import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import Boton from '@/shared/ui/componentes/Boton.vue'
@@ -56,7 +56,9 @@ const error = ref<string | null>(null)
 
 const resumenDeLaTienda = computed(() => {
   const c = configuracion.value
-  return c ? `${c.nombreTienda} · compras cada ${c.diasEntreCompras} días` : undefined
+  if (!c) return undefined
+  const dias = `${c.diasEntreCompras} ${plural(c.diasEntreCompras, 'día', 'días')}`
+  return `${c.nombreTienda} · compras cada ${dias}`
 })
 const textoUltimaCopia = computed(() =>
   ultimaCopia.value === null
@@ -69,13 +71,18 @@ async function leerAvisos(): Promise<void> {
 }
 
 onMounted(async () => {
-  const [config, sistema] = await Promise.all([
-    aplicacion.tienda.obtenerConfiguracion(),
-    aplicacion.tienda.consultable.estadoDelSistema(),
-    leerAvisos(),
-  ])
-  configuracion.value = config
-  ultimaCopia.value = sistema.ultimoRespaldoEn
+  try {
+    const [config, sistema] = await Promise.all([
+      aplicacion.tienda.obtenerConfiguracion(),
+      aplicacion.tienda.consultable.estadoDelSistema(),
+      leerAvisos(),
+    ])
+    configuracion.value = config
+    ultimaCopia.value = sistema.ultimoRespaldoEn
+  } catch (causa) {
+    console.error('No se pudo leer la configuración en Ajustes:', causa)
+    error.value = 'No pudimos leer tus ajustes'
+  }
 })
 
 /** Corre una acción de Ajustes: una a la vez, y su error se muestra con su mensaje. */

@@ -74,6 +74,15 @@ describe('Ajustes', () => {
     expect(texto).toContain('Todavía no guardas una copia de tus datos')
   })
 
+  it('si compra todos los días, lo dice en singular', async () => {
+    await app.tienda.actualizarConfiguracion({ diasEntreCompras: 1 })
+    pantalla = await montarPantalla(app, '/ajustes')
+
+    const texto = pantalla.wrapper.text().replaceAll(' ', ' ')
+    expect(texto).toContain('compras cada 1 día')
+    expect(texto).not.toContain('cada 1 días')
+  })
+
   it('RN-UX-01: el tamaño de letra cambia toda la app al elegirlo y queda guardado', async () => {
     pantalla = await montarPantalla(app, '/ajustes')
 

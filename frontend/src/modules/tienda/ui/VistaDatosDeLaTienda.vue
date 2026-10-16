@@ -36,12 +36,17 @@ const guardado = ref(false)
 const fallo = ref<string | null>(null)
 
 onMounted(async () => {
-  const configuracion = await aplicacion.tienda.obtenerConfiguracion()
-  valores.nombreTienda = configuracion.nombreTienda
-  valores.diasEntreCompras = String(configuracion.diasEntreCompras)
-  valores.diasAnticipacion = String(configuracion.diasAnticipacion)
-  valores.diasMaximosDeCompra = String(configuracion.diasMaximosDeCompra)
-  leido.value = true
+  try {
+    const configuracion = await aplicacion.tienda.obtenerConfiguracion()
+    valores.nombreTienda = configuracion.nombreTienda
+    valores.diasEntreCompras = String(configuracion.diasEntreCompras)
+    valores.diasAnticipacion = String(configuracion.diasAnticipacion)
+    valores.diasMaximosDeCompra = String(configuracion.diasMaximosDeCompra)
+    leido.value = true
+  } catch (causa) {
+    console.error('No se pudieron leer los datos de la tienda:', causa)
+    fallo.value = 'No pudimos leer los datos de tu tienda'
+  }
 })
 
 /** "10" → 10; vacío o con letras → NaN (que la validación rechaza con su mensaje). */
@@ -100,6 +105,12 @@ const CAMPOS_DE_DIAS: readonly { campo: CampoDeDias; etiqueta: string }[] = [
 
   <div v-else class="vista-datos-de-la-tienda">
     <EncabezadoPagina titulo="Datos de la tienda" volver />
+
+    <MensajeDeError
+      v-if="!leido && fallo"
+      :mensaje="fallo"
+      ayuda="Vuelve a Ajustes y entra de nuevo en un momento."
+    />
 
     <form v-if="leido" class="formulario" novalidate @submit.prevent="guardar">
       <CampoTexto

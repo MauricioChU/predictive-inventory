@@ -57,9 +57,12 @@ const guardando = ref(false)
 const errorAlGuardar = ref<string>()
 
 // Si se abre directo en un paso (p. ej. tras recargar), el nombre guardado no se pierde.
-void aplicacion.tienda.obtenerConfiguracion().then((configuracion) => {
-  if (nombre.value === '') nombre.value = configuracion.nombreTienda
-})
+aplicacion.tienda
+  .obtenerConfiguracion()
+  .then((configuracion) => {
+    if (nombre.value === '') nombre.value = configuracion.nombreTienda
+  })
+  .catch((error: unknown) => console.error('No se pudo leer el nombre de la tienda:', error))
 
 function irA(destino: Paso, como: 'push' | 'replace' = 'push'): void {
   const ubicacion = {
