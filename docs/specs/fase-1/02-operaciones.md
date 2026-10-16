@@ -132,4 +132,4 @@ Si pagan con S/ 20.00, el vuelto es S/ 5.37.
 | Evento | Datos | Lo escuchan |
 |---|---|---|
 | `OperacionRegistrada` | id, tipo, productos afectados | Alertas, Análisis |
-| `OperacionAnulada` | id original, id de la anulación | Alertas, Análisis |
+| `OperacionAnulada` | id original, id de la anulación, productos afectados | Alertas, Análisis |
