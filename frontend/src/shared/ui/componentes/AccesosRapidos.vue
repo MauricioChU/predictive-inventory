@@ -70,6 +70,8 @@ const visibles = computed(() => props.productos.slice(0, MAXIMO_DE_ACCESOS_RAPID
   min-inline-size: 0;
 }
 .acceso {
+  /* Cada botón es contenedor: la letra del nombre se ajusta a SU ancho (ver .nombre). */
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -101,7 +103,14 @@ const visibles = computed(() => props.productos.slice(0, MAXIMO_DE_ACCESOS_RAPID
   max-inline-size: 100%;
 }
 .nombre {
-  font-size: 0.9rem;
+  /* Una palabra de 13 letras ("Limpiavidrios", "Desinfectante") mide ~6.4 veces la letra: en
+     un botón angosto (2 columnas a 320 px con letra Muy grande) la letra baja lo justo para
+     que entre entera (15cqi = 15 % del ancho del botón). Nunca pasa de 0.9rem. */
+  font-size: min(0.9rem, 15cqi);
+  /* Un flex item no se encoge por debajo de su palabra más larga: sin esto, una palabra que no
+     entra sale por los costados del botón en vez de partirse como último recurso. */
+  min-inline-size: 0;
+  max-inline-size: 100%;
   font-weight: 700;
   line-height: 1.2;
   text-align: center;

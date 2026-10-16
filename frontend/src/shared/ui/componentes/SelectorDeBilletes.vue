@@ -75,6 +75,7 @@ const iconoDelMensaje = computed(() => ICONOS[props.tonoMensaje])
 .selector-de-billetes {
   container-type: inline-size;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--espacio-4);
 }
 .total {
@@ -96,7 +97,12 @@ const iconoDelMensaje = computed(() => ICONOS[props.tonoMensaje])
 }
 .pago {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--espacio-3);
+}
+.monto {
+  /* En PC no se estira a todo el ancho de la columna. */
+  max-inline-size: 22rem;
 }
 .pregunta {
   margin: 0;

@@ -54,11 +54,11 @@ const descripcion = computed(() => {
         decorativa
       />
       <span :id="ids.nombre" class="nombre">{{ nombre }}</span>
-      <span class="datos">
-        <span class="cifras">
-          <span :id="ids.stock" class="stock">{{ textoStock }}</span>
-          <span v-if="textoPrecio" :id="ids.precio" class="precio">{{ textoPrecio }}</span>
-        </span>
+      <span class="cifras">
+        <span :id="ids.stock" class="stock">{{ textoStock }}</span>
+        <span v-if="textoPrecio" :id="ids.precio" class="precio">{{ textoPrecio }}</span>
+      </span>
+      <span v-if="estado || textoSecundario" class="extras">
         <span v-if="estado" :id="ids.estado" class="estado"
           ><InsigniaEstado :estado="estado"
         /></span>
@@ -104,7 +104,8 @@ const descripcion = computed(() => {
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-areas:
     'foto nombre'
-    'foto datos';
+    'foto cifras'
+    'foto extras';
   align-items: center;
   column-gap: var(--espacio-3);
   row-gap: var(--espacio-1);
@@ -130,19 +131,21 @@ const descripcion = computed(() => {
   word-break: normal;
   hyphens: none;
 }
-.datos {
-  grid-area: datos;
+.cifras {
+  grid-area: cifras;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--espacio-3);
+  min-inline-size: 0;
+}
+.extras {
+  grid-area: extras;
   align-self: start;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--espacio-1) var(--espacio-3);
   min-inline-size: 0;
-}
-.cifras {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 var(--espacio-3);
 }
 .stock,
 .precio {
@@ -166,16 +169,21 @@ const descripcion = computed(() => {
     --foto-lado: 64px;
   }
 }
-/* Muy angosta (320 px con letra Muy grande): el nombre pasa a su propia línea, a todo el
-   ancho, y la foto queda al lado de los datos. Así una palabra larga ("Limpiavidrios") entra
-   entera en vez de partirse. */
-@container (max-width: 11rem) {
+/* Muy angosta (320–360 px con letra Muy grande, 320 px con Grande): el nombre y el estado
+   pasan a su propia línea, a todo el ancho, y la foto queda al lado del stock y el precio.
+   Así una palabra larga ("Limpiavidrios") entra entera en vez de partirse, y "Queda poco" no
+   se parte en dos. */
+@container (max-width: 13rem) {
   .contenido {
     --foto-lado: 56px;
     grid-template-areas:
       'nombre nombre'
-      'foto datos';
+      'foto cifras'
+      'extras extras';
     row-gap: var(--espacio-2);
+  }
+  .cifras {
+    flex-direction: column;
   }
 }
 </style>

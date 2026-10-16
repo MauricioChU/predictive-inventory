@@ -40,7 +40,9 @@ describe('FilaDeCarrito', () => {
     const campo = w.getComponent(CampoNumero)
     expect(campo.props('decimales')).toBe(false)
     expect(campo.props('minimo')).toBe(1)
-    expect(campo.props('sufijo')).toBe('unid.')
+    // La unidad va en la etiqueta (no como sufijo: le quitaba ancho al número en 320 px).
+    expect(campo.props('etiqueta')).toBe('Cantidad (unid.)')
+    expect(campo.props('sufijo')).toBeUndefined()
     expect(w.get('input').attributes('inputmode')).toBe('numeric')
   })
 
@@ -48,12 +50,12 @@ describe('FilaDeCarrito', () => {
     const w = mount(FilaDeCarrito, { props: { ...LINEA, unidad: 'KILO', cantidad: '1' } })
     const campo = w.getComponent(CampoNumero)
     expect(campo.props('decimales')).toBe(true)
-    expect(campo.props('sufijo')).toBe('kg')
+    expect(campo.props('etiqueta')).toBe('Cantidad (kg)')
     expect(w.get('input').attributes('inputmode')).toBe('decimal')
     // 1 kg − 1 = 0 kg: el botón "−" queda deshabilitado.
     expect(w.get('[aria-label="Quitar uno"]').attributes('disabled')).toBeDefined()
     const litros = mount(FilaDeCarrito, { props: { ...LINEA, unidad: 'LITRO' } })
-    expect(litros.getComponent(CampoNumero).props('sufijo')).toBe('L')
+    expect(litros.getComponent(CampoNumero).props('etiqueta')).toBe('Cantidad (L)')
   })
 
   it('cambiar la cantidad emite update:cantidad (v-model:cantidad)', async () => {

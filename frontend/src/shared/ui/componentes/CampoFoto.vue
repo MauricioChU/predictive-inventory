@@ -127,6 +127,7 @@ watch(
 <style scoped>
 .campo-foto {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--espacio-3);
   min-inline-size: 0;
   margin: 0;

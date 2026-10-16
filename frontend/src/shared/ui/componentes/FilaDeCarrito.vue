@@ -113,13 +113,14 @@ function guardar() {
     </div>
 
     <div class="cantidad-e-importe">
+      <!-- La unidad va en la etiqueta ("Cantidad (kg)") y no como sufijo junto al número: a
+           320 px con letra Muy grande el sufijo dejaba el campo en ~34 px de ancho. -->
       <CampoNumero
         class="cantidad"
-        etiqueta="Cantidad"
+        :etiqueta="`Cantidad (${SIMBOLO_DE_UNIDAD[unidad]})`"
         :model-value="cantidad"
         :decimales="!porUnidades"
         :minimo="minimo"
-        :sufijo="SIMBOLO_DE_UNIDAD[unidad]"
         @update:model-value="emit('update:cantidad', $event)"
       />
       <p class="importe">
@@ -178,6 +179,9 @@ function guardar() {
 .fila-de-carrito {
   container-type: inline-size;
   display: grid;
+  /* minmax(0, 1fr), no la columna implícita "auto": esa crece hasta el ancho mínimo de su
+     contenido y la fila se salía 200 px de la pantalla en 320 px (como S1 en la navegación). */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--espacio-3);
   padding: var(--espacio-3);
   border: 1px solid var(--color-borde);
@@ -233,6 +237,8 @@ function guardar() {
 .cantidad {
   flex: 1 1 12rem;
   min-inline-size: 0;
+  /* En PC no se estira a todo el ancho: un número corto en un campo de 900 px se pierde. */
+  max-inline-size: 22rem;
 }
 .importe {
   display: flex;
@@ -257,9 +263,12 @@ function guardar() {
 }
 .accion {
   flex: 1 1 auto;
+  /* En PC un "Quitar" solo no se vuelve una franja roja de 900 px. */
+  max-inline-size: 20rem;
 }
 .edicion-precio {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--espacio-3);
   padding: var(--espacio-3);
   border-radius: var(--radio-chico);
