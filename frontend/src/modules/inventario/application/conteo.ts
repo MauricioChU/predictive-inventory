@@ -62,18 +62,18 @@ async function guardar(ctx: ContextoDeInventario, conteo: ConteoGuiado): Promise
   await ctx.uow.ejecutar(() => ctx.conteo.guardar(conteo.aRegistro()))
 }
 
-async function enCurso(
+/**
+ * El conteo guardado, leído DENTRO de la transacción que lo va a cambiar: así dos toques
+ * seguidos (doble "Siguiente" o un "Saltar" rápido) se aplican uno después del otro y ninguno
+ * pisa al otro. Un conteo ya terminado se devuelve tal cual: un toque de más no falla.
+ */
+async function cargarEnCurso(
   ctx: ContextoDeInventario,
-): Promise<{ conteo: ConteoGuiado; productos: Productos }> {
+  productos: Productos,
+): Promise<ConteoGuiado> {
   const registro = await ctx.conteo.obtener()
-  if (!registro || registro.terminadoEn !== null) {
-    throw new Error('No hay un conteo guiado en curso')
-  }
-  const productos = await productosPorId(ctx)
-  return {
-    conteo: seguirConContables(ctx, ConteoGuiado.desdeRegistro(registro), productos),
-    productos,
-  }
+  if (!registro) throw new Error('No hay un conteo guiado en curso')
+  return seguirConContables(ctx, ConteoGuiado.desdeRegistro(registro), productos)
 }
 
 /** RN-OP-21 ("Contar todo"): empieza un conteo nuevo con los productos activos. */
@@ -96,21 +96,22 @@ export async function conteoActual(ctx: ContextoDeInventario): Promise<EstadoDel
 
 /**
  * RN-OP-21: "¿Cuántos hay?" del producto actual. Se registra AL MOMENTO como en RN-OP-16, en
- * la misma transacción que el avance del conteo, con su diferencia y su valor al costo.
+ * la misma transacción que lee y avanza el conteo, con su diferencia y su valor al costo.
  */
 export async function responderConteo(
   ctx: ContextoDeInventario,
   contado: string,
 ): Promise<EstadoDelConteo> {
-  const { conteo, productos } = await enCurso(ctx)
-  const id = conteo.productoActual
-  const producto = id === null ? undefined : productos.get(id)
-  if (!producto) {
-    await guardar(ctx, conteo)
-    return estadoDe(ctx, conteo, productos)
-  }
-  const cantidad = leerContado(contado, producto.unidad)
+  const productos = await productosPorId(ctx)
   const siguiente = await ctx.libro.enTransaccion(async (escritura) => {
+    const conteo = await cargarEnCurso(ctx, productos)
+    const id = conteo.productoActual
+    const producto = id === null ? undefined : productos.get(id)
+    if (!producto) {
+      await ctx.conteo.guardar(conteo.aRegistro())
+      return conteo
+    }
+    const cantidad = leerContado(contado, producto.unidad)
     const respuesta = await contarEn(ctx, escritura, producto, cantidad)
     const diferencia = respuesta.tipo === 'ajustado' ? respuesta.diferencia : Cantidad.cero()
     const valor = producto.precioCompra.multiplicarPor(diferencia)
@@ -127,10 +128,14 @@ export async function responderConteo(
 
 /** RN-OP-21: "Saltar": queda en "Te faltó contar". */
 export async function saltarEnConteo(ctx: ContextoDeInventario): Promise<EstadoDelConteo> {
-  const { conteo, productos } = await enCurso(ctx)
-  const siguiente = conteo.terminado
-    ? conteo
-    : seguirConContables(ctx, conteo.saltar(ctx.reloj.ahora()), productos)
-  await guardar(ctx, siguiente)
+  const productos = await productosPorId(ctx)
+  const siguiente = await ctx.uow.ejecutar(async () => {
+    const conteo = await cargarEnCurso(ctx, productos)
+    const avanzado = conteo.terminado
+      ? conteo
+      : seguirConContables(ctx, conteo.saltar(ctx.reloj.ahora()), productos)
+    await ctx.conteo.guardar(avanzado.aRegistro())
+    return avanzado
+  })
   return estadoDe(ctx, siguiente, productos)
 }

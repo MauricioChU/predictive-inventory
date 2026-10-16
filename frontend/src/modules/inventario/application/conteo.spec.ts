@@ -63,6 +63,41 @@ describe('conteo guiado', () => {
     expect(await modulo.conteoActual()).toEqual(despues)
   })
 
+  it('RN-OP-21: un doble toque en la última respuesta no pierde la diferencia', async () => {
+    const { modulo, tipos } = await escenario()
+    await modulo.iniciarConteoGuiado()
+    await modulo.responderConteo('10')
+    await modulo.saltarEnConteo()
+    const [primera, segunda] = await Promise.all([
+      modulo.responderConteo('8'),
+      modulo.responderConteo('8'),
+    ])
+    const esperado = [
+      'Contaste 2 productos. 1 con diferencia: -S/ 4.80',
+      'Te faltó contar 1: Detergente a granel',
+    ]
+    expect(primera.resumen).toEqual(esperado)
+    expect(segunda.resumen).toEqual(esperado)
+    expect(await tipos('lejia')).toEqual(['STOCK_INICIAL', 'AJUSTE'])
+  })
+
+  it('RN-OP-21: dos toques rápidos en "Saltar" saltan dos productos', async () => {
+    const { modulo } = await escenario()
+    await modulo.iniciarConteoGuiado()
+    await Promise.all([modulo.saltarEnConteo(), modulo.saltarEnConteo()])
+    const actual = await modulo.conteoActual()
+    expect(actual?.producto?.nombre).toBe('Lejía 1 L')
+    expect(actual?.progreso).toBe('Llevas 2 de 3')
+  })
+
+  it('RN-OP-21: responder y saltar a la vez se aplican uno después del otro', async () => {
+    const { modulo, tipos } = await escenario()
+    await modulo.iniciarConteoGuiado()
+    await Promise.all([modulo.responderConteo('9'), modulo.saltarEnConteo()])
+    expect(await tipos('carbon')).toEqual(['STOCK_INICIAL', 'AJUSTE'])
+    expect((await modulo.conteoActual())?.producto?.nombre).toBe('Lejía 1 L')
+  })
+
   it('RN-OP-21: cada respuesta se registra al momento', async () => {
     const { modulo, stock, tipos } = await escenario()
     await modulo.iniciarConteoGuiado()
