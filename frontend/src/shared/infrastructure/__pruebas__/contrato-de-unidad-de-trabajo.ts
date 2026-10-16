@@ -6,7 +6,8 @@ import type { UnidadDeTrabajo } from '../../application/unidad-de-trabajo'
  * (dentro de la transacción en curso, si hay una) y `leer` devuelve las marcas guardadas.
  */
 export interface EntornoDeUnidadDeTrabajo {
-  uow: UnidadDeTrabajo
+  /** Ola 3 (composición): las dos implementaciones dejan esperar las acciones sueltas. */
+  uow: UnidadDeTrabajo & { esperarAcciones(): Promise<void> }
   escribir(marca: string): Promise<void>
   /** Las marcas guardadas, ordenadas. */
   leer(): Promise<string[]>
@@ -196,6 +197,28 @@ export function probarUnidadDeTrabajo(crear: () => EntornoDeUnidadDeTrabajo): vo
     })
     await esperar(0)
     expect(error).toHaveBeenCalledTimes(2)
+  })
+
+  it('ADR-0002: esperarAcciones espera las acciones asíncronas que corrieron fuera de una transacción', async () => {
+    const { uow } = crear()
+    const orden: string[] = []
+    uow.alConfirmar(async () => {
+      await esperar(10)
+      orden.push('primera')
+      // Una acción suelta que registra otra: también se espera (bucle hasta que no queden).
+      uow.alConfirmar(async () => {
+        await esperar(5)
+        orden.push('encadenada')
+      })
+    })
+    expect(orden).toEqual([])
+    await uow.esperarAcciones()
+    expect(orden).toEqual(['primera', 'encadenada'])
+  })
+
+  it('ADR-0002: esperarAcciones resuelve enseguida si no hay acciones pendientes', async () => {
+    const { uow } = crear()
+    await expect(uow.esperarAcciones()).resolves.toBeUndefined()
   })
 
   it('ADR-0002: un ejecutar() dentro de una acción es una transacción nueva e independiente', async () => {

@@ -6,6 +6,7 @@ import {
   type Letra,
 } from './utilidades/calidad'
 import { caja, mostrarAvisoDeshacer } from './utilidades/escenarios'
+import { abrir } from './utilidades/navegacion'
 
 type VentanaConGanchos = Window & {
   __pruebas?: { mostrarCatalogo: (kit: 'productos') => Promise<void> }
@@ -31,7 +32,7 @@ const ACCESOS_POR_ANCHO: Record<number, { columnas: number; enFilas: boolean; al
 async function abrirCatalogo(page: Page, ancho: number, letra: Letra = 'MUY_GRANDE') {
   await usarLetra(page, letra)
   await page.setViewportSize({ width: ancho, height: ALTO })
-  await page.goto('./productos')
+  await abrir(page, './productos')
   await page.evaluate(async () => {
     const ganchos = (window as VentanaConGanchos).__pruebas
     if (!ganchos) throw new Error('La app no expuso window.__pruebas')

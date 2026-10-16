@@ -151,6 +151,15 @@ describe('leerRespaldo: fotos', () => {
 })
 
 describe('leerRespaldo: invariantes del libro', () => {
+  // Ola 3 (integración): la app guarda la configuración con el nombre vacío de
+  // CONFIGURACION_INICIAL si se cambia algo (p. ej. las notificaciones) antes de la primera vez.
+  // Una copia de ese estado la generó la propia app: tiene que poder restaurarse.
+  it('RN-RE-03: acepta la copia de una tienda que todavía no tiene nombre (configuración inicial)', () => {
+    const r = clon()
+    r.datos.configuracion.nombreTienda = ''
+    expect(leerRespaldo(JSON.stringify(r)).datos.configuracion?.nombreTienda).toBe('')
+  })
+
   it('el respaldo de referencia (con venta y anulación) es válido', () => {
     expect(() => leerRespaldo(JSON.stringify(clon()))).not.toThrow()
   })
@@ -199,7 +208,6 @@ describe('leerRespaldo: invariantes del libro', () => {
     ['precio de compra negativo', (r) => (r.datos.productos[0].precioCompra = -1)],
     ['precio de venta 0', (r) => (r.datos.productos[0].precioVenta = 0)],
     ['stock mínimo negativo', (r) => (r.datos.productos[0].stockMinimo = -1)],
-    ['nombre de tienda vacío', (r) => (r.datos.configuracion.nombreTienda = '')],
     [
       'nombre de tienda de más de 40 letras',
       (r) => (r.datos.configuracion.nombreTienda = 'a'.repeat(41)),
