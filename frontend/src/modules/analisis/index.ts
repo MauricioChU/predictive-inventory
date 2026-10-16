@@ -30,3 +30,7 @@ export {
   RepositorioDeListaDeComprasEnMemoria,
   RepositorioDeResumenesEnMemoria,
 } from './infrastructure/memoria/repositorios'
+export {
+  RepositorioDeListaDeComprasDexie,
+  RepositorioDeResumenesDexie,
+} from './infrastructure/dexie/repositorios'

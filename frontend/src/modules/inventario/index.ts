@@ -36,3 +36,8 @@ export {
   RepositorioDeExistenciasEnMemoria,
   RepositorioDeOperacionesEnMemoria,
 } from './infrastructure/memoria/repositorios'
+export {
+  RepositorioDeConteoDexie,
+  RepositorioDeExistenciasDexie,
+  RepositorioDeOperacionesDexie,
+} from './infrastructure/dexie/repositorios'

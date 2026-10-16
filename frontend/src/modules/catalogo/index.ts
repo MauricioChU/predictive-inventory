@@ -17,4 +17,9 @@ export {
   RepositorioDeFotosEnMemoria,
   RepositorioDeProductosEnMemoria,
 } from './infrastructure/memoria/repositorios'
+export {
+  RepositorioDeCategoriasDexie,
+  RepositorioDeFotosDexie,
+  RepositorioDeProductosDexie,
+} from './infrastructure/dexie/repositorios'
 export { ProcesadorDeFotosCanvas } from './infrastructure/navegador/procesador-de-fotos-canvas'

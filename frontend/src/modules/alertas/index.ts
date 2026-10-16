@@ -16,6 +16,7 @@ export {
   NotificadorEnMemoria,
   RepositorioDeAvisosEnMemoria,
 } from './infrastructure/memoria/repositorios'
+export { RepositorioDeAvisosDexie } from './infrastructure/dexie/repositorios'
 export {
   NotificadorDelSistema,
   soportaNotificaciones,

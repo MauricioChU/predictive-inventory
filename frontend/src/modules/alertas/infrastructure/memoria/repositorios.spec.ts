@@ -1,38 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { AlmacenEnMemoria } from '@/shared/infrastructure/memoria/almacen-en-memoria'
+import { probarRepositorioDeAvisos } from '../__pruebas__/contrato-de-repositorios'
 import { NotificadorEnMemoria, RepositorioDeAvisosEnMemoria } from './repositorios'
 
 describe('RepositorioDeAvisosEnMemoria', () => {
-  it('no tiene avisos al principio', async () => {
-    const repo = new RepositorioDeAvisosEnMemoria(new AlmacenEnMemoria())
-    expect(await repo.todos()).toEqual([])
-  })
-
-  it('guarda y devuelve un registro', async () => {
-    const repo = new RepositorioDeAvisosEnMemoria(new AlmacenEnMemoria())
-    await repo.guardar({ productoId: 'p1', ultimoEstadoAvisado: 'POR_ACABARSE' })
-    expect(await repo.todos()).toEqual([{ productoId: 'p1', ultimoEstadoAvisado: 'POR_ACABARSE' }])
-  })
-
-  it('guardar de nuevo el mismo producto reemplaza el registro', async () => {
-    const repo = new RepositorioDeAvisosEnMemoria(new AlmacenEnMemoria())
-    await repo.guardar({ productoId: 'p1', ultimoEstadoAvisado: 'POR_ACABARSE' })
-    await repo.guardar({ productoId: 'p1', ultimoEstadoAvisado: 'AGOTADO' })
-    expect(await repo.todos()).toEqual([{ productoId: 'p1', ultimoEstadoAvisado: 'AGOTADO' }])
-  })
-
-  it('RN-AL-01: eliminar quita el registro del producto archivado', async () => {
-    const repo = new RepositorioDeAvisosEnMemoria(new AlmacenEnMemoria())
-    await repo.guardar({ productoId: 'p1', ultimoEstadoAvisado: 'AGOTADO' })
-    await repo.guardar({ productoId: 'p2', ultimoEstadoAvisado: 'NORMAL' })
-    await repo.eliminar('p1')
-    expect(await repo.todos()).toEqual([{ productoId: 'p2', ultimoEstadoAvisado: 'NORMAL' }])
-  })
-
-  it('eliminar un producto sin registro no falla', async () => {
-    const repo = new RepositorioDeAvisosEnMemoria(new AlmacenEnMemoria())
-    await expect(repo.eliminar('inexistente')).resolves.toBeUndefined()
-  })
+  probarRepositorioDeAvisos(() => new RepositorioDeAvisosEnMemoria(new AlmacenEnMemoria()))
 })
 
 describe('NotificadorEnMemoria', () => {
