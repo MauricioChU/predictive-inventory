@@ -11,6 +11,10 @@ export interface FabricasDeRepositoriosDeAnalisis {
   listaDeCompras: () => RepositorioDeListaDeCompras
 }
 
+/**
+ * Una fila con movimiento: `lineasVendidas` ventas de 1 unidad o, si es 0, un ingreso de
+ * 1 unidad (así ninguna fila de estos casos es una "sin movimiento").
+ */
 export function fila(productoId: string, dia: string, lineasVendidas = 0): ResumenDiarioRegistro {
   return {
     clave: `${productoId}|${dia}`,
@@ -22,8 +26,13 @@ export function fila(productoId: string, dia: string, lineasVendidas = 0): Resum
     costoVendido: lineasVendidas * 240,
     costoMermas: 0,
     valorAjustes: 0,
-    cambioNeto: -lineasVendidas * 1000,
+    cambioNeto: lineasVendidas > 0 ? -lineasVendidas * 1000 : 1000,
   }
+}
+
+/** Lo que queda de un día cuya única venta se anuló ese mismo día: todo en cero. */
+export function filaSinMovimiento(productoId: string, dia: string): ResumenDiarioRegistro {
+  return { ...fila(productoId, dia), cambioNeto: 0 }
 }
 
 export function probarRepositorioDeResumenes(crear: () => RepositorioDeResumenes): void {

@@ -12,6 +12,24 @@ function enOrdenDeDia(a: ResumenDiarioRegistro, b: ResumenDiarioRegistro): numbe
 }
 
 /**
+ * Una fila sin ningún movimiento (todas las métricas y el cambio neto en cero), como la que
+ * queda de un día cuya única venta se anuló ese mismo día: no cuenta como primer día.
+ * Misma regla que `esFilaSinMovimiento` (analisis/domain/resumen-diario.ts, rama
+ * feat/eventos-diferidos); al integrar, este predicado se reemplaza por ese.
+ */
+function esFilaSinMovimiento(r: ResumenDiarioRegistro): boolean {
+  return (
+    r.lineasVendidas === 0 &&
+    r.cantidadVendida === 0 &&
+    r.ventas === 0 &&
+    r.costoVendido === 0 &&
+    r.costoMermas === 0 &&
+    r.valorAjustes === 0 &&
+    r.cambioNeto === 0
+  )
+}
+
+/**
  * Proyección `ResumenDiario` sobre la tabla `resumenes`: `entre` usa el índice `dia`; las
  * consultas de un producto, el compuesto `[productoId+dia]` (sus filas en orden de día).
  */
@@ -49,11 +67,18 @@ export class RepositorioDeResumenesDexie implements RepositorioDeResumenes {
   }
 
   async primerDiaDe(productoId: string): Promise<Dia | null> {
-    return (await this.delProducto(productoId).first())?.dia ?? null
+    const fila = await this.delProducto(productoId)
+      .filter((r) => !esFilaSinMovimiento(r))
+      .first()
+    return fila?.dia ?? null
   }
 
   async primerDiaDeLaTienda(): Promise<Dia | null> {
-    return (await this.db.resumenes.orderBy('dia').first())?.dia ?? null
+    const fila = await this.db.resumenes
+      .orderBy('dia')
+      .filter((r) => !esFilaSinMovimiento(r))
+      .first()
+    return fila?.dia ?? null
   }
 
   async ultimoDiaConVentaDe(productoId: string): Promise<Dia | null> {
