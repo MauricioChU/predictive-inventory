@@ -27,3 +27,8 @@ export {
 } from './infrastructure/navegador/excel'
 export { AlmacenamientoPersistenteDelNavegador } from './infrastructure/navegador/almacenamiento'
 export { base64ABlob, blobABase64 } from './infrastructure/navegador/imagenes'
+
+// Ola 4, plan 14: pantallas de copia e importación, cargadas al navegar.
+export const VistaGuardarCopia = () => import('./ui/VistaGuardarCopia.vue')
+export const VistaRestaurarCopia = () => import('./ui/VistaRestaurarCopia.vue')
+export const VistaImportarProductos = () => import('./ui/VistaImportarProductos.vue')
