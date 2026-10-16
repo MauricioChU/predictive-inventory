@@ -6,7 +6,7 @@ import {
 } from './utilidades/calidad'
 
 type VentanaConGanchos = Window & {
-  __pruebas?: { mostrarCatalogo: (nombre: string) => Promise<void> }
+  __pruebas?: { mostrarCatalogo: (kit: string) => Promise<void> }
 }
 
 const ALTO = 800
@@ -30,21 +30,24 @@ async function abrirCatalogo(page: Page, ancho: number): Promise<Locator> {
 }
 
 /** Trozos (separados por espacios normales) de cada elemento de `selector` que quedaron
- * partidos entre dos líneas. Un monto "S/ 12 345.67" usa espacios que no cortan: es UN trozo. */
+ * partidos entre dos líneas. Un monto "S/ 12 345.67" usa espacios que no cortan: es UN trozo.
+ * Recorre todos los nodos de texto del elemento (también los anidados); un elemento sin texto
+ * no aporta nada. */
 async function trozosPartidos(catalogo: Locator, selector: string): Promise<string[]> {
   return catalogo.evaluate((raiz, sel) => {
     const partidos: string[] = []
     for (const elemento of raiz.querySelectorAll(sel)) {
-      const nodo = [...elemento.childNodes].find((n) => n.nodeType === Node.TEXT_NODE)
-      const texto = nodo?.textContent ?? ''
-      let inicio = 0
-      for (const trozo of texto.split(' ')) {
-        const rango = document.createRange()
-        rango.setStart(nodo!, inicio)
-        rango.setEnd(nodo!, inicio + trozo.length)
-        const lineas = new Set([...rango.getClientRects()].map((r) => Math.round(r.top)))
-        if (lineas.size > 1) partidos.push(trozo)
-        inicio += trozo.length + 1
+      const textos = document.createTreeWalker(elemento, NodeFilter.SHOW_TEXT)
+      for (let nodo = textos.nextNode(); nodo; nodo = textos.nextNode()) {
+        let inicio = 0
+        for (const trozo of (nodo.textContent ?? '').split(' ')) {
+          const rango = document.createRange()
+          rango.setStart(nodo, inicio)
+          rango.setEnd(nodo, inicio + trozo.length)
+          const lineas = new Set([...rango.getClientRects()].map((r) => Math.round(r.top)))
+          if (lineas.size > 1) partidos.push(trozo)
+          inicio += trozo.length + 1
+        }
       }
     }
     return partidos
@@ -119,6 +122,30 @@ test.describe('Kit B (paneles): responsive y accesible con letra Muy grande', ()
       for (const separacion of separaciones) expect(separacion).toBeGreaterThanOrEqual(7.5)
     })
   }
+})
+
+test.describe('Casos límite', () => {
+  test('M3: dentro de un flex con align-items: flex-start, las cajas con container-type ocupan todo el ancho', async ({
+    page,
+  }) => {
+    const catalogo = await abrirCatalogo(page, 360)
+    const medida = await catalogo.locator('.envoltorio-encogible').evaluate((envoltorio) => ({
+      ancho: envoltorio.clientWidth,
+      hijos: [...envoltorio.children].map((hijo) => ({
+        clase: hijo.className,
+        ancho: hijo.getBoundingClientRect().width,
+      })),
+    }))
+    expect(medida.hijos.map((h) => h.clase.split(' ')[0])).toEqual([
+      'tarjeta-de-cifra',
+      'respuesta-grande',
+      'aviso-en-pagina',
+      'mensaje-de-error',
+    ])
+    for (const hijo of medida.hijos) {
+      expect(Math.abs(hijo.ancho - medida.ancho), hijo.clase).toBeLessThanOrEqual(1)
+    }
+  })
 })
 
 test.describe('SelectorSegmentado', () => {
@@ -252,20 +279,26 @@ test.describe('RespuestaGrande', () => {
   }) => {
     const catalogo = await abrirCatalogo(page, 360)
     const region = catalogo.locator('[data-prueba="anuncios-del-catalogo"]')
-    await expect(region).toHaveText('Sí, compra ~12 unid.')
+    await expect(region).toHaveText('Sí, compra ~12 unid. No hace falta: te alcanza para ~12 días')
     await catalogo.getByRole('radio', { name: 'No compres' }).click()
     await expect(region).toHaveText('No compres: no se vende hace 45 días')
-    await expect(catalogo.locator('.respuesta-grande')).toHaveClass(/respuesta-grande--peligro/)
+    const deEjemplo = catalogo.locator(
+      '[aria-labelledby="catalogo-respuesta-grande"] .respuesta-grande',
+    )
+    await expect(deEjemplo).toHaveClass(/respuesta-grande--peligro/)
   })
 
-  test('a 320 px con letra Muy grande la frase va más grande que el texto normal', async ({
-    page,
-  }) => {
-    const catalogo = await abrirCatalogo(page, 320)
-    const tamanos = await catalogo.evaluate((raiz) => ({
-      frase: parseFloat(getComputedStyle(raiz.querySelector('.respuesta-grande .texto')!).fontSize),
-      base: parseFloat(getComputedStyle(document.documentElement).fontSize),
-    }))
-    expect(tamanos.frase).toBeGreaterThanOrEqual(tamanos.base * 1.25)
+  test('M8: a 1280 px una frase corta va en el tamaño máximo (2rem)', async ({ page }) => {
+    const catalogo = await abrirCatalogo(page, 1280)
+    const tamanos = await catalogo.evaluate((raiz) => {
+      const seccion = raiz.querySelector('[aria-labelledby="catalogo-respuesta-grande"]')!
+      return {
+        frase: parseFloat(
+          getComputedStyle(seccion.querySelector('.respuesta-grande .texto')!).fontSize,
+        ),
+        base: parseFloat(getComputedStyle(document.documentElement).fontSize),
+      }
+    })
+    expect(tamanos.frase).toBeCloseTo(tamanos.base * 2, 1)
   })
 })

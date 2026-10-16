@@ -213,6 +213,20 @@ const respuestaActual = computed(() => RESPUESTAS[respuesta.value])
       />
       <RespuestaGrande :texto="respuestaActual.texto" :tono="respuestaActual.tono" />
     </section>
+
+    <section class="seccion" aria-labelledby="catalogo-casos-limite">
+      <h2 id="catalogo-casos-limite">Casos límite</h2>
+      <p>
+        El monto más grande de la app (S/ 99 999.99), una respuesta larga y cajas dentro de un
+        contenedor que se ajusta a su contenido (flex con align-items: flex-start).
+      </p>
+      <div class="envoltorio-encogible">
+        <TarjetaDeCifra titulo="Vendiste este año" texto-valor="S/ 99 999.99" />
+        <RespuestaGrande texto="No hace falta: te alcanza para ~12 días" tono="exito" />
+        <AvisoEnPagina tono="info" titulo="Hoy vendiste S/ 1 162.50" />
+        <MensajeDeError mensaje="Solo quedan 2 unid. de Lejía 1 L." />
+      </div>
+    </section>
   </div>
 </template>
 
@@ -238,6 +252,13 @@ h2 {
 .rejilla {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--espacio-4);
+}
+/* M3: un contexto "shrink-to-fit" donde una caja con container-type sin ancho propio colapsa. */
+.envoltorio-encogible {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--espacio-4);
 }
 </style>
