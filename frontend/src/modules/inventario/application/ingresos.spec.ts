@@ -96,6 +96,21 @@ describe('registrarIngreso', () => {
     expect(await stock('lejia')).toEqual(unidades(15))
   })
 
+  it('RN-OP-07: el mismo producto con distinto costo en dos líneas se rechaza', async () => {
+    const { modulo, stock } = await escenario()
+    await expect(
+      modulo.registrarIngreso({
+        lineas: [
+          { productoId: 'lejia', cantidad: '2', costo: '2.40' },
+          { productoId: 'lejia', cantidad: '3', costo: '2.60' },
+        ],
+      }),
+    ).rejects.toThrow(
+      'Pusiste el mismo producto dos veces con distinto precio. Déjalo en una sola línea.',
+    )
+    expect(await stock('lejia')).toEqual(unidades(10))
+  })
+
   describe('RN-OP-14: precio de compra', () => {
     it('RN-OP-14: si el costo cambió, se pide confirmar sin registrar nada todavía', async () => {
       const { modulo, stock, catalogo } = await escenario()

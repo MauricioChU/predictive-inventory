@@ -52,7 +52,7 @@ export async function registrarIngreso(
       costoUnitario: leerCosto(pedida.costo),
     })
   }
-  const lineas = fusionarLineas(pedidas)
+  const lineas = fusionarLineas(pedidas, (l) => l.costoUnitario)
   for (const linea of lineas) validarCantidad(linea.cantidad)
 
   if (datos.confirmarSobrecompra !== true) {

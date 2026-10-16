@@ -106,6 +106,43 @@ describe('registrarVenta', () => {
     ).rejects.toThrow('Solo quedan 10 unid. de Lejía 1 L')
   })
 
+  it('RN-OP-07 / RN-OP-11: el mismo producto con distinto precio en dos líneas se rechaza', async () => {
+    const { modulo, stock } = await escenario()
+    await expect(
+      modulo.registrarVenta({
+        lineas: [
+          { productoId: 'lejia', cantidad: '1' },
+          { productoId: 'lejia', cantidad: '1', precioEspecial: '3.00' },
+        ],
+      }),
+    ).rejects.toThrow(
+      'Pusiste el mismo producto dos veces con distinto precio. Déjalo en una sola línea.',
+    )
+    expect(await stock('lejia')).toEqual(unidades(10))
+  })
+
+  it('RN-OP-07 / RN-OP-11: con el mismo precio (especial o normal) se suman', async () => {
+    const { modulo, operaciones } = await escenario()
+    const especial = await modulo.registrarVenta({
+      lineas: [
+        { productoId: 'lejia', cantidad: '1', precioEspecial: '3.00' },
+        { productoId: 'lejia', cantidad: '2', precioEspecial: '3.00' },
+      ],
+    })
+    expect((await operaciones.porId(especial.operacionId))?.movimientos).toEqual([
+      { productoId: 'lejia', cantidad: -3000, costoUnitario: 240, precioUnitario: 300 },
+    ])
+    const normal = await modulo.registrarVenta({
+      lineas: [
+        { productoId: 'carbon', cantidad: '1' },
+        { productoId: 'carbon', cantidad: '1', precioEspecial: '4.00' },
+      ],
+    })
+    expect((await operaciones.porId(normal.operacionId))?.movimientos).toEqual([
+      { productoId: 'carbon', cantidad: -2000, costoUnitario: 275, precioUnitario: 400 },
+    ])
+  })
+
   it('RN-OP-08: no se vende un producto archivado ni uno que no existe', async () => {
     const { modulo, catalogo } = await escenario()
     catalogo.archivar('lejia')

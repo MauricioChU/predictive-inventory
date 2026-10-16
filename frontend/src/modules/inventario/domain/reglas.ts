@@ -95,13 +95,23 @@ export function validarStock(
 
 /**
  * RN-OP-07: suma en una sola línea las cantidades del mismo producto, en el orden en que
- * aparece cada producto por primera vez. Los demás datos (precio, costo) son los de la
- * primera línea de ese producto.
+ * aparece cada producto por primera vez. Solo se suman líneas con el MISMO precio (el costo
+ * en un ingreso, el precio aplicado en una venta): con precios distintos no hay una sola
+ * línea correcta, así que se rechaza.
  */
-export function fusionarLineas<T extends MovimientoConCantidad>(lineas: readonly T[]): T[] {
+export function fusionarLineas<T extends MovimientoConCantidad>(
+  lineas: readonly T[],
+  precioDe: (linea: T) => Dinero,
+): T[] {
   const porProducto = new Map<string, T>()
   for (const linea of lineas) {
     const previa = porProducto.get(linea.productoId)
+    if (previa && !precioDe(previa).igualA(precioDe(linea))) {
+      throw new ErrorDeDominio(
+        'LINEAS_EN_CONFLICTO',
+        'Pusiste el mismo producto dos veces con distinto precio. Déjalo en una sola línea.',
+      )
+    }
     porProducto.set(
       linea.productoId,
       previa ? { ...previa, cantidad: previa.cantidad.sumar(linea.cantidad) } : linea,
