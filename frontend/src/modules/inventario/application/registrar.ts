@@ -13,16 +13,28 @@ export interface DependenciasDelLibro {
   uow: UnidadDeTrabajo
   bus: BusDeEventos
   proyecciones: () => ProyeccionDeOperaciones[]
-  /** RN-OP-18: se llama tras confirmar cada registro (no las anulaciones). */
-  alConfirmarRegistro: (operacionId: string, registradaEn: Instante) => void
+  /** RN-OP-18: se llama tras confirmar cada registro que ofrece Deshacer (no las anulaciones). */
+  ofrecerDeshacer: (operacionId: string, registradaEn: Instante) => void
 }
 
 /** Datos de los productos para el mensaje de RN-OP-05; solo se usan si algo no alcanza. */
 export type ProductosDeLaOperacion = ReadonlyMap<string, DatosDeProducto>
 
+export interface OpcionesDeRegistro {
+  /**
+   * RN-OP-18 (por defecto, sí). Ola 3, ruling 2: el stock inicial y el retiro que pide Catálogo
+   * (`InventarioParaCatalogo`) no ofrecen Deshacer.
+   */
+  ofrecerDeshacer?: boolean
+}
+
 /** Lo que se puede escribir dentro de una transacción del libro. */
 export interface EscrituraEnLibro {
-  registrar(operacion: Operacion, productos?: ProductosDeLaOperacion): Promise<void>
+  registrar(
+    operacion: Operacion,
+    productos?: ProductosDeLaOperacion,
+    opciones?: OpcionesDeRegistro,
+  ): Promise<void>
   anular(
     original: Operacion,
     anulacion: Operacion,
@@ -30,30 +42,29 @@ export interface EscrituraEnLibro {
   ): Promise<void>
 }
 
-type Pendiente =
-  | { tipo: 'registro'; operacion: Operacion }
-  | { tipo: 'anulacion'; original: Operacion; anulacion: Operacion }
-
 /**
  * Registro común de operaciones (ADR-0002). Dentro de UNA unidad de trabajo: lee las
  * existencias de los productos → valida el stock (RN-OP-05) → agrega la operación → fija
  * las existencias → actualiza las proyecciones. Si algo falla, no queda nada (RN-OP-06).
- * Solo DESPUÉS de confirmar publica los eventos y, para registros, ofrece deshacer.
+ * Los eventos y, para registros, el Deshacer se dejan con `uow.alConfirmar`: corren solo
+ * DESPUÉS de confirmar la transacción MÁS EXTERNA (Ola 3, ruling 1), así que si el libro se
+ * usa dentro de otra unidad de trabajo (p. ej. la de Catálogo al crear un producto) y esa
+ * falla después, no se publica nada ni se ofrece Deshacer.
  */
 export class LibroDeOperaciones {
   constructor(private readonly d: DependenciasDelLibro) {}
 
-  async enTransaccion<T>(trabajo: (escritura: EscrituraEnLibro) => Promise<T>): Promise<T> {
-    const pendientes: Pendiente[] = []
+  enTransaccion<T>(trabajo: (escritura: EscrituraEnLibro) => Promise<T>): Promise<T> {
     const escritura: EscrituraEnLibro = {
-      registrar: async (operacion, productos = new Map()) => {
+      registrar: async (operacion, productos = new Map(), opciones = {}) => {
         if (operacion.tipo === 'ANULACION') {
           throw new Error('Una anulación se escribe con anular()')
         }
         const registro = operacion.aRegistro()
         await this.escribir(operacion, productos)
         for (const proyeccion of this.d.proyecciones()) await proyeccion.alRegistrar(registro)
-        pendientes.push({ tipo: 'registro', operacion })
+        const ofrecerDeshacer = opciones.ofrecerDeshacer ?? true
+        this.d.uow.alConfirmar(() => this.publicarRegistro(operacion, ofrecerDeshacer))
       },
       anular: async (original, anulacion, productos = new Map()) => {
         if (anulacion.anulaA !== original.id) {
@@ -68,16 +79,18 @@ export class LibroDeOperaciones {
         for (const proyeccion of this.d.proyecciones()) {
           await proyeccion.alAnular(registroOriginal, registro)
         }
-        pendientes.push({ tipo: 'anulacion', original, anulacion })
+        this.d.uow.alConfirmar(() => this.publicarAnulacion(original, anulacion))
       },
     }
-    const resultado = await this.d.uow.ejecutar(() => trabajo(escritura))
-    for (const pendiente of pendientes) await this.publicar(pendiente)
-    return resultado
+    return this.d.uow.ejecutar(() => trabajo(escritura))
   }
 
-  registrar(operacion: Operacion, productos?: ProductosDeLaOperacion): Promise<void> {
-    return this.enTransaccion((escritura) => escritura.registrar(operacion, productos))
+  registrar(
+    operacion: Operacion,
+    productos?: ProductosDeLaOperacion,
+    opciones?: OpcionesDeRegistro,
+  ): Promise<void> {
+    return this.enTransaccion((escritura) => escritura.registrar(operacion, productos, opciones))
   }
 
   anular(
@@ -100,23 +113,22 @@ export class LibroDeOperaciones {
     }
   }
 
-  private async publicar(pendiente: Pendiente): Promise<void> {
-    if (pendiente.tipo === 'anulacion') {
-      await this.d.bus.publicar({
-        tipo: 'OperacionAnulada',
-        operacionId: pendiente.original.id,
-        anulacionId: pendiente.anulacion.id,
-        productoIds: pendiente.anulacion.productoIds,
-      })
-      return
-    }
-    const { operacion } = pendiente
+  private async publicarRegistro(operacion: Operacion, ofrecerDeshacer: boolean): Promise<void> {
     await this.d.bus.publicar({
       tipo: 'OperacionRegistrada',
       operacionId: operacion.id,
       tipoOperacion: operacion.tipo,
       productoIds: operacion.productoIds,
     })
-    this.d.alConfirmarRegistro(operacion.id, operacion.registradaEn)
+    if (ofrecerDeshacer) this.d.ofrecerDeshacer(operacion.id, operacion.registradaEn)
+  }
+
+  private async publicarAnulacion(original: Operacion, anulacion: Operacion): Promise<void> {
+    await this.d.bus.publicar({
+      tipo: 'OperacionAnulada',
+      operacionId: original.id,
+      anulacionId: anulacion.id,
+      productoIds: anulacion.productoIds,
+    })
   }
 }

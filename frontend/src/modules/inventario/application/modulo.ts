@@ -64,7 +64,7 @@ export function crearModuloInventario(d: DependenciasDeInventario): ModuloInvent
   )
   const libro = new LibroDeOperaciones({
     ...d,
-    alConfirmarRegistro: (operacionId, registradaEn) => deshacer.ofrecer(operacionId, registradaEn),
+    ofrecerDeshacer: (operacionId, registradaEn) => deshacer.ofrecer(operacionId, registradaEn),
   })
   const ctx: ContextoDeInventario = { ...d, libro }
 

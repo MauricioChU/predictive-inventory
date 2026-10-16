@@ -892,3 +892,83 @@ describe('correcciones ronda 1', () => {
     expect(ctx.eventosPublicados).toEqual([])
   })
 })
+
+// Ola 3, ruling 1: los eventos se publican tras el commit de la unidad de trabajo MÁS EXTERNA
+// (p. ej. Inventario llama a actualizarPrecioCompra dentro de su transacción de ingreso, y
+// Respaldo llama a crear dentro de la de importación).
+describe('dentro de una unidad de trabajo externa', () => {
+  let ctx: ReturnType<typeof construirDependencias>
+  let productoId: string
+
+  const datosDeEscoba = {
+    nombre: 'Escoba',
+    categoriaId: 'c1',
+    unidad: 'UNIDAD' as const,
+    precioCompra: '6.00',
+    precioVenta: '9.00',
+    stockMinimo: '2',
+  }
+
+  /** Corre `trabajo` dentro de una unidad de trabajo externa que falla después. */
+  async function dentroDeUnaQueFalla(trabajo: () => Promise<unknown>): Promise<void> {
+    await expect(
+      ctx.deps.uow.ejecutar(async () => {
+        await trabajo()
+        throw new Error('falla externa')
+      }),
+    ).rejects.toThrow('falla externa')
+  }
+
+  beforeEach(async () => {
+    ctx = construirDependencias()
+    await crearCategoriaDePrueba(ctx.categorias, 'c1', 'Otros')
+    const creado = await crearProducto(datosDeEscoba, ctx.deps)
+    if (creado.tipo !== 'hecho') throw new Error('se esperaba hecho')
+    productoId = creado.valor.productoId
+    ctx.eventosPublicados.length = 0
+  })
+
+  it('RN-OP-06: crearProducto no publica ProductoCreado si la externa falla después', async () => {
+    await dentroDeUnaQueFalla(() =>
+      crearProducto({ ...datosDeEscoba, nombre: 'Trapeador' }, ctx.deps),
+    )
+    expect(await ctx.productos.todos()).toHaveLength(1)
+    expect(ctx.eventosPublicados).toEqual([])
+  })
+
+  it('RN-OP-06: editarProducto no publica ProductoActualizado si la externa falla después', async () => {
+    await dentroDeUnaQueFalla(() => editarProducto({ productoId, nombre: 'Escobilla' }, ctx.deps))
+    expect((await ctx.productos.porId(productoId))?.nombre).toBe('Escoba')
+    expect(ctx.eventosPublicados).toEqual([])
+  })
+
+  it('RN-OP-06: archivarProducto no publica ProductoArchivado si la externa falla después', async () => {
+    await dentroDeUnaQueFalla(() => archivarProducto({ productoId }, ctx.deps))
+    expect((await ctx.productos.porId(productoId))?.estado).toBe('ACTIVO')
+    expect(ctx.eventosPublicados).toEqual([])
+  })
+
+  it('RN-OP-06: reactivarProducto no publica ProductoReactivado si la externa falla después', async () => {
+    await archivarProducto({ productoId }, ctx.deps)
+    ctx.eventosPublicados.length = 0
+    await dentroDeUnaQueFalla(() => reactivarProducto(productoId, ctx.deps))
+    expect((await ctx.productos.porId(productoId))?.estado).toBe('ARCHIVADO')
+    expect(ctx.eventosPublicados).toEqual([])
+  })
+
+  it('RN-OP-14: actualizarPrecioCompra no publica ProductoActualizado si la externa falla después', async () => {
+    await dentroDeUnaQueFalla(() =>
+      actualizarPrecioCompra(productoId, Dinero.deTexto('7.00'), ctx.deps),
+    )
+    expect((await ctx.productos.porId(productoId))?.precioCompra).toBe(600)
+    expect(ctx.eventosPublicados).toEqual([])
+  })
+
+  it('ADR-0002: si la externa confirma, el evento se publica después del commit', async () => {
+    await ctx.deps.uow.ejecutar(async () => {
+      await actualizarPrecioCompra(productoId, Dinero.deTexto('7.00'), ctx.deps)
+      expect(ctx.eventosPublicados).toEqual([])
+    })
+    expect(ctx.eventosPublicados).toEqual([{ tipo: 'ProductoActualizado', productoId }])
+  })
+})

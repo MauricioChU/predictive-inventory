@@ -18,6 +18,11 @@ function sinClave<T extends { clave: string }>(registro: T): Omit<T, 'clave'> {
   return copia as Omit<T, 'clave'>
 }
 
+/** Ola 3, ruling 1: el evento sale tras el commit de la unidad de trabajo MÁS EXTERNA. */
+function publicarAlConfirmar(deps: DependenciasDeTienda): void {
+  deps.uow.alConfirmar(() => deps.bus.publicar({ tipo: 'ConfiguracionActualizada' }))
+}
+
 export async function obtenerConfiguracion(
   deps: DependenciasDeTienda,
 ): Promise<ConfiguracionDeNegocio> {
@@ -61,9 +66,8 @@ export async function actualizarConfiguracion(
         : { ...cambios, nombreTienda: cambios.nombreTienda.trim() }
     const actualizada: ConfiguracionRegistro = { ...actual, ...limpios, clave: 'negocio' }
     await deps.repositorio.guardarNegocio(actualizada)
+    publicarAlConfirmar(deps)
   })
-
-  await deps.bus.publicar({ tipo: 'ConfiguracionActualizada' })
 }
 
 export async function actualizarEstadoDelSistema(
@@ -101,7 +105,6 @@ export async function completarPrimeraVez(
       clave: 'sistema',
     }
     await deps.repositorio.guardarSistema(estadoActualizado)
+    publicarAlConfirmar(deps)
   })
-
-  await deps.bus.publicar({ tipo: 'ConfiguracionActualizada' })
 }

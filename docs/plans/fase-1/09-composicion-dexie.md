@@ -149,3 +149,13 @@ Cada uno con su test; commit por módulo (`fix(<modulo>): …`).
 - **Inventario (cont.):** Dexie devuelve `todas()` / `porProducto()` ordenadas por `registradaEn`. Después de `revisarDatos()`, `reconstruirExistencias()` o una restauración de copia, la composición llama `alertas.evaluarAvisos()` (los estados pueden haber cambiado sin un evento de operación).
 - **Respaldo:** tras `restaurarCopia`, la composición recarga la configuración (letra, etc.) y llama `alertas.evaluarAvisos()`. El `AlmacenDeRespaldo` de Dexie lee los registros en una transacción y convierte las fotos a base64 DESPUÉS de cerrarla (`blob.arrayBuffer()` cerraría la transacción de IndexedDB).
 - Agregar a la spec (rama `docs/*`, antes del código): los mensajes nuevos aceptados en la Ola 2 — `La nota puede tener hasta 200 caracteres`, `Ya pasó el tiempo para deshacer. Puedes anularla desde el Historial.`, `Pusiste el mismo producto dos veces con distinto precio. Déjalo en una sola línea.`, `Elige la fecha y la hora`, `Agrega al menos un producto`, `No contaste ningún producto.`, `No encontramos ese producto`, `Todavía no hay ventas para saberlo`, `No pudimos leer la foto. Prueba con otra.` — y corregir 02-operaciones: `OperacionRegistrada` lleva los productos afectados (no las existencias resultantes).
+
+## Notas para la rama C (de las revisiones de A y B)
+
+- **Reloj de pruebas sin empates:** `crearAplicacionDePrueba` usa un reloj que avanza 1 ms en cada `ahora()` (además de `fijar`/`avanzarSegundos`), así ninguna operación comparte `registradaEn` y el orden es idéntico en memoria y en Dexie.
+- **Respaldo en memoria:** componer con `new AlmacenDeRespaldoEnMemoria(almacen, uow)` (sin la UoW no hay instantánea coherente). `guardarCopia` ya no envuelve `leerTodo` en `uow.ejecutar`.
+- **Esperas:** `esperarTareasPendientes()` = `alertas.esperarEvaluacionesPendientes()` + `uow.esperarAcciones?.()` (solo existe en la UoW Dexie) hasta que nada cambie.
+- **Suscriptores del bus** (p. ej. el store Pinia del contador de atención) deben ser *fire-and-forget*: el publicador espera a los manejadores antes de ofrecer Deshacer.
+- **Fotos en pruebas con Dexie:** los specs que guardan fotos en Dexie corren con `// @vitest-environment node` (el Blob de jsdom no sobrevive en fake-indexeddb).
+- **Después de `revisarDatos()`, `reconstruirExistencias()` o `restaurarCopia()`:** llamar `alertas.evaluarAvisos()`; tras restaurar, recargar configuración (tamaño de letra).
+- **Medir (RN-SIS-09):** con durabilidad `'strict'` y lecturas de Análisis dentro de `uow.ejecutar` (bloqueo rw), una venta debe quedar < 300 ms y `consultarTorre()` < 1 s con 300 productos / 50 000 movimientos. Si no se cumple, proponer un camino de solo lectura en Dexie y reportarlo.

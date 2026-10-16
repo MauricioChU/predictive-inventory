@@ -51,7 +51,10 @@ export interface ModuloAlertas {
   notificacionesPermitidas(): Promise<boolean>
   /** Suscribe evaluarAvisos a los eventos del bus (RN-AL-02). Devuelve la función para cancelar. */
   escucharEventos(): () => void
-  /** Espera a que termine la última evaluación encolada (incluida la que esté en curso). */
+  /**
+   * Espera a que termine la última evaluación encolada (incluida la que esté en curso) y, si
+   * mientras tanto se encolaron otras (eventos encadenados), también a esas (Ola 3, ruling 4).
+   */
   esperarEvaluacionesPendientes(): Promise<void>
 }
 
@@ -59,6 +62,15 @@ export function crearModuloAlertas(d: DependenciasDeAlertas): ModuloAlertas {
   // Cola serializada: cada evaluación empieza (y lee situaciones()) solo cuando terminó la
   // anterior, así un snapshot viejo nunca se guarda después de uno nuevo. `cola` nunca rechaza.
   let cola: Promise<void> = Promise.resolve()
+
+  /** Ola 3, ruling 4: en bucle hasta que la cola deje de cambiar. */
+  async function esperarEvaluacionesPendientes(): Promise<void> {
+    let ultima: Promise<void>
+    do {
+      ultima = cola
+      await ultima
+    } while (ultima !== cola)
+  }
 
   function encolarEvaluacion(): Promise<Notificacion[]> {
     const turno = cola.then(() => evaluarAvisos(d))
@@ -89,6 +101,6 @@ export function crearModuloAlertas(d: DependenciasDeAlertas): ModuloAlertas {
         for (const cancelar of cancelaciones) cancelar()
       }
     },
-    esperarEvaluacionesPendientes: () => cola,
+    esperarEvaluacionesPendientes,
   }
 }

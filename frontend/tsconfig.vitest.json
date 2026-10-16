@@ -6,6 +6,8 @@
   "include": [
     "src/**/__tests__/*",
     "src/**/*.spec.ts",
+    // Ola 3, ruling 3: excluidos de tsconfig.app.json; se type-checan aquí, con tipos de Node.
+    "src/**/__pruebas__/**/*",
     "tests/**/*.ts",
     "scripts/**/*.spec.ts",
     "eslint-rules/**/*.ts",

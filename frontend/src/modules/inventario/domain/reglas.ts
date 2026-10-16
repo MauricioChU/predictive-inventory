@@ -44,18 +44,49 @@ export function leerContado(texto: string, unidad: Unidad): Cantidad {
 }
 
 const SOLO_FECHA = /^\d{4}-\d{2}-\d{2}$/
+/**
+ * Fecha y hora ISO 8601 con zona EXPLÍCITA: `Z` o `±hh:mm`. Grupos: fecha y hora hasta los
+ * minutos, segundos, fracción, zona, horas y minutos de la zona.
+ */
+const FECHA_HORA_CON_ZONA =
+  /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(Z|[+-](\d{2}):(\d{2}))$/
+
+const ELIGE_LA_FECHA_Y_LA_HORA = 'Elige la fecha y la hora'
+
+/**
+ * El instante (en ms) de una fecha-hora con zona, o NaN si no existe en el calendario. Fix round
+ * 1, ruling 6: JavaScript "corrige" un 30 de febrero o un 24:00 al día siguiente, así que se
+ * hace una ida y vuelta: la fecha-hora escrita, leída como UTC, tiene que volver idéntica.
+ */
+function instanteDelCalendario(texto: string): number {
+  const partes = FECHA_HORA_CON_ZONA.exec(texto)
+  if (!partes) return Number.NaN
+  const [, fechaHora = '', segundos = '00', fraccion = '', zona = '', horas = '0', minutos = '0'] =
+    partes
+  if (Number(horas) > 23 || Number(minutos) > 59) return Number.NaN
+  const escrita = `${fechaHora}:${segundos}`
+  const comoUtc = Date.parse(`${escrita}.${fraccion.padEnd(3, '0')}Z`)
+  if (Number.isNaN(comoUtc) || new Date(comoUtc).toISOString().slice(0, 19) !== escrita) {
+    return Number.NaN
+  }
+  const signo = zona.startsWith('-') ? -1 : 1
+  return comoUtc - signo * (Number(horas) * 60 + Number(minutos)) * 60_000
+}
 
 /**
  * RN-OP-09: la fecha-hora de una operación como instante ISO en UTC. Una fecha sin hora no
  * dice CUÁNDO ocurrió (y JavaScript la leería como medianoche UTC, otro día en Lima): se pide
- * la hora. Lo que no se puede leer es un error de programación (la pantalla manda instantes).
+ * la hora. Ola 3 (ruling de la Ola 2): la zona también es obligatoria (sin ella, JavaScript la
+ * leería en la zona del navegador, no en la de la tienda); lo vacío, ilegible, sin zona o que no
+ * existe en el calendario se rechaza con el mismo mensaje, nunca con un `Error` plano.
  */
 export function normalizarInstante(texto: Instante): Instante {
-  if (SOLO_FECHA.test(texto.trim())) {
-    throw new ErrorDeDominio('FECHA_SIN_HORA', 'Elige la fecha y la hora')
+  const limpio = texto.trim()
+  if (SOLO_FECHA.test(limpio)) {
+    throw new ErrorDeDominio('FECHA_SIN_HORA', ELIGE_LA_FECHA_Y_LA_HORA)
   }
-  const momento = Date.parse(texto)
-  if (Number.isNaN(momento)) throw new Error(`Fecha inválida: ${texto}`)
+  const momento = instanteDelCalendario(limpio)
+  if (Number.isNaN(momento)) throw new ErrorDeDominio('FECHA_INVALIDA', ELIGE_LA_FECHA_Y_LA_HORA)
   return new Date(momento).toISOString()
 }
 

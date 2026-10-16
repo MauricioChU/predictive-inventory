@@ -83,8 +83,7 @@ export function productoResumido(producto: ProductoDePrueba): ProductoResumido {
 /**
  * Módulo Inventario real sobre repositorios en memoria, con dobles de los otros módulos y
  * los productos de los Antecedentes (cada uno con su STOCK_INICIAL). La UoW la pone cada
- * spec (UnidadDeTrabajoEnMemoria es solo para Node: este archivo también lo type-checa la
- * app). Al volver, los espías están limpios: solo anotan lo que haga la prueba.
+ * spec. Al volver, los espías están limpios: solo anotan lo que haga la prueba.
  */
 export async function crearEscenario(
   crearUow: (almacen: AlmacenEnMemoria) => UnidadDeTrabajo,
@@ -147,6 +146,8 @@ export async function crearEscenario(
 
   return {
     almacen,
+    /** La unidad de trabajo del módulo: para envolver sus casos de uso en una externa. */
+    uow: dependencias.uow,
     reloj,
     bus,
     eventos,

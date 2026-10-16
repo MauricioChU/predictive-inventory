@@ -104,6 +104,20 @@ export function probarRepositorioDeResumenes(crear: () => RepositorioDeResumenes
     expect(await repo.ultimoDiaConVentaDe('jabon')).toBeNull()
   })
 
+  // Ola 3 (revisión de la Ola 2) y fix round 1, ruling 3: una operación anulada el MISMO día
+  // deja su fila en cero, y esa fila no es "el primer movimiento" del producto (RN-OP-17). Una
+  // anulación en otro día deja filas con cambio de stock que siguen contando (caso raro, aceptado).
+  it('RN-AN-04: primerDiaDe ignora solo las filas en cero que deja una anulación del mismo día', async () => {
+    const repo = await conFilas()
+    await repo.guardar(filaSinMovimiento('lejia', '2026-07-01'))
+    await repo.guardar(filaSinMovimiento('jabon', '2026-07-01'))
+    await repo.guardar(fila('jabon', '2026-07-02'))
+    expect(await repo.primerDiaDe('lejia')).toBe('2026-08-01')
+    expect(await repo.primerDiaDe('jabon')).toBe('2026-07-02')
+    await repo.guardar(filaSinMovimiento('escoba', '2026-07-01'))
+    expect(await repo.primerDiaDe('escoba')).toBeNull()
+  })
+
   it('primerDiaDeLaTienda cuenta el primer día con filas, aunque solo tenga una venta anulada ese mismo día', async () => {
     const repo = crear()
     await repo.guardar(filaSinMovimiento('lejia', '2026-08-01'))

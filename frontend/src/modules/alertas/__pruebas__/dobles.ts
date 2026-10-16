@@ -128,12 +128,9 @@ export interface ContextoDePrueba {
  * Arma unas `DependenciasDeAlertas` completas con adaptadores en memoria y dobles de los
  * otros módulos, para probar los casos de uso de punta a punta (igual que en `alertas.feature`).
  *
- * Recibe la unidad de trabajo YA CONSTRUIDA (en vez de construir una `UnidadDeTrabajoEnMemoria`
- * aquí mismo) para que este archivo, que no termina en ".spec.ts", nunca importe esa clase: usa
- * node:async_hooks, y eslint-rules/fronteras.ts solo permite importarla desde un ".spec.ts" o
- * desde tests. Además, tsconfig.app.json incluye cualquier archivo bajo src/ salvo los
- * ".spec.ts" y "__tests__/", así que un import directo aquí haría que `vue-tsc --build`
- * intentara type-chequear este archivo (sin tipos de Node) como si fuera código de la app.
+ * Recibe la unidad de trabajo YA CONSTRUIDA: cada spec decide cuál usar (y puede envolverla en
+ * una transacción externa). Desde la Ola 3 (ruling 3) los `__pruebas__/` se type-checan con el
+ * proyecto de Vitest, así que podrían importar `UnidadDeTrabajoEnMemoria` directamente.
  */
 export function crearContextoDePrueba(
   uow: UnidadDeTrabajo,

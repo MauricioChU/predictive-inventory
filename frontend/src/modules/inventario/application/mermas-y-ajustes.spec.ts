@@ -177,6 +177,34 @@ describe('stock inicial y retiro (lo que usa Catálogo)', () => {
     expect(await tipos('lejia')).toEqual(['STOCK_INICIAL', 'AJUSTE'])
   })
 
+  // Ola 3, ruling 2: las operaciones que registra Catálogo no ofrecen Deshacer.
+  it('RN-OP-18: el stock inicial y el retiro que pide Catálogo no ofrecen Deshacer', async () => {
+    // Los Antecedentes ya registraron un STOCK_INICIAL por producto.
+    const { modulo, eventos } = await escenario()
+    expect(modulo.deshacer.disponible()).toBeNull()
+    await modulo.consultable.registrarStockInicial('nuevo', kilos('3.5'), soles('1.20'))
+    expect(modulo.deshacer.disponible()).toBeNull()
+    await modulo.consultable.retirarStock('carbon')
+    expect(modulo.deshacer.disponible()).toBeNull()
+    // Los eventos sí se publican: Alertas y Análisis los escuchan.
+    expect(eventos.map((e) => e.tipo === 'OperacionRegistrada' && e.tipoOperacion)).toEqual([
+      'STOCK_INICIAL',
+      'AJUSTE',
+    ])
+  })
+
+  // Fix round 1, ruling 5: tampoco reemplazan la oferta de la última operación registrada.
+  it('RN-OP-18: tras el stock inicial o el retiro de Catálogo, el Deshacer sigue siendo el de la venta', async () => {
+    const { modulo } = await escenario()
+    const { operacionId } = await modulo.registrarVenta({
+      lineas: [{ productoId: 'lejia', cantidad: '1' }],
+    })
+    await modulo.consultable.registrarStockInicial('nuevo', kilos('2'), soles('1.20'))
+    expect(modulo.deshacer.disponible()?.operacionId).toBe(operacionId)
+    await modulo.consultable.retirarStock('carbon')
+    expect(modulo.deshacer.disponible()?.operacionId).toBe(operacionId)
+  })
+
   it('RN-CAT-11: retirarStock funciona aunque el producto ya esté archivado, pero no si no existe', async () => {
     const { modulo, stock, catalogo } = await escenario()
     catalogo.archivar('lejia')

@@ -2,6 +2,7 @@ import type { ListaDeComprasRegistro, ResumenDiarioRegistro } from '@/shared/con
 import type { Dia } from '@/shared/domain/fecha'
 import type { AlmacenEnMemoria } from '@/shared/infrastructure/memoria/almacen-en-memoria'
 import type { RepositorioDeListaDeCompras, RepositorioDeResumenes } from '../../application/puertos'
+import { esFilaSinMovimiento } from '../../domain/resumen-diario'
 
 function enOrdenDeDia(a: ResumenDiarioRegistro, b: ResumenDiarioRegistro): number {
   if (a.dia !== b.dia) return a.dia < b.dia ? -1 : 1
@@ -39,7 +40,7 @@ export class RepositorioDeResumenesEnMemoria implements RepositorioDeResumenes {
   }
 
   async primerDiaDe(productoId: string): Promise<Dia | null> {
-    return this.delProducto(productoId)[0]?.dia ?? null
+    return this.delProducto(productoId).find((r) => !esFilaSinMovimiento(r))?.dia ?? null
   }
 
   async primerDiaDeLaTienda(): Promise<Dia | null> {

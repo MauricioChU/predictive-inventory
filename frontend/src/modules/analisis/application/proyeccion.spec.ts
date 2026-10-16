@@ -14,10 +14,13 @@ describe('ProyeccionDeResumenes', () => {
   let resumenes: RepositorioDeResumenesEnMemoria
   let proyeccion: ProyeccionDeResumenes
 
+  let uow: UnidadDeTrabajoEnMemoria
+
   beforeEach(() => {
     almacen = new AlmacenEnMemoria()
     resumenes = new RepositorioDeResumenesEnMemoria(almacen)
-    proyeccion = new ProyeccionDeResumenes(resumenes, new UnidadDeTrabajoEnMemoria(almacen))
+    uow = new UnidadDeTrabajoEnMemoria(almacen)
+    proyeccion = new ProyeccionDeResumenes(resumenes, uow)
   })
 
   async function todas() {
@@ -158,5 +161,19 @@ describe('ProyeccionDeResumenes', () => {
     const rota = { ...nuevaOperacion('VENTA', '2026-10-15 11:00', []), movimientos: null }
     await expect(proyeccion.reconstruir([rota as unknown as OperacionRegistro])).rejects.toThrow()
     expect(await todas()).toEqual(antes)
+  })
+
+  // Ola 3: Inventario la llama dentro de su transacción (la más externa); la proyección no
+  // publica nada, pero sus filas siguen la suerte de esa transacción.
+  it('RN-OP-06: dentro de la transacción de Inventario, si esa falla después, no queda ninguna fila', async () => {
+    await expect(
+      uow.ejecutar(async () => {
+        await proyeccion.alRegistrar(
+          nuevaOperacion('VENTA', '2026-10-15 10:00', [{ ...LEJIA, cantidad: '1' }]),
+        )
+        throw new Error('falla externa')
+      }),
+    ).rejects.toThrow('falla externa')
+    expect(await todas()).toEqual([])
   })
 })
