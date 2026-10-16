@@ -21,6 +21,13 @@ type VentanaConAplicacion = Window & { __aplicacion?: AplicacionEnLaPagina }
 /** Ventas de la ráfaga: una tras otra, cada una esperada, sin pausa entre ellas. */
 const VENTAS_EN_RAFAGA = 10
 
+/**
+ * A paso de cajero: entre una venta y la siguiente pasan ~350 ms, un poco más que la ventana con
+ * que Alertas junta las re-evaluaciones (300 ms). Cada venta llega justo cuando corre la
+ * re-evaluación que disparó la anterior: el peor caso de una persona rápida.
+ */
+const PAUSA_DE_CAJERO_MS = 350
+
 function mediana(valores: readonly number[]): number {
   const orden = [...valores].sort((a, b) => a - b)
   return orden[Math.floor(orden.length / 2)]!
@@ -86,7 +93,7 @@ test.describe('RN-SIS-09: rendimiento en el navegador real (medición opcional)'
       await frenarCpu(page, lentitud)
 
       const medicion = await page.evaluate(
-        async ({ copia, ids, rafaga }) => {
+        async ({ copia, ids, rafaga, pausaDeCajero }) => {
           const app = (window as VentanaConAplicacion).__aplicacion
           if (!app) throw new Error('La app no expuso window.__aplicacion')
           const medir = async (trabajo: () => Promise<unknown>) => {
@@ -121,17 +128,42 @@ test.describe('RN-SIS-09: rendimiento en el navegador real (medición opcional)'
             )
           }
           await app.esperarTareasPendientes()
+          // A paso de cajero (informativo, como la ráfaga): con la re-evaluación de la anterior
+          // en curso.
+          const ventaAPasoDeCajero: number[] = []
+          for (let i = 0; i < rafaga; i += 1) {
+            await new Promise((resolver) => setTimeout(resolver, pausaDeCajero))
+            ventaAPasoDeCajero.push(
+              await medir(() => app.inventario.registrarVenta({ lineas: lineas(i) })),
+            )
+          }
+          await app.esperarTareasPendientes()
           const situaciones = await medir(() => app.analisis.consultable.situaciones())
           const evaluarAvisos = await medir(() => app.alertas.evaluarAvisos())
-          return { restaurar, torre, ventaEnCalma, ventaEnRafaga, situaciones, evaluarAvisos }
+          return {
+            restaurar,
+            torre,
+            ventaEnCalma,
+            ventaEnRafaga,
+            ventaAPasoDeCajero,
+            situaciones,
+            evaluarAvisos,
+          }
         },
-        { copia: texto, ids: productos, rafaga: VENTAS_EN_RAFAGA },
+        {
+          copia: texto,
+          ids: productos,
+          rafaga: VENTAS_EN_RAFAGA,
+          pausaDeCajero: PAUSA_DE_CAJERO_MS,
+        },
       )
 
-      const { ventaEnRafaga } = medicion
+      const { ventaEnRafaga, ventaAPasoDeCajero } = medicion
       const resumen =
         `RN-SIS-09 en Chromium (CPU x${lentitud}, ms): ${JSON.stringify(medicion)}; ` +
-        `ráfaga: mediana ${mediana(ventaEnRafaga)}, peor ${Math.max(...ventaEnRafaga)}`
+        `ráfaga: mediana ${mediana(ventaEnRafaga)}, peor ${Math.max(...ventaEnRafaga)}; ` +
+        `a paso de cajero (${PAUSA_DE_CAJERO_MS} ms): mediana ${mediana(ventaAPasoDeCajero)}, ` +
+        `peor ${Math.max(...ventaAPasoDeCajero)}`
       console.log(resumen)
       await testInfo.attach(`rendimiento-cpu-x${lentitud}`, {
         body: resumen,
@@ -139,6 +171,7 @@ test.describe('RN-SIS-09: rendimiento en el navegador real (medición opcional)'
       })
       expect(medicion.torre).toHaveLength(3)
       expect(medicion.ventaEnRafaga).toHaveLength(VENTAS_EN_RAFAGA)
+      expect(medicion.ventaAPasoDeCajero).toHaveLength(VENTAS_EN_RAFAGA)
     })
   }
 })
