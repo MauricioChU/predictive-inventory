@@ -81,6 +81,15 @@ export interface Infraestructura {
   almacenamiento: AlmacenamientoPersistente
 }
 
+/** Ajustes de la composición (las pruebas los cambian). */
+export interface OpcionesDeAplicacion {
+  /**
+   * RN-SIS-09: ventana con que Alertas junta las re-evaluaciones pedidas en ráfaga (por
+   * defecto, la de Alertas: 300 ms). `esperarTareasPendientes` no la espera: la adelanta.
+   */
+  ventanaDeReevaluacionMs?: number
+}
+
 /** Los seis módulos ya cableados entre sí: lo único que ven las pantallas (`useAplicacion()`). */
 export interface Aplicacion {
   catalogo: ModuloCatalogo
@@ -113,11 +122,16 @@ export interface Aplicacion {
  * - Inventario actualiza la proyección de Análisis en la misma unidad de trabajo (ADR-0002).
  * - El `Reconstructor` de Respaldo es `inventario.reconstruirExistencias()`, que también
  *   reconstruye las proyecciones (RN-RE-04).
- * - Alertas escucha los eventos del bus. Tras revisar datos, reconstruir o restaurar una copia
+ * - Alertas escucha los eventos del bus y junta en UNA re-evaluación los que llegan en ráfaga
+ *   (RN-SIS-09); cada evaluación comparte su resumen de atención (`alCalcularLaAtencion`), que
+ *   el estado global usa para el contador sin volver a leer. Tras revisar datos, reconstruir o restaurar una copia
  *   (sin evento de dominio) la composición vuelve a evaluar los avisos y avisa a quien escuche
  *   `alCambiarEnBloque` (p. ej. el estado global, que recarga la letra y el contador).
  */
-export function crearAplicacion(infra: Infraestructura): Aplicacion {
+export function crearAplicacion(
+  infra: Infraestructura,
+  opciones: OpcionesDeAplicacion = {},
+): Aplicacion {
   const { uow, reloj, ids, repositorios: r } = infra
 
   // Cuenta las publicaciones: si durante una espera se publicó algo, hay que volver a esperar.
@@ -179,6 +193,7 @@ export function crearAplicacion(infra: Infraestructura): Aplicacion {
     bus,
     analisis: () => analisis.consultable,
     tienda: () => tienda.consultable,
+    ventanaDeReevaluacionMs: opciones.ventanaDeReevaluacionMs,
   })
 
   const catalogoParaRespaldo = { ...catalogo.consultable, importacion: catalogo.importacion }

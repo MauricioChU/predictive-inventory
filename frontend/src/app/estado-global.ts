@@ -1,22 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { ResumenDelDia } from '@/modules/alertas'
+import type { ResumenDeAtencion, ResumenDelDia } from '@/modules/alertas'
 import type { TamanoDeLetra } from '@/shared/contratos/configuracion'
-import type { TipoDeEvento } from '@/shared/domain/eventos'
 import { aplicarTamanoDeLetra } from '@/shared/ui/preferencias/tamano-de-letra'
 import type { InicioDeLaApp } from './abrir-app'
 import type { Aplicacion } from './composicion'
-
-/** RN-AL-02: lo que puede cambiar el estado de stock de algún producto (y con él, el contador). */
-const EVENTOS_QUE_CAMBIAN_LA_ATENCION: readonly TipoDeEvento[] = [
-  'OperacionRegistrada',
-  'OperacionAnulada',
-  'ProductoCreado',
-  'ProductoActualizado',
-  'ProductoArchivado',
-  'ProductoReactivado',
-  'ConfiguracionActualizada',
-]
 
 /**
  * Corre `tarea` de a una: si la piden mientras corre, vuelve a correr UNA vez más al terminar
@@ -51,9 +39,13 @@ function deAUna(nombre: string, tarea: () => Promise<void>): () => Promise<void>
  * (`BarraNavegacion.contadorControl`, RN-AL-06b), el tamaño de letra de la configuración, si
  * falta la primera vez, el resumen del día y el recordatorio de copia.
  *
- * Se refresca con los eventos del bus y con `alCambiarEnBloque` (revisar datos, restaurar una
- * copia). Los manejadores son "dispara y olvida": encolan la lectura y vuelven, porque quien
- * publica espera a sus manejadores antes de ofrecer Deshacer (ADR-0002).
+ * El contador sale de cada re-evaluación de Alertas (`alertas.alCalcularLaAtencion`, RN-SIS-09):
+ * después de una operación, avisos y contador usan UN solo cálculo de situaciones, y una ráfaga
+ * de operaciones, una sola re-evaluación. Alertas re-evalúa tras cada evento relevante (RN-AL-02)
+ * y tras revisar datos o restaurar una copia, así que el contador termina siempre con el último
+ * estado. La letra se recarga con `ConfiguracionActualizada` y `alCambiarEnBloque`. Los
+ * manejadores son "dispara y olvida": encolan y vuelven, porque quien publica espera a sus
+ * manejadores antes de ofrecer Deshacer (ADR-0002).
  */
 export const useEstadoGlobal = defineStore('estado-global', () => {
   const contadorDeAtencion = ref(0)
@@ -70,9 +62,23 @@ export const useEstadoGlobal = defineStore('estado-global', () => {
     return aplicacion
   }
 
-  /** RN-AL-06b: agotados + por acabarse. */
+  /** Resúmenes que entregó Alertas: una lectura propia no pisa uno que llegó mientras leía. */
+  let entregas = 0
+
+  /** RN-AL-06b: agotados + por acabarse, de la última re-evaluación de Alertas. */
+  function alCalcularLaAtencion(resumen: ResumenDeAtencion): void {
+    entregas += 1
+    contadorDeAtencion.value = resumen.contador
+  }
+
+  /**
+   * RN-AL-06b: la lectura propia (al conectar, o si alguien la pide). Si mientras tanto llegó un
+   * resumen de Alertas, ese manda: cualquier cambio posterior a esta lectura trae otro.
+   */
   const refrescarAtencion = deAUna('el contador de atención', async () => {
-    contadorDeAtencion.value = (await conectada().alertas.resumenDeAtencion()).contador
+    const antes = entregas
+    const { contador } = await conectada().alertas.resumenDeAtencion()
+    if (entregas === antes) contadorDeAtencion.value = contador
   })
 
   /** La letra (con su copia rápida en localStorage) y si falta la primera vez. */
@@ -104,19 +110,14 @@ export const useEstadoGlobal = defineStore('estado-global', () => {
     resumenDelDia.value = inicio.resumenDelDia
     recordatorioDeCopia.value = inicio.recordatorioDeCopia
 
-    const alCambiarLaAtencion = (): void => {
-      void refrescarAtencion()
-    }
     cancelaciones = [
-      ...EVENTOS_QUE_CAMBIAN_LA_ATENCION.map((tipo) =>
-        app.bus.suscribir(tipo, alCambiarLaAtencion),
-      ),
+      app.alertas.alCalcularLaAtencion(alCalcularLaAtencion),
       app.bus.suscribir('ConfiguracionActualizada', (): void => {
         void recargarConfiguracion()
       }),
-      // Tras restaurar una copia cambian la configuración (letra) y los estados de stock.
+      // Tras restaurar una copia cambian la configuración (letra) y los estados de stock; el
+      // contador llega con la re-evaluación que la composición pide en ese momento.
       app.alCambiarEnBloque(() => {
-        void refrescarAtencion()
         void recargarConfiguracion()
       }),
     ]

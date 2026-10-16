@@ -119,7 +119,10 @@ describe('RN-SIS-09: rendimiento con datos realistas (Dexie)', () => {
     }
     // En ráfaga (informativo, sin presupuesto): cada venta llega apenas confirmó la anterior
     // ("confirmar" = hasta que `registrarVenta` resuelve), con los avisos y el contador que
-    // disparó la anterior todavía pendientes.
+    // disparó la anterior todavía pendientes. Aquí no se exige: fake-indexeddb tarda ~100 ms en
+    // REESCRIBIR una fila existente de una tabla grande (las de hoy de los productos que ya se
+    // vendieron en calma), cosa que IndexedDB del navegador hace en milisegundos. RN-SIS-09 en
+    // ráfaga lo mide la E2E opcional (e2e/rendimiento.spec.ts, CPU x4).
     for (let i = 0; i < VENTAS_EN_RAFAGA; i += 1) {
       const { ms } = await medir(() => app.inventario.registrarVenta({ lineas: lineas(i) }))
       medicion.ventaEnRafaga.push(ms)
