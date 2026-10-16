@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { ProductoResumido } from '@/shared/contratos/entre-modulos'
 import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'
+import { UnidadDeTrabajoEspia } from '@/shared/application/__pruebas__/unidad-de-trabajo-espia'
 import { crearEntorno } from '../__pruebas__/entorno'
 import { historial } from '../domain/__pruebas__/historial'
 import { anulacionDe, nuevaOperacion } from '../domain/__pruebas__/operaciones'
 import { cant, ESCOBA, LEJIA, producto, TRAPEADOR } from '../domain/__pruebas__/productos'
+import { cargarDatos } from './situaciones'
 
 function entorno(productos: readonly ProductoResumido[]) {
   return crearEntorno({ productos, uow: (a) => new UnidadDeTrabajoEnMemoria(a) })
@@ -209,41 +211,32 @@ describe('situaciones de los productos (AnalisisConsultable)', () => {
     expect(deProducto).toHaveBeenCalledWith('lejia', '2026-08-16', '2026-10-15')
   })
 
-  it('ADR-0002: las existencias y las filas de la ventana se leen en una misma lectura (uow.leer)', async () => {
-    /** Marca cuándo corre la consulta de una lectura (no solo cuándo se pide). */
-    class UnidadQueMarca extends UnidadDeTrabajoEnMemoria {
-      dentro = 0
-      override leer<T>(consulta: () => Promise<T>): Promise<T> {
-        return super.leer(async () => {
-          this.dentro++
-          try {
-            return await consulta()
-          } finally {
-            this.dentro--
-          }
-        })
-      }
-    }
-    let uow: UnidadQueMarca | null = null
-    const e = crearEntorno({
-      productos: [LEJIA],
-      uow: (almacen) => (uow = new UnidadQueMarca(almacen)),
-    })
+  // cargarDatos por sí sola (no dentro del leer de una consulta del módulo, que ya la envuelve).
+  it('ADR-0002: cargarDatos lee las existencias, las filas de la ventana y los primeros días en UNA lectura', async () => {
+    const e = entorno([LEJIA])
     await e.cargar(LEJIA_56_EN_28(62))
-    const leidasDentro: string[] = []
-    const existencias = e.inventario.existencias.bind(e.inventario)
-    vi.spyOn(e.inventario, 'existencias').mockImplementation(async () => {
-      if (uow!.dentro > 0) leidasDentro.push('existencias')
-      return existencias()
-    })
-    const entre = e.resumenes.entre.bind(e.resumenes)
-    vi.spyOn(e.resumenes, 'entre').mockImplementation(async (desde, hasta) => {
-      if (uow!.dentro > 0) leidasDentro.push('entre')
-      return entre(desde, hasta)
+    const espia = new UnidadDeTrabajoEspia(new UnidadDeTrabajoEnMemoria(e.almacen))
+    const resumenes = espia.vigilar('resumenes', e.resumenes)
+    const inventario = espia.vigilar('inventario', e.inventario)
+    const entre = vi.spyOn(resumenes, 'entre')
+    const existencias = vi.spyOn(inventario, 'existencias')
+
+    const datos = await cargarDatos({
+      resumenes,
+      listaDeCompras: e.listaDeCompras,
+      uow: espia,
+      reloj: e.reloj,
+      catalogo: () => e.catalogo,
+      inventario: () => inventario,
+      tienda: () => e.tienda,
     })
 
-    const [s] = await e.modulo.consultable.situaciones()
-    expect(leidasDentro.sort()).toEqual(['entre', 'existencias'])
-    expect(s).toMatchObject({ estado: 'POR_ACABARSE', diasDeCobertura: 3 })
+    expect(espia.transacciones()).toEqual({ lecturas: 1, escrituras: 0 })
+    expect(espia.llamadasSueltas).toEqual([])
+    expect(entre).toHaveBeenCalledOnce()
+    expect(existencias).toHaveBeenCalledOnce()
+    expect(datos.existencias.get('lejia')).toEqual(cant('6'))
+    expect(datos.primerosDias.get('lejia')).toBe('2026-08-01')
+    expect(datos.filas.length).toBeGreaterThan(0)
   })
 })
