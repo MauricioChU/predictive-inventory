@@ -3,7 +3,11 @@ import type { Aplicacion } from '../composicion'
 import type { InicioDeLaApp } from '../abrir-app'
 import { crearMontaje, type PantallasDeLaApp } from '../montaje'
 
-const APLICACION = {} as Aplicacion
+/** Solo lo que el montaje usa de la aplicación. */
+function aplicacionFalsa(): Aplicacion & { detener: ReturnType<typeof vi.fn> } {
+  return { detener: vi.fn() } as unknown as Aplicacion & { detener: ReturnType<typeof vi.fn> }
+}
+const APLICACION = aplicacionFalsa()
 const INICIO: InicioDeLaApp = {
   primeraVez: false,
   tamanoDeLetra: 'GRANDE',
@@ -60,6 +64,32 @@ describe('crearMontaje: qué queda en #app', () => {
     montaje.montarApp(APLICACION, INICIO)
     expect(bitacora).toEqual(['monta sin datos: actualizada'])
     expect(falsas.montarApp).not.toHaveBeenCalled()
+  })
+
+  it('M2: la aplicación que termina de abrir después de actualizarse la base se detiene sin montarse', () => {
+    const { falsas } = pantallas()
+    const montaje = crearMontaje(falsas)
+    const aplicacion = aplicacionFalsa()
+    montaje.seActualizoLaBase()
+    montaje.montarApp(aplicacion, INICIO)
+    expect(aplicacion.detener).toHaveBeenCalledOnce()
+    expect(falsas.montarApp).not.toHaveBeenCalled()
+  })
+
+  it('si montar una pantalla lanza, la anterior no se vuelve a desmontar después', () => {
+    const { falsas, bitacora } = pantallas()
+    const montaje = crearMontaje(falsas)
+    montaje.mostrarError('otro')
+    vi.mocked(falsas.montarApp).mockImplementationOnce(() => {
+      throw new Error('falla al montar')
+    })
+    expect(() => montaje.montarApp(APLICACION, INICIO)).toThrow('falla al montar')
+    montaje.seActualizoLaBase()
+    expect(bitacora).toEqual([
+      'monta sin datos: otro',
+      'desmonta sin datos: otro',
+      'monta sin datos: actualizada',
+    ])
   })
 
   it('M2: tampoco la pisa un error del arranque que llega después (la base ya se cerró)', () => {

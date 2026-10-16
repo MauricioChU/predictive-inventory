@@ -94,7 +94,7 @@ export interface AplicacionDePrueba extends Aplicacion {
   readonly almacenamiento: AlmacenamientoPersistenteEnMemoria
   /** Lo que recibió la composición: para pasos que alteran datos "por fuera" (RN-OP-19). */
   readonly infraestructura: Infraestructura
-  /** Espera lo pendiente y, con Dexie, cierra la base. */
+  /** Espera lo pendiente, deja de escuchar (`detener`) y, con Dexie, cierra la base. */
   cerrar(): Promise<void>
 }
 
@@ -170,6 +170,7 @@ export function crearAplicacionDePrueba(
     infraestructura,
     async cerrar() {
       await aplicacion.esperarTareasPendientes()
+      aplicacion.detener()
       db?.close()
     },
   }

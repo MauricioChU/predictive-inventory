@@ -113,6 +113,12 @@ export interface Aplicacion {
    * (una acción puede publicar un evento que encola otra evaluación).
    */
   esperarTareasPendientes(): Promise<void>
+  /**
+   * M2: deja de escuchar los eventos y descarta la re-evaluación de avisos programada (al
+   * desmontar la app porque la base se cerró por `versionchange`): nada pendiente corre
+   * contra una base cerrada.
+   */
+  detener(): void
 }
 
 /**
@@ -214,7 +220,7 @@ export function crearAplicacion(
     tienda: () => tienda.consultable,
   })
 
-  alertas.escucharEventos()
+  const dejarDeEscuchar = alertas.escucharEventos()
 
   const manejadoresDeCambio = new Set<() => void>()
 
@@ -279,5 +285,6 @@ export function crearAplicacion(
       }
     },
     esperarTareasPendientes,
+    detener: dejarDeEscuchar,
   }
 }

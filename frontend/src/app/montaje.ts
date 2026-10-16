@@ -4,13 +4,19 @@ import type { MotivoSinDatos } from './motivo-sin-datos'
 
 /** Cómo se monta cada pantalla en #app; cada una devuelve cómo desmontarla. */
 export interface PantallasDeLaApp {
-  /** La app, con su estado global conectado: desmontarla también lo desconecta del bus. */
+  /**
+   * La app, con su estado global conectado: desmontarla también lo desconecta del bus y detiene
+   * la aplicación (`aplicacion.detener()`).
+   */
   montarApp(aplicacion: Aplicacion, inicio: InicioDeLaApp): () => void
   montarSinDatos(motivo: MotivoSinDatos): () => void
 }
 
 export interface Montaje {
-  /** El arranque terminó: monta la app (salvo que la base ya se haya actualizado). */
+  /**
+   * El arranque terminó: monta la app. Si la base ya se actualizó, no la monta y la detiene
+   * (no queda escuchando eventos sobre una base cerrada).
+   */
   montarApp(aplicacion: Aplicacion, inicio: InicioDeLaApp): void
   /** El arranque falló: la pantalla sin datos (salvo que la base ya se haya actualizado). */
   mostrarError(motivo: MotivoSinDatos): void
@@ -28,13 +34,19 @@ export function crearMontaje(pantallas: PantallasDeLaApp): Montaje {
   let seActualizo = false
 
   function reemplazarPor(montar: () => () => void): void {
-    desmontar?.()
+    const anterior = desmontar
+    // Antes de montar: si montar lanza, lo anterior ya se desmontó y no se desmonta otra vez.
+    desmontar = null
+    anterior?.()
     desmontar = montar()
   }
 
   return {
     montarApp(aplicacion, inicio) {
-      if (seActualizo) return
+      if (seActualizo) {
+        aplicacion.detener()
+        return
+      }
       reemplazarPor(() => pantallas.montarApp(aplicacion, inicio))
     },
     mostrarError(motivo) {

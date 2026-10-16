@@ -39,8 +39,10 @@ const montaje = crearMontaje({
     const retirarGancho = exponerAplicacionParaPruebas(aplicacion)
     app.mount('#app')
     return () => {
-      // Sin suscripciones al bus ni ganchos de una aplicación cuya base ya se cerró.
+      // Sin suscripciones al bus, re-evaluaciones pendientes ni ganchos de una aplicación cuya
+      // base ya se cerró.
       desconectarEstado()
+      aplicacion.detener()
       dejarDeEscucharRutas()
       retirarGancho()
       app.unmount()

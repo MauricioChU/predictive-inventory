@@ -254,3 +254,46 @@ describe('RelojDePrueba', () => {
     expect(reloj.ahora()).toBe('2026-10-16T13:00:00.000Z')
   })
 })
+
+// M2 (revisión de perf/rafagas): al cerrar la base por versionchange, ninguna re-evaluación
+// pendiente debe correr contra la base cerrada.
+describe.each(ALMACENES)('Aplicacion.detener (%s)', (almacen) => {
+  const VENTANA = 300
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('M2: deja de escuchar los eventos y descarta la re-evaluación programada', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    const app = crearAplicacionDePrueba({ ahora: HOY, almacen, ventanaDeReevaluacionMs: VENTANA })
+    await app.tienda.actualizarConfiguracion({ notificacionesActivas: true })
+    const id = await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '5' })
+    await app.esperarTareasPendientes()
+    const situaciones = vi.spyOn(app.analisis.consultable, 'situaciones')
+
+    await app.inventario.registrarVenta({ lineas: [{ productoId: id, cantidad: '3' }] })
+    app.detener()
+    await vi.advanceTimersByTimeAsync(10 * VENTANA)
+    await app.inventario.registrarVenta({ lineas: [{ productoId: id, cantidad: '1' }] })
+    await vi.advanceTimersByTimeAsync(10 * VENTANA)
+    await app.esperarTareasPendientes()
+
+    expect(situaciones).not.toHaveBeenCalled()
+    expect(app.notificador.mostradas).toEqual([])
+    await app.cerrar()
+  })
+
+  it('cerrar() de la aplicación de prueba también la detiene: nada corre después de cerrar', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    const app = crearAplicacionDePrueba({ ahora: HOY, almacen, ventanaDeReevaluacionMs: VENTANA })
+    await app.cerrar()
+    const situaciones = vi.spyOn(app.analisis.consultable, 'situaciones')
+
+    await app.bus.publicar({ tipo: 'ConfiguracionActualizada' })
+    await vi.advanceTimersByTimeAsync(10 * VENTANA)
+
+    expect(situaciones).not.toHaveBeenCalled()
+  })
+})
