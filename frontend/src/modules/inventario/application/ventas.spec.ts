@@ -143,6 +143,14 @@ describe('registrarVenta', () => {
     ])
   })
 
+  it('una venta sin líneas se rechaza', async () => {
+    const { modulo, operaciones } = await escenario()
+    await expect(modulo.registrarVenta({ lineas: [] })).rejects.toThrow(
+      'Agrega al menos un producto',
+    )
+    expect(await operaciones.todas()).toHaveLength(3)
+  })
+
   it('RN-OP-08: no se vende un producto archivado ni uno que no existe', async () => {
     const { modulo, catalogo } = await escenario()
     catalogo.archivar('lejia')

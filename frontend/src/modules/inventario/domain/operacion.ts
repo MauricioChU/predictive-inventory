@@ -114,7 +114,7 @@ export class Operacion {
 
   private static crear(campos: Campos): Operacion {
     if (campos.movimientos.length === 0) {
-      throw new Error('Una operación necesita al menos un movimiento')
+      throw new ErrorDeDominio('SIN_LINEAS', 'Agrega al menos un producto')
     }
     const vistos = new Set<string>()
     for (const movimiento of campos.movimientos) {

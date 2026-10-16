@@ -262,8 +262,9 @@ describe('invariantes', () => {
   })
 
   it('una operación tiene al menos un movimiento', () => {
-    expect(() => Operacion.ingreso(datos(), [])).toThrow(
-      'Una operación necesita al menos un movimiento',
+    expect(() => Operacion.ingreso(datos(), [])).toThrow('Agrega al menos un producto')
+    expect(() => Operacion.venta(datos(), [])).toThrow(
+      expect.objectContaining({ name: 'ErrorDeDominio', codigo: 'SIN_LINEAS' }),
     )
   })
 

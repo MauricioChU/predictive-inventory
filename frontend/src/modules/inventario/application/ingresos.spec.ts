@@ -111,6 +111,14 @@ describe('registrarIngreso', () => {
     expect(await stock('lejia')).toEqual(unidades(10))
   })
 
+  it('un ingreso sin líneas se rechaza', async () => {
+    const { modulo, operaciones } = await escenario()
+    await expect(modulo.registrarIngreso({ lineas: [] })).rejects.toThrow(
+      'Agrega al menos un producto',
+    )
+    expect(await operaciones.todas()).toHaveLength(3)
+  })
+
   describe('RN-OP-14: precio de compra', () => {
     it('RN-OP-14: si el costo cambió, se pide confirmar sin registrar nada todavía', async () => {
       const { modulo, stock, catalogo } = await escenario()
