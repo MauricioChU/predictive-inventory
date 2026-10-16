@@ -35,8 +35,8 @@ describe('entregarArchivo (RN-RE-01/02: compartir o descargar)', () => {
 
   afterEach(() => {
     const navegador = navigator as NavegadorConCompartir
-    delete navegador.canShare
-    delete navegador.share
+    Reflect.deleteProperty(navegador, 'canShare')
+    Reflect.deleteProperty(navegador, 'share')
     vi.restoreAllMocks()
   })
 

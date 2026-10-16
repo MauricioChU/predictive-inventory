@@ -45,8 +45,8 @@ export function simularMenuDeCompartir(compartir: (datos: ShareData) => Promise<
 
 export function quitarMenuDeCompartir(): void {
   const navegador = navigator as NavegadorConCompartir
-  delete navegador.canShare
-  delete navegador.share
+  Reflect.deleteProperty(navegador, 'canShare')
+  Reflect.deleteProperty(navegador, 'share')
 }
 
 /** El texto de un Blob (el de jsdom no tiene `.text()`). */
