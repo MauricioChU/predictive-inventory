@@ -16,7 +16,9 @@ describe('estado global (Pinia)', () => {
   let app: AplicacionDePrueba
 
   async function conectar() {
-    app = crearAplicacionDePrueba({ ahora: HOY })
+    // Sin ventana para juntar re-evaluaciones: el contador llega enseguida (la ventana y sus
+    // consecuencias se prueban en estado-global-rafaga.spec.ts).
+    app = crearAplicacionDePrueba({ ahora: HOY, ventanaDeReevaluacionMs: 0 })
     const inicio = await abrirApp(app, { aplicarTamanoDeLetra: () => undefined })
     const estado = useEstadoGlobal()
     estado.conectar(app, inicio)

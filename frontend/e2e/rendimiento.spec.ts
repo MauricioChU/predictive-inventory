@@ -97,13 +97,18 @@ test.describe('RN-SIS-09: rendimiento en el navegador real (medición opcional)'
           const lineas = (i: number) =>
             ids.slice(i * 3, i * 3 + 3).map((productoId) => ({ productoId, cantidad: '1' }))
 
-          const restaurar = await medir(() => app.respaldo.restaurarCopia(copia, { confirmaciones: 2 }))
+          const restaurar = await medir(() =>
+            app.respaldo.restaurarCopia(copia, { confirmaciones: 2 }),
+          )
           await app.esperarTareasPendientes()
           const torre: number[] = []
-          for (let i = 0; i < 3; i += 1) torre.push(await medir(() => app.analisis.consultarTorre()))
+          for (let i = 0; i < 3; i += 1)
+            torre.push(await medir(() => app.analisis.consultarTorre()))
           const ventaEnCalma: number[] = []
           for (let i = 0; i < 5; i += 1) {
-            ventaEnCalma.push(await medir(() => app.inventario.registrarVenta({ lineas: lineas(i) })))
+            ventaEnCalma.push(
+              await medir(() => app.inventario.registrarVenta({ lineas: lineas(i) })),
+            )
             await app.esperarTareasPendientes()
             await new Promise((resolver) => setTimeout(resolver, 300))
           }
@@ -111,7 +116,9 @@ test.describe('RN-SIS-09: rendimiento en el navegador real (medición opcional)'
           // que disparó la anterior todavía pendientes).
           const ventaEnRafaga: number[] = []
           for (let i = 0; i < rafaga; i += 1) {
-            ventaEnRafaga.push(await medir(() => app.inventario.registrarVenta({ lineas: lineas(i) })))
+            ventaEnRafaga.push(
+              await medir(() => app.inventario.registrarVenta({ lineas: lineas(i) })),
+            )
           }
           await app.esperarTareasPendientes()
           const situaciones = await medir(() => app.analisis.consultable.situaciones())
@@ -126,7 +133,10 @@ test.describe('RN-SIS-09: rendimiento en el navegador real (medición opcional)'
         `RN-SIS-09 en Chromium (CPU x${lentitud}, ms): ${JSON.stringify(medicion)}; ` +
         `ráfaga: mediana ${mediana(ventaEnRafaga)}, peor ${Math.max(...ventaEnRafaga)}`
       console.log(resumen)
-      await testInfo.attach(`rendimiento-cpu-x${lentitud}`, { body: resumen, contentType: 'text/plain' })
+      await testInfo.attach(`rendimiento-cpu-x${lentitud}`, {
+        body: resumen,
+        contentType: 'text/plain',
+      })
       expect(medicion.torre).toHaveLength(3)
       expect(medicion.ventaEnRafaga).toHaveLength(VENTAS_EN_RAFAGA)
     })

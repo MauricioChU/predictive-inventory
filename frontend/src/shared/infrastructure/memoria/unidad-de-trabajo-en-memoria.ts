@@ -82,6 +82,12 @@ async function correrSinPropagar(accion: AccionAlConfirmar): Promise<void> {
  * curso ni la ve aparecer mientras lee) pero sin foto ni rollback: no hay nada que revertir.
  * Su token es de solo lectura: ahí `ejecutar` rechaza y `alConfirmar` lanza. Dentro de un
  * `ejecutar` o de otro `leer` activos, se une a ellos (con su token).
+ *
+ * Diferencia con Dexie (aceptada; manda la de Dexie): esta clase no ve los repositorios, así que
+ * una escritura DIRECTA a un repositorio en memoria dentro de un `leer` (sin `ejecutar`) no
+ * falla aquí, mientras que IndexedDB la rechaza (ReadOnlyError). El contrato de `leer` lo fijan
+ * las suites de contrato que corren también sobre Dexie (shared/infrastructure/__pruebas__) y
+ * las pruebas de integración con las dos persistencias.
  */
 export class UnidadDeTrabajoEnMemoria implements UnidadDeTrabajo {
   private readonly contexto = new AsyncLocalStorage<TokenDeTransaccion>()

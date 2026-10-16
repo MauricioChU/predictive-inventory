@@ -40,7 +40,7 @@ interface Medicion {
 
 /**
  * RN-SIS-09 con 300 productos y 50 000 movimientos en un año, sobre Dexie con durabilidad
- * 'strict' y las lecturas de Análisis dentro de `uow.ejecutar` (transacción 'rw'). La historia
+ * 'strict' y las lecturas de Análisis en `uow.leer` (transacción de solo lectura 'r'). La historia
  * se carga como una copia (`reemplazarTodo`) y las proyecciones se reconstruyen con el caso de
  * uso real. Corre sobre fake-indexeddb (IndexedDB en JavaScript, sin disco ni el motor del
  * navegador): se exigen los presupuestos con lo que se mide aquí, y el umbral en un celular de
