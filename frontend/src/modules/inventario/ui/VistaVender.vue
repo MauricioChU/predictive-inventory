@@ -17,12 +17,15 @@ import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
 import { BILLETES_DE_SOLES } from '@/shared/ui/tipos-de-productos'
 import { calcularVuelto } from '../domain/vuelto'
 import BuscadorDeProductos from './BuscadorDeProductos.vue'
+import CuandoFue from './CuandoFue.vue'
 import DisposicionDeCarrito from './DisposicionDeCarrito.vue'
 import ListaDelCarrito from './ListaDelCarrito.vue'
 import { textoDePrecio, usarCarrito } from './carrito-de-pantalla'
+import { cuandoInicial, ERRORES_DE_FECHA, instanteDe } from './cuando'
 import { enfocarPrimerError, enfocarTitulo, vibrar } from './foco-y-respuesta'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
 import { usarDeshacer } from './usar-deshacer'
+import { hoyEnLaTienda } from './usar-destinos'
 
 /**
  * Vender (HU-OP-01, HU-OP-02; 06-experiencia-de-uso): buscar o tocar un más vendido → carrito
@@ -43,6 +46,9 @@ const registrando = ref(false)
 const error = ref<ErrorParaMostrar | null>(null)
 const detalleDeExito = ref('')
 const deshecha = ref(false)
+/** RN-OP-09 / HU-OP-07: la venta es de ahora o de otro día (hasta 7 días atrás). */
+const cuando = ref(cuandoInicial(hoyEnLaTienda()))
+const errorFecha = ref<string>()
 
 const textoTotal = computed(() => formatearDinero(carrito.total.value))
 /** RN-OP-13: "Vuelto S/ 5.37" / "Faltan S/ 4.63"; sin monto escrito se puede confirmar igual. */
@@ -66,6 +72,7 @@ async function cobrar(): Promise<void> {
     return
   }
   error.value = null
+  errorFecha.value = undefined
   pagado.value = ''
   paso.value = 'cobro'
   await enfocarTitulo()
@@ -86,17 +93,28 @@ async function actualizarStock(): Promise<void> {
 
 async function confirmar(): Promise<void> {
   if (registrando.value || !vuelto.value.puedeConfirmar) return
-  registrando.value = true
   error.value = null
+  const fecha = instanteDe(cuando.value)
+  errorFecha.value = fecha.error
+  if (fecha.error) return
+  registrando.value = true
   try {
-    await aplicacion.inventario.registrarVenta(carrito.aDatosDeVenta())
+    await aplicacion.inventario.registrarVenta({
+      ...carrito.aDatosDeVenta(),
+      ...(fecha.instante ? { ocurridaEn: fecha.instante } : {}),
+    })
   } catch (causa) {
-    error.value = errorParaMostrar(causa, 'venta')
+    const mostrado = errorParaMostrar(causa, 'venta')
+    registrando.value = false
+    if (mostrado.codigo && ERRORES_DE_FECHA.has(mostrado.codigo)) {
+      errorFecha.value = mostrado.mensaje
+      return
+    }
+    error.value = mostrado
     if (error.value.codigo === 'STOCK_INSUFICIENTE') {
       await actualizarStock()
       paso.value = 'carrito'
     }
-    registrando.value = false
     return
   }
   registrando.value = false
@@ -107,6 +125,7 @@ async function confirmar(): Promise<void> {
     : `Total ${textoTotal.value}`
   carrito.vaciar()
   pagado.value = ''
+  cuando.value = cuandoInicial(hoyEnLaTienda())
   paso.value = 'exito'
   vibrar()
   deshacer.ofrecer({
@@ -168,6 +187,7 @@ const resumenDelCobro = computed(() =>
         :tono-mensaje="tonoDelVuelto"
         @exacto="pagoExacto"
       />
+      <CuandoFue v-model="cuando" pregunta="¿Cuándo fue la venta?" :error="errorFecha" />
       <MensajeDeError v-if="error" :mensaje="error.mensaje" :ayuda="error.ayuda" />
       <section class="resumen-del-cobro" :aria-labelledby="idResumen">
         <h2 :id="idResumen" class="subtitulo">Lo que se vende</h2>

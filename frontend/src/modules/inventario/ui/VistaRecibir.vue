@@ -15,12 +15,15 @@ import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import PantallaExito from '@/shared/ui/componentes/PantallaExito.vue'
 import type { DatosDeIngreso } from '../application/ingresos'
 import BuscadorDeProductos from './BuscadorDeProductos.vue'
+import CuandoFue from './CuandoFue.vue'
 import DisposicionDeCarrito from './DisposicionDeCarrito.vue'
 import ListaDelCarrito from './ListaDelCarrito.vue'
 import { usarCarrito } from './carrito-de-pantalla'
+import { cuandoInicial, ERRORES_DE_FECHA, instanteDe } from './cuando'
 import { enfocarPrimerError, enfocarTitulo, vibrar } from './foco-y-respuesta'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
 import { usarDeshacer } from './usar-deshacer'
+import { hoyEnLaTienda } from './usar-destinos'
 
 /**
  * Llegó mercadería (HU-OP-03, HU-OP-09; en la navegación "Recibir"): igual que Vender, pero cada
@@ -51,6 +54,9 @@ const avisoParaCorregir = ref<string | null>(null)
 const prellenada = ref<'con-lineas' | 'vacia' | null>(null)
 const detalleDeExito = ref('')
 const deshecha = ref(false)
+/** RN-OP-09: la mercadería llegó ahora o otro día (hasta 7 días atrás). */
+const cuando = ref(cuandoInicial(hoyEnLaTienda()))
+const errorFecha = ref<string>()
 
 const textoTotal = computed(() => formatearDinero(carrito.total.value))
 
@@ -94,11 +100,15 @@ async function registrarLlegada(): Promise<void> {
 
 async function intentar(): Promise<void> {
   if (registrando.value) return
-  registrando.value = true
   error.value = null
+  const fecha = instanteDe(cuando.value)
+  errorFecha.value = fecha.error
+  if (fecha.error) return
+  registrando.value = true
   try {
     const respuesta = await aplicacion.inventario.registrarIngreso({
       ...carrito.aDatosDeIngreso(),
+      ...(fecha.instante ? { ocurridaEn: fecha.instante } : {}),
       ...respuestas,
     })
     if (respuesta.tipo === 'aviso-sobrecompra') {
@@ -109,7 +119,10 @@ async function intentar(): Promise<void> {
       registrada()
     }
   } catch (causa) {
-    error.value = errorParaMostrar(causa, 'ingreso')
+    const mostrado = errorParaMostrar(causa, 'ingreso')
+    if (mostrado.codigo && ERRORES_DE_FECHA.has(mostrado.codigo))
+      errorFecha.value = mostrado.mensaje
+    else error.value = mostrado
   } finally {
     registrando.value = false
   }
@@ -150,6 +163,7 @@ function registrada(): void {
   const n = copia.length
   detalleDeExito.value = `${formatearEntero(n)} ${plural(n, 'producto', 'productos')} · Costo total ${textoTotal.value}`
   carrito.vaciar()
+  cuando.value = cuandoInicial(hoyEnLaTienda())
   respuestas = {}
   prellenada.value = null
   paso.value = 'exito'
@@ -257,6 +271,12 @@ onMounted(() => {
             :carrito="carrito"
             concepto="ingreso"
             texto-vacio="Toca un producto para agregarlo."
+          />
+          <CuandoFue
+            v-if="!carrito.vacio.value"
+            v-model="cuando"
+            pregunta="¿Cuándo llegó?"
+            :error="errorFecha"
           />
         </template>
         <template #total>

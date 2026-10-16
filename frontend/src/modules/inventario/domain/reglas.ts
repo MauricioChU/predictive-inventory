@@ -51,7 +51,8 @@ const SOLO_FECHA = /^\d{4}-\d{2}-\d{2}$/
 const FECHA_HORA_CON_ZONA =
   /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(Z|[+-](\d{2}):(\d{2}))$/
 
-const ELIGE_LA_FECHA_Y_LA_HORA = 'Elige la fecha y la hora'
+/** RN-OP-09: sin hora (o si no se puede leer). */
+export const ELIGE_LA_FECHA_Y_LA_HORA = 'Elige la fecha y la hora'
 
 /**
  * El instante (en ms) de una fecha-hora con zona, o NaN si no existe en el calendario. Fix round

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { formatearDinero } from '@/shared/domain/formato'
+import { useAnunciador } from '@/shared/ui/anunciador'
 import FilaDeCarrito from '@/shared/ui/componentes/FilaDeCarrito.vue'
 import { textoDePrecio, type CarritoDePantalla, type Concepto } from './carrito-de-pantalla'
 import { usarFotos } from './usar-fotos'
@@ -18,6 +19,16 @@ const props = defineProps<{
 }>()
 
 const fotos = usarFotos()
+const anunciador = useAnunciador()
+const refRaiz = ref<HTMLElement>()
+
+/** El botón Quitar desaparece con su línea: el foco va al título del carrito (no se pierde). */
+async function quitar(productoId: string, nombre: string): Promise<void> {
+  props.carrito.quitar(productoId)
+  anunciador.anunciar(`Quitaste ${nombre}`)
+  await nextTick()
+  refRaiz.value?.closest('.columna-carrito')?.querySelector<HTMLElement>('.titulo-carrito')?.focus()
+}
 const lineas = computed(() => props.carrito.lineas.value)
 watch(
   () => lineas.value.map((l) => l.producto),
@@ -35,7 +46,7 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
 </script>
 
 <template>
-  <div class="lista-del-carrito">
+  <div ref="refRaiz" class="lista-del-carrito">
     <p v-if="lineas.length === 0" class="vacio">{{ textoVacio }}</p>
     <ul v-else role="list" class="lineas">
       <li
@@ -63,7 +74,7 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
           @update:cantidad="carrito.cambiarCantidad(linea.producto.id, $event)"
           @cambiar-precio="carrito.cambiarPrecio(linea.producto.id, $event)"
           @cancelar-precio="carrito.cancelarPrecio(linea.producto.id)"
-          @quitar="carrito.quitar(linea.producto.id)"
+          @quitar="quitar(linea.producto.id, linea.producto.nombre)"
         />
       </li>
     </ul>

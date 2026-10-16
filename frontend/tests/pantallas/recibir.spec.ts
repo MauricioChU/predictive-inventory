@@ -151,6 +151,23 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     )
   })
 
+  it('RN-OP-09: la llegada se puede anotar en otro día (dentro de los 7 días)', async () => {
+    const { app } = await conLejia()
+    const p = await abrir(app)
+    await agregar(p, 'lejia', 'Lejía 1 L')
+    expect(p.w.text()).toContain('¿Cuándo llegó?')
+    await boton(p.w, 'Otro día').trigger('click')
+    await p.w.get('input[type="date"]').setValue('2026-10-16')
+    await p.w.get('input[type="time"]').setValue('08:00')
+    await registrar(p)
+    expect(p.w.text()).toContain('La fecha no puede ser futura')
+
+    await p.w.get('input[type="date"]').setValue('2026-10-13')
+    await registrar(p)
+    const [ingreso] = await app.inventario.historial({ tipo: 'INGRESO' })
+    expect(ingreso?.ocurridaEn).toBe(instanteLocal('2026-10-13 08:00'))
+  })
+
   describe('RN-OP-20: aviso de sobrecompra (no bloquea)', () => {
     /** Escoba: stock inicial 5 el 2026-07-17, una venta el 2026-08-31 → parada hace 45 días. */
     async function conEscobaParada() {

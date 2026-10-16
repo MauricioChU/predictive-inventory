@@ -11,6 +11,7 @@ import {
   type PantallaMontada,
 } from '../soporte/pantallas'
 import { crearProductoDePrueba } from '../soporte/productos-de-prueba'
+import { instanteLocal } from '@/shared/domain/fecha'
 import { formatearNumero } from '@/shared/domain/formato'
 
 /** Los productos del Antecedente de operaciones.feature. */
@@ -136,6 +137,16 @@ describe('Vender (HU-OP-01, HU-OP-02)', () => {
     expect(lineas(p)).toHaveLength(1)
     expect((lineas(p)[0]!.get('.cantidad input').element as HTMLInputElement).value).toBe('2')
     expect(total(p)).toBe('S/ 7.00')
+  })
+
+  it('RN-UX-05: "Quitar" saca la línea y el foco pasa al título del carrito (no se pierde)', async () => {
+    const { app } = await tiendaDePrueba()
+    const p = await abrirVender(app)
+    await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+    await boton(lineas(p)[0]!, 'Quitar').trigger('click')
+    await esperarDatos(app)
+    expect(lineas(p)).toHaveLength(0)
+    expect(document.activeElement?.textContent).toBe('En esta venta')
   })
 
   it('RN-OP-12: total = suma de importes de línea, redondeados al céntimo', async () => {
@@ -299,6 +310,54 @@ describe('Vender (HU-OP-01, HU-OP-02)', () => {
       'Cambia la cantidad o registra la llegada de mercadería.',
     )
     expect(await stock(app, ids.lejia)).toBe('2')
+  })
+
+  describe('RN-OP-09 / HU-OP-07: anotar una venta de otro día (hasta 7 días atrás)', () => {
+    async function cobrarLejia() {
+      const { app, ids } = await tiendaDePrueba()
+      const p = await abrirVender(app)
+      await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+      await boton(p.w, 'Cobrar').trigger('click')
+      await esperarDatos(app)
+      return { app, ids, p }
+    }
+
+    it('por defecto la venta es de ahora; con "Otro día" se elige la fecha y la hora', async () => {
+      const { app, p } = await cobrarLejia()
+      const grupo = p.w.get('[role="radiogroup"]')
+      expect(grupo.findAll('[role="radio"]').map((r) => r.text())).toEqual(['Ahora', 'Otro día'])
+      expect(p.w.find('input[type="date"]').exists()).toBe(false)
+
+      await boton(p.w, 'Otro día').trigger('click')
+      await p.w.get('input[type="date"]').setValue('2026-10-14')
+      await p.w.get('input[type="time"]').setValue('18:30')
+      await boton(p.w, 'Confirmar venta').trigger('click')
+      await esperarDatos(app)
+      const [venta] = await app.inventario.historial({ tipo: 'VENTA' })
+      expect(venta?.ocurridaEn).toBe(instanteLocal('2026-10-14 18:30'))
+      expect(p.w.get('.pantalla-exito h1').text()).toBe('Venta registrada')
+    })
+
+    it('sin hora pide "Elige la fecha y la hora" y no registra', async () => {
+      const { app, p } = await cobrarLejia()
+      await boton(p.w, 'Otro día').trigger('click')
+      await p.w.get('input[type="date"]').setValue('2026-10-14')
+      await boton(p.w, 'Confirmar venta').trigger('click')
+      await esperarDatos(app)
+      expect(p.w.text()).toContain('Elige la fecha y la hora')
+      expect(await app.inventario.historial({ tipo: 'VENTA' })).toEqual([])
+    })
+
+    it('más de 7 días atrás se rechaza con el mensaje del dominio', async () => {
+      const { app, p } = await cobrarLejia()
+      await boton(p.w, 'Otro día').trigger('click')
+      await p.w.get('input[type="date"]').setValue('2026-10-07')
+      await p.w.get('input[type="time"]').setValue('23:59')
+      await boton(p.w, 'Confirmar venta').trigger('click')
+      await esperarDatos(app)
+      expect(p.w.text()).toContain('Solo puedes anotar hasta 7 días atrás')
+      expect(await app.inventario.historial({ tipo: 'VENTA' })).toEqual([])
+    })
   })
 
   it('RN-UX-10: sin productos todavía, explica y ofrece agregar el primero', async () => {
