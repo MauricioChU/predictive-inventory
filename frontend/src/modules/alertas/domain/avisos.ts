@@ -48,10 +48,14 @@ export interface AvisoNotificable {
 
 /** RN-AL-07: uno o ninguno se notifica tal cual; dos o más se agrupan en un solo aviso. */
 export function agruparAvisos(situaciones: readonly SituacionDeProducto[]): AvisoNotificable[] {
-  if (situaciones.length === 0) return []
-  if (situaciones.length === 1) {
-    const [unica] = situaciones
-    return [{ texto: textoDeAviso(unica!), url: rutaDeProducto(unica!.productoId) }]
+  // Desestructura con resto en vez de indexar `situaciones[0]` (que con
+  // `noUncheckedIndexedAccess` sería `SituacionDeProducto | undefined`): así `primera === undefined`
+  // y `resto.length > 0` narrowan el tipo explícitamente, sin asertar con `!`, y cada rama queda
+  // cubierta por un caso real (0, 2+, exactamente 1), sin ninguna rama muerta.
+  const [primera, ...resto] = situaciones
+  if (primera === undefined) return []
+  if (resto.length > 0) {
+    return [{ texto: `${situaciones.length} productos se están acabando`, url: RUTA_PARA_COMPRAR }]
   }
-  return [{ texto: `${situaciones.length} productos se están acabando`, url: RUTA_PARA_COMPRAR }]
+  return [{ texto: textoDeAviso(primera), url: rutaDeProducto(primera.productoId) }]
 }

@@ -27,10 +27,13 @@ export interface TotalesDeAyer {
 }
 
 function lineaDeAyer(totales: TotalesDeAyer): string {
-  if (totales.ventas.esCero()) return 'Ayer no hubo ventas'
+  // La pérdida se revisa ANTES que "sin ventas": una merma sin ninguna venta (ventas = 0,
+  // gananciaNeta < 0) sí perdió plata y no debe esconderse como "no hubo ventas". Solo cuando
+  // la ganancia neta no es negativa importa si hubo ventas o no.
   if (totales.gananciaNeta.esNegativo()) {
     return `Ayer perdiste ${formatearDinero(totales.gananciaNeta.negar())}`
   }
+  if (totales.ventas.esCero()) return 'Ayer no hubo ventas'
   return `Ayer ganaste ${formatearDinero(totales.gananciaNeta)}`
 }
 
