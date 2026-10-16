@@ -1,5 +1,15 @@
-import { createApp } from 'vue'
+import { createApp, type Component } from 'vue'
 import type { ContextoAvisoDeshacer } from './aviso-deshacer'
+
+/**
+ * Páginas de catálogo de los kits de componentes (src/shared/ui/__catalogo__), solo para las
+ * E2E: cada kit agrega la suya con su nombre. Import dinámico: no pesan en la app normal.
+ */
+const CATALOGOS: Record<string, () => Promise<{ default: Component }>> = {
+  // ── Kit B (feat/ui-kit-paneles) ──────────────────────────────────────────
+  paneles: () => import('@/shared/ui/__catalogo__/CatalogoKitPaneles.vue'),
+  // ── fin Kit B ─────────────────────────────────────────────────────────────
+}
 
 export interface BarraDePrueba {
   etiqueta: string
@@ -15,6 +25,9 @@ export interface GanchosDePrueba {
   /** Monta un GraficoBarras al final de #contenido, para medir su geometría (todavía no hay
    * pantallas reales con gráfico). Se carga aparte: no pesa en la app normal. */
   mostrarGrafico: (titulo: string, barras: BarraDePrueba[]) => Promise<void>
+  /** Monta al final de #contenido la página de catálogo de un kit ("paneles", …) para medir
+   * sus componentes y auditarlos con axe antes de que existan las pantallas reales. */
+  mostrarCatalogo: (nombre: string) => Promise<void>
 }
 
 declare global {
@@ -44,6 +57,16 @@ export function exponerGanchosDePrueba(aviso: ContextoAvisoDeshacer): () => void
       const lugar = document.createElement('div')
       contenido.append(lugar)
       createApp(GraficoBarras, { titulo, barras }).mount(lugar)
+    },
+    async mostrarCatalogo(nombre) {
+      const cargar = CATALOGOS[nombre]
+      if (!cargar) throw new Error(`No hay un catálogo "${nombre}"`)
+      const { default: catalogo } = await cargar()
+      const contenido = document.getElementById('contenido')
+      if (!contenido) throw new Error('Falta #contenido')
+      const lugar = document.createElement('div')
+      contenido.append(lugar)
+      createApp(catalogo).mount(lugar)
     },
   }
   return () => {
