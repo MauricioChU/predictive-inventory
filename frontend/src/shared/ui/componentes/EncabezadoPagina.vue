@@ -45,17 +45,29 @@ function alVolver() {
 </template>
 
 <style scoped>
+/*
+  Plan 13: a 320 px con letra Muy grande, "Volver" se encogía hasta quedar una letra por línea
+  (el título largo, "¿Necesito comprar?", se llevaba todo el ancho y el texto se partía en
+  cualquier parte). Ahora "Volver" nunca se encoge ni se parte, y si el título no cabe a su
+  lado (menos de 10rem), baja a su propia línea.
+*/
 .encabezado-pagina {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--espacio-3);
+  gap: var(--espacio-1) var(--espacio-3);
   padding-block: var(--espacio-4);
 }
 h1 {
+  flex: 1 1 10rem;
+  min-inline-size: 0;
   font-size: 1.375rem;
   margin: 0;
+  overflow-wrap: break-word;
 }
 .volver {
+  flex: none;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: var(--espacio-1);

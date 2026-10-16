@@ -40,7 +40,9 @@ const emit = defineEmits<{ click: [evento: MouseEvent] }>()
   gap: var(--espacio-2);
   width: 100%;
   min-height: var(--alto-boton-principal);
-  padding-inline: var(--espacio-5);
+  /* Plan 13: el botón ya ocupa todo el ancho y centra su texto; con más relleno, a 320 px con
+     letra Muy grande una palabra larga ("Compartir" en BarraDeTotal) no cabía y se partía. */
+  padding-inline: var(--espacio-3);
   border-radius: var(--radio);
   border: 2px solid transparent;
   font-size: 1.125rem;
