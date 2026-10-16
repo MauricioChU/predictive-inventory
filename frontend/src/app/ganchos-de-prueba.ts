@@ -1,5 +1,16 @@
-import { createApp } from 'vue'
+import { createApp, type Component } from 'vue'
 import type { ContextoAvisoDeshacer } from './aviso-deshacer'
+
+// ── Catálogos de los kits de componentes (plan 09b) ─────────────────────────────────────────
+// Páginas solo para pruebas (src/shared/ui/__catalogo__/) que las E2E montan con
+// `window.__pruebas.mostrarCatalogo(kit)`. Cada kit agrega SOLO su entrada en este objeto.
+const CATALOGOS_DE_KITS = {
+  // Kit A — feat/ui-kit-productos
+  productos: () => import('@/shared/ui/__catalogo__/CatalogoKitProductos.vue'),
+} satisfies Record<string, () => Promise<{ default: Component }>>
+
+export type KitDeCatalogo = keyof typeof CATALOGOS_DE_KITS
+// ── fin de los catálogos de kits ────────────────────────────────────────────────────────────
 
 export interface BarraDePrueba {
   etiqueta: string
@@ -15,6 +26,8 @@ export interface GanchosDePrueba {
   /** Monta un GraficoBarras al final de #contenido, para medir su geometría (todavía no hay
    * pantallas reales con gráfico). Se carga aparte: no pesa en la app normal. */
   mostrarGrafico: (titulo: string, barras: BarraDePrueba[]) => Promise<void>
+  /** Plan 09b: monta el catálogo de un kit de componentes al final de #contenido. */
+  mostrarCatalogo: (kit: KitDeCatalogo) => Promise<void>
 }
 
 declare global {
@@ -44,6 +57,16 @@ export function exponerGanchosDePrueba(aviso: ContextoAvisoDeshacer): () => void
       const lugar = document.createElement('div')
       contenido.append(lugar)
       createApp(GraficoBarras, { titulo, barras }).mount(lugar)
+    },
+    async mostrarCatalogo(kit) {
+      const cargar = CATALOGOS_DE_KITS[kit] as (() => Promise<{ default: Component }>) | undefined
+      if (!cargar) throw new Error(`No hay catálogo para el kit "${kit}"`)
+      const { default: Catalogo } = await cargar()
+      const contenido = document.getElementById('contenido')
+      if (!contenido) throw new Error('Falta #contenido')
+      const lugar = document.createElement('div')
+      contenido.append(lugar)
+      createApp(Catalogo).mount(lugar)
     },
   }
   return () => {
