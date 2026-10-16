@@ -1,5 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
-import { VistaVender } from '@/modules/inventario'
+import { VistaRecibir, VistaVender } from '@/modules/inventario'
 import { Pendiente } from './pendiente'
 
 /** Ola 4, plan 12 (`feat/ui-operaciones`): Vender, Recibir, merma, conteos e Historial. */
@@ -13,7 +13,8 @@ export const rutasDeOperaciones: RouteRecordRaw[] = [
   {
     path: '/recibir',
     name: 'recibir',
-    component: Pendiente,
+    // RN-UX-12: en la navegación dice "Recibir"; la pantalla se titula "Llegó mercadería".
+    component: VistaRecibir,
     meta: { titulo: 'Recibir', enNavegacion: true, icono: 'package-plus' },
   },
   {

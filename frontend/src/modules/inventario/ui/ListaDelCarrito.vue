@@ -38,7 +38,12 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
   <div class="lista-del-carrito">
     <p v-if="lineas.length === 0" class="vacio">{{ textoVacio }}</p>
     <ul v-else role="list" class="lineas">
-      <li v-for="linea in lineas" :key="linea.producto.id" class="linea">
+      <li
+        v-for="linea in lineas"
+        :key="linea.producto.id"
+        class="linea"
+        :data-producto="linea.producto.id"
+      >
         <FilaDeCarrito
           :nombre="linea.producto.nombre"
           :imagen="fotos.foto(linea.producto.id)"

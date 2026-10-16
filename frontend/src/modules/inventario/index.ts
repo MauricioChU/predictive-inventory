@@ -44,3 +44,4 @@ export {
 
 // Ola 4, plan 12: pantallas de operaciones, cargadas recién al abrirlas (cada una es su chunk).
 export const VistaVender = () => import('./ui/VistaVender.vue')
+export const VistaRecibir = () => import('./ui/VistaRecibir.vue')
