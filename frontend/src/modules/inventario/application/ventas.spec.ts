@@ -217,6 +217,17 @@ describe('registrarVenta', () => {
     expect(await tipos('lejia')).toEqual(['STOCK_INICIAL'])
   })
 
+  it('RN-OP-09: una fecha con hora pero sin zona se rechaza y no se registra nada', async () => {
+    const { modulo, tipos } = await escenario()
+    await expect(
+      modulo.registrarVenta({
+        lineas: [{ productoId: 'lejia', cantidad: '1' }],
+        ocurridaEn: '2026-10-14T18:30',
+      }),
+    ).rejects.toMatchObject({ codigo: 'FECHA_INVALIDA', message: 'Elige la fecha y la hora' })
+    expect(await tipos('lejia')).toEqual(['STOCK_INICIAL'])
+  })
+
   it('RN-OP-10 / RN-OP-12: la venta guarda precio y costo, y calcula total y ganancia por línea', async () => {
     const { modulo, operaciones } = await escenario()
     const { operacionId } = await modulo.registrarVenta({

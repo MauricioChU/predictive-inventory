@@ -171,6 +171,52 @@ describe('crearModuloAlertas', () => {
     expect(notificador.mostradas).toEqual([{ texto: 'Se acabó: Lejía 1 L', url: '/productos/p1' }])
   })
 
+  // Ola 3, ruling 4: los pasos Gherkin encadenan eventos; la espera sigue hasta que la cola
+  // deja de cambiar.
+  it('RN-AL-02: esperarEvaluacionesPendientes también espera las evaluaciones que se encolan mientras espera', async () => {
+    const { dependencias, bus, analisisFalso, notificador } = prepararContexto()
+    const modulo = crearModuloAlertas(dependencias)
+    modulo.escucharEventos()
+    analisisFalso.situacionesActuales = [
+      crearSituacion({
+        productoId: 'p1',
+        nombre: 'Lejía 1 L',
+        estado: 'POR_ACABARSE',
+        stock: Cantidad.deEntero(3),
+      }),
+    ]
+    let liberar: () => void = () => {}
+    analisisFalso.retrasarProximaLlamada(new Promise<void>((r) => (liberar = r)))
+    // Un evento encadenado: cuando sale la primera notificación, otro módulo publica un evento
+    // (y el producto ya se agotó), lo que encola una segunda evaluación.
+    const mostrar = notificador.mostrar.bind(notificador)
+    let encadenado = false
+    notificador.mostrar = async (notificacion) => {
+      await mostrar(notificacion)
+      if (encadenado) return
+      encadenado = true
+      analisisFalso.situacionesActuales = [
+        crearSituacion({ productoId: 'p1', nombre: 'Lejía 1 L', estado: 'AGOTADO' }),
+      ]
+      void bus.publicar({ tipo: 'ConfiguracionActualizada' })
+    }
+
+    await bus.publicar({
+      tipo: 'OperacionRegistrada',
+      operacionId: 'o1',
+      tipoOperacion: 'VENTA',
+      productoIds: ['p1'],
+    })
+    const espera = modulo.esperarEvaluacionesPendientes()
+    liberar()
+    await espera
+
+    expect(notificador.mostradas).toEqual([
+      { texto: 'Queda poco: Lejía 1 L (3 unid.)', url: '/productos/p1' },
+      { texto: 'Se acabó: Lejía 1 L', url: '/productos/p1' },
+    ])
+  })
+
   it('RN-AL-02: una evaluación que falla se registra y no rompe la cola', async () => {
     const { dependencias, analisisFalso, notificador } = prepararContexto()
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})

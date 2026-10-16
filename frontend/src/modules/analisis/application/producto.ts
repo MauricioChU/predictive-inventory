@@ -5,7 +5,7 @@ import type { Instante } from '@/shared/domain/fecha'
 import { respuestaNecesitoComprar } from '../domain/necesito-comprar'
 import { tendencia } from '../domain/observaciones'
 import { textoCobertura, textoVentaDiaria } from '../domain/prediccion'
-import { PRODUCTO_NO_ENCONTRADO } from './lista-de-compras'
+import { cambiosDelDia, PRODUCTO_NO_ENCONTRADO } from './lista-de-compras'
 import type { DependenciasDeAnalisis } from './puertos'
 import { evaluarProducto } from './situaciones'
 
@@ -28,16 +28,17 @@ export interface DetalleDeProducto {
   tendencia: Cantidad[]
 }
 
-/** RN-AN-16: "¿Necesito comprar?" para un producto activo. */
+/** RN-AN-16: "¿Necesito comprar?" para un producto activo, con la lista de hoy (RN-AN-08). */
 export async function necesitoComprar(
   d: DependenciasDeAnalisis,
   productoId: string,
 ): Promise<RespuestaNecesitoComprar> {
   const evaluacion = await evaluarProducto(d, productoId)
   if (!evaluacion) throw new ErrorDeDominio('PRODUCTO_NO_ENCONTRADO', PRODUCTO_NO_ENCONTRADO)
-  const { producto, situacion } = evaluacion
+  const { hoy, producto, situacion } = evaluacion
+  const cambio = (await cambiosDelDia(d, hoy)).find((c) => c.productoId === productoId)
   return {
-    respuesta: respuestaNecesitoComprar(situacion, producto.precioCompra),
+    respuesta: respuestaNecesitoComprar(situacion, producto.precioCompra, cambio),
     stock: situacion.stock,
     unidad: situacion.unidad,
     ultimoIngreso: await d.inventario().ultimoIngresoDe(productoId),

@@ -90,7 +90,7 @@ describe('RN-AN-08: lista para comprar editable', () => {
     ['lejia', '0', 'La cantidad debe ser mayor que 0'],
     ['lejia', '1.5', 'Este producto se cuenta por unidades enteras'],
     ['carbon', '100000', 'La cantidad no puede pasar de 99 999'],
-    ['otro', '2', 'No encontré ese producto'],
+    ['otro', '2', 'No encontramos ese producto'],
   ])('RN-AN-08: cambiar %s a "%s" se rechaza: %s', async (productoId, texto, mensaje) => {
     const e = await conLejiaYCarbon()
     await expect(e.modulo.cambiarCantidadEnLista(productoId, texto)).rejects.toThrow(mensaje)
@@ -100,8 +100,16 @@ describe('RN-AN-08: lista para comprar editable', () => {
   it('RN-AN-08: un producto archivado no se cambia en la lista', async () => {
     const e = await conLejiaYCarbon(entorno([{ ...LEJIA, activo: false }, CARBON]))
     await expect(e.modulo.cambiarCantidadEnLista('lejia', '24')).rejects.toThrow(
-      'No encontré ese producto',
+      'No encontramos ese producto',
     )
+  })
+
+  // Ola 3 (ruling de la Ola 2): quitar también valida el producto, con el texto de Catálogo.
+  it('RN-AN-08: quitar de la lista un producto que no existe o está archivado se rechaza', async () => {
+    const e = await conLejiaYCarbon(entorno([{ ...LEJIA, activo: false }, CARBON]))
+    await expect(e.modulo.quitarDeLista('lejia')).rejects.toThrow('No encontramos ese producto')
+    await expect(e.modulo.quitarDeLista('otro')).rejects.toThrow('No encontramos ese producto')
+    expect(await e.listaDeCompras.delDia('2026-10-15')).toBeNull()
   })
 
   it('RN-AN-08: compartir la lista como texto', async () => {

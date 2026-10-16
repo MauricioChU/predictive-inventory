@@ -11,7 +11,7 @@ import type { DependenciasDeTienda } from './puertos'
 
 export interface ModuloTienda {
   obtenerConfiguracion(): Promise<ConfiguracionDeNegocio>
-  /** Publica `ConfiguracionActualizada` después de guardar. */
+  /** Publica `ConfiguracionActualizada` después de confirmar (la unidad de trabajo más externa). */
   actualizarConfiguracion(cambios: Partial<ConfiguracionDeNegocio>): Promise<void>
   completarPrimeraVez(d: { nombreTienda: string; tamanoDeLetra: TamanoDeLetra }): Promise<void>
   consultable: TiendaConsultable

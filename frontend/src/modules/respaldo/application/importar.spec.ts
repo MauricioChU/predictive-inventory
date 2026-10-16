@@ -141,6 +141,56 @@ describe('previsualizarImportacion (RN-RE-08)', () => {
   })
 })
 
+// Ola 3, ruling 1: lo que Catálogo deja con alConfirmar (ProductoCreado, OperacionRegistrada del
+// stock inicial) sale tras confirmar la importación entera, que es la unidad de trabajo externa.
+describe('confirmarImportacion en una sola unidad de trabajo', () => {
+  function conPublicacionAlConfirmar(contexto: ReturnType<typeof crearContexto>) {
+    const { deps, catalogo } = contexto
+    const publicados: string[] = []
+    const crear = catalogo.importacion.crear
+    // Como el Catálogo real: el evento se deja para después del commit más externo.
+    catalogo.importacion.crear = async (datos) => {
+      if (datos.nombre === 'Jabón Rey') throw new Error('falla al crear')
+      const id = await crear(datos)
+      deps.uow.alConfirmar(() => {
+        publicados.push(`ProductoCreado ${datos.nombre}`)
+      })
+      return id
+    }
+    return publicados
+  }
+
+  it('RN-RE-07: si una fila falla al crearse, no se publica nada de las filas anteriores', async () => {
+    const contexto = crearContexto()
+    const publicados = conPublicacionAlConfirmar(contexto)
+    contexto.lectorDeExcel.fijarFilas([
+      ENCABEZADOS,
+      ['Jabón Bolívar', 'Detergentes', 'unid', '1.20', '2.00', '5', '24'],
+      ['Jabón Rey', 'Detergentes', 'unid', '1.10', '1.90', '5', ''],
+    ])
+    const previa = await previsualizarImportacion(contexto.deps, new Blob())
+
+    await expect(confirmarImportacion(contexto.deps, previa)).rejects.toThrow('falla al crear')
+
+    expect(publicados).toEqual([])
+  })
+
+  it('ADR-0002: si la importación confirma, los eventos salen después y en el orden de las filas', async () => {
+    const contexto = crearContexto()
+    const publicados = conPublicacionAlConfirmar(contexto)
+    contexto.lectorDeExcel.fijarFilas([
+      ENCABEZADOS,
+      ['Jabón Bolívar', 'Detergentes', 'unid', '1.20', '2.00', '5', '24'],
+      ['Ambientador Glade', 'Ambientadores', 'unid', '6.50', '9.00', '2', '6'],
+    ])
+    const previa = await previsualizarImportacion(contexto.deps, new Blob())
+
+    await confirmarImportacion(contexto.deps, previa)
+
+    expect(publicados).toEqual(['ProductoCreado Jabón Bolívar', 'ProductoCreado Ambientador Glade'])
+  })
+})
+
 describe('previsualizarImportacion: otros errores del catálogo', () => {
   it('RN-RE-08: otro código usa el mensaje con la primera letra en minúscula', async () => {
     const { deps, lectorDeExcel, catalogo } = crearContexto()

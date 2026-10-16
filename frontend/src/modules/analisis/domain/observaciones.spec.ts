@@ -409,7 +409,14 @@ describe('RN-AN-13: mejor día de la semana', () => {
     )
     const mejor = mejorDiaDeLaSemana(filas, HOY, '2026-08-01')
     expect(mejor).toMatchObject({ tipo: 'calculado', mejor: 'lunes' })
-    expect(mejorDiaDeLaSemana([], HOY, '2026-08-01')).toMatchObject({ mejor: 'lunes' })
+  })
+
+  // Ola 3 (ruling de la Ola 2): sin ventas no hay un "mejor día" que marcar.
+  it('RN-AN-13: con historia suficiente pero todos los promedios en S/ 0.00, todavía no se sabe', () => {
+    const esperado = { tipo: 'insuficiente', mensaje: 'Todavía no hay ventas para saberlo' }
+    expect(mejorDiaDeLaSemana([], HOY, '2026-08-01')).toEqual(esperado)
+    const sinVentas = ventasDiarias('2026-08-01', HOY, () => null)
+    expect(mejorDiaDeLaSemana(sinVentas, HOY, '2026-08-01')).toEqual(esperado)
   })
 })
 

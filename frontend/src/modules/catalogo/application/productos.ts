@@ -56,7 +56,7 @@ function aProductoVista(
  * RN-CAT-01/02/04/05/06/08: valida en orden (nombre, unicidad, categoría, precio de compra,
  * precio de venta, stock mínimo, stock inicial) y, al confirmar, guarda el producto y registra
  * el stock inicial en la MISMA unidad de trabajo (RN-OP-06): si falla, el producto no queda
- * guardado. Publica `ProductoCreado` después de confirmar la UoW.
+ * guardado. Publica `ProductoCreado` después de confirmar la UoW MÁS EXTERNA (alConfirmar).
  */
 export async function crearProducto(
   datos: DatosDeProductoNuevo & { confirmado?: boolean },
@@ -104,9 +104,8 @@ export async function crearProducto(
     if (stockInicial.esPositiva()) {
       await deps.inventario().registrarStockInicial(id, stockInicial, precioCompra)
     }
+    deps.uow.alConfirmar(() => deps.bus.publicar({ tipo: 'ProductoCreado', productoId: id }))
   })
-
-  await deps.bus.publicar({ tipo: 'ProductoCreado', productoId: id })
   return hecho({ productoId: id })
 }
 
@@ -171,14 +170,16 @@ export async function editarProducto(
 
   await deps.uow.ejecutar(async () => {
     await deps.productos.guardar(producto.aRegistro())
+    deps.uow.alConfirmar(() =>
+      deps.bus.publicar({ tipo: 'ProductoActualizado', productoId: producto.id }),
+    )
   })
-  await deps.bus.publicar({ tipo: 'ProductoActualizado', productoId: producto.id })
   return hecho(undefined)
 }
 
 /**
  * RN-CAT-11: para archivar el stock debe ser 0; si no, ofrece retirarlo (AJUSTE) y archivar
- * en el mismo paso. Publica `ProductoArchivado` tras confirmar la UoW.
+ * en el mismo paso. Publica `ProductoArchivado` tras confirmar la UoW MÁS EXTERNA.
  */
 export async function archivarProducto(
   datos: { productoId: string; confirmado?: boolean },
@@ -200,9 +201,10 @@ export async function archivarProducto(
     }
     producto.archivar(ahora)
     await deps.productos.guardar(producto.aRegistro())
+    deps.uow.alConfirmar(() =>
+      deps.bus.publicar({ tipo: 'ProductoArchivado', productoId: producto.id }),
+    )
   })
-
-  await deps.bus.publicar({ tipo: 'ProductoArchivado', productoId: producto.id })
   return hecho(undefined)
 }
 
@@ -219,8 +221,8 @@ export async function reactivarProducto(
 
   await deps.uow.ejecutar(async () => {
     await deps.productos.guardar(producto.aRegistro())
+    deps.uow.alConfirmar(() => deps.bus.publicar({ tipo: 'ProductoReactivado', productoId }))
   })
-  await deps.bus.publicar({ tipo: 'ProductoReactivado', productoId })
 }
 
 export async function obtenerProducto(
@@ -269,7 +271,8 @@ export async function buscarProductos(
 
 /**
  * RN-OP-14: Inventario la usa al aceptar el nuevo costo de un ingreso. Solo actualiza el
- * precio de compra (el de venta no cambia) y publica `ProductoActualizado`.
+ * precio de compra (el de venta no cambia) y publica `ProductoActualizado` cuando confirma la
+ * transacción de Inventario (la más externa).
  */
 export async function actualizarPrecioCompra(
   productoId: string,
@@ -284,8 +287,8 @@ export async function actualizarPrecioCompra(
 
   await deps.uow.ejecutar(async () => {
     await deps.productos.guardar(producto.aRegistro())
+    deps.uow.alConfirmar(() => deps.bus.publicar({ tipo: 'ProductoActualizado', productoId }))
   })
-  await deps.bus.publicar({ tipo: 'ProductoActualizado', productoId })
 }
 
 function leerOError<T>(fn: () => T): { valor: T } | { error: ErrorDeValidacion } {

@@ -29,11 +29,11 @@ El inventario funciona como un **libro de operaciones**: cada hecho del negocio 
 |---|---|
 | `id` | UUID generado en el dispositivo (clave de idempotencia para la sincronización de la Fase 2). |
 | `tipo` | Ver tabla de tipos. |
-| `movimientos` | Lista no vacía, un movimiento por producto. |
+| `movimientos` | Lista no vacía, un movimiento por producto. Sin ningún producto se rechaza: "Agrega al menos un producto". |
 | `ocurridaEn` | Fecha-hora del hecho (por defecto, ahora). |
 | `registradaEn` | Fecha-hora en que se anotó. |
 | `motivo` | Obligatorio en `MERMA`; opcional en `AJUSTE` y `ANULACION`. |
-| `nota` | Texto libre opcional (máx. 200 caracteres). |
+| `nota` | Texto libre opcional (máx. 200 caracteres; si se pasa: "La nota puede tener hasta 200 caracteres"). |
 | `anulaA` | Solo en `ANULACION`: id de la operación revertida. |
 | `dispositivoId` | Identificador del dispositivo que la registró. |
 
@@ -73,9 +73,9 @@ El inventario funciona como un **libro de operaciones**: cada hecho del negocio 
 | **RN-OP-04** | **Precisión por unidad**: `UNIDAD` solo acepta enteros; `KILO` y `LITRO` aceptan hasta **3 decimales** (gramos o mililitros). |
 | **RN-OP-05** | **El stock nunca es negativo.** Si una operación dejaría algún producto bajo 0, se rechaza **completa** y el mensaje dice qué producto falta y cuánto hay: "Solo quedan 2 unid. de Lejía 1 L". |
 | **RN-OP-06** | Una operación con varias líneas se registra **entera o no se registra** (atómica). |
-| **RN-OP-07** | Una operación no repite un producto: si se agrega dos veces el mismo, se **suman** las cantidades en una sola línea. |
-| **RN-OP-08** | Solo se operan productos **activos** (salvo la anulación de una operación pasada de un producto ya archivado). |
-| **RN-OP-09** | La fecha de una operación puede ser **ahora o hasta 7 días atrás**, nunca futura. Por defecto es ahora. La validación de stock (RN-OP-05) se hace contra el stock **actual**. |
+| **RN-OP-07** | Una operación no repite un producto: si se agrega dos veces el mismo, se **suman** las cantidades en una sola línea. Solo se suman líneas con el mismo precio (el de venta en una venta, el costo en un ingreso); si es distinto, se rechaza: "Pusiste el mismo producto dos veces con distinto precio. Déjalo en una sola línea." |
+| **RN-OP-08** | Solo se operan productos **activos** (salvo la anulación de una operación pasada de un producto ya archivado). Un producto que no existe se rechaza: "No encontramos ese producto". |
+| **RN-OP-09** | La fecha de una operación puede ser **ahora o hasta 7 días atrás**, nunca futura. Por defecto es ahora. Si se elige otra fecha, se elige también la hora; sin hora (o si no se puede leer) se pide: "Elige la fecha y la hora". La validación de stock (RN-OP-05) se hace contra el stock **actual**. |
 
 ### Venta
 
@@ -99,14 +99,14 @@ El inventario funciona como un **libro de operaciones**: cada hecho del negocio 
 |---|---|
 | **RN-OP-15** | La **merma** exige un motivo: *Se dañó o rompió*, *Se derramó*, *Se venció* u *Otro* (con nota obligatoria). Su costo es costo unitario × cantidad y cuenta como **pérdida**. |
 | **RN-OP-16** | **Contar stock**: el usuario escribe cuánto **hay realmente**. La app calcula la diferencia contra el stock actual. Si es 0, no se registra nada y se muestra "El stock ya estaba correcto". Si no, se registra un `AJUSTE` por la diferencia (positiva o negativa). Los ajustes no cuentan como ganancia ni como merma: se muestran aparte como *Diferencias de conteo*. |
-| **RN-OP-21** | **Conteo guiado** ("Contar todo"): recorre los productos activos agrupados por categoría y ordenados por nombre, uno por pantalla. Cada respuesta se registra **al momento** como en RN-OP-16, así que no se pierde nada si se interrumpe. Se puede *Saltar* un producto o *Seguir después*: el conteo recuerda en qué producto quedó y cuáles faltan. Al terminar muestra un resumen: productos contados, productos con diferencia y el valor total de las diferencias. |
+| **RN-OP-21** | **Conteo guiado** ("Contar todo"): recorre los productos activos agrupados por categoría y ordenados por nombre, uno por pantalla. Cada respuesta se registra **al momento** como en RN-OP-16, así que no se pierde nada si se interrumpe. Se puede *Saltar* un producto o *Seguir después*: el conteo recuerda en qué producto quedó y cuáles faltan. Al terminar muestra un resumen: productos contados, productos con diferencia y el valor total de las diferencias (si no se contó ninguno: "No contaste ningún producto."). |
 
 ### Anulación y deshacer
 
 | Id | Regla |
 |---|---|
 | **RN-OP-17** | Cualquier operación, salvo una `ANULACION`, puede **anularse una sola vez**. La anulación invierte todos sus movimientos y se rechaza si dejaría stock negativo (RN-OP-05), por ejemplo al anular un ingreso cuya mercadería ya se vendió. La operación anulada y su anulación **no cuentan** en ningún cálculo de ventas, ganancias, mermas ni tendencias. |
-| **RN-OP-18** | Después de registrar cualquier operación se muestra **"Deshacer"** durante 10 segundos. Deshacer equivale a anularla sin pedir motivo. |
+| **RN-OP-18** | Después de registrar cualquier operación se muestra **"Deshacer"** durante 10 segundos. Deshacer equivale a anularla sin pedir motivo. Un toque que llega cuando ya pasó ese tiempo se rechaza con "Ya pasó el tiempo para deshacer. Puedes anularla desde el Historial." El stock inicial y el retiro de stock que se registran al crear o archivar un producto (RN-CAT-08, RN-CAT-11) no ofrecen Deshacer. |
 
 ### Integridad
 
@@ -131,5 +131,5 @@ Si pagan con S/ 20.00, el vuelto es S/ 5.37.
 
 | Evento | Datos | Lo escuchan |
 |---|---|---|
-| `OperacionRegistrada` | id, tipo, productos afectados, existencias resultantes | Alertas, Análisis |
-| `OperacionAnulada` | id original, id de la anulación | Alertas, Análisis |
+| `OperacionRegistrada` | id, tipo, productos afectados | Alertas, Análisis |
+| `OperacionAnulada` | id original, id de la anulación, productos afectados | Alertas, Análisis |

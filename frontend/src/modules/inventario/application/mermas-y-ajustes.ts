@@ -78,7 +78,10 @@ export async function contarEn(
   return { tipo: 'ajustado', operacionId: ajuste.id, diferencia }
 }
 
-/** RN-CAT-08: lo llama Catálogo al crear un producto con stock inicial. */
+/** Ola 3, ruling 2: lo que registra Catálogo (stock inicial y retiro) no ofrece Deshacer. */
+const SIN_DESHACER = { ofrecerDeshacer: false } as const
+
+/** RN-CAT-08: lo llama Catálogo al crear un producto con stock inicial (sin Deshacer). */
 export async function registrarStockInicial(
   ctx: ContextoDeInventario,
   productoId: string,
@@ -90,12 +93,12 @@ export async function registrarStockInicial(
     cantidad,
     costoUnitario,
   })
-  await ctx.libro.registrar(inicial)
+  await ctx.libro.registrar(inicial, undefined, SIN_DESHACER)
 }
 
 /**
  * RN-CAT-11: AJUSTE hasta 0 con motivo "Producto retirado"; con stock 0 no registra nada. No
- * exige que el producto esté activo: es parte de archivarlo.
+ * exige que el producto esté activo: es parte de archivarlo. Sin Deshacer (ruling 2).
  */
 export async function retirarStock(ctx: ContextoDeInventario, productoId: string): Promise<void> {
   const producto = await productoExistente(ctx, productoId)
@@ -107,6 +110,6 @@ export async function retirarStock(ctx: ContextoDeInventario, productoId: string
       { ...(await datosDeRegistro(ctx, momentos)), motivo: MOTIVO_PRODUCTO_RETIRADO },
       { productoId, diferencia: stock.negar(), costoUnitario: producto.precioCompra },
     )
-    await escritura.registrar(retiro, datosDeProductos([producto]))
+    await escritura.registrar(retiro, datosDeProductos([producto]), SIN_DESHACER)
   })
 }

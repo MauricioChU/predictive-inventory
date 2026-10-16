@@ -176,4 +176,35 @@ describe('ModuloTienda', () => {
     ).rejects.toThrow('disco lleno')
     expect(publicado).toBe(false)
   })
+
+  // Ola 3, ruling 1: el evento se publica tras el commit de la unidad de trabajo MÁS EXTERNA.
+  it('RN-OP-06: si una unidad de trabajo externa falla después, no se publica ni se guarda nada', async () => {
+    const { modulo: m, deps } = crearModulo()
+    const publicados: string[] = []
+    deps.bus.suscribir('ConfiguracionActualizada', (evento) => {
+      publicados.push(evento.tipo)
+    })
+    await expect(
+      deps.uow.ejecutar(async () => {
+        await m.actualizarConfiguracion({ nombreTienda: 'Bodega Rosita' })
+        await m.completarPrimeraVez({ nombreTienda: 'Casa Lola', tamanoDeLetra: 'GRANDE' })
+        throw new Error('falla externa')
+      }),
+    ).rejects.toThrow('falla externa')
+    expect(publicados).toEqual([])
+    expect(await m.obtenerConfiguracion()).toEqual(CONFIGURACION_INICIAL)
+  })
+
+  it('ADR-0002: si la unidad de trabajo externa confirma, el evento llega después del commit', async () => {
+    const { modulo: m, deps } = crearModulo()
+    const publicados: string[] = []
+    deps.bus.suscribir('ConfiguracionActualizada', (evento) => {
+      publicados.push(evento.tipo)
+    })
+    await deps.uow.ejecutar(async () => {
+      await m.actualizarConfiguracion({ nombreTienda: 'Bodega Rosita' })
+      expect(publicados).toEqual([])
+    })
+    expect(publicados).toEqual(['ConfiguracionActualizada'])
+  })
 })

@@ -1,3 +1,4 @@
+import type { ProductoResumido } from '@/shared/contratos/entre-modulos'
 import type { Cantidad } from '@/shared/domain/cantidad'
 import type { Dinero } from '@/shared/domain/dinero'
 import { ErrorDeDominio } from '@/shared/domain/errores'
@@ -16,7 +17,18 @@ import {
 import type { DependenciasDeAnalisis } from './puertos'
 import { cargarDatos, evaluarProductos, hoyDe, type EvaluacionDeProducto } from './situaciones'
 
-export const PRODUCTO_NO_ENCONTRADO = 'No encontré ese producto'
+/** El mismo texto que Catálogo (spec 01, Casos borde). */
+export const PRODUCTO_NO_ENCONTRADO = 'No encontramos ese producto'
+
+/** Solo los productos activos están en la lista (RN-AL-01 / RN-CAT-10). */
+async function productoActivo(
+  d: DependenciasDeAnalisis,
+  productoId: string,
+): Promise<ProductoResumido> {
+  const producto = await d.catalogo().producto(productoId)
+  if (!producto?.activo) throw new ErrorDeDominio('PRODUCTO_NO_ENCONTRADO', PRODUCTO_NO_ENCONTRADO)
+  return producto
+}
 
 /** RN-AN-07: la lista sugerida, sin los cambios del usuario. */
 export function listaSugerida(evaluaciones: readonly EvaluacionDeProducto[]): ListaParaComprar {
@@ -54,13 +66,13 @@ export async function cambiarCantidadEnLista(
   productoId: string,
   texto: string,
 ): Promise<void> {
-  const producto = await d.catalogo().producto(productoId)
-  if (!producto?.activo) throw new ErrorDeDominio('PRODUCTO_NO_ENCONTRADO', PRODUCTO_NO_ENCONTRADO)
+  const producto = await productoActivo(d, productoId)
   await guardarCambio(d, { productoId, cantidad: cantidadDeLista(texto, producto.unidad) })
 }
 
 /** RN-AN-08: el usuario quita un producto de la lista del día. */
 export async function quitarDeLista(d: DependenciasDeAnalisis, productoId: string): Promise<void> {
+  await productoActivo(d, productoId)
   await guardarCambio(d, { productoId, cantidad: null })
 }
 

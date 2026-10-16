@@ -154,6 +154,7 @@ describe('guardarFoto / obtenerFoto / quitarFoto (RN-CAT-14)', () => {
           orden.push('uow')
           return ctx.deps.uow.ejecutar(trabajo)
         },
+        alConfirmar: (accion) => ctx.deps.uow.alConfirmar(accion),
       },
     }
     await guardarFoto(productoId, new Blob([new Uint8Array([1])]), espia)
@@ -169,6 +170,7 @@ describe('guardarFoto / obtenerFoto / quitarFoto (RN-CAT-14)', () => {
           await editarProducto({ productoId, nombre: 'Escoba nueva' }, ctx.deps)
           return ctx.deps.uow.ejecutar(trabajo)
         },
+        alConfirmar: (accion) => ctx.deps.uow.alConfirmar(accion),
       },
     }
     await quitarFoto(productoId, interferente)

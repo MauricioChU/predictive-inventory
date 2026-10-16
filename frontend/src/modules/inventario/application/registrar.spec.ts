@@ -50,12 +50,15 @@ function preparar() {
   const existencias = new RepositorioDeExistenciasEnMemoria(almacen)
   const transacciones = new UnidadDeTrabajoEnMemoria(almacen)
   const bitacora: string[] = []
+  // Anota cuándo termina el trabajo de la transacción del libro (justo antes de confirmarla).
   const uow: UnidadDeTrabajo = {
-    async ejecutar(trabajo) {
-      const resultado = await transacciones.ejecutar(trabajo)
-      bitacora.push('confirmada')
-      return resultado
-    },
+    ejecutar: (trabajo) =>
+      transacciones.ejecutar(async () => {
+        const resultado = await trabajo()
+        bitacora.push('trabajo terminado')
+        return resultado
+      }),
+    alConfirmar: (accion) => transacciones.alConfirmar(accion),
   }
   const bus = new BusEnMemoria()
   const eventos: EventoDeDominio[] = []
@@ -73,12 +76,22 @@ function preparar() {
     uow,
     bus,
     proyecciones: () => [proyeccion],
-    alConfirmarRegistro: (operacionId, registradaEn) => {
+    ofrecerDeshacer: (operacionId, registradaEn) => {
       ofertas.push({ operacionId, registradaEn })
       bitacora.push('deshacer ofrecido')
     },
   })
-  return { almacen, operaciones, existencias, bitacora, eventos, proyeccion, ofertas, libro }
+  return {
+    almacen,
+    operaciones,
+    existencias,
+    bitacora,
+    eventos,
+    proyeccion,
+    ofertas,
+    libro,
+    transacciones,
+  }
 }
 
 describe('LibroDeOperaciones.registrar', () => {
@@ -101,7 +114,11 @@ describe('LibroDeOperaciones.registrar', () => {
   it('RN-OP-18: los eventos se publican solo tras confirmar, y después se ofrece deshacer', async () => {
     const { libro, bitacora, eventos, ofertas } = preparar()
     await libro.registrar(stockInicial('op-1', 'lejia', 10))
-    expect(bitacora).toEqual(['confirmada', 'evento OperacionRegistrada', 'deshacer ofrecido'])
+    expect(bitacora).toEqual([
+      'trabajo terminado',
+      'evento OperacionRegistrada',
+      'deshacer ofrecido',
+    ])
     expect(eventos).toEqual([
       {
         tipo: 'OperacionRegistrada',
@@ -161,6 +178,45 @@ describe('LibroDeOperaciones.registrar', () => {
     ])
   })
 
+  it('RN-OP-18: un registro sin Deshacer (lo que pide Catálogo) publica su evento pero no ofrece deshacer', async () => {
+    const { libro, eventos, ofertas } = preparar()
+    await libro.registrar(stockInicial('op-1', 'lejia', 10), undefined, { ofrecerDeshacer: false })
+    await libro.enTransaccion((escritura) =>
+      escritura.registrar(venta('op-2', ['lejia', 2]), PRODUCTOS, { ofrecerDeshacer: false }),
+    )
+    expect(eventos.map((e) => e.tipo === 'OperacionRegistrada' && e.operacionId)).toEqual([
+      'op-1',
+      'op-2',
+    ])
+    expect(ofertas).toEqual([])
+  })
+
+  it('ADR-0002: dentro de una unidad de trabajo externa, los eventos y el Deshacer esperan a que la externa confirme', async () => {
+    const { libro, transacciones, eventos, ofertas } = preparar()
+    await transacciones.ejecutar(async () => {
+      await libro.registrar(stockInicial('op-1', 'lejia', 10))
+      expect(eventos).toEqual([])
+      expect(ofertas).toEqual([])
+    })
+    expect(eventos.map((e) => e.tipo)).toEqual(['OperacionRegistrada'])
+    expect(ofertas.map((o) => o.operacionId)).toEqual(['op-1'])
+  })
+
+  it('RN-OP-06: si la unidad de trabajo externa falla después de registrar, no se publica nada ni se ofrece deshacer', async () => {
+    const { libro, transacciones, operaciones, existencias, eventos, ofertas } = preparar()
+    await expect(
+      transacciones.ejecutar(async () => {
+        await libro.registrar(stockInicial('op-1', 'lejia', 10))
+        await libro.registrar(venta('op-2', ['lejia', 2]), PRODUCTOS)
+        throw new Error('falla externa')
+      }),
+    ).rejects.toThrow('falla externa')
+    expect(await operaciones.todas()).toEqual([])
+    expect(await existencias.todas()).toEqual(new Map())
+    expect(eventos).toEqual([])
+    expect(ofertas).toEqual([])
+  })
+
   it('una anulación no se escribe con registrar', async () => {
     const { libro } = preparar()
     const original = stockInicial('op-1', 'lejia', 10)
@@ -191,8 +247,26 @@ describe('LibroDeOperaciones.anular', () => {
       anulacionId: 'op-3',
       productoIds: ['lejia'],
     })
-    expect(bitacora).toEqual(['confirmada', 'evento OperacionAnulada'])
+    expect(bitacora).toEqual(['trabajo terminado', 'evento OperacionAnulada'])
     expect(ofertas.map((o) => o.operacionId)).toEqual(['op-1', 'op-2'])
+  })
+
+  it('RN-OP-06: si la unidad de trabajo externa falla después de anular, no se publica OperacionAnulada', async () => {
+    const { libro, transacciones, existencias, eventos, proyeccion } = preparar()
+    await libro.registrar(stockInicial('op-1', 'lejia', 10))
+    const original = venta('op-2', ['lejia', 2])
+    await libro.registrar(original, PRODUCTOS)
+    eventos.length = 0
+    await expect(
+      transacciones.ejecutar(async () => {
+        await libro.anular(original, Operacion.anulacionDe(original, datos('op-3')), PRODUCTOS)
+        throw new Error('falla externa')
+      }),
+    ).rejects.toThrow('falla externa')
+    expect(await existencias.obtener('lejia')).toEqual(unidades(8))
+    expect(eventos).toEqual([])
+    // La proyección sí se llamó dentro de la transacción (que luego se revirtió).
+    expect(proyeccion.anuladas).toHaveLength(1)
   })
 
   it('RN-OP-17: el libro no deja registrar una segunda anulación de la misma operación', async () => {

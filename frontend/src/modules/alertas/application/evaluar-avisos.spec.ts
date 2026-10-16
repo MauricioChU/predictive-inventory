@@ -232,4 +232,44 @@ describe('evaluarAvisos', () => {
 
     expect(notificador.solicitudes).toBe(0)
   })
+
+  // Ola 3, ruling 1: la notificación sale tras el commit de la unidad de trabajo MÁS EXTERNA.
+  it('RN-AL-06: dentro de una unidad de trabajo externa que falla después, no se notifica ni queda el registro', async () => {
+    const almacen = new AlmacenEnMemoria()
+    const uow = new UnidadDeTrabajoEnMemoria(almacen)
+    const { dependencias, analisisFalso, notificador } = crearContextoDePrueba(uow, almacen)
+    analisisFalso.situacionesActuales = [
+      crearSituacion({ productoId: 'p1', nombre: 'Lejía 1 L', estado: 'AGOTADO' }),
+    ]
+
+    await expect(
+      uow.ejecutar(async () => {
+        await evaluarAvisos(dependencias)
+        throw new Error('falla externa')
+      }),
+    ).rejects.toThrow('falla externa')
+
+    expect(notificador.mostradas).toEqual([])
+    expect(almacen.todos('avisos')).toEqual([])
+    // Como el registro no quedó guardado, la próxima evaluación avisa.
+    expect(await evaluarAvisos(dependencias)).toEqual([
+      { texto: 'Se acabó: Lejía 1 L', url: '/productos/p1' },
+    ])
+  })
+
+  it('ADR-0002: dentro de una unidad de trabajo externa que confirma, la notificación sale después del commit', async () => {
+    const almacen = new AlmacenEnMemoria()
+    const uow = new UnidadDeTrabajoEnMemoria(almacen)
+    const { dependencias, analisisFalso, notificador } = crearContextoDePrueba(uow, almacen)
+    analisisFalso.situacionesActuales = [
+      crearSituacion({ productoId: 'p1', nombre: 'Lejía 1 L', estado: 'AGOTADO' }),
+    ]
+
+    await uow.ejecutar(async () => {
+      await evaluarAvisos(dependencias)
+      expect(notificador.mostradas).toEqual([])
+    })
+
+    expect(notificador.mostradas).toEqual([{ texto: 'Se acabó: Lejía 1 L', url: '/productos/p1' }])
+  })
 })

@@ -237,13 +237,18 @@ export const NOMBRES_DE_DIA = [
 export type NombreDeDia = (typeof NOMBRES_DE_DIA)[number]
 
 export const MENSAJE_SIN_HISTORIA_SUFICIENTE = 'Necesito al menos 2 semanas de ventas para saberlo'
+/** Con historia suficiente pero sin ninguna venta: no hay un "mejor día" que marcar. */
+export const MENSAJE_SIN_VENTAS_PARA_MEJOR_DIA = 'Todavía no hay ventas para saberlo'
 /** Días de historia que hacen falta. */
 export const DIAS_PARA_MEJOR_DIA = 14
 /** Días completos que se miran. */
 export const DIAS_DE_HISTORIA_DEL_MEJOR_DIA = 56
 
 export type MejorDia =
-  | { tipo: 'insuficiente'; mensaje: typeof MENSAJE_SIN_HISTORIA_SUFICIENTE }
+  | {
+      tipo: 'insuficiente'
+      mensaje: typeof MENSAJE_SIN_HISTORIA_SUFICIENTE | typeof MENSAJE_SIN_VENTAS_PARA_MEJOR_DIA
+    }
   | { tipo: 'calculado'; promedios: { dia: NombreDeDia; promedio: Dinero }[]; mejor: NombreDeDia }
 
 export function mejorDiaDeLaSemana(
@@ -277,6 +282,9 @@ export function mejorDiaDeLaSemana(
     return { dia, promedio: Dinero.deCentimos(redondearMitadLejosDeCero(suma, veces)) }
   })
   const mejor = promedios.reduce((m, p) => (p.promedio.mayorQue(m.promedio) ? p : m))
+  if (mejor.promedio.esCero()) {
+    return { tipo: 'insuficiente', mensaje: MENSAJE_SIN_VENTAS_PARA_MEJOR_DIA }
+  }
   return { tipo: 'calculado', promedios, mejor: mejor.dia }
 }
 

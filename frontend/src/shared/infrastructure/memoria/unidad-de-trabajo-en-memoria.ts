@@ -50,8 +50,29 @@ import type { AlmacenEnMemoria } from './almacen-en-memoria'
  */
 interface TokenDeTransaccion {
   activa: boolean
+  /** Ola 3, ruling 1: lo que corre tras el commit; las llamadas anidadas también agregan aquí. */
+  readonly alConfirmar: AccionAlConfirmar[]
 }
 
+type AccionAlConfirmar = () => void | Promise<void>
+
+/** Una acción que falla no debe afectar a las demás ni a quien ya confirmó (ADR-0002). */
+async function correrSinPropagar(accion: AccionAlConfirmar): Promise<void> {
+  try {
+    await accion()
+  } catch (error) {
+    console.error('Falló una acción posterior a confirmar la unidad de trabajo:', error)
+  }
+}
+
+/**
+ * `alConfirmar` cumple el contrato documentado en `UnidadDeTrabajo`. Cómo lo hace aquí: la acción
+ * se guarda en el token de la transacción MÁS EXTERNA (las anidadas comparten su token); si hay
+ * rollback, el token se descarta con sus acciones. Una continuación tardía cuyo token ya cerró
+ * la corre enseguida. Tras el commit, las acciones corren FUERA de la cola de transacciones
+ * (`colaDeEjecucion` ya avanzó) y con el token inactivo, así que un `ejecutar()` dentro de una
+ * acción espera su turno como transacción independiente: nunca se une ni se bloquea.
+ */
 export class UnidadDeTrabajoEnMemoria implements UnidadDeTrabajo {
   private readonly contexto = new AsyncLocalStorage<TokenDeTransaccion>()
   private colaDeEjecucion: Promise<unknown> = Promise.resolve()
@@ -67,14 +88,28 @@ export class UnidadDeTrabajoEnMemoria implements UnidadDeTrabajo {
       .catch(() => undefined)
       .then(() => this.comoTransaccion(trabajo))
     this.colaDeEjecucion = miTurno
-    return miTurno
+    const { resultado, acciones } = await miTurno
+    for (const accion of acciones) await correrSinPropagar(accion)
+    return resultado
   }
 
-  private async comoTransaccion<T>(trabajo: () => Promise<T>): Promise<T> {
+  alConfirmar(accion: AccionAlConfirmar): void {
+    const token = this.contexto.getStore()
+    if (token?.activa) {
+      token.alConfirmar.push(accion)
+      return
+    }
+    void correrSinPropagar(accion)
+  }
+
+  private async comoTransaccion<T>(
+    trabajo: () => Promise<T>,
+  ): Promise<{ resultado: T; acciones: AccionAlConfirmar[] }> {
     const antes = this.almacen.instantanea()
-    const token: TokenDeTransaccion = { activa: true }
+    const token: TokenDeTransaccion = { activa: true, alConfirmar: [] }
     try {
-      return await this.contexto.run(token, trabajo)
+      const resultado = await this.contexto.run(token, trabajo)
+      return { resultado, acciones: token.alConfirmar }
     } catch (error) {
       this.almacen.restaurar(antes)
       throw error
