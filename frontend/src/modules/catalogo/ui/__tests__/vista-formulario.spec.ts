@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ErrorDeDominio } from '@/shared/domain/errores'
 import { formatearCantidad } from '@/shared/domain/formato'
 import { elegirArchivo, simularUrlsDeObjeto } from '@/shared/ui/__tests__/utilidades-kit-productos'
-import type { AplicacionDePrueba } from '../../soporte/aplicacion-de-prueba'
+import type { AplicacionDePrueba } from '../../../../../tests/soporte/aplicacion-de-prueba'
 import {
   crearAplicacion,
   crearProducto,
@@ -12,7 +12,7 @@ import {
   idDeCategoria,
   montarVista,
   type VistaMontada,
-} from '../../soporte/pantallas-de-productos'
+} from '../../../../../tests/soporte/pantallas-de-productos'
 
 function leer(texto: string): string {
   return texto.replace(/ /g, ' ')

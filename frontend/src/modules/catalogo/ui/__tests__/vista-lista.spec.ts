@@ -1,6 +1,6 @@
 import type { VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { AplicacionDePrueba } from '../../soporte/aplicacion-de-prueba'
+import type { AplicacionDePrueba } from '../../../../../tests/soporte/aplicacion-de-prueba'
 import {
   crearAplicacion,
   crearProducto,
@@ -8,7 +8,7 @@ import {
   esperarRuta,
   montarVista,
   type VistaMontada,
-} from '../../soporte/pantallas-de-productos'
+} from '../../../../../tests/soporte/pantallas-de-productos'
 
 function nombres(w: VueWrapper): string[] {
   return w.findAll('.tarjeta-de-producto .nombre').map((n) => n.text())

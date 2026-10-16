@@ -1,7 +1,7 @@
 import type { VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { instanteLocal } from '@/shared/domain/fecha'
-import type { AplicacionDePrueba } from '../../soporte/aplicacion-de-prueba'
+import type { AplicacionDePrueba } from '../../../../../tests/soporte/aplicacion-de-prueba'
 import {
   crearAplicacion,
   crearProducto,
@@ -10,7 +10,7 @@ import {
   HOY,
   montarVista,
   type VistaMontada,
-} from '../../soporte/pantallas-de-productos'
+} from '../../../../../tests/soporte/pantallas-de-productos'
 
 function boton(w: VueWrapper, texto: string) {
   const encontrado = w.findAll('button').find((b) => b.text().trim() === texto)
