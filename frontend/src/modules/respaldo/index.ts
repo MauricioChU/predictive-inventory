@@ -15,6 +15,7 @@ export type {
 } from './application/puertos'
 export type { ResumenDeCopia } from './domain/formato-de-respaldo'
 export { AlmacenDeRespaldoEnMemoria } from './infrastructure/memoria/almacen-de-respaldo'
+export { AlmacenDeRespaldoDexie } from './infrastructure/dexie/almacen-de-respaldo'
 export {
   AlmacenamientoPersistenteEnMemoria,
   GeneradorDeExcelEnMemoria,

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { RelojFijo } from '../../../shared/domain/reloj'
 import { instanteLocal } from '../../../shared/domain/fecha'
 import { AlmacenEnMemoria } from '../../../shared/infrastructure/memoria/almacen-en-memoria'
@@ -73,7 +73,7 @@ function crearContexto() {
   tienda.fijarConfiguracion({ nombreTienda: 'Bodega Rosita' })
 
   const deps: DependenciasDeRespaldo = {
-    almacen: new AlmacenDeRespaldoEnMemoria(almacenEnMemoria),
+    almacen: new AlmacenDeRespaldoEnMemoria(almacenEnMemoria, uow),
     reconstructor,
     generadorDeExcel: new GeneradorDeExcelEnMemoria(),
     lectorDeExcel: new LectorDeExcelEnMemoria(),
@@ -409,35 +409,18 @@ describe('copia consistente (RN-RE-02/03/04)', () => {
   })
 })
 
-describe('guardarCopia lee dentro de la unidad de trabajo', () => {
-  it('leerTodo se ejecuta dentro de uow.ejecutar (una sola foto coherente)', async () => {
-    const { deps, uow } = crearContexto()
-    let dentro = false
-    let leidoDentro = false
-    const conEspia: DependenciasDeRespaldo = {
-      ...deps,
-      uow: {
-        ejecutar: async (trabajo) => {
-          dentro = true
-          try {
-            return await uow.ejecutar(trabajo)
-          } finally {
-            dentro = false
-          }
-        },
-        alConfirmar: (accion) => uow.alConfirmar(accion),
-      },
-      almacen: {
-        leerTodo: async () => {
-          leidoDentro = dentro
-          return deps.almacen.leerTodo()
-        },
-        reemplazarTodo: (datos) => deps.almacen.reemplazarTodo(datos),
-      },
-    }
+describe('guardarCopia toma la foto con el almacén, fuera de una unidad de trabajo', () => {
+  it('RN-RE-02: no abre una unidad de trabajo: el almacén lee todo en una sola transacción y convierte las fotos fuera de ella', async () => {
+    const { deps, almacenEnMemoria, seedProductosYOperaciones } = crearContexto()
+    seedProductosYOperaciones()
+    const delCasoDeUso = new UnidadDeTrabajoEnMemoria(almacenEnMemoria)
+    const ejecutar = vi.spyOn(delCasoDeUso, 'ejecutar')
+    const leerTodo = vi.spyOn(deps.almacen, 'leerTodo')
 
-    await guardarCopia(conEspia)
+    const archivo = await guardarCopia({ ...deps, uow: delCasoDeUso })
 
-    expect(leidoDentro).toBe(true)
+    expect(leerTodo).toHaveBeenCalledTimes(1)
+    expect(ejecutar).not.toHaveBeenCalled()
+    expect(JSON.parse(await archivo.contenido.text()).control.productos).toBe(2)
   })
 })

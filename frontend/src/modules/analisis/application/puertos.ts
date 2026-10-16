@@ -12,6 +12,8 @@ import type { Reloj } from '@/shared/domain/reloj'
 export interface RepositorioDeResumenes {
   obtener(productoId: string, dia: Dia): Promise<ResumenDiarioRegistro | null>
   guardar(r: ResumenDiarioRegistro): Promise<void>
+  /** Escritura masiva (reconstruir la proyección): reemplaza las filas con la misma clave. */
+  guardarVarios(registros: readonly ResumenDiarioRegistro[]): Promise<void>
   /** Filas de toda la tienda entre dos días (inclusive), por día y producto. */
   entre(desde: Dia, hasta: Dia): Promise<ResumenDiarioRegistro[]>
   /** Filas de un producto entre dos días (inclusive), por día (índice [productoId+dia]). */

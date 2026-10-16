@@ -153,4 +153,42 @@ describe('situaciones de los productos (AnalisisConsultable)', () => {
     expect(entre).not.toHaveBeenCalled()
     expect(deProducto).toHaveBeenCalledWith('lejia', '2026-08-16', '2026-10-15')
   })
+
+  it('ADR-0002: las existencias y las filas de la ventana se leen en una misma unidad de trabajo', async () => {
+    /** Marca cuándo corre el trabajo de una unidad de trabajo (no solo cuándo se pide). */
+    class UnidadQueMarca extends UnidadDeTrabajoEnMemoria {
+      dentro = 0
+      override ejecutar<T>(trabajo: () => Promise<T>): Promise<T> {
+        return super.ejecutar(async () => {
+          this.dentro++
+          try {
+            return await trabajo()
+          } finally {
+            this.dentro--
+          }
+        })
+      }
+    }
+    let uow: UnidadQueMarca | null = null
+    const e = crearEntorno({
+      productos: [LEJIA],
+      uow: (almacen) => (uow = new UnidadQueMarca(almacen)),
+    })
+    await e.cargar(LEJIA_56_EN_28(62))
+    const leidasDentro: string[] = []
+    const existencias = e.inventario.existencias.bind(e.inventario)
+    vi.spyOn(e.inventario, 'existencias').mockImplementation(async () => {
+      if (uow!.dentro > 0) leidasDentro.push('existencias')
+      return existencias()
+    })
+    const entre = e.resumenes.entre.bind(e.resumenes)
+    vi.spyOn(e.resumenes, 'entre').mockImplementation(async (desde, hasta) => {
+      if (uow!.dentro > 0) leidasDentro.push('entre')
+      return entre(desde, hasta)
+    })
+
+    const [s] = await e.modulo.consultable.situaciones()
+    expect(leidasDentro.sort()).toEqual(['entre', 'existencias'])
+    expect(s).toMatchObject({ estado: 'POR_ACABARSE', diasDeCobertura: 3 })
+  })
 })

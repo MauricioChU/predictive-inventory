@@ -15,6 +15,12 @@ export type { CeldaDeExcel, DatosDelRespaldo, HojaDeExcel }
 /** Lee y reemplaza todo lo que guarda y restaura un respaldo (sin tocar el estado del
  * sistema, que vive aparte en el módulo Tienda). */
 export interface AlmacenDeRespaldo {
+  /**
+   * Una foto coherente de todo (RN-RE-02): lee todos los registros de una vez (en Dexie, en
+   * una sola transacción de lectura) y después convierte las fotos a base64. Se llama FUERA
+   * de una unidad de trabajo: convertir las fotos dentro de una transacción de IndexedDB la
+   * cerraría antes de tiempo.
+   */
   leerTodo(): Promise<DatosDelRespaldo>
   /**
    * Reemplaza configuración del negocio, categorías, productos, operaciones, avisos y

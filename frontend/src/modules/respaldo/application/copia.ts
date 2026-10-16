@@ -17,15 +17,16 @@ export const CONFIRMACIONES_PARA_RESTAURAR = [
 const TIPO_JSON = 'application/json'
 
 /**
- * RN-RE-02: respaldo completo. Se lee todo en una sola unidad de trabajo (una foto
- * coherente) y el control sale del libro de operaciones de esa misma foto (ADR-0002).
- * No marca el último respaldo: eso lo hace marcarCopiaGuardada() cuando la copia ya salió.
+ * RN-RE-02: respaldo completo. El almacén lee todo de una vez (una foto coherente, en su
+ * propia transacción de lectura) y el control sale del libro de operaciones de esa misma
+ * foto (ADR-0002). No se envuelve en una unidad de trabajo: el almacén convierte las fotos a
+ * base64 DESPUÉS de leer, y hacerlo dentro de una transacción de IndexedDB la cerraría antes
+ * de tiempo. No marca el último respaldo: eso lo hace marcarCopiaGuardada() cuando la copia
+ * ya salió.
  */
 export async function guardarCopia(deps: DependenciasDeRespaldo): Promise<ArchivoGenerado> {
   const ahora = deps.reloj.ahora()
-  const respaldo = await deps.uow.ejecutar(async () =>
-    crearRespaldo(await deps.almacen.leerTodo(), ahora),
-  )
+  const respaldo = crearRespaldo(await deps.almacen.leerTodo(), ahora)
 
   const configuracion = await deps.tienda().configuracion()
   const nombre = nombreDeArchivoCopia(configuracion.nombreTienda, ahora)

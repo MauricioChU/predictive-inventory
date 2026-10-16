@@ -28,10 +28,12 @@ export class ProyeccionDeResumenes implements ProyeccionDeOperaciones {
     return this.uow.ejecutar(() => this.acumular(aportesDeAnulacion(original, anulacion)))
   }
 
+  /** Escritura masiva (RN-SIS-09): con miles de operaciones, una fila a la vez sería lento. */
   reconstruir(operaciones: readonly OperacionRegistro[]): Promise<void> {
     return this.uow.ejecutar(async () => {
+      const filas = proyectarLibro(operaciones).map((fila) => fila.aRegistro())
       await this.resumenes.vaciar()
-      for (const fila of proyectarLibro(operaciones)) await this.resumenes.guardar(fila.aRegistro())
+      await this.resumenes.guardarVarios(filas)
     })
   }
 

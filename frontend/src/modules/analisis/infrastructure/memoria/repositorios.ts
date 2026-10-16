@@ -20,6 +20,10 @@ export class RepositorioDeResumenesEnMemoria implements RepositorioDeResumenes {
     this.almacen.guardar('resumenes', r)
   }
 
+  async guardarVarios(registros: readonly ResumenDiarioRegistro[]): Promise<void> {
+    for (const r of registros) this.almacen.guardar('resumenes', r)
+  }
+
   async entre(desde: Dia, hasta: Dia): Promise<ResumenDiarioRegistro[]> {
     return this.almacen
       .todos('resumenes')

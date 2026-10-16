@@ -36,11 +36,14 @@ export interface DatosDeAnalisis {
 
 export async function cargarDatos(d: DependenciasDeAnalisis): Promise<DatosDeAnalisis> {
   const hoy = hoyDe(d)
-  const [configuracion, productos, existencias, registros] = await Promise.all([
+  const [configuracion, productos, [existencias, registros]] = await Promise.all([
     d.tienda().configuracion(),
     d.catalogo().productos(),
-    d.inventario().existencias(),
-    d.resumenes.entre(inicioDeLaVentana(hoy), hoy),
+    // El stock y las filas salen de la misma foto (una transacción): una venta confirmada a
+    // mitad de la lectura no puede aparecer en uno y no en el otro (ADR-0002).
+    d.uow.ejecutar(() =>
+      Promise.all([d.inventario().existencias(), d.resumenes.entre(inicioDeLaVentana(hoy), hoy)]),
+    ),
   ])
   return {
     hoy,
