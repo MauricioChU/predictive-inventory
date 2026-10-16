@@ -43,6 +43,22 @@ export function leerContado(texto: string, unidad: Unidad): Cantidad {
   return contado
 }
 
+const SOLO_FECHA = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * RN-OP-09: la fecha-hora de una operación como instante ISO en UTC. Una fecha sin hora no
+ * dice CUÁNDO ocurrió (y JavaScript la leería como medianoche UTC, otro día en Lima): se pide
+ * la hora. Lo que no se puede leer es un error de programación (la pantalla manda instantes).
+ */
+export function normalizarInstante(texto: Instante): Instante {
+  if (SOLO_FECHA.test(texto.trim())) {
+    throw new ErrorDeDominio('FECHA_SIN_HORA', 'Elige la fecha y la hora')
+  }
+  const momento = Date.parse(texto)
+  if (Number.isNaN(momento)) throw new Error(`Fecha inválida: ${texto}`)
+  return new Date(momento).toISOString()
+}
+
 /** RN-OP-09: ahora o hasta 7 días atrás (desde el inicio de ese día de negocio), nunca futura. */
 export function validarFecha(ocurridaEn: Instante, ahora: Instante): void {
   const momento = Date.parse(ocurridaEn)

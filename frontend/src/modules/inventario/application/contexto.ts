@@ -5,6 +5,7 @@ import type { DatosDeRegistro } from '../domain/operacion'
 import {
   exigirProducto,
   exigirProductoActivo,
+  normalizarInstante,
   validarFecha,
   type DatosDeProducto,
 } from '../domain/reglas'
@@ -21,10 +22,13 @@ export interface Momentos {
   registradaEn: Instante
 }
 
-/** RN-OP-09: por defecto ahora; si se indica, hasta 7 días atrás y nunca futura. */
+/**
+ * RN-OP-09: por defecto ahora; si se indica, hasta 7 días atrás y nunca futura, guardada
+ * como instante ISO en UTC.
+ */
 export function momentosDe(reloj: Reloj, ocurridaEn?: Instante): Momentos {
   const ahora = reloj.ahora()
-  const cuando = ocurridaEn ?? ahora
+  const cuando = ocurridaEn === undefined ? ahora : normalizarInstante(ocurridaEn)
   validarFecha(cuando, ahora)
   return { ocurridaEn: cuando, registradaEn: ahora }
 }

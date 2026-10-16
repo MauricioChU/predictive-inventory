@@ -189,6 +189,26 @@ describe('registrarVenta', () => {
     expect(deHoy?.ocurridaEn).toBe(instanteLocal('2026-10-15 10:00'))
   })
 
+  it('RN-OP-09: una fecha con zona horaria se guarda normalizada en UTC', async () => {
+    const { modulo, operaciones } = await escenario()
+    const { operacionId } = await modulo.registrarVenta({
+      lineas: [{ productoId: 'lejia', cantidad: '1' }],
+      ocurridaEn: '2026-10-14T18:30:00-05:00',
+    })
+    expect((await operaciones.porId(operacionId))?.ocurridaEn).toBe('2026-10-14T23:30:00.000Z')
+  })
+
+  it('RN-OP-09: una fecha sin hora se rechaza y no se registra nada', async () => {
+    const { modulo, tipos } = await escenario()
+    await expect(
+      modulo.registrarVenta({
+        lineas: [{ productoId: 'lejia', cantidad: '1' }],
+        ocurridaEn: '2026-10-15',
+      }),
+    ).rejects.toThrow('Elige la fecha y la hora')
+    expect(await tipos('lejia')).toEqual(['STOCK_INICIAL'])
+  })
+
   it('RN-OP-10 / RN-OP-12: la venta guarda precio y costo, y calcula total y ganancia por línea', async () => {
     const { modulo, operaciones } = await escenario()
     const { operacionId } = await modulo.registrarVenta({

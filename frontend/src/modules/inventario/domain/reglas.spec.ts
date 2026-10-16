@@ -13,6 +13,7 @@ import {
   leerContado,
   leerCosto,
   leerPrecioDeVenta,
+  normalizarInstante,
   normalizarNota,
   validarCantidad,
   validarFecha,
@@ -90,6 +91,20 @@ describe('validarFecha', () => {
     ['2026-10-16 08:00', 'error: La fecha no puede ser futura'],
   ])('RN-OP-09: con fecha %s → %s', (fecha, resultado) => {
     expect(resultadoDe(() => validarFecha(instanteLocal(fecha), ahora))).toBe(resultado)
+  })
+
+  it('RN-OP-09: una fecha con zona horaria se guarda como instante UTC', () => {
+    expect(normalizarInstante('2026-10-14T18:30:00-05:00')).toBe('2026-10-14T23:30:00.000Z')
+    expect(normalizarInstante('2026-10-14T23:30:00Z')).toBe('2026-10-14T23:30:00.000Z')
+  })
+
+  it('RN-OP-09: una fecha sin hora se rechaza', () => {
+    expect(() => normalizarInstante('2026-10-15')).toThrow('Elige la fecha y la hora')
+    expect(() => normalizarInstante(' 2026-10-15 ')).toThrow('Elige la fecha y la hora')
+  })
+
+  it('RN-OP-09: una fecha que no se puede leer sigue siendo un error de programación', () => {
+    expect(() => normalizarInstante('ayer')).toThrow('Fecha inválida: ayer')
   })
 
   it('RN-OP-09: una fecha que no se puede leer es un error de programación', () => {
