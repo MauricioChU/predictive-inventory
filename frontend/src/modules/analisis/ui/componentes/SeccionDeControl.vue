@@ -36,6 +36,13 @@ const idTitulo = useId()
   border-radius: var(--radio);
   background: var(--color-fondo);
 }
+/* Celular angosto (320–479 px): menos relleno, más ancho para las cifras y los nombres (con
+   letra Muy grande, 16 px de cada lado dejaban palabras como "descuento" sin lugar). */
+@media (max-width: 479px) {
+  .seccion-de-control {
+    padding: var(--espacio-3);
+  }
+}
 .titulo {
   display: flex;
   align-items: center;

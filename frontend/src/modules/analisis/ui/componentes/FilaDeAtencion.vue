@@ -32,16 +32,21 @@ const idLista = useId()
       @click="abierta = !abierta"
     >
       <component :is="icono" aria-hidden="true" class="icono" />
-      <span class="etiqueta">{{ etiqueta }}</span>
-      <span class="cantidad"
-        >{{ formatearEntero(cantidad) }} {{ plural(cantidad, 'producto', 'productos') }}</span
-      >
+      <span class="textos">
+        <span class="etiqueta">{{ etiqueta }}</span>
+        {{ ' '
+        }}<span class="cantidad"
+          >{{ formatearEntero(cantidad) }} {{ plural(cantidad, 'producto', 'productos') }}</span
+        >
+      </span>
       <ChevronDown aria-hidden="true" class="chevron" />
     </button>
     <p v-else class="cabecera cabecera--sin-productos">
       <CircleCheck aria-hidden="true" class="icono icono--bien" />
-      <span class="etiqueta">{{ etiqueta }}</span>
-      <span class="cantidad">Ninguno</span>
+      <span class="textos">
+        <span class="etiqueta">{{ etiqueta }}</span>
+        {{ ' ' }}<span class="cantidad">Ninguno</span>
+      </span>
     </p>
     <div v-if="cantidad > 0" v-show="abierta" :id="idLista" class="lista">
       <slot />
@@ -58,11 +63,13 @@ const idLista = useId()
   --tono: var(--color-peligro);
   --tono-suave: var(--color-peligro-suave);
 }
+/* Ícono · textos · flecha en una fila; si no caben, la etiqueta y la cantidad se acomodan en
+   dos líneas en el medio, pero el ícono y la flecha quedan a los lados (nunca sueltos). */
 .cabecera {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--espacio-1) var(--espacio-3);
+  gap: var(--espacio-3);
   inline-size: 100%;
   min-block-size: var(--alto-toque);
   margin: 0;
@@ -91,9 +98,17 @@ button.cabecera {
 .icono--bien {
   color: var(--color-exito);
 }
-.etiqueta {
-  flex: 1 1 8rem;
+.cabecera--sin-productos {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.textos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 var(--espacio-3);
   min-inline-size: 0;
+}
+.etiqueta {
   font-weight: 700;
 }
 .cantidad {

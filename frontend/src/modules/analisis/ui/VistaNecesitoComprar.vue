@@ -9,6 +9,7 @@ import FilaDeDato from '@/shared/ui/componentes/FilaDeDato.vue'
 import ListaDeProductos from '@/shared/ui/componentes/ListaDeProductos.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import RespuestaGrande from '@/shared/ui/componentes/RespuestaGrande.vue'
+import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
 import type { ProductoDeLista } from '@/shared/ui/tipos-de-productos'
 import type { RespuestaNecesitoComprar } from '../application/producto'
 import { textoUltimaLlegada, tonoDeRespuesta } from './textos'
@@ -119,7 +120,9 @@ async function elegir(productoId: string): Promise<void> {
     />
 
     <section v-else-if="elegido" class="respuesta" :aria-labelledby="idTitulo">
-      <h2 :id="idTitulo" ref="refTitulo" tabindex="-1">{{ elegido.nombre }}</h2>
+      <h2 :id="idTitulo" ref="refTitulo" tabindex="-1">
+        {{ pegarCifras(elegido.nombre) }}
+      </h2>
       <!-- La :key vuelve a montar la respuesta con cada pregunta: así se anuncia otra vez aunque
            la frase sea igual a la anterior (otro producto con la misma respuesta). -->
       <RespuestaGrande

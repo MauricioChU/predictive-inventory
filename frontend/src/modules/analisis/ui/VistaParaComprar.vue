@@ -272,9 +272,10 @@ onBeforeUnmount(() => {
   margin: 0;
   color: var(--color-texto-suave);
 }
+/* Una línea debajo de otra; en PC (contenido ancho), dos por fila para ver más de una vez. */
 .lineas {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr));
   gap: var(--espacio-3);
   margin: 0;
   padding: 0;

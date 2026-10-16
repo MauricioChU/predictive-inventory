@@ -29,6 +29,7 @@ import GraficoBarras from '@/shared/ui/componentes/GraficoBarras.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import SelectorSegmentado from '@/shared/ui/componentes/SelectorSegmentado.vue'
 import TarjetaDeCifra from '@/shared/ui/componentes/TarjetaDeCifra.vue'
+import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
 import type { TorreDeControl } from '../application/torre'
 import { SUGERENCIA_PARA_PARADOS } from '../domain/observaciones'
 import type { Periodo } from '../domain/periodos'
@@ -284,7 +285,7 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar'): void {
               <ul class="productos" role="list">
                 <li v-for="p in atencion.agotados.productos" :key="p.productoId">
                   <EnlaceAProducto :producto-id="p.productoId">
-                    <span class="nombre">{{ p.nombre }}</span>
+                    <span class="nombre">{{ pegarCifras(p.nombre) }}</span>
                     <span class="detalle">Agotado</span>
                   </EnlaceAProducto>
                 </li>
@@ -299,8 +300,8 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar'): void {
               <ul class="productos" role="list">
                 <li v-for="p in atencion.porAcabarse.productos" :key="p.productoId">
                   <EnlaceAProducto :producto-id="p.productoId">
-                    <span class="nombre">{{ p.nombre }}</span>
-                    <span class="detalle">{{ p.detalle }}</span>
+                    <span class="nombre">{{ pegarCifras(p.nombre) }}</span>
+                    <span class="detalle">{{ pegarCifras(p.detalle) }}</span>
                   </EnlaceAProducto>
                 </li>
               </ul>
@@ -314,8 +315,8 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar'): void {
               <ul class="productos" role="list">
                 <li v-for="p in atencion.precios.productos" :key="p.productoId">
                   <EnlaceAProducto :producto-id="p.productoId">
-                    <span class="nombre">{{ p.nombre }}</span>
-                    <span class="detalle">{{ p.detalle }}</span>
+                    <span class="nombre">{{ pegarCifras(p.nombre) }}</span>
+                    <span class="detalle">{{ pegarCifras(p.detalle) }}</span>
                   </EnlaceAProducto>
                 </li>
               </ul>
@@ -361,15 +362,15 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar'): void {
               <h3>Los que más se venden</h3>
               <ol class="ranking">
                 <li v-for="f in masVendidos.porVeces" :key="f.id">
-                  <span class="nombre">{{ f.nombre }}</span>
-                  <span class="detalle">{{ f.detalle }}</span>
+                  <span class="nombre">{{ pegarCifras(f.nombre) }}</span>
+                  <span class="detalle">{{ pegarCifras(f.detalle) }}</span>
                 </li>
               </ol>
               <h3>Los que más ganancia dejan</h3>
               <ol class="ranking">
                 <li v-for="f in masVendidos.porGanancia" :key="f.id">
-                  <span class="nombre">{{ f.nombre }}</span>
-                  <span class="detalle">{{ f.detalle }}</span>
+                  <span class="nombre">{{ pegarCifras(f.nombre) }}</span>
+                  <span class="detalle">{{ pegarCifras(f.detalle) }}</span>
                 </li>
               </ol>
             </template>
@@ -422,7 +423,7 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar'): void {
               <ul class="parados" role="list">
                 <li v-for="p in parados.productos" :key="p.id">
                   <FilaDeDato :etiqueta="p.nombre" :texto-valor="p.dinero" />
-                  <p class="detalle">{{ p.detalle }}</p>
+                  <p class="detalle">{{ pegarCifras(p.detalle) }}</p>
                 </li>
               </ul>
               <FilaDeDato
