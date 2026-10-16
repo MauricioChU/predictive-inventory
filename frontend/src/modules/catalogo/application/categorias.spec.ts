@@ -196,7 +196,6 @@ describe('categoriaPorNombre', () => {
   it('devuelve null si no existe', async () => {
     const almacen = new AlmacenEnMemoria()
     const categorias = new RepositorioDeCategoriasEnMemoria(almacen)
-    const uow = new UnidadDeTrabajoEnMemoria(almacen)
     expect(await categoriaPorNombre(categorias, 'no existe')).toBeNull()
   })
 })
