@@ -3,6 +3,8 @@ import { esperarSinDesplazamientoHorizontal, esperarSinViolacionesGraves, usarLe
 import { abrir } from './utilidades/navegacion'
 
 const DESTINOS = ['Inicio', 'Vender', 'Recibir', 'Productos', 'Control']
+/** Plan 12 (RN-UX-12): el destino "Recibir" abre la pantalla titulada "Llegó mercadería". */
+const TITULO_DE_LA_PANTALLA: Record<string, string> = { Recibir: 'Llegó mercadería' }
 const ANCHOS = [320, 360, 768, 1280]
 
 test.describe('RN-UX-12: navegación', () => {
@@ -10,7 +12,9 @@ test.describe('RN-UX-12: navegación', () => {
     await abrir(page, './')
     for (const destino of DESTINOS) {
       await page.getByRole('link', { name: destino }).click()
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(destino)
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+        TITULO_DE_LA_PANTALLA[destino] ?? destino,
+      )
     }
   })
 })

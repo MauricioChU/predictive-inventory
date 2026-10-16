@@ -90,7 +90,10 @@ test.describe('Ola 3: la app arranca con los datos guardados en el celular', () 
     await abrir(page, './')
     for (const destino of ['Vender', 'Recibir', 'Productos', 'Control', 'Inicio']) {
       await page.getByRole('link', { name: new RegExp(`^${destino}`) }).click()
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(destino)
+      // Plan 12 (RN-UX-12): "Recibir" abre la pantalla titulada "Llegó mercadería".
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+        destino === 'Recibir' ? 'Llegó mercadería' : destino,
+      )
     }
   })
 
