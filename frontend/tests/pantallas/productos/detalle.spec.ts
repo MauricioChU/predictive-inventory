@@ -229,6 +229,8 @@ describe('Detalle del producto', () => {
     expect(texto(w)).toContain('Este producto está archivado')
     expect(hayBoton(w, 'Reactivar producto')).toBe(true)
     expect(hayBoton(w, 'Archivar producto')).toBe(false)
+    // El botón tocado desapareció: el foco pasa al que lo reemplaza (y no queda en <body>).
+    expect(document.activeElement).toBe(boton(w, 'Reactivar producto').element)
   })
 
   it('RN-UX-08: archivar sin stock no pregunta y ofrece Deshacer', async () => {
@@ -261,6 +263,7 @@ describe('Detalle del producto', () => {
     expect((await app.catalogo.obtenerProducto(id))?.activo).toBe(true)
     expect(vista.aviso.activo.value?.mensaje).toBe('Reactivaste Escoba')
     expect(texto(w)).not.toContain('Este producto está archivado')
+    expect(document.activeElement).toBe(boton(w, 'Editar producto').element)
 
     vista.aviso.activo.value?.alDeshacer()
     await esperar()

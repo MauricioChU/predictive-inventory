@@ -158,6 +158,7 @@ async function archivar(confirmado = false) {
   if (!p || ocupado.value) return
   ocupado.value = true
   error.value = null
+  let cambio = false
   try {
     const retirado = p.stock.esPositiva() ? formatearCantidad(p.stock, p.unidad) : null
     const respuesta = await app.catalogo.archivarProducto({ productoId: p.id, confirmado })
@@ -178,13 +179,15 @@ async function archivar(confirmado = false) {
         alDeshacer: () => void cambiarSinPreguntar(p.id, 'reactivar'),
       })
     }
-    await enfocarAccion()
+    cambio = true
   } catch (e) {
     confirmacion.value = null
     mostrarError(e)
   } finally {
     ocupado.value = false
   }
+  // Recién ahora: mientras se guardaba, el botón nuevo estaba deshabilitado (no toma el foco).
+  if (cambio) await enfocarAccion()
 }
 
 async function reactivar() {
@@ -192,6 +195,7 @@ async function reactivar() {
   if (!p || ocupado.value) return
   ocupado.value = true
   error.value = null
+  let cambio = false
   try {
     await app.catalogo.reactivarProducto(p.id)
     hecho.value = null
@@ -200,12 +204,13 @@ async function reactivar() {
       mensaje: `Reactivaste ${p.nombre}`,
       alDeshacer: () => void cambiarSinPreguntar(p.id, 'archivar'),
     })
-    await enfocarAccion()
+    cambio = true
   } catch (e) {
     mostrarError(e)
   } finally {
     ocupado.value = false
   }
+  if (cambio) await enfocarAccion()
 }
 
 /** Deshacer: vuelve al estado anterior (sin stock no hay nada que confirmar). */

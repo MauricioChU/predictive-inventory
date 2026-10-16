@@ -61,6 +61,8 @@ function alTocarPanel(evento: MouseEvent) {
 <style scoped>
 .filtro-de-categoria {
   display: grid;
+  /* minmax(0, 1fr): una palabra larga de una categoría no ensancha la columna (RN-UX-09). */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--espacio-3);
   min-inline-size: 0;
 }
@@ -73,9 +75,12 @@ function alTocarPanel(evento: MouseEvent) {
   padding-block: var(--espacio-2);
 }
 .panel {
-  padding: var(--espacio-3);
-  border: 2px solid var(--color-borde);
-  border-radius: var(--radio);
-  background: var(--color-superficie);
+  padding-block-end: var(--espacio-3);
+  border-block-end: 2px solid var(--color-borde);
+}
+/* Diez categorías con nombres largos ("Ambientadores e insecticidas"): a la letra base (nunca
+   menos, RN-UX-01) para que en 320 px con letra Muy grande cada palabra entre entera. */
+.panel :deep(.opcion) {
+  font-size: 1rem;
 }
 </style>

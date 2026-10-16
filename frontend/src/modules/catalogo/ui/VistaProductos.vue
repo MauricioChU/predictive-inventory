@@ -153,11 +153,7 @@ function abrirProducto(id: string) {
     <template v-if="!cargando">
       <div class="cuerpo">
         <section v-if="hayProductos" class="filtros" aria-label="Buscar y filtrar">
-          <BuscadorGrande
-            v-model="filtros.texto"
-            etiqueta="Buscar producto"
-            marcador="Escribe parte del nombre"
-          />
+          <BuscadorGrande v-model="filtros.texto" etiqueta="Buscar producto" />
           <SelectorSegmentado
             v-model="filtros.estado"
             :opciones="OPCIONES_DE_ESTADO"
@@ -183,13 +179,13 @@ function abrirProducto(id: string) {
             @elegir="abrirProducto"
             @accion="alAccionDelVacio"
           />
+          <!-- Principio 1: la acción principal, abajo y al alcance del pulgar: pegada al fondo
+               de la columna de la lista, sobre el pie. Sin productos, la del estado vacío ya
+               es "Agregar el primero". -->
+          <div v-if="hayProductos" class="accion-principal">
+            <BotonPrincipal texto="Agregar producto" :icono="Plus" @click="agregar()" />
+          </div>
         </section>
-      </div>
-
-      <!-- Principio 1: la acción principal, abajo y al alcance del pulgar (pegada sobre el pie).
-           Sin productos, la del estado vacío ya es "Agregar el primero". -->
-      <div v-if="hayProductos" class="accion-principal">
-        <BotonPrincipal texto="Agregar producto" :icono="Plus" @click="agregar()" />
       </div>
     </template>
   </div>
@@ -246,8 +242,6 @@ function abrirProducto(id: string) {
   }
   .accion-principal {
     bottom: var(--alto-aviso, 0px);
-    justify-self: end;
-    inline-size: min(100%, 24rem);
   }
 }
 </style>
