@@ -1,4 +1,11 @@
 {
   "extends": "@tsconfig/node24/tsconfig.json",
-  "include": ["./**/*"]
+  "include": ["./**/*"],
+  "compilerOptions": {
+    // Para reutilizar ayudantes de tests/soporte (p. ej. el generador de datos de RN-SIS-09).
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  }
 }
