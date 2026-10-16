@@ -36,6 +36,8 @@ jobs:
           # En main todos los escenarios Gherkin deben estar implementados.
           GHERKIN_ESTRICTO: ${{ (github.base_ref == 'main' || github.ref == 'refs/heads/main') && '1' || '0' }}
       - run: npm run build-only
+      # RN-SIS-09: lo que se descarga al abrir y lo que precachea el service worker (lee dist/).
+      - run: npm run test:build
 
   specs:
     name: Specs (cada regla tiene escenario)
