@@ -161,7 +161,7 @@ function crearImportacion(deps: DependenciasDeCatalogo): CatalogoParaImportacion
       throw new ErrorDeDominio('ERROR_INESPERADO', resultado.mensaje)
     },
     categoriaPorNombre: (nombre) => categoriaPorNombre(deps.categorias, nombre),
-    crearCategoria: (nombre) => crearCategoria(deps.categorias, deps.ids, nombre),
+    crearCategoria: (nombre) => crearCategoria(deps.categorias, deps.ids, deps.uow, nombre),
   }
 }
 
@@ -175,12 +175,13 @@ export function crearModuloCatalogo(deps: DependenciasDeCatalogo): ModuloCatalog
     obtenerProducto: (productoId) => obtenerProducto(productoId, deps),
     buscarProductos: (filtro) => buscarProductos(filtro, deps),
     listarCategorias: () => listarCategorias(deps.categorias),
-    crearCategoria: (nombre) => crearCategoria(deps.categorias, deps.ids, nombre),
+    crearCategoria: (nombre) => crearCategoria(deps.categorias, deps.ids, deps.uow, nombre),
     renombrarCategoria: (categoriaId, nombre) =>
-      renombrarCategoria(deps.categorias, categoriaId, nombre),
+      renombrarCategoria(deps.categorias, deps.uow, categoriaId, nombre),
     eliminarCategoria: (categoriaId) =>
-      eliminarCategoria(deps.categorias, deps.productos, categoriaId),
-    sembrarCategoriasIniciales: () => sembrarCategoriasIniciales(deps.categorias, deps.ids),
+      eliminarCategoria(deps.categorias, deps.productos, deps.uow, categoriaId),
+    sembrarCategoriasIniciales: () =>
+      sembrarCategoriasIniciales(deps.categorias, deps.ids, deps.uow),
     guardarFoto: (productoId, imagen) => guardarFoto(productoId, imagen, deps),
     obtenerFoto: (productoId) => obtenerFoto(productoId, deps),
     quitarFoto: (productoId) => quitarFoto(productoId, deps),
