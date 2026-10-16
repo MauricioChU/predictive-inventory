@@ -144,6 +144,44 @@ describe.each(ALMACENES)('Composición de la aplicación (%s)', (almacen) => {
     expect(cambios).not.toHaveBeenCalled()
   })
 
+  it('RN-RE-04: si la copia no cuadra al reconstruir, la unidad de trabajo revierte todo y no avisa ningún cambio en bloque', async () => {
+    await nuevaApp()
+    const id = await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '2' })
+    await app.esperarTareasPendientes()
+    const copia = JSON.parse(await (await app.respaldo.guardarCopia()).contenido.text()) as {
+      control: { stockPorProducto: Record<string, number> }
+    }
+    // Pasa la validación del formato, pero el stock de control no cuadra con el libro.
+    copia.control.stockPorProducto[id] = 9000
+    await app.inventario.registrarIngreso({
+      lineas: [{ productoId: id, cantidad: '8', costo: '2.40' }],
+    })
+    await app.tienda.actualizarConfiguracion({ tamanoDeLetra: 'MUY_GRANDE' })
+    await app.esperarTareasPendientes()
+    const antes = {
+      stock: (await app.inventario.consultable.stockDe(id)).milesimas,
+      historial: await app.inventario.historial(),
+      configuracion: await app.tienda.obtenerConfiguracion(),
+      resumen: await app.analisis.consultarResumen('HOY'),
+    }
+    const cambios = vi.fn()
+    app.alCambiarEnBloque(cambios)
+
+    await expect(
+      app.respaldo.restaurarCopia(JSON.stringify(copia), { confirmaciones: 2 }),
+    ).rejects.toThrow('La copia tiene datos que no cuadran. No se cambió nada')
+    await app.esperarTareasPendientes()
+
+    expect(cambios).not.toHaveBeenCalled()
+    expect({
+      stock: (await app.inventario.consultable.stockDe(id)).milesimas,
+      historial: await app.inventario.historial(),
+      configuracion: await app.tienda.obtenerConfiguracion(),
+      resumen: await app.analisis.consultarResumen('HOY'),
+    }).toStrictEqual(antes)
+    expect(antes.stock).toBe(10_000)
+  })
+
   it('un manejador de cambios en bloque que falla se registra y no afecta a la operación ni a los demás', async () => {
     await nuevaApp()
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
