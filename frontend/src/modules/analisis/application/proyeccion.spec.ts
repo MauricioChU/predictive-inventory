@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { OperacionRegistro } from '@/shared/contratos/registros'
 import { AlmacenEnMemoria } from '@/shared/infrastructure/memoria/almacen-en-memoria'
 import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'
@@ -128,6 +128,26 @@ describe('ProyeccionDeResumenes', () => {
     })
     await proyeccion.reconstruir([...libro].reverse())
     expect(await todas()).toEqual(unaPorUna)
+  })
+
+  it('RN-SIS-09: reconstruir escribe toda la proyección con una sola escritura masiva', async () => {
+    const guardar = vi.spyOn(resumenes, 'guardar')
+    const guardarVarios = vi.spyOn(resumenes, 'guardarVarios')
+    await proyeccion.reconstruir([
+      nuevaOperacion('STOCK_INICIAL', '2026-10-01 08:00', [
+        { ...LEJIA, cantidad: '20' },
+        { ...CARBON, cantidad: '10' },
+      ]),
+      nuevaOperacion('VENTA', '2026-10-14 10:00', [{ ...LEJIA, cantidad: '2' }]),
+    ])
+    expect(guardar).not.toHaveBeenCalled()
+    expect(guardarVarios).toHaveBeenCalledTimes(1)
+    expect(guardarVarios.mock.calls[0]![0].map((r) => r.clave).sort()).toEqual([
+      'carbon|2026-10-01',
+      'lejia|2026-10-01',
+      'lejia|2026-10-14',
+    ])
+    expect(await todas()).toHaveLength(3)
   })
 
   it('reconstruir es atómico: si falla, la proyección queda como estaba', async () => {
