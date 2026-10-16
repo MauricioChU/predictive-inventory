@@ -248,14 +248,24 @@ export function pasosDeCatalogo(pasos: Pasos): void {
     expect((await m.producto(nombre)).activo).toBe(false)
   })
 
-  afirmacion(pasos, 'no se crea un producto nuevo', async (m: Mundo) => {
-    expect(m.resultado).not.toBe('creado')
-    expect(await m.app.catalogo.consultable.productos()).toHaveLength(m.cantidadAntes)
-  })
+  afirmacion(
+    pasos,
+    'no se crea un producto nuevo',
+    async (m: Mundo) => {
+      expect(m.resultado).not.toBe('creado')
+      expect(await m.app.catalogo.consultable.productos()).toHaveLength(m.cantidadAntes)
+    },
+    { revisa: true },
+  )
 
-  afirmacion(pasos, 'se ofrece reactivar el producto {string}', (m: Mundo, nombre: string) => {
-    expect(m.reactivar?.nombre).toBe(nombre)
-  })
+  afirmacion(
+    pasos,
+    'se ofrece reactivar el producto {string}',
+    (m: Mundo, nombre: string) => {
+      expect(m.reactivar?.nombre).toBe(nombre)
+    },
+    { revisa: true },
+  )
 
   afirmacion(pasos, 'los resultados son {string}', (m: Mundo, resultados: string) => {
     expect(m.busqueda).toEqual(lista(resultados))

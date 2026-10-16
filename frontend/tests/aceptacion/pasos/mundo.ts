@@ -49,12 +49,21 @@ export interface PantallaAbierta {
  * (categoría), "restaurada" (copia), o "error: " + el mensaje del ErrorDeDominio. Solo se
  * captura un `ErrorDeDominio`: cualquier otro error es un defecto y hace fallar el paso.
  */
+/** Los resultados que alguien tiene que revisar (ver `Mundo.sinRevisar`). */
+const RESULTADOS_POR_REVISAR = /^(error: |confirmar|aviso de sobrecompra|reactivar: )/
+
 export class Mundo {
   /** Día de negocio del escenario ("hoy es …", "pasa al día …"). */
   dia: Dia = '2026-01-01'
   categorias: string[] = []
 
   resultado: string | null = null
+  /**
+   * Un resultado que alguien tiene que mirar: un error de dominio o una pregunta sin contestar
+   * (confirmar, sobrecompra, reactivar). Lo deja la acción y lo da por visto el primer paso que
+   * revisa el resultado; cualquier otro paso (o el final del escenario) falla.
+   */
+  sinRevisar: string | null = null
   confirmacion: Confirmacion | null = null
   reactivar: { productoId: string; nombre: string } | null = null
   /** Productos que había antes de la última acción que crea uno (RN-CAT-02). */
@@ -84,6 +93,8 @@ export class Mundo {
   visibles: string[] = []
   /** Pedidos de permiso de notificaciones que había al empezar la última acción. */
   solicitudesDePermisoAntes = 0
+  /** Notificaciones que ya se habían enviado al empezar la última acción. */
+  notificacionesAntes = 0
   ultimaNotificacion: Notificacion | null = null
   inicio: InicioDeLaApp | null = null
   pantalla: string | null = null
@@ -195,6 +206,27 @@ export class Mundo {
     this.visibles = []
     this.resultado = null
     this.solicitudesDePermisoAntes = this.app.notificador.solicitudes
+    this.notificacionesAntes = this.app.notificador.mostradas.length
+  }
+
+  /** Al terminar una acción: un error o una pregunta abierta quedan por revisar. */
+  terminarAccion(): void {
+    if (this.resultado !== null && RESULTADOS_POR_REVISAR.test(this.resultado)) {
+      this.sinRevisar = this.resultado
+    }
+  }
+
+  /**
+   * Antes de cada paso: si la acción anterior dejó algo por revisar, solo puede seguir un paso
+   * que lo revisa ("el resultado es …", "se avisa …", "se pide confirmar …", "confirmo"…).
+   */
+  exigirRevisado(revisa: boolean): void {
+    const pendiente = this.sinRevisar
+    if (pendiente === null) return
+    this.sinRevisar = null
+    if (!revisa) {
+      throw new Error(`El paso anterior terminó en "${pendiente}" y este paso no lo revisa`)
+    }
   }
 
   /**
@@ -371,4 +403,7 @@ export async function cerrarMundo(): Promise<void> {
   const mundo = mundoActual
   mundoActual = null
   await mundo?.app.cerrar()
+  if (mundo?.sinRevisar) {
+    throw new Error(`El escenario terminó sin revisar "${mundo.sinRevisar}"`)
+  }
 }

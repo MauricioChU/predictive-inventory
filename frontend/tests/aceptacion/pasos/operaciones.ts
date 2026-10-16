@@ -172,17 +172,30 @@ export function pasosDeOperaciones(pasos: Pasos): void {
     m.resultado = 'anulada'
   })
 
-  accion(pasos, 'confirmo', async (m: Mundo) => {
-    if (!m.confirmacion) throw new Error('No hay nada que confirmar')
-    await m.confirmacion.aceptar()
-  })
+  accion(
+    pasos,
+    'confirmo',
+    async (m: Mundo) => {
+      if (!m.confirmacion) throw new Error('No hay nada que confirmar')
+      await m.confirmacion.aceptar()
+    },
+    { revisa: true },
+  )
 
-  accion(pasos, 'rechazo la confirmación', async (m: Mundo) => {
-    if (!m.confirmacion) throw new Error('No hay nada que rechazar')
-    await m.confirmacion.rechazar()
-  })
+  accion(
+    pasos,
+    'rechazo la confirmación',
+    async (m: Mundo) => {
+      if (!m.confirmacion) throw new Error('No hay nada que rechazar')
+      await m.confirmacion.rechazar()
+    },
+    { revisa: true },
+  )
 
-  accion(pasos, 'toco {string}', (m: Mundo, boton: string) => tocar(m, boton))
+  // "Registrar igual" contesta el aviso de sobrecompra que dejó la llegada de mercadería.
+  accion(pasos, 'toco {string}', (m: Mundo, boton: string) => tocar(m, boton), {
+    revisa: (boton: string) => boton === 'Registrar igual',
+  })
 
   accion(pasos, 'reviso los datos', async (m: Mundo) => {
     m.revision = await m.app.inventario.revisarDatos()
@@ -244,9 +257,14 @@ export function pasosDeOperaciones(pasos: Pasos): void {
     expect(m.conteo?.resumen ?? []).toContain(linea)
   })
 
-  afirmacion(pasos, 'el resultado es {string}', (m: Mundo, esperado: string) => {
-    expect(m.resultado).toBe(esperado)
-  })
+  afirmacion(
+    pasos,
+    'el resultado es {string}',
+    (m: Mundo, esperado: string) => {
+      expect(m.resultado).toBe(esperado)
+    },
+    { revisa: true },
+  )
 
   afirmacion(
     pasos,
@@ -360,26 +378,46 @@ export function pasosDeOperaciones(pasos: Pasos): void {
     expect(m.app.inventario.deshacer.disponible()).toBeNull()
   })
 
-  afirmacion(pasos, 'se avisa {string}', (m: Mundo, aviso: string) => {
-    expect(m.avisos).toContain(aviso)
-  })
+  afirmacion(
+    pasos,
+    'se avisa {string}',
+    (m: Mundo, aviso: string) => {
+      expect(m.avisos).toContain(aviso)
+    },
+    { revisa: true },
+  )
 
-  afirmacion(pasos, 'se ofrecen las opciones {string}', (m: Mundo, opciones: string) => {
-    expect([...m.opciones]).toEqual(lista(opciones))
-  })
+  afirmacion(
+    pasos,
+    'se ofrecen las opciones {string}',
+    (m: Mundo, opciones: string) => {
+      expect([...m.opciones]).toEqual(lista(opciones))
+    },
+    { revisa: true },
+  )
 
-  afirmacion(pasos, 'no se muestra ningún aviso de sobrecompra', (m: Mundo) => {
-    expect(m.avisos).toEqual([])
-    expect(m.resultado).toBe('registrada')
-  })
+  afirmacion(
+    pasos,
+    'no se muestra ningún aviso de sobrecompra',
+    (m: Mundo) => {
+      expect(m.avisos).toEqual([])
+      expect(m.resultado).toBe('registrada')
+    },
+    { revisa: true },
+  )
 
   afirmacion(pasos, 'se informa {string}', (m: Mundo, mensaje: string) => {
     expect(m.revision?.mensaje).toBe(mensaje)
   })
 
-  afirmacion(pasos, 'se pide confirmar con el mensaje {string}', (m: Mundo, mensaje: string) => {
-    expect(m.confirmacion?.mensajes ?? []).toContain(mensaje)
-  })
+  afirmacion(
+    pasos,
+    'se pide confirmar con el mensaje {string}',
+    (m: Mundo, mensaje: string) => {
+      expect(m.confirmacion?.mensajes ?? []).toContain(mensaje)
+    },
+    { revisa: true },
+  )
 
   // RN-AN-02, periodo Hoy (lo que Inicio y la Torre de control muestran de hoy).
   const deHoy = (

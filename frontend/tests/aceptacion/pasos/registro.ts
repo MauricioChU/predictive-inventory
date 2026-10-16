@@ -9,12 +9,32 @@ export type Pasos = RegistroDePasos<Mundo>
  */
 type Manejador = (m: Mundo, ...argumentos: never[]) => unknown
 
+export interface OpcionesDePaso {
+  /**
+   * El paso mira lo que dejó la acción anterior (un error o una pregunta abierta): "el
+   * resultado es …", "se avisa …", "confirmo"… Con una función, solo con esos argumentos (p. ej.
+   * "toco 'Registrar igual'"). Cualquier otro paso falla si quedó algo sin revisar.
+   */
+  revisa?: boolean | ((...argumentos: never[]) => boolean)
+}
+
+function revisa(opciones: OpcionesDePaso, argumentos: unknown[]): boolean {
+  const { revisa: criterio = false } = opciones
+  return typeof criterio === 'function' ? criterio(...(argumentos as never[])) : criterio
+}
+
 /**
  * "Dado": prepara el escenario. Construye antes la historia pendiente; un error (también uno
  * de dominio) hace fallar el escenario.
  */
-export function preparacion(pasos: Pasos, texto: string, manejador: Manejador): void {
+export function preparacion(
+  pasos: Pasos,
+  texto: string,
+  manejador: Manejador,
+  opciones: OpcionesDePaso = {},
+): void {
   pasos.paso(texto, async (m: Mundo, ...argumentos: unknown[]) => {
+    m.exigirRevisado(revisa(opciones, argumentos))
     await m.historia.materializar()
     await manejador(m, ...(argumentos as never[]))
     await m.app.esperarTareasPendientes()
@@ -23,19 +43,33 @@ export function preparacion(pasos: Pasos, texto: string, manejador: Manejador): 
 
 /**
  * "Cuando" (y los "Dado" que son la misma acción): lo que hace el usuario. Un ErrorDeDominio
- * queda en `m.resultado` ("error: …") para que lo verifique "el resultado es …".
+ * queda en `m.resultado` ("error: …") para que lo verifique "el resultado es …"; si el paso
+ * siguiente no lo revisa, falla (también un "Dado" que no pudo hacer lo que dice).
  */
-export function accion(pasos: Pasos, texto: string, manejador: Manejador): void {
+export function accion(
+  pasos: Pasos,
+  texto: string,
+  manejador: Manejador,
+  opciones: OpcionesDePaso = {},
+): void {
   pasos.paso(texto, async (m: Mundo, ...argumentos: unknown[]) => {
+    m.exigirRevisado(revisa(opciones, argumentos))
     await m.historia.materializar()
     m.empezarAccion()
     await m.actuar(async () => manejador(m, ...(argumentos as never[])))
+    m.terminarAccion()
   })
 }
 
 /** "Entonces": verifica, sin cambiar nada, cuando ya terminó todo lo pendiente. */
-export function afirmacion(pasos: Pasos, texto: string, manejador: Manejador): void {
+export function afirmacion(
+  pasos: Pasos,
+  texto: string,
+  manejador: Manejador,
+  opciones: OpcionesDePaso = {},
+): void {
   pasos.paso(texto, async (m: Mundo, ...argumentos: unknown[]) => {
+    m.exigirRevisado(revisa(opciones, argumentos))
     await m.historia.materializar()
     await m.app.esperarTareasPendientes()
     await manejador(m, ...(argumentos as never[]))
@@ -45,6 +79,7 @@ export function afirmacion(pasos: Pasos, texto: string, manejador: Manejador): v
 /** Historia declarada ("vendió 56 entre …"): solo anota el plan (ver `historia.ts`). */
 export function declaracion(pasos: Pasos, texto: string, manejador: Manejador): void {
   pasos.paso(texto, async (m: Mundo, ...argumentos: unknown[]) => {
+    m.exigirRevisado(false)
     await manejador(m, ...(argumentos as never[]))
   })
 }
