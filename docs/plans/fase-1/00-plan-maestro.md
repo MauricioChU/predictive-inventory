@@ -66,8 +66,11 @@ El runner marca como **pendiente** (`skip`) un escenario con algún paso sin def
 
 ## Procedimiento de merge (cada rama)
 
-1. En la rama: `git merge develop` y resolver conflictos (en `package-lock.json`: aceptar `develop` y correr `npm install`).
+Desde el 2026-10-16 `main` y `develop` están **protegidas** en GitHub: solo se integran por **pull request**, con los 4 checks del CI en verde (Frontend, Specs, E2E, Backend) y la rama al día con su base.
+
+1. En la rama: `git merge develop` (resolver conflictos; en `package-lock.json` aceptar `develop` y correr `npm install`).
 2. En `frontend/`: `npm run lint:ci && npm run type-check && npm run test:unit -- --run && npm run build-only && npm run verificar-specs`.
 3. Revisión de spec y de calidad (subagentes revisores) aprobada.
-4. `git switch develop && git merge --no-ff <rama>` y repetir el paso 2 en `develop`.
-5. `git push origin develop <rama>`.
+4. `git push -u origin <rama>` y `gh pr create --base develop --title "<tipo>(<ámbito>): …" --body "<resumen, reglas cubiertas, rulings, verificación>"`.
+5. `gh pr checks --watch` hasta que los 4 checks pasen; luego `gh pr merge --merge --delete-branch=false` (merge commit, igual que `--no-ff`).
+6. Al cerrar la Fase 1: PR de `develop` a `main`, etiqueta `v0.1.0`; el workflow *Publicar en GitHub Pages* publica en https://mauriciochu.github.io/predictive-inventory/.
