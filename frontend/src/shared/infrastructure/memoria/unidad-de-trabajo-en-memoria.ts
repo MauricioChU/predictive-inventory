@@ -66,17 +66,12 @@ async function correrSinPropagar(accion: AccionAlConfirmar): Promise<void> {
 }
 
 /**
- * Ola 3, ruling 1 (`alConfirmar`): dentro de una transacción, la acción se guarda en el token de
- * la transacción MÁS EXTERNA (las anidadas comparten su token) y corre después del commit, en
- * orden y de a una (se espera a que termine cada una). Si hay rollback, el token se descarta con
- * sus acciones. Fuera de una transacción (o desde una continuación tardía cuyo token ya cerró),
- * corre enseguida.
- *
- * `ejecutar()` resuelve DESPUÉS de que terminaron sus acciones: quien hace `await` de un caso de
- * uso ya ve los eventos publicados y el Deshacer ofrecido. Las acciones corren FUERA de la cola de
- * transacciones (`colaDeEjecucion` ya avanzó) y con el token inactivo, así que un `ejecutar()`
- * dentro de una acción (p. ej. el manejador de un evento) es una transacción independiente que
- * espera su turno, nunca una anidada ni un bloqueo.
+ * `alConfirmar` cumple el contrato documentado en `UnidadDeTrabajo`. Cómo lo hace aquí: la acción
+ * se guarda en el token de la transacción MÁS EXTERNA (las anidadas comparten su token); si hay
+ * rollback, el token se descarta con sus acciones. Una continuación tardía cuyo token ya cerró
+ * la corre enseguida. Tras el commit, las acciones corren FUERA de la cola de transacciones
+ * (`colaDeEjecucion` ya avanzó) y con el token inactivo, así que un `ejecutar()` dentro de una
+ * acción espera su turno como transacción independiente: nunca se une ni se bloquea.
  */
 export class UnidadDeTrabajoEnMemoria implements UnidadDeTrabajo {
   private readonly contexto = new AsyncLocalStorage<TokenDeTransaccion>()

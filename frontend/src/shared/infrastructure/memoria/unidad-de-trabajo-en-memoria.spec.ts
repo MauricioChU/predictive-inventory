@@ -321,6 +321,27 @@ describe('UnidadDeTrabajoEnMemoria.alConfirmar', () => {
     ])
   })
 
+  // Fix round 1, ruling 4: documentado en el contrato de UnidadDeTrabajo (no hay puntos de
+  // guardado: una anidada que falla no se revierte sola).
+  it('ADR-0002: si la externa atrapa el error de una anidada y confirma, las acciones de la anidada corren igual', async () => {
+    const uow = new UnidadDeTrabajoEnMemoria(new AlmacenEnMemoria())
+    const bitacora: string[] = []
+    await uow.ejecutar(async () => {
+      await uow
+        .ejecutar(async () => {
+          uow.alConfirmar(() => {
+            bitacora.push('accion de la anidada que falló')
+          })
+          throw new Error('falla la anidada')
+        })
+        .catch(() => undefined)
+      uow.alConfirmar(() => {
+        bitacora.push('accion externa')
+      })
+    })
+    expect(bitacora).toEqual(['accion de la anidada que falló', 'accion externa'])
+  })
+
   it('RN-OP-06: si la transacción externa falla después de la anidada, se descartan todas las acciones', async () => {
     const almacen = new AlmacenEnMemoria()
     const uow = new UnidadDeTrabajoEnMemoria(almacen)
