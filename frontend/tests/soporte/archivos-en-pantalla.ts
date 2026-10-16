@@ -58,3 +58,9 @@ export function leerTexto(contenido: Blob): Promise<string> {
     lector.readAsText(contenido)
   })
 }
+
+/** Elige `archivo` en el `<input type="file">` de la pantalla (jsdom no deja escribir `files`). */
+export async function elegirArchivo(input: HTMLInputElement, archivo: File): Promise<void> {
+  Object.defineProperty(input, 'files', { value: [archivo], configurable: true })
+  input.dispatchEvent(new Event('change'))
+}
