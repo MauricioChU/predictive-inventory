@@ -60,12 +60,23 @@ describe('ServicioDeDeshacer', () => {
     expect(anuladas).toEqual(['op-2'])
   })
 
-  it('RN-OP-18: un toque hecho mientras se ofrecía se respeta aunque llegue tarde', async () => {
+  it('RN-OP-18: un toque hecho mientras se ofrecía se respeta aunque llegue tarde (2 s de margen)', async () => {
     const { reloj, deshacer, anuladas } = servicio()
     deshacer.ofrecer('op-1', AHORA)
-    reloj.avanzarSegundos(10.2)
+    reloj.avanzarSegundos(11.9)
     await deshacer.deshacer()
     expect(anuladas).toEqual(['op-1'])
+  })
+
+  it('RN-OP-18: pasado el margen, deshacer se rechaza y no anula nada', async () => {
+    const { reloj, deshacer, anuladas } = servicio()
+    deshacer.ofrecer('op-1', AHORA)
+    reloj.avanzarSegundos(12)
+    await expect(deshacer.deshacer()).rejects.toThrow(
+      'Ya pasó el tiempo para deshacer. Puedes anularla desde el Historial.',
+    )
+    expect(anuladas).toEqual([])
+    expect(deshacer.disponible()).toBeNull()
   })
 
   it('RN-OP-18: con el reloj atrasado, no ofrece más de 10 segundos', () => {
@@ -96,6 +107,33 @@ describe('deshacer en el módulo', () => {
     await modulo.registrarVenta({ lineas: [{ productoId: 'lejia', cantidad: '2' }] })
     reloj.avanzarSegundos(11)
     expect(modulo.deshacer.disponible()).toBeNull()
+  })
+
+  it('RN-OP-18: a los 11 s un toque tardío todavía deshace (dentro del margen)', async () => {
+    const { modulo, reloj, stock } = await escenario()
+    await modulo.registrarVenta({ lineas: [{ productoId: 'lejia', cantidad: '2' }] })
+    reloj.avanzarSegundos(11)
+    await modulo.deshacer.deshacer()
+    expect(await stock('lejia')).toEqual(Cantidad.deEntero(10))
+  })
+
+  it('RN-OP-18: a los 15 s deshacer se rechaza y el stock no cambia', async () => {
+    const { modulo, reloj, stock, tipos } = await escenario()
+    await modulo.registrarVenta({ lineas: [{ productoId: 'lejia', cantidad: '2' }] })
+    reloj.avanzarSegundos(15)
+    await expect(modulo.deshacer.deshacer()).rejects.toThrow(
+      'Ya pasó el tiempo para deshacer. Puedes anularla desde el Historial.',
+    )
+    expect(await stock('lejia')).toEqual(Cantidad.deEntero(8))
+    expect(await tipos('lejia')).toEqual(['STOCK_INICIAL', 'VENTA'])
+  })
+
+  it('RN-OP-18: una hora después, deshacer ya no anula (se anula desde el Historial)', async () => {
+    const { modulo, reloj, stock } = await escenario()
+    await modulo.registrarVenta({ lineas: [{ productoId: 'lejia', cantidad: '2' }] })
+    reloj.avanzarSegundos(3600)
+    await expect(modulo.deshacer.deshacer()).rejects.toThrow('Ya pasó el tiempo para deshacer')
+    expect(await stock('lejia')).toEqual(Cantidad.deEntero(8))
   })
 
   it('RN-OP-18: se ofrece tras cualquier registro, pero no tras una anulación', async () => {
