@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { AlmacenEnMemoria } from './almacen-en-memoria'
 import { UnidadDeTrabajoEnMemoria } from './unidad-de-trabajo-en-memoria'
 import { BusEnMemoria } from '../../domain/eventos'
+import { probarUnidadDeTrabajo } from '../__pruebas__/contrato-de-unidad-de-trabajo'
 
 const existencia = (productoId: string, cantidad: number) => ({ productoId, cantidad })
 
@@ -479,5 +480,22 @@ describe('UnidadDeTrabajoEnMemoria.alConfirmar', () => {
     await expect(primera).rejects.toThrow('falla la primera')
     await segunda
     expect(bitacora).toEqual(['de la segunda'])
+  })
+})
+
+describe('UnidadDeTrabajoEnMemoria: contrato del puerto', () => {
+  probarUnidadDeTrabajo(() => {
+    const almacen = new AlmacenEnMemoria()
+    return {
+      uow: new UnidadDeTrabajoEnMemoria(almacen),
+      escribir: async (marca) => {
+        almacen.guardar('categorias', { id: marca, nombre: marca, nombreNormalizado: marca })
+      },
+      leer: async () =>
+        almacen
+          .todos('categorias')
+          .map((c) => c.id)
+          .sort(),
+    }
   })
 })

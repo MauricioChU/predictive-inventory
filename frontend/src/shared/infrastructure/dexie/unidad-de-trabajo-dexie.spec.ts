@@ -2,6 +2,7 @@
 import Dexie from 'dexie'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CategoriaRegistro } from '../../contratos/registros'
+import { probarUnidadDeTrabajo } from '../__pruebas__/contrato-de-unidad-de-trabajo'
 import { crearBaseDePrueba, IDBFactory } from './__pruebas__/base-de-prueba'
 import type { BaseDeDatos } from './base-de-datos'
 import { enTransaccion, UnidadDeTrabajoDexie } from './unidad-de-trabajo-dexie'
@@ -28,6 +29,19 @@ function transaccionNativa(): IDBTransaction | null {
   return Dexie.currentTransaction?.idbtrans ?? null
 }
 
+describe('UnidadDeTrabajoDexie: contrato del puerto', () => {
+  probarUnidadDeTrabajo(() => {
+    const db = crearBaseDePrueba()
+    return {
+      uow: new UnidadDeTrabajoDexie(db),
+      escribir: async (marca) => {
+        await db.categorias.put(categoria(marca))
+      },
+      leer: async () => idsGuardados(db),
+    }
+  })
+})
+
 describe('UnidadDeTrabajoDexie', () => {
   afterEach(() => {
     vi.restoreAllMocks()
@@ -38,33 +52,7 @@ describe('UnidadDeTrabajoDexie', () => {
     expect(await uow.ejecutar(async () => transaccionNativa()?.durability)).toBe('strict')
   })
 
-  it('RN-OP-06: confirma todo lo que escribe el trabajo y devuelve su resultado', async () => {
-    const { db, uow } = crear()
-    const resultado = await uow.ejecutar(async () => {
-      await db.categorias.put(categoria('c1'))
-      await db.categorias.put(categoria('c2'))
-      return 'listo'
-    })
-    expect(resultado).toBe('listo')
-    expect(await idsGuardados(db)).toEqual(['c1', 'c2'])
-  })
-
-  it('RN-OP-06: si el trabajo falla, IndexedDB revierte todas sus escrituras', async () => {
-    const { db, uow } = crear()
-    await db.categorias.put(categoria('antes'))
-    await expect(
-      uow.ejecutar(async () => {
-        await db.categorias.put(categoria('c1'))
-        await db.existencias.put({ productoId: 'lejia', cantidad: 1000 })
-        await db.categorias.delete('antes')
-        throw new Error('falla a mitad')
-      }),
-    ).rejects.toThrow('falla a mitad')
-    expect(await idsGuardados(db)).toEqual(['antes'])
-    expect(await db.existencias.count()).toBe(0)
-  })
-
-  it('RN-OP-06: una llamada anidada se une a la transacción en curso; si falla, se revierte todo', async () => {
+  it('RN-OP-06: una llamada anidada corre en la MISMA transacción nativa; si falla, se revierte todo', async () => {
     const { db, uow } = crear()
     let externa: IDBTransaction | null = null
     let anidada: IDBTransaction | null = null
@@ -84,21 +72,6 @@ describe('UnidadDeTrabajoDexie', () => {
     expect(await idsGuardados(db)).toEqual([])
   })
 
-  it('una anidada cuyo error atrapa la externa no revierte nada por sí sola (igual que en memoria)', async () => {
-    const { db, uow } = crear()
-    await uow.ejecutar(async () => {
-      await db.categorias.put(categoria('c1'))
-      await uow
-        .ejecutar(async () => {
-          await db.categorias.put(categoria('c2'))
-          throw new Error('falla la anidada')
-        })
-        .catch(() => undefined)
-      await db.categorias.put(categoria('c3'))
-    })
-    expect(await idsGuardados(db)).toEqual(['c1', 'c2', 'c3'])
-  })
-
   it('RN-OP-06: si falla una petición de IndexedDB (clave repetida), se revierte todo', async () => {
     const { db, uow } = crear()
     await db.categorias.put(categoria('c0'))
@@ -109,22 +82,6 @@ describe('UnidadDeTrabajoDexie', () => {
       }),
     ).rejects.toMatchObject({ name: 'ConstraintError' })
     expect(await idsGuardados(db)).toEqual(['c0'])
-  })
-
-  it('dos llamadas independientes son transacciones separadas: el fallo de una no revierte la otra', async () => {
-    const { db, uow } = crear()
-    const [falla, sigue] = await Promise.allSettled([
-      uow.ejecutar(async () => {
-        await db.categorias.put(categoria('c1'))
-        throw new Error('falla la primera')
-      }),
-      uow.ejecutar(async () => {
-        await db.categorias.put(categoria('c2'))
-      }),
-    ])
-    expect(falla.status).toBe('rejected')
-    expect(sigue.status).toBe('fulfilled')
-    expect(await idsGuardados(db)).toEqual(['c2'])
   })
 
   it('una llamada que llega después de cerrar la transacción que la originó es independiente', async () => {
@@ -207,16 +164,7 @@ describe('UnidadDeTrabajoDexie', () => {
   })
 
   describe('alConfirmar', () => {
-    it('fuera de una transacción, corre la acción enseguida', () => {
-      const { uow } = crear()
-      let corrio = false
-      uow.alConfirmar(() => {
-        corrio = true
-      })
-      expect(corrio).toBe(true)
-    })
-
-    it('ADR-0002: dentro, corre después del commit de la transacción más externa, en orden', async () => {
+    it('ADR-0002: la acción ve lo confirmado desde otra conexión y corre fuera de la transacción', async () => {
       const fabrica = new IDBFactory()
       const db = crearBaseDePrueba(fabrica)
       const uow = new UnidadDeTrabajoDexie(db)
@@ -238,52 +186,6 @@ describe('UnidadDeTrabajoDexie', () => {
       expect(orden).toEqual(['fin del trabajo', 'a1 ve c1: true', 'a2'])
     })
 
-    it('una acción de una llamada anidada espera al commit de la más externa', async () => {
-      const { db, uow } = crear()
-      const orden: string[] = []
-      await uow.ejecutar(async () => {
-        await uow.ejecutar(async () => {
-          await db.categorias.put(categoria('c1'))
-          uow.alConfirmar(() => {
-            orden.push('acción de la anidada')
-          })
-        })
-        orden.push('terminó la anidada')
-        await db.categorias.put(categoria('c2'))
-        uow.alConfirmar(() => {
-          orden.push('acción de la externa')
-        })
-        orden.push('fin de la externa')
-      })
-      expect(orden).toEqual([
-        'terminó la anidada',
-        'fin de la externa',
-        'acción de la anidada',
-        'acción de la externa',
-      ])
-    })
-
-    it('RN-OP-06: si hay rollback, descarta las acciones (también las de llamadas anidadas)', async () => {
-      const { db, uow } = crear()
-      const corrieron: string[] = []
-      await expect(
-        uow.ejecutar(async () => {
-          uow.alConfirmar(() => {
-            corrieron.push('externa')
-          })
-          await uow.ejecutar(async () => {
-            await db.categorias.put(categoria('c1'))
-            uow.alConfirmar(() => {
-              corrieron.push('anidada')
-            })
-          })
-          throw new Error('rollback')
-        }),
-      ).rejects.toThrow('rollback')
-      expect(corrieron).toEqual([])
-      expect(await idsGuardados(db)).toEqual([])
-    })
-
     it('RN-OP-06: si IndexedDB aborta la transacción, descarta las acciones', async () => {
       const { db, uow } = crear()
       await db.categorias.put(categoria('c0'))
@@ -297,69 +199,6 @@ describe('UnidadDeTrabajoDexie', () => {
         }),
       ).rejects.toMatchObject({ name: 'ConstraintError' })
       expect(corrieron).toEqual([])
-    })
-
-    it('una acción que lanza o rechaza se registra con console.error y no impide las demás', async () => {
-      const { db, uow } = crear()
-      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-      const corrieron: string[] = []
-      const resultado = await uow.ejecutar(async () => {
-        await db.categorias.put(categoria('c1'))
-        uow.alConfirmar(() => {
-          throw new Error('lanza')
-        })
-        uow.alConfirmar(async () => {
-          throw new Error('rechaza')
-        })
-        uow.alConfirmar(() => {
-          corrieron.push('tercera')
-        })
-        return 'confirmado'
-      })
-      expect(resultado).toBe('confirmado')
-      expect(corrieron).toEqual(['tercera'])
-      expect(error).toHaveBeenCalledTimes(2)
-      expect(await idsGuardados(db)).toEqual(['c1'])
-
-      uow.alConfirmar(() => {
-        throw new Error('fuera de una transacción')
-      })
-      await uow.esperarAcciones()
-      expect(error).toHaveBeenCalledTimes(3)
-    })
-
-    it('ejecutar resuelve cuando ya terminaron sus acciones, que corren una tras otra', async () => {
-      const { uow } = crear()
-      const orden: string[] = []
-      await uow.ejecutar(async () => {
-        uow.alConfirmar(async () => {
-          await esperar(15)
-          orden.push('lenta')
-        })
-        uow.alConfirmar(() => {
-          orden.push('rápida')
-        })
-      })
-      expect(orden).toEqual(['lenta', 'rápida'])
-    })
-
-    it('una acción puede abrir su propia unidad de trabajo', async () => {
-      const { db, uow } = crear()
-      let externa: IDBTransaction | null = null
-      let deLaAccion: IDBTransaction | null = null
-      await uow.ejecutar(async () => {
-        externa = transaccionNativa()
-        await db.categorias.put(categoria('c1'))
-        uow.alConfirmar(async () => {
-          deLaAccion = await uow.ejecutar(async () => {
-            await db.categorias.put(categoria('c2'))
-            return transaccionNativa()
-          })
-        })
-      })
-      expect(deLaAccion).not.toBeNull()
-      expect(deLaAccion).not.toBe(externa)
-      expect(await idsGuardados(db)).toEqual(['c1', 'c2'])
     })
 
     it('dentro de una transacción que no abrió la unidad de trabajo, también espera a su commit', async () => {

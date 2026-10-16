@@ -69,12 +69,15 @@ export async function enTransaccion<T>(
  * de después no, y las acciones `alConfirmar` se descartan como en un rollback. Lo lento que
  * no es IndexedDB va antes o después de `ejecutar` (como `guardarFoto` o `leerTodo`).
  *
- * `alConfirmar`: dentro de una transacción, la acción se encola y corre DESPUÉS del commit de
- * la transacción más externa, en orden y una tras otra; si hay rollback, se descarta. El
- * `ejecutar` más externo resuelve cuando sus acciones ya terminaron (como cuando los casos de
- * uso publicaban con `await` después de `ejecutar`). Fuera de una transacción, la acción
- * corre enseguida. Una acción que lanza o rechaza se registra con `console.error` y no
- * afecta a las demás ni al resultado de `ejecutar`.
+ * `alConfirmar` cumple el contrato documentado en `UnidadDeTrabajo` (el mismo spec de contrato
+ * corre contra esta clase y la de memoria: shared/infrastructure/__pruebas__). Cómo lo hace
+ * aquí: la acción se encola en la lista de la transacción NATIVA más externa (las anidadas la
+ * comparten, también si fallaron y la externa atrapó el error); `enTransaccion` corre la lista
+ * después de que Dexie confirma, en orden y de a una, fuera de la zona de la transacción (un
+ * `ejecutar()` dentro de una acción abre una transacción nueva), y recién entonces resuelve.
+ * Si hay rollback, la lista se pierde con la transacción. Fuera de una transacción, o desde
+ * una continuación tardía cuya transacción ya cerró, la acción corre enseguida. Una acción que
+ * lanza o rechaza se registra con `console.error` y no afecta a las demás ni a `ejecutar`.
  */
 export class UnidadDeTrabajoDexie implements UnidadDeTrabajo {
   /** Acciones que nadie espera: las de fuera de una transacción y las de una ajena. */
