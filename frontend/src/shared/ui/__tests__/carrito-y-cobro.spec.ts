@@ -36,6 +36,13 @@ describe('FilaDeCarrito', () => {
     expect(textoReferido(grupo.element, 'aria-labelledby')).toBe('Lejía Clorox 1 L')
   })
 
+  // Plan 13: en Para comprar el monto de la línea es el "Costo estimado" (RN-AN-08).
+  it('el monto de la línea dice "Importe" salvo que la pantalla le dé otro nombre', () => {
+    expect(mount(FilaDeCarrito, { props: LINEA }).get('.etiqueta-importe').text()).toBe('Importe')
+    const w = mount(FilaDeCarrito, { props: { ...LINEA, etiquetaImporte: 'Costo estimado' } })
+    expect(w.get('.etiqueta-importe').text()).toBe('Costo estimado')
+  })
+
   it('RN-UX-06: la cantidad usa CampoNumero; por unidades, sin decimales y sin bajar de 1', () => {
     const w = mount(FilaDeCarrito, { props: LINEA })
     const campo = w.getComponent(CampoNumero)
