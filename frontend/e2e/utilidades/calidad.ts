@@ -1,12 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, type Page } from '@playwright/test'
 
-export type Letra = 'NORMAL' | 'GRANDE' | 'MUY_GRANDE'
-
-/** Debe llamarse antes de page.goto: fija el tamaño de letra guardado. */
-export async function usarLetra(page: Page, letra: Letra): Promise<void> {
-  await page.addInitScript((valor) => localStorage.setItem('pi.letra', valor), letra)
-}
+export { usarLetra, type Letra } from './navegacion'
 
 /** RN-UX-09 / RN-SIS-06.
  *

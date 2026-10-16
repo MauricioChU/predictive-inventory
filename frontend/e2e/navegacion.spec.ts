@@ -1,12 +1,13 @@
 import { expect, test } from '@playwright/test'
 import { esperarSinDesplazamientoHorizontal, esperarSinViolacionesGraves, usarLetra } from './utilidades/calidad'
+import { abrir } from './utilidades/navegacion'
 
 const DESTINOS = ['Inicio', 'Vender', 'Recibir', 'Productos', 'Control']
 const ANCHOS = [320, 360, 768, 1280]
 
 test.describe('RN-UX-12: navegación', () => {
   test('los cinco destinos están visibles y funcionan', async ({ page }) => {
-    await page.goto('./')
+    await abrir(page, './')
     for (const destino of DESTINOS) {
       await page.getByRole('link', { name: destino }).click()
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(destino)
@@ -20,7 +21,7 @@ test.describe('RN-SIS-06 y RN-SIS-07: responsive y accesibilidad', () => {
       await usarLetra(page, 'MUY_GRANDE')
       await page.setViewportSize({ width: ancho, height: 800 })
       for (const ruta of ['./', './vender', './recibir', './productos', './control', './ajustes', './historial']) {
-        await page.goto(ruta)
+        await abrir(page, ruta)
         await esperarSinDesplazamientoHorizontal(page)
         await expect(page.getByRole('navigation')).toBeVisible()
       }
@@ -28,7 +29,7 @@ test.describe('RN-SIS-06 y RN-SIS-07: responsive y accesibilidad', () => {
   }
 
   test('sin violaciones graves de accesibilidad', async ({ page }) => {
-    await page.goto('./')
+    await abrir(page, './')
     await esperarSinViolacionesGraves(page)
   })
 })
@@ -54,7 +55,7 @@ test.describe('S1: enlaces de navegación completos y dentro del viewport', () =
         )
         await usarLetra(page, letra)
         await page.setViewportSize({ width: ancho, height: 800 })
-        await page.goto('./')
+        await abrir(page, './')
 
         const datos = await page.evaluate(() => {
           const anchoVentana = document.documentElement.clientWidth
@@ -120,7 +121,7 @@ test.describe('Ronda 3: la barra de navegación queda al fondo del viewport tamb
         await usarLetra(page, letra)
         const altoViewport = 800
         await page.setViewportSize({ width: ancho, height: altoViewport })
-        await page.goto('./ajustes')
+        await abrir(page, './ajustes')
 
         const cajaAntes = await page.getByRole('navigation').boundingBox()
         expect(cajaAntes, 'la barra de navegación debe tener una caja visible').not.toBeNull()

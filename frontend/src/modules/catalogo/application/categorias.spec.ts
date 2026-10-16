@@ -182,6 +182,41 @@ describe('listarCategorias', () => {
     const id = await crearCategoria(categorias, ids, uow, 'Bolsas')
     expect(await listarCategorias(categorias)).toEqual([{ id, nombre: 'Bolsas' }])
   })
+
+  // Ola 3 (integración): Dexie las devuelve por id (UUID en la app: al azar) y la memoria por
+  // orden de creación. El orden lo decide el caso de uso, igual con cualquier repositorio.
+  it('RN-CAT-15: las ordena por nombre, sin importar tildes ni mayúsculas ni el orden del repositorio', async () => {
+    const almacen = new AlmacenEnMemoria()
+    const categorias = new RepositorioDeCategoriasEnMemoria(almacen)
+    const uow = new UnidadDeTrabajoEnMemoria(almacen)
+    const ids = new IdsSecuenciales('c')
+    for (const nombre of ['Lejías', 'Bolsas', 'Ácidos', 'lavavajillas']) {
+      await crearCategoria(categorias, ids, uow, nombre)
+    }
+    expect((await listarCategorias(categorias)).map((c) => c.nombre)).toEqual([
+      'Ácidos',
+      'Bolsas',
+      'lavavajillas',
+      'Lejías',
+    ])
+  })
+
+  it('RN-CAT-15: "Otros" va siempre al final, aunque otras se ordenen después por nombre', async () => {
+    const almacen = new AlmacenEnMemoria()
+    const categorias = new RepositorioDeCategoriasEnMemoria(almacen)
+    const uow = new UnidadDeTrabajoEnMemoria(almacen)
+    const ids = new IdsSecuenciales('c')
+    for (const nombre of ['Velas', 'ÓTROS', 'Papel y descartables', 'Bolsas', 'Otros productos']) {
+      await crearCategoria(categorias, ids, uow, nombre)
+    }
+    expect((await listarCategorias(categorias)).map((c) => c.nombre)).toEqual([
+      'Bolsas',
+      'Otros productos',
+      'Papel y descartables',
+      'Velas',
+      'ÓTROS',
+    ])
+  })
 })
 
 describe('categoriaPorNombre', () => {

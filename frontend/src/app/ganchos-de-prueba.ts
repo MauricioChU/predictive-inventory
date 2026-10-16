@@ -1,5 +1,19 @@
+/**
+ * GANCHOS DE PRUEBA EN EL BUILD DE PRODUCCIÓN (para las E2E de Playwright).
+ *
+ * Existen solo si `import.meta.env.DEV` (servidor de desarrollo) o `navigator.webdriver` (un
+ * navegador automatizado, como Playwright contra `npm run preview` en CI). Para una persona
+ * usando la app no existen:
+ * - `window.__pruebas`: muestra el aviso Deshacer, monta un GraficoBarras y monta los catálogos
+ *   de los kits de componentes para medir su geometría (LayoutApp los expone y los retira al
+ *   desmontar).
+ * - `window.__aplicacion`: la aplicación real (los seis módulos), para preparar datos y
+ *   completar operaciones por los casos de uso mientras no existan las pantallas (main.ts).
+ * No dan acceso a nada que el código de la página no tenga ya (los datos son locales).
+ */
 import { createApp, type App, type Component } from 'vue'
 import type { ContextoAvisoDeshacer } from './aviso-deshacer'
+import type { Aplicacion } from './composicion'
 
 // ── Catálogos de los kits de componentes (plan 09b) ──
 // Páginas solo para pruebas (src/shared/ui/__catalogo__/) que las E2E montan con
@@ -31,12 +45,18 @@ export interface GanchosDePrueba {
 declare global {
   interface Window {
     __pruebas?: GanchosDePrueba
+    /** La aplicación real (solo en desarrollo o con el navegador automatizado). */
+    __aplicacion?: Aplicacion
   }
 }
 
 interface Montada {
   app: App
   lugar: HTMLElement
+}
+
+function hayPruebas(): boolean {
+  return import.meta.env.DEV || navigator.webdriver
 }
 
 /**
@@ -48,7 +68,7 @@ interface Montada {
  * función que los retira (y desmonta lo que montaron).
  */
 export function exponerGanchosDePrueba(aviso: ContextoAvisoDeshacer): () => void {
-  if (!(import.meta.env.DEV || navigator.webdriver)) return () => {}
+  if (!hayPruebas()) return () => {}
   const montadas: Montada[] = []
   const prefijosUsados = new Map<string, number>()
 
@@ -94,5 +114,18 @@ export function exponerGanchosDePrueba(aviso: ContextoAvisoDeshacer): () => void
       lugar.remove()
     }
     delete window.__pruebas
+  }
+}
+
+/**
+ * Ola 3: las E2E preparan datos y completan operaciones (p. ej. la venta sin conexión de
+ * RN-SIS-08) por los casos de uso reales, mientras no existan las pantallas. Mismas
+ * condiciones que los ganchos de arriba; devuelve la función que la retira.
+ */
+export function exponerAplicacionParaPruebas(aplicacion: Aplicacion): () => void {
+  if (!hayPruebas()) return () => {}
+  window.__aplicacion = aplicacion
+  return () => {
+    delete window.__aplicacion
   }
 }
