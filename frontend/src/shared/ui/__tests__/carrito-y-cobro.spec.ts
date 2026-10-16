@@ -293,8 +293,7 @@ describe('BarraDeTotal', () => {
   })
 
   describe('plan 12 (WCAG 2.4.11): publica su alto para que el foco nunca quede tapado', () => {
-    const variable = () =>
-      document.documentElement.style.getPropertyValue('--alto-barra-de-total')
+    const variable = () => document.documentElement.style.getPropertyValue('--alto-barra-de-total')
     let observados: Element[] = []
 
     beforeEach(() => {

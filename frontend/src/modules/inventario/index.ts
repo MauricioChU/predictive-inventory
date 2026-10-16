@@ -41,3 +41,6 @@ export {
   RepositorioDeExistenciasDexie,
   RepositorioDeOperacionesDexie,
 } from './infrastructure/dexie/repositorios'
+
+// Ola 4, plan 12: pantallas de operaciones, cargadas recién al abrirlas (cada una es su chunk).
+export const VistaVender = () => import('./ui/VistaVender.vue')
