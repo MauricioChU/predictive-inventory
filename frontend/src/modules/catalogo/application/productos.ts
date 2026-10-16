@@ -15,6 +15,7 @@ import {
   leerPrecioVenta,
   leerStockInicial,
   leerStockMinimo,
+  verificarPrecioCompra,
 } from '../domain/validaciones'
 import type { DatosDeEdicion, DependenciasDeCatalogo, ProductoVista } from './modulo'
 import type { RepositorioDeProductos } from './puertos'
@@ -80,11 +81,6 @@ export async function crearProducto(
   const stockMinimo = leerStockMinimo(datos.stockMinimo, datos.unidad)
   const stockInicial = leerStockInicial(datos.stockInicial, datos.unidad)
 
-  const perdida = precioVenta.mayorQue(precioCompra) ? null : precioCompra.restar(precioVenta)
-  if (perdida !== null && !datos.confirmado) {
-    return confirmar(mensajePerdida(perdida, datos.unidad))
-  }
-
   const id = deps.ids.nuevo()
   const ahora = deps.reloj.ahora()
   const producto = Producto.crear({
@@ -97,6 +93,11 @@ export async function crearProducto(
     stockMinimo,
     ahora,
   })
+
+  const perdida = producto.perdidaPorUnidad()
+  if (perdida !== null && !datos.confirmado) {
+    return confirmar(mensajePerdida(perdida, datos.unidad))
+  }
 
   await deps.uow.ejecutar(async () => {
     await deps.productos.guardar(producto.aRegistro())
@@ -143,6 +144,10 @@ export async function editarProducto(
   if (datos.unidad !== undefined && datos.unidad !== producto.unidad) {
     const tieneOperaciones = await deps.inventario().tieneOperaciones(producto.id)
     producto.cambiarUnidad(datos.unidad, tieneOperaciones, ahora)
+    // RN-CAT-06 / RN-OP-04: el mínimo guardado debe respetar la precisión de la nueva unidad.
+    if (datos.stockMinimo === undefined && !producto.stockMinimo.esValidaPara(datos.unidad)) {
+      throw new ErrorDeDominio('CANTIDAD_ENTERA', 'Este producto se cuenta por unidades enteras')
+    }
   }
 
   if (datos.stockMinimo !== undefined) {
@@ -157,11 +162,11 @@ export async function editarProducto(
         : producto.precioCompra
     const venta =
       datos.precioVenta !== undefined ? leerPrecioVenta(datos.precioVenta) : producto.precioVenta
-    const perdida = venta.mayorQue(compra) ? null : compra.restar(venta)
+    producto.cambiarPrecios(compra, venta, ahora)
+    const perdida = producto.perdidaPorUnidad()
     if (perdida !== null && !datos.confirmado) {
       return confirmar(mensajePerdida(perdida, producto.unidad))
     }
-    producto.cambiarPrecios(compra, venta, ahora)
   }
 
   await deps.uow.ejecutar(async () => {
@@ -181,6 +186,7 @@ export async function archivarProducto(
 ): Promise<Respuesta<void>> {
   const registro = await obtenerRegistro(deps.productos, datos.productoId)
   const producto = Producto.desdeRegistro(registro)
+  if (!producto.activo) return hecho(undefined) // ya archivado: no hay nada que hacer
   const stock = await deps.inventario().stockDe(producto.id)
 
   if (stock.esPositiva() && !datos.confirmado) {
@@ -207,6 +213,7 @@ export async function reactivarProducto(
 ): Promise<void> {
   const registro = await obtenerRegistro(deps.productos, productoId)
   const producto = Producto.desdeRegistro(registro)
+  if (producto.activo) return // ya activo: no hay nada que hacer
   const ahora = deps.reloj.ahora()
   producto.reactivar(ahora)
 
@@ -269,9 +276,7 @@ export async function actualizarPrecioCompra(
   precio: Dinero,
   deps: DependenciasDeCatalogo,
 ): Promise<void> {
-  if (precio.esNegativo()) {
-    throw new ErrorDeDominio('PRECIO_COMPRA_NEGATIVO', 'El precio de compra no puede ser negativo')
-  }
+  verificarPrecioCompra(precio)
   const registro = await obtenerRegistro(deps.productos, productoId)
   const producto = Producto.desdeRegistro(registro)
   const ahora = deps.reloj.ahora()

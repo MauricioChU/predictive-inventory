@@ -13,7 +13,7 @@ import {
   RepositorioDeProductosEnMemoria,
 } from '../infrastructure/memoria/repositorios'
 import type { DependenciasDeCatalogo } from './modulo'
-import { crearProducto } from './productos'
+import { crearProducto, editarProducto } from './productos'
 import { guardarFoto, obtenerFoto, quitarFoto } from './fotos'
 
 /** Doble mínimo de Inventario: ninguno de estos tests registra stock inicial. */
@@ -115,5 +115,65 @@ describe('guardarFoto / obtenerFoto / quitarFoto (RN-CAT-14)', () => {
 
   it('quitarFoto lanza "No encontramos ese producto" si no existe', async () => {
     await expect(quitarFoto('no-existe', ctx.deps)).rejects.toThrow('No encontramos ese producto')
+  })
+
+  it('guardarFoto concurrente con editarProducto conserva la edición', async () => {
+    let liberar!: () => void
+    const compuerta = new Promise<void>((r) => (liberar = r))
+    const lenta: DependenciasDeCatalogo = {
+      ...ctx.deps,
+      procesadorDeFotos: {
+        reducir: async (imagen) => {
+          await compuerta
+          return imagen
+        },
+      },
+    }
+    const guardando = guardarFoto(productoId, new Blob([new Uint8Array([1])]), lenta)
+    await editarProducto({ productoId, nombre: 'Escoba reforzada' }, ctx.deps)
+    liberar()
+    await guardando
+
+    const final = await ctx.productos.porId(productoId)
+    expect(final?.nombre).toBe('Escoba reforzada')
+    expect(final?.tieneFoto).toBe(true)
+  })
+
+  it('guardarFoto reduce la imagen ANTES de abrir la unidad de trabajo', async () => {
+    const orden: string[] = []
+    const espia: DependenciasDeCatalogo = {
+      ...ctx.deps,
+      procesadorDeFotos: {
+        reducir: async (imagen) => {
+          orden.push('reducir')
+          return imagen
+        },
+      },
+      uow: {
+        ejecutar: (trabajo) => {
+          orden.push('uow')
+          return ctx.deps.uow.ejecutar(trabajo)
+        },
+      },
+    }
+    await guardarFoto(productoId, new Blob([new Uint8Array([1])]), espia)
+    expect(orden).toEqual(['reducir', 'uow'])
+  })
+
+  it('quitarFoto relee el producto dentro de la unidad de trabajo y conserva ediciones intermedias', async () => {
+    await guardarFoto(productoId, new Blob([new Uint8Array([1])]), ctx.deps)
+    const interferente: DependenciasDeCatalogo = {
+      ...ctx.deps,
+      uow: {
+        ejecutar: async (trabajo) => {
+          await editarProducto({ productoId, nombre: 'Escoba nueva' }, ctx.deps)
+          return ctx.deps.uow.ejecutar(trabajo)
+        },
+      },
+    }
+    await quitarFoto(productoId, interferente)
+    const final = await ctx.productos.porId(productoId)
+    expect(final?.nombre).toBe('Escoba nueva')
+    expect(final?.tieneFoto).toBe(false)
   })
 })

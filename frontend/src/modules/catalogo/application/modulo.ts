@@ -1,3 +1,4 @@
+import type { ProductoRegistro } from '@/shared/contratos/registros'
 import { Cantidad, type Unidad } from '@/shared/domain/cantidad'
 import { Dinero } from '@/shared/domain/dinero'
 import type { BusDeEventos } from '@/shared/domain/eventos'
@@ -111,44 +112,35 @@ export interface ModuloCatalogo {
   importacion: CatalogoParaImportacion
 }
 
-function aProductoResumido(vista: ProductoVista): ProductoResumido {
+function aProductoResumido(p: ProductoRegistro, categoriaNombre: string): ProductoResumido {
   return {
-    id: vista.id,
-    nombre: vista.nombre,
-    unidad: vista.unidad,
-    categoriaId: vista.categoriaId,
-    categoriaNombre: vista.categoriaNombre,
-    precioCompra: vista.precioCompra,
-    precioVenta: vista.precioVenta,
-    stockMinimo: vista.stockMinimo,
-    activo: vista.activo,
-    tieneFoto: vista.tieneFoto,
+    id: p.id,
+    nombre: p.nombre,
+    unidad: p.unidad,
+    categoriaId: p.categoriaId,
+    categoriaNombre,
+    precioCompra: Dinero.deCentimos(p.precioCompra),
+    precioVenta: Dinero.deCentimos(p.precioVenta),
+    stockMinimo: Cantidad.deMilesimas(p.stockMinimo),
+    activo: p.estado === 'ACTIVO',
+    tieneFoto: p.tieneFoto,
   }
 }
 
 function crearConsultable(deps: DependenciasDeCatalogo): CatalogoConsultable {
   return {
     async producto(id) {
-      const vista = await obtenerProducto(id, deps)
-      return vista ? aProductoResumido(vista) : null
+      const registro = await deps.productos.porId(id)
+      if (!registro) return null
+      const categoria = await deps.categorias.porId(registro.categoriaId)
+      return aProductoResumido(registro, categoria?.nombre ?? '')
     },
     async productos(filtro) {
       const todos = await deps.productos.todos()
       const filtrados = filtro?.soloActivos ? todos.filter((p) => p.estado === 'ACTIVO') : todos
       const categorias = await deps.categorias.todas()
       const nombrePorCategoria = new Map(categorias.map((c) => [c.id, c.nombre]))
-      return filtrados.map((p): ProductoResumido => ({
-        id: p.id,
-        nombre: p.nombre,
-        unidad: p.unidad,
-        categoriaId: p.categoriaId,
-        categoriaNombre: nombrePorCategoria.get(p.categoriaId) ?? '',
-        precioCompra: Dinero.deCentimos(p.precioCompra),
-        precioVenta: Dinero.deCentimos(p.precioVenta),
-        stockMinimo: Cantidad.deMilesimas(p.stockMinimo),
-        activo: p.estado === 'ACTIVO',
-        tieneFoto: p.tieneFoto,
-      }))
+      return filtrados.map((p) => aProductoResumido(p, nombrePorCategoria.get(p.categoriaId) ?? ''))
     },
     async actualizarPrecioCompra(id, precio) {
       await actualizarPrecioCompra(id, precio, deps)

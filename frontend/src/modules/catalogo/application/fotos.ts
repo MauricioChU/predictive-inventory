@@ -18,12 +18,14 @@ export async function guardarFoto(
   imagen: Blob,
   deps: DependenciasDeCatalogo,
 ): Promise<void> {
-  const registro = await obtenerRegistro(deps, productoId)
+  await obtenerRegistro(deps, productoId) // falla temprano si el producto no existe
+  // Lo lento (decodificar y comprimir) va FUERA de la unidad de trabajo.
   const reducida = await deps.procesadorDeFotos.reducir(imagen)
-  const producto = Producto.desdeRegistro(registro)
-  producto.marcarFoto(true, deps.reloj.ahora())
 
   await deps.uow.ejecutar(async () => {
+    // Se relee dentro: no se pisa una edición concurrente con una copia vieja.
+    const producto = Producto.desdeRegistro(await obtenerRegistro(deps, productoId))
+    producto.marcarFoto(true, deps.reloj.ahora())
     await deps.fotos.guardar({ productoId, imagen: reducida })
     await deps.productos.guardar(producto.aRegistro())
   })
@@ -38,11 +40,11 @@ export async function obtenerFoto(
 
 /** Quita la foto del producto (vuelve a mostrarse el ícono de su categoría). */
 export async function quitarFoto(productoId: string, deps: DependenciasDeCatalogo): Promise<void> {
-  const registro = await obtenerRegistro(deps, productoId)
-  const producto = Producto.desdeRegistro(registro)
-  producto.marcarFoto(false, deps.reloj.ahora())
+  await obtenerRegistro(deps, productoId) // falla temprano si el producto no existe
 
   await deps.uow.ejecutar(async () => {
+    const producto = Producto.desdeRegistro(await obtenerRegistro(deps, productoId))
+    producto.marcarFoto(false, deps.reloj.ahora())
     await deps.fotos.eliminar(productoId)
     await deps.productos.guardar(producto.aRegistro())
   })

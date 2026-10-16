@@ -65,7 +65,9 @@ class InventarioFalso implements InventarioParaCatalogo {
     this.productosConOperaciones.add(productoId)
     if (this.lanzarAlRegistrarStockInicial) throw new Error('Falla simulada de Inventario')
   }
+  lanzarAlRetirarStock = false
   async retirarStock(productoId: string): Promise<void> {
+    if (this.lanzarAlRetirarStock) throw new Error('Falla simulada al retirar')
     this.llamadasARetirarStock.push(productoId)
     this.stock.set(productoId, Cantidad.cero())
   }
@@ -86,7 +88,13 @@ function construirDependencias() {
   bus.suscribir('ProductoReactivado', (e) => void eventosPublicados.push(e))
   const inventario = new InventarioFalso()
   const vecesVendidoFijo = new Map<string, number>()
-  const ventas = { vecesVendido: async () => vecesVendidoFijo }
+  const llamadasAVecesVendido: [string, string][] = []
+  const ventas = {
+    vecesVendido: async (desde: string, hasta: string) => {
+      llamadasAVecesVendido.push([desde, hasta])
+      return vecesVendidoFijo
+    },
+  }
   const deps: DependenciasDeCatalogo = {
     productos,
     categorias,
@@ -107,6 +115,7 @@ function construirDependencias() {
     inventario,
     eventosPublicados,
     vecesVendidoFijo,
+    llamadasAVecesVendido,
     reloj,
     almacen,
   }
@@ -757,5 +766,129 @@ describe('actualizarPrecioCompra (RN-OP-14)', () => {
     await expect(
       actualizarPrecioCompra('no-existe', Dinero.deTexto('2.80'), ctx.deps),
     ).rejects.toThrow('No encontramos ese producto')
+  })
+})
+
+const base = (nombre: string, extra: Record<string, string> = {}) => ({
+  nombre,
+  categoriaId: 'c1',
+  unidad: 'UNIDAD' as 'UNIDAD' | 'KILO' | 'LITRO',
+  precioCompra: '2.40',
+  precioVenta: '3.50',
+  stockMinimo: '3',
+  ...extra,
+})
+
+describe('correcciones ronda 1', () => {
+  let ctx: ReturnType<typeof construirDependencias>
+  beforeEach(async () => {
+    ctx = construirDependencias()
+    await crearCategoriaDePrueba(ctx.categorias, 'c1', 'Lejías y desinfectantes')
+  })
+  const idDe = (r: Awaited<ReturnType<typeof crearProducto>>) => {
+    if (r.tipo !== 'hecho') throw new Error('se esperaba hecho')
+    return r.valor.productoId
+  }
+
+  it('RN-CAT-06: KILO a UNIDAD sin stockMinimo con mínimo fraccionario se rechaza', async () => {
+    const id = idDe(
+      await crearProducto({ ...base('Carbón', { stockMinimo: '2.5' }), unidad: 'KILO' }, ctx.deps),
+    )
+    await expect(editarProducto({ productoId: id, unidad: 'UNIDAD' }, ctx.deps)).rejects.toThrow(
+      'Este producto se cuenta por unidades enteras',
+    )
+    expect((await ctx.productos.porId(id))?.unidad).toBe('KILO')
+  })
+
+  it('RN-CAT-06: KILO a UNIDAD con mínimo entero se acepta', async () => {
+    const id = idDe(await crearProducto({ ...base('Carbón'), unidad: 'KILO' }, ctx.deps))
+    const r = await editarProducto({ productoId: id, unidad: 'UNIDAD' }, ctx.deps)
+    expect(r.tipo).toBe('hecho')
+  })
+
+  it('RN-CAT-12: vecesVendido se consulta con el rango de días de Lima (hoy-29, hoy)', async () => {
+    ctx.reloj.fijar('2026-10-16T03:00:00.000Z')
+    await buscarProductos({ texto: '' }, ctx.deps)
+    expect(ctx.llamadasAVecesVendido).toEqual([['2026-09-16', '2026-10-15']])
+  })
+
+  it('RN-CAT-12: los más vendidos primero con 1 vs 2 ventas', async () => {
+    const a = idDe(await crearProducto(base('Lejía Tradicional 1 L'), ctx.deps))
+    const b = idDe(await crearProducto(base('Lejía Tradicional 2 L'), ctx.deps))
+    ctx.vecesVendidoFijo.set(a, 1)
+    ctx.vecesVendidoFijo.set(b, 2)
+    const r = await buscarProductos({ texto: 'lejia' }, ctx.deps)
+    expect(r.map((p) => p.nombre)).toEqual(['Lejía Tradicional 2 L', 'Lejía Tradicional 1 L'])
+  })
+
+  it('RN-CAT-12: "trad 2" no encuentra 1 L y "lejia" no encuentra Carbón', async () => {
+    await crearProducto(base('Lejía Tradicional 1 L'), ctx.deps)
+    await crearProducto(base('Lejía Tradicional 2 L'), ctx.deps)
+    await crearProducto({ ...base('Carbón vegetal'), unidad: 'KILO' }, ctx.deps)
+    expect((await buscarProductos({ texto: 'trad 2' }, ctx.deps)).map((p) => p.nombre)).toEqual([
+      'Lejía Tradicional 2 L',
+    ])
+    expect((await buscarProductos({ texto: 'lejia' }, ctx.deps)).map((p) => p.nombre)).toEqual([
+      'Lejía Tradicional 1 L',
+      'Lejía Tradicional 2 L',
+    ])
+  })
+
+  it('RN-CAT-02: validarNuevo contra un nombre archivado devuelve NOMBRE_DUPLICADO', async () => {
+    const id = idDe(await crearProducto(base('Escoba'), ctx.deps))
+    await archivarProducto({ productoId: id }, ctx.deps)
+    expect(await validarNuevo(base('escoba'), ctx.productos)).toEqual({
+      codigo: 'NOMBRE_DUPLICADO',
+      mensaje: 'Ya existe un producto con ese nombre',
+      nombreExistente: 'Escoba',
+    })
+  })
+
+  it('RN-CAT-11: si retirarStock lanza, el producto sigue ACTIVO y no hay evento', async () => {
+    const id = idDe(await crearProducto(base('Escoba'), ctx.deps))
+    ctx.inventario.stock.set(id, Cantidad.deEntero(4))
+    ctx.eventosPublicados.length = 0
+    ctx.inventario.lanzarAlRetirarStock = true
+    await expect(archivarProducto({ productoId: id, confirmado: true }, ctx.deps)).rejects.toThrow(
+      'Falla simulada al retirar',
+    )
+    expect((await ctx.productos.porId(id))?.estado).toBe('ACTIVO')
+    expect(ctx.eventosPublicados).toEqual([])
+  })
+
+  it('orden de validación: duplicado + categoría inválida da error de duplicado', async () => {
+    await crearProducto(base('Escoba'), ctx.deps)
+    await expect(crearProducto(base('escoba', { categoriaId: 'x' }), ctx.deps)).rejects.toThrow(
+      'Ya existe un producto con ese nombre',
+    )
+  })
+
+  it('orden de validación: categoría inválida + precio inválido da error de categoría', async () => {
+    await expect(
+      crearProducto(base('Nuevo', { categoriaId: 'x', precioCompra: '-1' }), ctx.deps),
+    ).rejects.toThrow('Elige una categoría')
+  })
+
+  it('RN-CAT-04: actualizarPrecioCompra respeta el máximo S/ 99 999.99', async () => {
+    const id = idDe(await crearProducto(base('Escoba'), ctx.deps))
+    await expect(actualizarPrecioCompra(id, Dinero.deTexto('100000.00'), ctx.deps)).rejects.toThrow(
+      'El precio no puede pasar de S/ 99 999.99',
+    )
+  })
+
+  it('archivar un producto ya archivado es no-op: sin evento', async () => {
+    const id = idDe(await crearProducto(base('Escoba'), ctx.deps))
+    await archivarProducto({ productoId: id }, ctx.deps)
+    ctx.eventosPublicados.length = 0
+    const r = await archivarProducto({ productoId: id }, ctx.deps)
+    expect(r.tipo).toBe('hecho')
+    expect(ctx.eventosPublicados).toEqual([])
+  })
+
+  it('reactivar un producto ya activo es no-op: sin evento', async () => {
+    const id = idDe(await crearProducto(base('Escoba'), ctx.deps))
+    ctx.eventosPublicados.length = 0
+    await reactivarProducto(id, ctx.deps)
+    expect(ctx.eventosPublicados).toEqual([])
   })
 })

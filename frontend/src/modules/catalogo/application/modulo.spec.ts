@@ -17,7 +17,9 @@ import { crearModuloCatalogo, type DependenciasDeCatalogo, type ModuloCatalogo }
 
 class InventarioFalso implements InventarioParaCatalogo {
   readonly stock = new Map<string, Cantidad>()
+  llamadasAStockDe = 0
   async stockDe(productoId: string): Promise<Cantidad> {
+    this.llamadasAStockDe += 1
     return this.stock.get(productoId) ?? Cantidad.cero()
   }
   async existencias(): Promise<Map<string, Cantidad>> {
@@ -40,7 +42,11 @@ class InventarioFalso implements InventarioParaCatalogo {
   }
 }
 
-function construirModulo(): { modulo: ModuloCatalogo; deps: DependenciasDeCatalogo } {
+function construirModulo(): {
+  modulo: ModuloCatalogo
+  deps: DependenciasDeCatalogo
+  inventario: InventarioFalso
+} {
   const almacen = new AlmacenEnMemoria()
   const deps: DependenciasDeCatalogo = {
     productos: new RepositorioDeProductosEnMemoria(almacen),
@@ -55,7 +61,7 @@ function construirModulo(): { modulo: ModuloCatalogo; deps: DependenciasDeCatalo
     ventas: () => ({ vecesVendido: async () => new Map() }),
   }
   const inventario = new InventarioFalso()
-  return { modulo: crearModuloCatalogo(deps), deps }
+  return { modulo: crearModuloCatalogo(deps), deps, inventario }
 }
 
 describe('crearModuloCatalogo: delega en los casos de uso', () => {
@@ -168,6 +174,22 @@ describe('ModuloCatalogo.consultable', () => {
       activo: true,
       tieneFoto: false,
     })
+  })
+
+  it('producto() no consulta el stock a Inventario', async () => {
+    const { modulo, inventario } = construirModulo()
+    const categoriaId = await modulo.crearCategoria('Lejías')
+    const creado = await modulo.crearProducto({
+      nombre: 'Lejía 1 L',
+      categoriaId,
+      unidad: 'UNIDAD',
+      precioCompra: '2.40',
+      precioVenta: '3.50',
+      stockMinimo: '3',
+    })
+    if (creado.tipo !== 'hecho') throw new Error('se esperaba hecho')
+    await modulo.consultable.producto(creado.valor.productoId)
+    expect(inventario.llamadasAStockDe).toBe(0)
   })
 
   it('producto() es null si no existe', async () => {

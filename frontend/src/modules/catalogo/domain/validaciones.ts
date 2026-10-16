@@ -29,7 +29,11 @@ function verificarLimiteMaximo(precio: Dinero): void {
 
 /** RN-CAT-04: el precio de compra es ≥ S/ 0.00 y como máximo S/ 99 999.99. */
 export function leerPrecioCompra(texto: string): Dinero {
-  const precio = Dinero.deTexto(texto)
+  return verificarPrecioCompra(Dinero.deTexto(texto))
+}
+
+/** RN-CAT-04 sobre un Dinero ya construido (también lo usa actualizarPrecioCompra). */
+export function verificarPrecioCompra(precio: Dinero): Dinero {
   if (precio.esNegativo()) {
     throw new ErrorDeDominio('PRECIO_COMPRA_NEGATIVO', 'El precio de compra no puede ser negativo')
   }
