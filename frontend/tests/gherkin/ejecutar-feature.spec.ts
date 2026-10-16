@@ -30,14 +30,30 @@ const pasos = new RegistroDePasos<Mundo>()
     expect(m.nota.split('\n')).toHaveLength(Number(n))
   })
 
-// Genera: 1 + 2 + 1 escenarios en verde y 1 pendiente (skip) por el paso sin definir.
+// Genera: 1 + 2 + 1 escenarios en verde y 1 pendiente (skip) por el paso sin definir, también
+// con GHERKIN_ESTRICTO=1 (el pendiente es parte del ejemplo).
 // Nota: se evita `new URL(ruta, import.meta.url)` porque Vite lo trata como una
 // referencia a un asset bajo el entorno jsdom de Vitest y no resuelve a una ruta de archivo real.
 ejecutarFeature(
   join(dirname(fileURLToPath(import.meta.url)), '__fixtures__', 'ejemplo.feature'),
   pasos,
   () => ({ manzanas: 0, nota: '' }),
+  { estricto: false },
 )
+
+// Ronda de revisión 1, punto 7: un .feature con escenarios pesados (p. ej. restaurar una copia
+// grande) puede dar más tiempo a cada escenario. El grupo de afuera deja solo 50 ms; el paso
+// tarda 100 ms: solo pasa si el `timeout` de ejecutarFeature manda sobre el del grupo.
+describe('ejecutarFeature con timeout propio', { timeout: 50 }, () => {
+  ejecutarFeature(
+    join(dirname(fileURLToPath(import.meta.url)), '__fixtures__', 'lento.feature'),
+    new RegistroDePasos<object>().paso('que espero {string} ms', async (_m, ms: string) => {
+      await new Promise((resolver) => setTimeout(resolver, Number(ms)))
+    }),
+    () => ({}),
+    { timeout: 1000 },
+  )
+})
 
 const etiqueta = (nombre: string): PickleTag => ({ name: nombre, astNodeId: 'x' })
 
