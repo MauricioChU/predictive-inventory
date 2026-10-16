@@ -72,6 +72,20 @@ function quitarExtension(ruta: string): string {
   return ruta.replace(/\.(ts|tsx|js|vue)$/i, '')
 }
 
+/**
+ * Ola 4: las pantallas de un módulo (capa `ui`) llegan a la aplicación compuesta SOLO por estas
+ * tres "puertas" de `src/app`: `useAplicacion()` (los casos de uso), el estado global (Pinia) y
+ * `useAvisoDeshacer()`. El resto de `src/app` (composición, arranque, ganchos de prueba…) sigue
+ * fuera de su alcance.
+ */
+const PUERTAS_DE_LA_APP = ['proveer-aplicacion', 'estado-global', 'aviso-deshacer'].map((nombre) =>
+  join(SRC_ROOT, 'app', nombre),
+)
+
+function esPuertaDeLaApp(destinoAbsoluto: string): boolean {
+  return PUERTAS_DE_LA_APP.includes(quitarExtension(destinoAbsoluto))
+}
+
 function esIndiceDeModulo(destinoAbsoluto: string, modulo: string): boolean {
   const sinExt = quitarExtension(destinoAbsoluto)
   const dirModulo = join(SRC_ROOT, 'modules', modulo)
@@ -106,7 +120,7 @@ const MENSAJE_APLICACION =
 const MENSAJE_INFRAESTRUCTURA =
   'La infraestructura de un módulo no importa su propia UI ni "app" (ADR-0005).'
 const MENSAJE_UI =
-  'La UI de un módulo solo usa su dominio/aplicación, shared, u otros módulos por su index (ADR-0005).'
+  'La UI de un módulo solo usa su dominio/aplicación, shared, otros módulos por su index o las puertas de la app (useAplicacion, estado global, aviso Deshacer) (ADR-0005).'
 const MENSAJE_INDICE_DE_MODULO =
   'El index de un módulo solo usa sus propias capas o shared (ADR-0005).'
 const MENSAJE_SHARED_DOMAIN = 'shared/domain solo usa shared/domain y shared/contratos (ADR-0005).'
@@ -152,11 +166,14 @@ export function verificarFrontera(archivoImportador: string, especificador: stri
       importador.area === 'modules' &&
       destino.area === 'modules' &&
       destino.modulo === importador.modulo
+    // Ola 4: también tests/** (p. ej. tests/soporte/aplicacion-de-prueba.ts), para que la spec
+    // de una pantalla pruebe con la aplicación de prueba compuesta.
     if (
       mismoModulo ||
       destino.area === 'shared' ||
       destino.area === 'router' ||
-      destino.area === 'app'
+      destino.area === 'app' ||
+      destino.area === 'tests'
     ) {
       return null
     }
@@ -224,7 +241,8 @@ export function verificarFrontera(archivoImportador: string, especificador: stri
           propiaCapa('domain') ||
           propiaCapa('application') ||
           propiaCapa('ui') ||
-          destino.area === 'shared'
+          destino.area === 'shared' ||
+          esPuertaDeLaApp(destinoAbsoluto)
         ) {
           return null
         }
