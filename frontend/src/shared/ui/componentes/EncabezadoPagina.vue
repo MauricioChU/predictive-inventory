@@ -45,24 +45,17 @@ function alVolver() {
 </template>
 
 <style scoped>
-/* Plan 14: "Volver" nunca se encoge (antes, junto a un título largo con letra Muy grande, quedaba
-   una letra por renglón). Si el título no cabe a su lado, baja a su propia línea, entero. */
 .encabezado-pagina {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--espacio-2) var(--espacio-3);
+  gap: var(--espacio-3);
   padding-block: var(--espacio-4);
 }
 h1 {
-  flex: 1 1 auto;
-  min-width: 0;
   font-size: 1.375rem;
   margin: 0;
 }
 .volver {
-  flex: none;
-  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: var(--espacio-1);
