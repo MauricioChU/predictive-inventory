@@ -1,5 +1,5 @@
 import type { VueWrapper } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AplicacionDePrueba } from '../../../../../tests/soporte/aplicacion-de-prueba'
 import {
   crearAplicacion,
@@ -217,5 +217,15 @@ describe('Productos (lista)', () => {
     await boton(vista.wrapper, 'Categorías').trigger('click')
     await esperarRuta(vista.router, 'categorias')
     expect(vista.router.currentRoute.value.path).toBe('/productos/categorias')
+  })
+
+  it('RN-UX-07: si no se pueden leer los productos lo dice en lenguaje simple', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.spyOn(app.catalogo, 'buscarProductos').mockRejectedValue(new Error('IndexedDB cerrada'))
+    vista = await montarVista(app, '/productos')
+    const alerta = vista.wrapper.get('[role="alert"]')
+    expect(alerta.text()).toContain('No pudimos abrir tus productos.')
+    expect(alerta.text()).not.toContain('IndexedDB')
+    vi.restoreAllMocks()
   })
 })

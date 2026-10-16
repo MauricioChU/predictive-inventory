@@ -276,4 +276,12 @@ describe('Detalle del producto', () => {
     await boton(vista.wrapper, 'Ver mis productos').trigger('click')
     await esperarRuta(vista.router, 'productos')
   })
+
+  it('RN-UX-07: si no se puede leer el producto lo dice en lenguaje simple', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.spyOn(app.catalogo, 'obtenerProducto').mockRejectedValue(new Error('IndexedDB cerrada'))
+    vista = await montarVista(app, '/productos/p-1')
+    expect(vista.wrapper.get('[role="alert"]').text()).toContain('No pudimos abrir este producto.')
+    vi.restoreAllMocks()
+  })
 })

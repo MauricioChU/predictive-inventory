@@ -74,7 +74,11 @@ watch(
     cargando.value = true
     hecho.value = null
     error.value = null
-    void cargar()
+    confirmacion.value = null
+    cargar().catch((e: unknown) => {
+      console.error('No se pudo leer el producto:', e)
+      error.value = 'No pudimos abrir este producto.'
+    })
   },
   { immediate: true },
 )
@@ -231,6 +235,11 @@ async function cambiarSinPreguntar(id: string, accion: 'archivar' | 'reactivar')
 <template>
   <div class="vista-detalle-producto">
     <EncabezadoPagina :titulo="titulo" volver />
+    <MensajeDeError
+      v-if="error && cargando"
+      :mensaje="error"
+      ayuda="Vuelve a intentarlo en un momento."
+    />
 
     <template v-if="!cargando && !producto">
       <!-- Un enlace viejo (o una notificación) a un producto que ya no existe (01-catalogo). -->

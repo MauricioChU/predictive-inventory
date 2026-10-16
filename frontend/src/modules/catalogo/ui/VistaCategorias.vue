@@ -52,7 +52,10 @@ async function cargar() {
   cantidades.value = porCategoria
   cargando.value = false
 }
-void cargar()
+cargar().catch((error: unknown) => {
+  console.error('No se pudieron leer las categorías:', error)
+  errorGeneral.value = 'No pudimos abrir tus categorías.'
+})
 
 function textoCantidad(categoriaId: string): string {
   const n = cantidades.value.get(categoriaId) ?? 0

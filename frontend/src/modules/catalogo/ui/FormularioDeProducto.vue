@@ -129,7 +129,10 @@ async function cargar() {
   }
   cargando.value = false
 }
-void cargar()
+cargar().catch((error: unknown) => {
+  console.error('No se pudo leer el producto:', error)
+  errorGeneral.value = 'No pudimos abrir el formulario.'
+})
 
 const titulo = computed(() => {
   if (!existe.value) return 'No encontramos ese producto'
@@ -395,6 +398,12 @@ function verProducto(productoId: string) {
 
     <template v-else>
       <EncabezadoPagina :titulo="titulo" volver />
+
+      <MensajeDeError
+        v-if="errorGeneral && cargando"
+        :mensaje="errorGeneral"
+        ayuda="Vuelve a intentarlo en un momento."
+      />
 
       <template v-if="!existe">
         <p class="explicacion">Puede que ya no esté en tu lista. Búscalo entre tus productos.</p>

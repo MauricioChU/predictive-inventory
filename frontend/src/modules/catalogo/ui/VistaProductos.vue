@@ -9,6 +9,7 @@ import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import BuscadorGrande from '@/shared/ui/componentes/BuscadorGrande.vue'
 import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
 import ListaDeProductos from '@/shared/ui/componentes/ListaDeProductos.vue'
+import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import SelectorSegmentado from '@/shared/ui/componentes/SelectorSegmentado.vue'
 import type { CategoriaVista, ProductoVista } from '../application/modulo'
 import FiltroDeCategoria from './FiltroDeCategoria.vue'
@@ -34,6 +35,7 @@ const encontrados = ref<ProductoVista[]>([])
 const estados = ref<ReadonlyMap<string, EstadoDeStock>>(new Map())
 const fotos = shallowReactive(new Map<string, Blob>())
 const fotosPedidas = new Set<string>()
+const error = ref<string | null>(null)
 
 /** Solo cuenta la última búsqueda: una respuesta vieja que llega tarde no pisa la nueva. */
 let ultimoPedido = 0
@@ -56,16 +58,26 @@ function mostrar(productos: ProductoVista[]) {
   cargarFotos(productos)
 }
 
-async function buscar() {
-  const pedido = ++ultimoPedido
-  const productos = await app.catalogo.buscarProductos({
-    texto: filtros.texto,
-    archivados: filtros.estado === 'ARCHIVADOS',
-  })
-  if (pedido === ultimoPedido) mostrar(productos)
+/** RN-UX-07: si algo falla al leer los datos, se dice en lenguaje simple (nunca técnico). */
+function fallo(e: unknown) {
+  console.error('No se pudieron leer los productos:', e)
+  error.value = 'No pudimos abrir tus productos.'
 }
 
-onMounted(async () => {
+async function buscar() {
+  const pedido = ++ultimoPedido
+  try {
+    const productos = await app.catalogo.buscarProductos({
+      texto: filtros.texto,
+      archivados: filtros.estado === 'ARCHIVADOS',
+    })
+    if (pedido === ultimoPedido) mostrar(productos)
+  } catch (e) {
+    fallo(e)
+  }
+}
+
+async function cargar() {
   const pedido = ++ultimoPedido
   const [lista, activos, archivados, situaciones] = await Promise.all([
     app.catalogo.listarCategorias(),
@@ -85,14 +97,15 @@ onMounted(async () => {
     mostrar(filtros.estado === 'ARCHIVADOS' ? archivados : activos)
   }
   cargando.value = false
-})
+}
 
-watch(
-  () => [filtros.texto, filtros.estado === 'ARCHIVADOS'],
-  () => {
-    if (!cargando.value) void buscar()
-  },
-)
+onMounted(() => cargar().catch(fallo))
+
+// Se vuelve a buscar solo si cambia lo que el catálogo filtra (el texto, o activos ↔
+// archivados); los demás filtros se aplican sobre lo ya encontrado.
+watch([() => filtros.texto, () => filtros.estado === 'ARCHIVADOS'], () => {
+  if (!cargando.value) void buscar()
+})
 
 const visibles = computed(() =>
   filtrarProductos(encontrados.value, {
@@ -149,6 +162,8 @@ function abrirProducto(id: string) {
         @click="router.push({ name: 'categorias' })"
       />
     </div>
+
+    <MensajeDeError v-if="error" :mensaje="error" ayuda="Vuelve a intentarlo en un momento." />
 
     <template v-if="!cargando">
       <div class="cuerpo">
