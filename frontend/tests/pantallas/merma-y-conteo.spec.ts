@@ -49,11 +49,11 @@ async function tocar(p: PantallaMontada, texto: string) {
 const nombreDeLaFicha = (p: PantallaMontada) =>
   p.router.hasRoute('producto') ? 'producto' : 'inicio'
 
-describe('Registrar merma (HU-OP-04, RN-OP-15)', () => {
+describe('Registrar pérdida (merma: HU-OP-04, RN-OP-15)', () => {
   it('muestra el producto, cuánto hay y los motivos como botones grandes', async () => {
     const { app, lejia } = await conLejia()
     const p = await abrir(app, `/productos/${lejia}/merma`)
-    expect(p.w.get('#contenido h1').text()).toBe('Registrar merma')
+    expect(p.w.get('#contenido h1').text()).toBe('Registrar pérdida')
     expect(p.w.text()).toContain('Lejía 1 L')
     expect(p.w.text()).toContain('Hay 10 unid.')
     const grupo = p.w.get('.botones-de-opcion')

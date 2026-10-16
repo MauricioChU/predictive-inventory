@@ -1,8 +1,11 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import AvisoDeshacer from '../componentes/AvisoDeshacer.vue'
 import DialogoConfirmacion from '../componentes/DialogoConfirmacion.vue'
 import PantallaExito from '../componentes/PantallaExito.vue'
+import { prepararDialogos } from './dialogo-en-jsdom'
+
+beforeAll(prepararDialogos)
 
 /**
  * Plan 12 (RN-UX-09): en 320 px con letra Muy grande, "S/ 2.60" se partía en "S/" | "2.60" y
@@ -10,7 +13,7 @@ import PantallaExito from '../componentes/PantallaExito.vue'
  * pantalla de éxito: se lee otro número. Como en el kit B (pegarCifras), lo que se VE lleva
  * espacios duros entre el monto o la cantidad y su símbolo; las palabras se envuelven igual.
  */
-const NBSP = ' '
+const NBSP = '\u00a0'
 
 describe('plan 12: montos y cantidades que no se parten en avisos y diálogos', () => {
   it('DialogoConfirmacion: título y mensaje', () => {

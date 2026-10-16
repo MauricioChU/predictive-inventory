@@ -29,7 +29,7 @@ export const rutasDeOperaciones: RouteRecordRaw[] = [
     path: '/productos/:id/merma',
     name: 'merma',
     component: VistaMerma,
-    meta: { titulo: 'Registrar merma' },
+    meta: { titulo: 'Registrar pérdida' },
   },
   {
     path: '/productos/:id/contar',

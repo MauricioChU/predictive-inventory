@@ -348,7 +348,7 @@ test.describe('Pantallas de operaciones: responsive, accesibles y tocables (letr
       await page.getByRole('radio', { name: 'Otro' }).click()
       await page.getByRole('button', { name: 'Guardar' }).click()
       await expect(page.getByRole('alert').first()).toBeVisible()
-      await revisar('Registrar merma')
+      await revisar('Registrar pérdida')
       await abrir(page, `./productos/${lejia}/contar`)
       await revisar('Contar stock')
 

@@ -9,7 +9,7 @@ withDefaults(
     producto: Pick<ProductoVista, 'nombre' | 'categoriaNombre' | 'unidad' | 'stock'>
     foto?: Blob
     tamano?: 'mediana' | 'grande'
-    /** "Hay 10 unid." (Registrar merma) o "En la app: 10 unid." (Contar stock). */
+    /** "Hay 10 unid." (Registrar pérdida) o "En la app: 10 unid." (Contar stock). */
     prefijoStock?: string
   }>(),
   { foto: undefined, tamano: 'mediana', prefijoStock: undefined },

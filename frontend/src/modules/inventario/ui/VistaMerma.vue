@@ -23,7 +23,8 @@ import { usarDestinos } from './usar-destinos'
 import { usarProductoDeLaRuta } from './usar-producto-de-la-ruta'
 
 /**
- * Registrar merma (HU-OP-04, RN-OP-15): qué pasó (botones grandes: Se dañó o rompió · Se
+ * Registrar pérdida (la merma de HU-OP-04, RN-OP-15; en pantalla nunca "merma", guía de
+ * palabras de 06-experiencia-de-uso): qué pasó (botones grandes: Se dañó o rompió · Se
  * derramó · Se venció · Otro, con nota obligatoria) y cuánto. Cuenta como pérdida; después,
  * pantalla de éxito con Deshacer (RN-OP-18).
  */
@@ -143,7 +144,7 @@ function volverAlProducto(): void {
     </PantallaExito>
 
     <template v-else>
-      <EncabezadoPagina titulo="Registrar merma" volver />
+      <EncabezadoPagina titulo="Registrar pérdida" volver />
       <MensajeDeError
         v-if="errorDeCarga"
         :mensaje="errorDeCarga.mensaje"

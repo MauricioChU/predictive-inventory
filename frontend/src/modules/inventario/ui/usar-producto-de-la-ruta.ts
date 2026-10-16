@@ -6,7 +6,7 @@ import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
 import { usarFotos } from './usar-fotos'
 
 /**
- * El producto de `/productos/:id/…` (Registrar merma, Contar stock), con su foto. `estado` dice
+ * El producto de `/productos/:id/…` (Registrar pérdida, Contar stock), con su foto. `estado` dice
  * qué mostrar mientras tanto: cargando, el producto, o que no se puede usar (no existe o está
  * archivado, RN-OP-08). `recargar()` lo vuelve a leer (el stock cambió).
  */

@@ -216,9 +216,12 @@ describe('Llegó mercadería (HU-OP-03)', () => {
       expect(await stock(app, escoba)).toBe('4')
       expect(dialogoAbierto(p).exists()).toBe(false)
       // AvisoEnPagina no deja partir "45 días" ni "4 unid." (espacios duros): se comparan normales.
-      expect(p.w.get('.aviso-en-pagina').text().replace(/ /g, ' ')).toContain(
-        'Escoba no se vende hace 45 días y aún tienes 4 unid.',
-      )
+      expect(
+        p.w
+          .get('.aviso-en-pagina')
+          .text()
+          .replace(/\u00a0/g, ' '),
+      ).toContain('Escoba no se vende hace 45 días y aún tienes 4 unid.')
       const campo = lineas(p)[0]!.get('.cantidad input').element
       // El foco se mueve recién cuando el diálogo terminó de cerrarse.
       await vi.waitFor(() => expect(document.activeElement).toBe(campo))

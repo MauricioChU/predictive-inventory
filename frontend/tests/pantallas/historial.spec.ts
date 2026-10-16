@@ -118,7 +118,7 @@ describe('Historial (HU-OP-08)', () => {
 
     expect(p.w.get('#contenido h1').text()).toBe('Venta')
     expect(p.w.text()).toContain('Hoy, 10:00')
-    const filas = p.w.findAll('.fila-de-dato').map((f) => f.text().replace(/ /g, ' '))
+    const filas = p.w.findAll('.fila-de-dato').map((f) => f.text().replace(/\u00a0/g, ' '))
     expect(filas).toEqual(
       expect.arrayContaining([
         expect.stringContaining('Lejía 1 L'),

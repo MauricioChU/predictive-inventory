@@ -237,15 +237,15 @@ describe('Vender (HU-OP-01, HU-OP-02)', () => {
     const mensaje = () => p.w.get('.selector-de-billetes .mensaje').text()
 
     await boton(p.w, 'S/ 20').trigger('click')
-    expect(mensaje()).toBe('Vuelto S/ 5.37')
+    expect(mensaje()).toBe('Vuelto S/\u00a05.37')
     expect(confirmar().attributes('disabled')).toBeUndefined()
 
     await boton(p.w, 'S/ 10').trigger('click')
-    expect(mensaje()).toBe('Faltan S/ 4.63')
+    expect(mensaje()).toBe('Faltan S/\u00a04.63')
     expect(confirmar().attributes('disabled')).toBeDefined()
 
     await boton(p.w, 'Exacto').trigger('click')
-    expect(mensaje()).toBe('Vuelto S/ 0.00')
+    expect(mensaje()).toBe('Vuelto S/\u00a00.00')
     expect(confirmar().attributes('disabled')).toBeUndefined()
   })
 
@@ -305,7 +305,7 @@ describe('Vender (HU-OP-01, HU-OP-02)', () => {
     await esperarDatos(app)
 
     const error = p.w.get('.mensaje-de-error')
-    expect(error.get('.mensaje').text()).toBe('Solo quedan 2 unid. de Lejía 1 L')
+    expect(error.get('.mensaje').text()).toBe('Solo quedan 2\u00a0unid. de Lejía 1\u00a0L')
     expect(error.get('.ayuda').text()).toBe(
       'Cambia la cantidad o registra la llegada de mercadería.',
     )

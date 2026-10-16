@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 import LayoutApp from '@/app/LayoutApp.vue'
 import { proveerAplicacion } from '@/app/proveer-aplicacion'
 import { rutas } from '@/router'
+import { prepararDialogos } from '@/shared/ui/__tests__/dialogo-en-jsdom'
 import { instanteLocal, type Instante } from '@/shared/domain/fecha'
 import { crearAplicacionDePrueba, type AplicacionDePrueba } from './aplicacion-de-prueba'
 
@@ -17,19 +18,6 @@ export interface PantallaMontada {
   router: Router
   /** Navega como lo haría un enlace y espera a que la pantalla nueva cargue sus datos. */
   ir(ruta: string): Promise<void>
-}
-
-/**
- * jsdom no implementa `<dialog>.showModal()` ni `close()` (DialogoConfirmacion los usa): lo
- * mínimo para que un diálogo se abra y se cierre.
- */
-function prepararDialogos(): void {
-  HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
-    this.setAttribute('open', '')
-  }
-  HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) {
-    this.removeAttribute('open')
-  }
 }
 
 /**
@@ -107,5 +95,5 @@ export async function buscar(pantalla: PantallaMontada, texto: string): Promise<
  * partir "S/ 2.60" ni "9 kg" (pegarCifras), pero las pruebas comparan con el texto de la spec.
  */
 export function leer(elemento: { text(): string }): string {
-  return elemento.text().replace(/ /g, ' ')
+  return elemento.text().replace(/\u00a0/g, ' ')
 }

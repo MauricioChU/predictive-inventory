@@ -1,16 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import DialogoConfirmacion from '../componentes/DialogoConfirmacion.vue'
+import { prepararDialogos } from './dialogo-en-jsdom'
 
-// jsdom no implementa <dialog>.showModal()/close(): lo mínimo para abrir y cerrar.
-beforeAll(() => {
-  HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
-    this.setAttribute('open', '')
-  }
-  HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) {
-    this.removeAttribute('open')
-  }
-})
+beforeAll(prepararDialogos)
 
 const PROPS = {
   abierto: true,
@@ -30,7 +23,13 @@ describe('DialogoConfirmacion', () => {
     await flushPromises()
     expect(w.get('dialog').attributes('open')).toBeDefined()
     expect(w.get('h2').text()).toBe(PROPS.titulo)
-    expect(w.get('p').text()).toBe(PROPS.mensaje)
+    // Con espacios duros (pegarCifras): "S/ 2.60" no se parte.
+    expect(
+      w
+        .get('p')
+        .text()
+        .replace(/\u00a0/g, ' '),
+    ).toBe(PROPS.mensaje)
     await w.get('.confirmar').trigger('click')
     await w.get('.cancelar').trigger('click')
     expect(w.emitted('confirmar')).toHaveLength(1)
