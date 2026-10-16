@@ -103,11 +103,16 @@ describe('RN-AN-16: ¿Necesito comprar?', () => {
     const r = await e.modulo.necesitoComprar('lejia')
     expect(formatearCantidad(r.stock, r.unidad)).toBe('16 unid.')
     expect(r.ultimoIngreso).toBe(instanteLocal('2026-10-10 09:30'))
+    // Plan 13: la pantalla dice "hace 5 días" con el "hoy" de la tienda, no el del celular.
+    expect(r.diasDesdeUltimoIngreso).toBe(5)
   })
 
   it('RN-AN-16: sin llegadas de mercadería, la última llegada es null', async () => {
     const e = entorno([LEJIA])
-    expect(await e.modulo.necesitoComprar('lejia')).toMatchObject({ ultimoIngreso: null })
+    expect(await e.modulo.necesitoComprar('lejia')).toMatchObject({
+      ultimoIngreso: null,
+      diasDesdeUltimoIngreso: null,
+    })
   })
 
   it('RN-AN-16: un producto archivado o que no existe no se puede consultar', async () => {

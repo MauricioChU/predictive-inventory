@@ -1,7 +1,7 @@
 import type { SituacionDeProducto } from '@/shared/contratos/entre-modulos'
 import type { Cantidad, Unidad } from '@/shared/domain/cantidad'
 import { ErrorDeDominio } from '@/shared/domain/errores'
-import type { Instante } from '@/shared/domain/fecha'
+import { diaDe, diasEntre, type Instante } from '@/shared/domain/fecha'
 import { decidirNecesitoComprar, type CasoNecesitoComprar } from '../domain/necesito-comprar'
 import { tendencia } from '../domain/observaciones'
 import { textoCobertura, textoVentaDiaria } from '../domain/prediccion'
@@ -18,6 +18,8 @@ export interface RespuestaNecesitoComprar {
   unidad: Unidad
   /** Última vez que llegó mercadería de ese producto. */
   ultimoIngreso: Instante | null
+  /** Días de la tienda desde esa llegada (0 = hoy), o null si nunca llegó. */
+  diasDesdeUltimoIngreso: number | null
 }
 
 export interface DetalleDeProducto {
@@ -40,12 +42,14 @@ export async function necesitoComprar(
   const { hoy, producto, situacion } = evaluacion
   const cambio = (await cambiosDelDia(d, hoy)).find((c) => c.productoId === productoId)
   const { respuesta, caso } = decidirNecesitoComprar(situacion, producto.precioCompra, cambio)
+  const ultimoIngreso = await d.inventario().ultimoIngresoDe(productoId)
   return {
     respuesta,
     caso,
     stock: situacion.stock,
     unidad: situacion.unidad,
-    ultimoIngreso: await d.inventario().ultimoIngresoDe(productoId),
+    ultimoIngreso,
+    diasDesdeUltimoIngreso: ultimoIngreso === null ? null : diasEntre(diaDe(ultimoIngreso), hoy),
   }
 }
 

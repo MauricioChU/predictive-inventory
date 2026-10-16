@@ -138,6 +138,7 @@ export function vecesVendido(
 export interface PrecioParaRevisar {
   productoId: string
   nombre: string
+  unidad: Unidad
   perdidaPorUnidad: Dinero
 }
 
@@ -147,6 +148,7 @@ export function preciosParaRevisar(productos: readonly ProductoResumido[]): Prec
     .map((p) => ({
       productoId: p.id,
       nombre: p.nombre,
+      unidad: p.unidad,
       perdidaPorUnidad: p.precioCompra.restar(p.precioVenta),
     }))
     .sort((a, b) => b.perdidaPorUnidad.compararCon(a.perdidaPorUnidad) || porNombre(a, b))

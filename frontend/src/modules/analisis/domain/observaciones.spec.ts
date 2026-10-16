@@ -165,6 +165,15 @@ describe('RN-AN-10: precios para revisar', () => {
     expect(revisar[0]?.productoId).toBe('cera')
   })
 
+  // Plan 13: Control dice "por unidad", "por kilo" o "por litro".
+  it('RN-AN-10: cada precio para revisar lleva la unidad del producto', () => {
+    const carbon = producto('carbon', 'Carbón', 'KILO', '4.00', '3.50', '1')
+    expect(preciosParaRevisar([carbon, CERA_ROJA]).map((p) => [p.nombre, p.unidad])).toEqual([
+      ['Carbón', 'KILO'],
+      ['Cera roja', 'UNIDAD'],
+    ])
+  })
+
   it('RN-AN-10: a igual pérdida, por nombre', () => {
     const b = producto('b', 'Bórax', 'UNIDAD', '2.00', '2.00', '1')
     const a = producto('a', 'Ácido', 'UNIDAD', '3.00', '3.00', '1')
