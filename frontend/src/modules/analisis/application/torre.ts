@@ -3,12 +3,14 @@ import {
   masVendidos,
   mejorDiaDeLaSemana,
   preciosParaRevisar,
+  productosEnAtencion,
   productosParados,
   semanaContraSemana,
   type ComparacionSemanal,
   type MasVendidos,
   type MejorDia,
   type PrecioParaRevisar,
+  type ProductosEnAtencion,
   type ProductosParados,
 } from '../domain/observaciones'
 import {
@@ -27,6 +29,8 @@ import { cargarDatos, evaluarProductos, hoyDe } from './situaciones'
 export interface TorreDeControl {
   resumen: ResumenDePeriodo
   atencion: { agotados: number; porAcabarse: number; preciosParaRevisar: number }
+  /** Lo que abre cada fila de Atención (los precios para revisar van en `preciosParaRevisar`). */
+  productosEnAtencion: ProductosEnAtencion
   paraComprar: ListaParaComprar
   masVendidos: MasVendidos
   semana: ComparacionSemanal
@@ -73,6 +77,7 @@ export async function consultarTorre(
       porAcabarse: situaciones.filter((s) => s.estado === 'POR_ACABARSE').length,
       preciosParaRevisar: precios.length,
     },
+    productosEnAtencion: productosEnAtencion(situaciones),
     paraComprar: aplicarCambiosALista(listaSugerida(evaluaciones), cambios),
     masVendidos: masVendidos(filas, productos, ultimosDias(hoy, opciones.periodoMasVendidos ?? 7)),
     semana: semanaContraSemana(filas, hoy),

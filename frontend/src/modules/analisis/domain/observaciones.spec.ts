@@ -3,7 +3,7 @@ import type { ProductoResumido } from '@/shared/contratos/entre-modulos'
 import { Cantidad } from '@/shared/domain/cantidad'
 import { sumarDias, type Dia } from '@/shared/domain/fecha'
 import { formatearCantidad, formatearDinero, formatearNumero } from '@/shared/domain/formato'
-import { historial } from './__pruebas__/historial'
+import { historial, prediccionCon } from './__pruebas__/historial'
 import { anulacionDe, nuevaOperacion } from './__pruebas__/operaciones'
 import {
   BOLSAS,
@@ -19,12 +19,14 @@ import {
   soles,
   TRAPEADOR,
 } from './__pruebas__/productos'
+import { evaluarSituacion } from './situacion'
 import {
   diasSinVender,
   masVendidos,
   mejorDiaDeLaSemana,
   podriaEstarParado,
   preciosParaRevisar,
+  productosEnAtencion,
   productosParados,
   semanaContraSemana,
   tendencia,
@@ -435,5 +437,41 @@ describe('RN-AN-14: tendencia de 8 semanas', () => {
 
   it('RN-AN-14: sin ventas, los 8 bloques están en 0', () => {
     expect(tendencia([], HOY).map((c) => c.milesimas)).toEqual([0, 0, 0, 0, 0, 0, 0, 0])
+  })
+})
+
+describe('Atención: agotados y por acabarse (Control)', () => {
+  function situacion(p: ProductoResumido, stock: string, vpd: string | null) {
+    return evaluarSituacion({
+      producto: p,
+      stock: Cantidad.deTexto(stock, p.unidad),
+      prediccion: vpd === null ? null : prediccionCon(vpd),
+      diasEntreCompras: 7,
+      diasAnticipacion: 3,
+    })
+  }
+
+  it('separa por estado, con menos días de cobertura primero, sin predicción al final y luego por nombre', () => {
+    const { agotados, porAcabarse } = productosEnAtencion([
+      situacion(JABON, '2', null),
+      situacion(DETERGENTE, '20', '0.5'),
+      situacion(CARBON, '2', '0.5'),
+      situacion(BOLSAS, '0', null),
+      situacion(LEJIA, '5', '2'),
+      situacion(CERA_ROJA, '1', null),
+      situacion(ESCOBA, '0', '1'),
+    ])
+    expect(agotados.map((p) => [p.nombre, p.cobertura])).toEqual([
+      ['Bolsas', null],
+      ['Escoba', null],
+    ])
+    expect(
+      porAcabarse.map((p) => [p.nombre, formatearCantidad(p.stock, p.unidad), p.cobertura]),
+    ).toEqual([
+      ['Lejía 1 L', '5 unid.', 'Se acaba en ~2 días'],
+      ['Carbón', '2 kg', 'Se acaba en ~4 días'],
+      ['Cera roja', '1 unid.', null],
+      ['Jabón', '2 unid.', null],
+    ])
   })
 })

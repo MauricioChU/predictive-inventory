@@ -32,6 +32,11 @@ describe('RN-AN-16: ¿Necesito comprar?', () => {
     expect(await respuesta('jabon')).toBe(
       'Tienes 10 unid. Todavía no sé cuánto vendes; vuelve a preguntar en unos días',
     )
+    // Plan 13: el caso viaja con la frase, para que la pantalla elija el tono.
+    const caso = async (id: string) => (await e.modulo.necesitoComprar(id)).caso
+    expect(await caso('lejia')).toBe('COMPRAR')
+    expect(await caso('detergente')).toBe('NO_HACE_FALTA')
+    expect(await caso('jabon')).toBe('SIN_PREDICCION')
   })
 
   it('RN-AN-16: con predicción y sin ventas en 4 semanas, no hace falta', async () => {

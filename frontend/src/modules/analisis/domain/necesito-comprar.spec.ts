@@ -3,7 +3,7 @@ import type { ProductoResumido } from '@/shared/contratos/entre-modulos'
 import { prediccionCon } from './__pruebas__/historial'
 import { cant, CARBON, DETERGENTE, ESCOBA, JABON, LEJIA } from './__pruebas__/productos'
 import type { CambioEnLista } from './compras'
-import { respuestaNecesitoComprar } from './necesito-comprar'
+import { decidirNecesitoComprar, respuestaNecesitoComprar } from './necesito-comprar'
 import { evaluarSituacion } from './situacion'
 
 function preguntar(
@@ -113,5 +113,50 @@ describe('RN-AN-16: ¿Necesito comprar?', () => {
     expect(respuestaNecesitoComprar(situacion, LEJIA.precioCompra)).toBe(
       'No hace falta: te alcanza para ~1 día',
     )
+  })
+})
+
+// Plan 13: la pantalla necesita saber QUÉ caso es para elegir el tono de la respuesta (el texto
+// lo dice igual, RN-UX-04), sin adivinarlo por el comienzo de la frase.
+describe('RN-AN-16: el caso de la respuesta', () => {
+  function caso(
+    p: ProductoResumido,
+    stock: string,
+    vpd: string | null,
+    parado: { diasSinVender: number } | null = null,
+    cambioDelDia?: CambioEnLista,
+  ) {
+    const situacion = evaluarSituacion({
+      producto: p,
+      stock: cant(stock),
+      prediccion: vpd === null ? null : prediccionCon(vpd),
+      diasEntreCompras: 7,
+      diasAnticipacion: 3,
+      parado,
+    })
+    const decision = decidirNecesitoComprar(situacion, p.precioCompra, cambioDelDia)
+    expect(decision.respuesta).toBe(
+      respuestaNecesitoComprar(situacion, p.precioCompra, cambioDelDia),
+    )
+    return decision.caso
+  }
+
+  it('parado: NO_COMPRES', () => {
+    expect(caso(ESCOBA, '4', '0', { diasSinVender: 45 })).toBe('NO_COMPRES')
+  })
+
+  it('en Para comprar: COMPRAR (también si lo quitó y se está acabando)', () => {
+    expect(caso(LEJIA, '5', '2')).toBe('COMPRAR')
+    expect(caso(LEJIA, '5', '2', null, quitado('lejia'))).toBe('COMPRAR')
+  })
+
+  it('con predicción y le alcanza (o no se vendió en 4 semanas): NO_HACE_FALTA', () => {
+    expect(caso(DETERGENTE, '20', '0.5')).toBe('NO_HACE_FALTA')
+    expect(caso(LEJIA, '10', '0')).toBe('NO_HACE_FALTA')
+    expect(caso(CARBON, '7', '0.75', null, quitado('carbon'))).toBe('NO_HACE_FALTA')
+  })
+
+  it('sin predicción: SIN_PREDICCION', () => {
+    expect(caso(JABON, '10', null)).toBe('SIN_PREDICCION')
   })
 })

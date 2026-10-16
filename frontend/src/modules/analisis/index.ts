@@ -10,6 +10,7 @@ export type {
 export type { OpcionesDeTorre, TorreDeControl } from './application/torre'
 export type { DetalleDeProducto, RespuestaNecesitoComprar } from './application/producto'
 export type { LineaParaComprar, ListaParaComprar } from './domain/compras'
+export type { CasoNecesitoComprar } from './domain/necesito-comprar'
 export {
   MENSAJE_SIN_HISTORIA_SUFICIENTE,
   NOMBRES_DE_DIA,
@@ -22,6 +23,8 @@ export {
   type MejorDia,
   type NombreDeDia,
   type PrecioParaRevisar,
+  type ProductoEnAtencion,
+  type ProductosEnAtencion,
   type ProductoParado,
   type ProductosParados,
 } from './domain/observaciones'

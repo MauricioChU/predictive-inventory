@@ -1,12 +1,64 @@
-import type { ProductoResumido } from '@/shared/contratos/entre-modulos'
+import type { ProductoResumido, SituacionDeProducto } from '@/shared/contratos/entre-modulos'
 import { Cantidad, type Unidad } from '@/shared/domain/cantidad'
 import { Dinero, redondearMitadLejosDeCero } from '@/shared/domain/dinero'
 import { diaDeLaSemana, diasEntre, sumarDias, type Dia } from '@/shared/domain/fecha'
 import { estaEnRango, resumenDePeriodo, type RangoDeDias } from './periodos'
+import { textoCobertura } from './prediccion'
 import type { ResumenDiario } from './resumen-diario'
 
 function porNombre(a: { nombre: string }, b: { nombre: string }): number {
   return a.nombre.localeCompare(b.nombre, 'es')
+}
+
+// ───────────── Atención (04-torre-de-control, sección 2) ─────────────
+
+/** Un producto de la lista que abre "Agotados" o "Queda poco" en Control. */
+export interface ProductoEnAtencion {
+  productoId: string
+  nombre: string
+  unidad: Unidad
+  stock: Cantidad
+  /** RN-AN-05: "Se acaba en ~2 días"; null sin predicción o agotado. */
+  cobertura: string | null
+}
+
+export interface ProductosEnAtencion {
+  agotados: ProductoEnAtencion[]
+  porAcabarse: ProductoEnAtencion[]
+}
+
+function compararCobertura(a: SituacionDeProducto, b: SituacionDeProducto): number {
+  if (a.diasDeCobertura === b.diasDeCobertura) return 0
+  if (a.diasDeCobertura === null) return 1
+  if (b.diasDeCobertura === null) return -1
+  return a.diasDeCobertura - b.diasDeCobertura
+}
+
+function enAtencion(s: SituacionDeProducto): ProductoEnAtencion {
+  return {
+    productoId: s.productoId,
+    nombre: s.nombre,
+    unidad: s.unidad,
+    stock: s.stock,
+    cobertura: textoCobertura(s.prediccion, s.stock),
+  }
+}
+
+/**
+ * Agotados (por nombre: con stock 0 la cobertura no dice nada) y por acabarse (RN-AL-01), estos
+ * con menos días de cobertura primero, los sin predicción al final y luego por nombre.
+ */
+export function productosEnAtencion(
+  situaciones: readonly SituacionDeProducto[],
+): ProductosEnAtencion {
+  const delEstado = (estado: SituacionDeProducto['estado']) =>
+    situaciones.filter((s) => s.estado === estado)
+  return {
+    agotados: delEstado('AGOTADO').sort(porNombre).map(enAtencion),
+    porAcabarse: delEstado('POR_ACABARSE')
+      .sort((a, b) => compararCobertura(a, b) || porNombre(a, b))
+      .map(enAtencion),
+  }
 }
 
 // ───────────── Más vendidos (RN-AN-09) ─────────────
