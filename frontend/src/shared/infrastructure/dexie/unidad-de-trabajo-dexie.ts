@@ -60,10 +60,14 @@ export async function enTransaccion<T>(
  * aborta), no queda nada. Las llamadas anidadas se unen a la transacción en curso
  * (`Dexie.currentTransaction`, que Dexie propaga a través de los `await`).
  *
- * Regla de IndexedDB: dentro del trabajo solo se esperan promesas de IndexedDB. Esperar otra
- * cosa (un temporizador, `fetch`, `blob.arrayBuffer()`) deja la transacción sin peticiones
- * pendientes y el navegador la confirma antes de tiempo: Dexie lo detecta y `ejecutar`
- * rechaza con PrematureCommitError (o TransactionInactiveError en la siguiente escritura).
+ * REGLA DE INTEGRIDAD DE DATOS: dentro de `ejecutar` solo se esperan promesas de IndexedDB.
+ * Esperar otra cosa (un temporizador, `fetch`, `blob.arrayBuffer()`, decodificar una imagen)
+ * deja la transacción sin peticiones pendientes y el navegador la CONFIRMA en ese momento,
+ * con lo escrito hasta ahí. Dexie lo detecta después: `ejecutar` rechaza con
+ * PrematureCommitError (o la escritura siguiente, con TransactionInactiveError), pero lo
+ * escrito antes de la espera YA quedó guardado (confirmación parcial: se rompe RN-OP-06), lo
+ * de después no, y las acciones `alConfirmar` se descartan como en un rollback. Lo lento que
+ * no es IndexedDB va antes o después de `ejecutar` (como `guardarFoto` o `leerTodo`).
  *
  * `alConfirmar`: dentro de una transacción, la acción se encola y corre DESPUÉS del commit de
  * la transacción más externa, en orden y una tras otra; si hay rollback, se descarta. El

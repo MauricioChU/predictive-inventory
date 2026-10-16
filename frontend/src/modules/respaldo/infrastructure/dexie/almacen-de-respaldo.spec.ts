@@ -5,6 +5,7 @@ import { crearBaseDePrueba } from '../../../../shared/infrastructure/dexie/__pru
 import type { BaseDeDatos } from '../../../../shared/infrastructure/dexie/base-de-datos'
 import { UnidadDeTrabajoDexie } from '../../../../shared/infrastructure/dexie/unidad-de-trabajo-dexie'
 import type { ProductoRegistro } from '../../../../shared/contratos/registros'
+import type { DatosDelRespaldo } from '../../domain/formato-de-respaldo'
 import { Cantidad } from '../../../../shared/domain/cantidad'
 import { instanteLocal } from '../../../../shared/domain/fecha'
 import { RelojFijo } from '../../../../shared/domain/reloj'
@@ -132,7 +133,7 @@ describe('AlmacenDeRespaldoDexie', () => {
     const datos = await e.almacen.leerTodo()
 
     expect(transaccion).toHaveBeenCalledTimes(1)
-    expect(transaccion.mock.calls[0]?.[0]).toBe('r')
+    expect(transaccion.mock.calls[0]?.[0]).toBe('r!')
     expect(transaccionAlConvertir).toEqual([false, false])
     expect([...datos.fotos].sort((a, b) => a.productoId.localeCompare(b.productoId))).toEqual([
       { productoId: 'carbon', tipo: 'image/png', base64: 'BA==' },
@@ -167,6 +168,28 @@ describe('AlmacenDeRespaldoDexie', () => {
     await expect(
       new UnidadDeTrabajoDexie(db).ejecutar(() => new AlmacenDeRespaldoDexie(db).leerTodo()),
     ).rejects.toThrow('leerTodo abre su propia transacción')
+  })
+
+  it('leerTodo desde una continuación de una transacción ya terminada abre su propia transacción de lectura', async () => {
+    const db = crearBaseDePrueba()
+    const e = entorno(db)
+    await e.sembrar('productos', producto('lejia'))
+    let seConfirmo!: () => void
+    // El `then` de una promesa de Dexie corre en la zona donde se encadenó: la de una
+    // transacción que para entonces ya se confirmó (Dexie.currentTransaction, inactiva).
+    const confirmada = new Dexie.Promise<void>((resolver) => (seConfirmo = resolver))
+    let lectura: Promise<DatosDelRespaldo> | null = null
+    await new UnidadDeTrabajoDexie(db).ejecutar(async () => {
+      await db.operaciones.add(operacion('op-1'))
+      lectura = confirmada.then(() => {
+        expect(Dexie.currentTransaction?.active).toBe(false)
+        return e.almacen.leerTodo()
+      })
+    })
+    seConfirmo()
+    const datos = await lectura!
+    expect(datos.operaciones.map((o) => o.id)).toEqual(['op-1'])
+    expect(datos.productos.map((p) => p.id)).toEqual(['lejia'])
   })
 
   it('leerTodo devuelve las operaciones en orden de registro', async () => {

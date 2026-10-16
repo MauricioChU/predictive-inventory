@@ -63,7 +63,9 @@ export class AlmacenDeRespaldoDexie implements AlmacenDeRespaldo {
       )
     }
     const db = this.db
-    const leido = await db.transaction('r', [...TABLAS_DEL_RESPALDO], async () => {
+    // 'r!': siempre una transacción nueva (como 'rw!' en enTransaccion), aunque el código corra
+    // en la zona de una transacción que ya terminó.
+    const leido = await db.transaction('r!', [...TABLAS_DEL_RESPALDO], async () => {
       const [negocio, categorias, productos, operaciones, avisos, fotos] = await Promise.all([
         db.configuracion.get('negocio'),
         db.categorias.toArray(),

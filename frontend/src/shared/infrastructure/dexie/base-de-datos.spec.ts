@@ -1,4 +1,5 @@
 // @vitest-environment node
+import Dexie from 'dexie'
 import { describe, expect, it } from 'vitest'
 import { CLAVE_DE_TABLA, type NombreDeTabla } from '../../contratos/registros'
 import { crearBaseDePrueba, IDBFactory } from './__pruebas__/base-de-prueba'
@@ -53,6 +54,14 @@ describe('BaseDeDatos (Dexie)', () => {
     expect(sinIndices.map((t) => [t, indices(t as NombreDeTabla)])).toEqual(
       sinIndices.map((t) => [t, []]),
     )
+  })
+
+  it('abre sus transacciones con durabilidad estricta (los datos primero)', async () => {
+    const db = crearBaseDePrueba()
+    const durabilidad = (modo: 'r' | 'rw') =>
+      db.transaction(modo, db.categorias, async () => Dexie.currentTransaction?.idbtrans.durability)
+    expect(await durabilidad('rw')).toBe('strict')
+    expect(await durabilidad('r')).toBe('strict')
   })
 
   it('los datos sobreviven a cerrar y volver a abrir la base', async () => {

@@ -32,6 +32,13 @@ export interface OpcionesDeBaseDeDatos {
 
 type TablaDe<K extends NombreDeTabla> = Table<TablasDeLaApp[K], string>
 
+/**
+ * Durabilidad de cada transacción: 'strict' (el commit se informa recién cuando los datos
+ * están en disco). Los datos de la tienda primero; la composición mide su costo contra el
+ * presupuesto de 300 ms de una venta (RN-SIS-09).
+ */
+export const DURABILIDAD_DE_LAS_TRANSACCIONES = 'strict' as const
+
 /** La base IndexedDB de la app (Dexie). Los repositorios Dexie de cada módulo la reciben. */
 export class BaseDeDatos extends Dexie {
   // `declare`: Dexie crea cada tabla al declarar el esquema; un campo de clase normal la
@@ -49,6 +56,7 @@ export class BaseDeDatos extends Dexie {
 
   constructor(opciones: OpcionesDeBaseDeDatos = {}) {
     super(NOMBRE_DE_LA_BASE, {
+      chromeTransactionDurability: DURABILIDAD_DE_LAS_TRANSACCIONES,
       ...(opciones.indexedDB ? { indexedDB: opciones.indexedDB } : {}),
       ...(opciones.IDBKeyRange ? { IDBKeyRange: opciones.IDBKeyRange } : {}),
     })

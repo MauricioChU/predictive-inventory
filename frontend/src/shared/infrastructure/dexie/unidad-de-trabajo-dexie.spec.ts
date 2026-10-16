@@ -33,6 +33,11 @@ describe('UnidadDeTrabajoDexie', () => {
     vi.restoreAllMocks()
   })
 
+  it('cada ejecutar abre su transacción con durabilidad estricta', async () => {
+    const { uow } = crear()
+    expect(await uow.ejecutar(async () => transaccionNativa()?.durability)).toBe('strict')
+  })
+
   it('RN-OP-06: confirma todo lo que escribe el trabajo y devuelve su resultado', async () => {
     const { db, uow } = crear()
     const resultado = await uow.ejecutar(async () => {
@@ -156,14 +161,22 @@ describe('UnidadDeTrabajoDexie', () => {
     expect(await idsGuardados(db)).toEqual(['c1', 'c2'])
   })
 
-  it('esperar algo ajeno a IndexedDB dentro del trabajo hace fallar ejecutar (Dexie confirmaría antes de tiempo)', async () => {
+  it('esperar algo ajeno a IndexedDB dentro del trabajo: lo escrito antes QUEDA confirmado, ejecutar rechaza y las acciones se pierden', async () => {
     const { db, uow } = crear()
+    const corrieron: string[] = []
     await expect(
       uow.ejecutar(async () => {
         await db.categorias.put(categoria('c1'))
-        await esperar(10)
+        uow.alConfirmar(() => {
+          corrieron.push('acción')
+        })
+        await esperar(10) // IndexedDB confirma aquí, sin esperar al resto del trabajo
+        await db.categorias.put(categoria('c2')).catch(() => undefined)
       }),
     ).rejects.toMatchObject({ name: 'PrematureCommitError' })
+    // Confirmación parcial: c1 se guardó aunque ejecutar rechazó; c2 no; la acción no corrió.
+    expect(await idsGuardados(db)).toEqual(['c1'])
+    expect(corrieron).toEqual([])
   })
 
   describe('enTransaccion', () => {
