@@ -17,6 +17,18 @@ describe('AvisoEnPagina', () => {
     for (const icono of iconos) expect(icono.attributes('aria-hidden')).toBe('true')
   })
 
+  it('RN-UX-09: los montos y cantidades del título y del texto no se parten entre líneas', () => {
+    const w = mount(AvisoEnPagina, {
+      props: {
+        tono: 'exito',
+        titulo: 'Hoy vendiste S/ 1 162.50',
+        texto: 'Vendiste S/ 162.50 y ganaste S/ 48.20.',
+      },
+    })
+    expect(w.get('.titulo').text()).toBe('Hoy vendiste S/ 1 162.50')
+    expect(w.get('.texto').text()).toBe('Vendiste S/ 162.50 y ganaste S/ 48.20.')
+  })
+
   it('es contenido normal de la página: no es una región viva (no se anuncia solo al cargar)', () => {
     const w = mount(AvisoEnPagina, { props: { tono: 'info', titulo: 'Guarda una copia' } })
     expect(w.find('[role="alert"], [role="status"], [aria-live]').exists()).toBe(false)
@@ -68,9 +80,19 @@ describe('MensajeDeError', () => {
       },
     })
     expect(w.attributes('role')).toBe('alert')
-    expect(w.get('.mensaje').text()).toBe('Solo quedan 2 unid. de Lejía 1 L.')
+    // "Tal cual": las mismas palabras (los espacios de las cantidades no cortan la línea).
+    const sinNbsp = (texto: string) => texto.replaceAll(' ', ' ')
+    expect(sinNbsp(w.get('.mensaje').text())).toBe('Solo quedan 2 unid. de Lejía 1 L.')
     expect(w.get('.ayuda').text()).toBe('Cambia la cantidad o registra la llegada de mercadería.')
     for (const icono of w.findAll('svg')) expect(icono.attributes('aria-hidden')).toBe('true')
+  })
+
+  it('RN-UX-09: las cantidades del mensaje no se parten entre líneas ("2 unid.", "1 L")', () => {
+    const w = mount(MensajeDeError, {
+      props: { mensaje: 'Solo quedan 2 unid. de Lejía 1 L.', ayuda: 'Vende hasta 2 unid.' },
+    })
+    expect(w.get('.mensaje').text()).toBe('Solo quedan 2 unid. de Lejía 1 L.')
+    expect(w.get('.ayuda').text()).toBe('Vende hasta 2 unid.')
   })
 
   it('sin ayuda, solo el mensaje', () => {

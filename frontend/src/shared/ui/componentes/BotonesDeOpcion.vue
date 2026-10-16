@@ -72,14 +72,16 @@ const grupo = usarGrupoDeRadio(
   flex-direction: column;
   gap: var(--separacion-toque);
 }
-/* Opción grande, a todo el ancho, como un botón principal (RN-UX-02: ≥ 56 px). */
+/* Opción grande, a todo el ancho, como un botón principal (RN-UX-02: ≥ 56 px). Relleno,
+   separaciones e íconos medidos para que a 320 px con letra Muy grande al texto le queden
+   ~140 px: una palabra como "derramó" entra entera (antes se partía "derram|ó"). */
 .opcion {
   display: flex;
   align-items: center;
-  gap: var(--espacio-3);
+  gap: var(--espacio-2);
   width: 100%;
   min-height: var(--alto-boton-principal);
-  padding: var(--espacio-2) var(--espacio-4);
+  padding: var(--espacio-2) var(--espacio-3);
   border: 2px solid var(--color-borde);
   border-radius: var(--radio);
   background: var(--color-fondo);
@@ -110,17 +112,15 @@ const grupo = usarGrupoDeRadio(
   flex: 1;
   min-width: 0;
 }
-.icono {
-  width: 1.5em;
-  height: 1.5em;
-  flex: none;
-}
+.icono,
 .marca {
-  width: 1.5em;
-  height: 1.5em;
+  width: 1.25em;
+  height: 1.25em;
   min-width: 24px;
   min-height: 24px;
   flex: none;
+}
+.marca {
   /* RN-UX-03: ícono ≥ 4.5:1 también sobre el fondo de :hover (superficie). */
   color: var(--color-texto-suave);
 }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ChevronRight, CircleCheck, Info, TriangleAlert, X } from 'lucide-vue-next'
+import { pegarCifras } from '../texto-sin-cortes'
 
 const props = withDefaults(
   defineProps<{
@@ -31,10 +32,8 @@ const icono = computed(() => ICONOS[props.tono])
     -->
     <div class="cuerpo">
       <component :is="icono" aria-hidden="true" class="icono" />
-      <div class="textos">
-        <p class="titulo">{{ titulo }}</p>
-        <p v-if="texto" class="texto">{{ texto }}</p>
-      </div>
+      <p class="titulo">{{ pegarCifras(titulo) }}</p>
+      <p v-if="texto" class="texto">{{ pegarCifras(texto) }}</p>
     </div>
     <div v-if="textoAccion || textoCerrar" class="acciones">
       <button v-if="textoAccion" type="button" class="accion" @click="emit('accion')">
@@ -58,9 +57,9 @@ const icono = computed(() => ICONOS[props.tono])
   display: flex;
   flex-direction: column;
   gap: var(--espacio-3);
-  padding: var(--espacio-4);
+  padding: var(--espacio-3);
   border: 2px solid var(--tono);
-  border-left-width: 8px;
+  border-left-width: 6px;
   border-radius: var(--radio);
   background: var(--tono-suave);
   color: var(--color-texto);
@@ -74,10 +73,13 @@ const icono = computed(() => ICONOS[props.tono])
   --tono: var(--color-exito);
   --tono-suave: var(--color-exito-suave);
 }
+/* Ícono · título en la primera fila; el texto debajo del título (o, si el aviso es angosto,
+   a todo el ancho, también debajo del ícono: así no queda una columnita de 3 palabras). */
 .cuerpo {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--espacio-3);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--espacio-1) var(--espacio-3);
 }
 .icono {
   width: 1.75rem;
@@ -87,17 +89,14 @@ const icono = computed(() => ICONOS[props.tono])
   flex: none;
   color: var(--tono);
 }
-.textos {
-  flex: 1;
-  min-width: 0;
-}
 .titulo {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
 }
 .texto {
-  margin: var(--espacio-1) 0 0;
+  grid-column: 2;
+  margin: 0;
   color: var(--color-texto-suave);
 }
 .acciones {
@@ -114,7 +113,7 @@ const icono = computed(() => ICONOS[props.tono])
   gap: var(--espacio-2);
   min-height: var(--alto-toque);
   max-width: 100%;
-  padding: var(--espacio-1) var(--espacio-4);
+  padding: var(--espacio-1) var(--espacio-3);
   border: 2px solid var(--tono);
   border-radius: var(--radio-chico);
   font-weight: 700;
@@ -136,6 +135,9 @@ const icono = computed(() => ICONOS[props.tono])
 }
 /* Angosto (celular con letra grande): cada botón a todo el ancho, uno debajo del otro. */
 @container (max-width: 24rem) {
+  .texto {
+    grid-column: 1 / -1;
+  }
   .acciones {
     flex-direction: column;
   }
