@@ -59,7 +59,7 @@ Lejías y desinfectantes · Detergentes y jabones · Lavavajillas · Limpiadores
 | **RN-CAT-11** | Para archivar, el stock debe ser 0. Si no lo es, la app ofrece, en el mismo paso, **retirar el stock restante** (operación `AJUSTE` hasta 0 con motivo "Producto retirado") y luego archivar. |
 | **RN-CAT-12** | La **búsqueda** ignora mayúsculas y tildes y encuentra productos cuyo nombre contiene **todas las palabras escritas, en cualquier orden** ("1 l lejia" encuentra "Lejía Tradicional 1 L"). Los resultados se ordenan por los productos **vendidos más veces en los últimos 30 días** y luego por nombre. Solo se buscan productos activos, salvo en el filtro *Archivados*. |
 | ~~RN-CAT-13~~ | **Retirada** (2026-10-15): sin códigos de barras no hay escáner. |
-| **RN-CAT-14** | La **foto** es opcional. Se reduce a un máximo de 512 px en su lado mayor y se guarda comprimida (≤ 100 KB). Sin foto, se muestra un ícono de su categoría. |
+| **RN-CAT-14** | La **foto** es opcional. Se reduce a un máximo de 512 px en su lado mayor y se guarda comprimida (≤ 100 KB). Sin foto, se muestra un ícono de su categoría. Si la imagen no se puede leer: "No pudimos leer la foto. Prueba con otra." |
 | **RN-CAT-15** | Una **categoría** con productos (activos o archivados) no se puede eliminar; se puede renombrar. El nombre de categoría es único con la misma comparación que RN-CAT-01. |
 
 ## Eventos de dominio
@@ -75,3 +75,4 @@ Lejías y desinfectantes · Detergentes y jabones · Lavavajillas · Limpiadores
 - Escribir el precio con coma ("2,50") se acepta como 2.50.
 - Sin permiso de cámara para la foto: se puede elegir una imagen de la galería o dejar el producto sin foto, sin error.
 - Dos productos con el mismo nombre en un Excel importado: se aplica [RN-RE-08](05-respaldo-e-importacion.md).
+- Un producto que ya no existe (por ejemplo, desde un enlace viejo): "No encontramos ese producto".
