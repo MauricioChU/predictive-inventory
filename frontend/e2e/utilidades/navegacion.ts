@@ -25,12 +25,14 @@ export async function usarLetra(page: Page, letra: Letra): Promise<void> {
 /**
  * Abre una ruta de la app y espera a que termine de arrancar. Desde la Ola 3 la app abre la
  * base local (IndexedDB) y prepara los datos ANTES de montar la interfaz, así que el evento
- * "load" ya no alcanza: se espera al <h1> de la pantalla (RN-UX-15: toda pantalla tiene uno) y,
- * si la prueba pidió una letra, a que la configuración la tenga aplicada.
+ * "load" ya no alcanza. Se espera al <h1> de la pantalla DENTRO de la app montada
+ * (`data-app-montada`, en LayoutApp): si el arranque falla y se ve la pantalla sin datos (que
+ * también tiene <h1>), la prueba falla. Si la prueba pidió una letra, además se espera a que la
+ * configuración la tenga aplicada.
  */
 export async function abrir(page: Page, ruta: string): Promise<void> {
   await page.goto(ruta)
-  await expect(page.locator('#contenido h1')).toBeVisible()
+  await expect(page.locator('[data-app-montada] #contenido h1')).toBeVisible()
   const letra = letraPedida.get(page)
   if (letra === undefined) return
   await page.evaluate(async (valor) => {

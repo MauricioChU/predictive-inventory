@@ -1,3 +1,15 @@
+/**
+ * GANCHOS DE PRUEBA EN EL BUILD DE PRODUCCIÓN (para las E2E de Playwright).
+ *
+ * Existen solo si `import.meta.env.DEV` (servidor de desarrollo) o `navigator.webdriver` (un
+ * navegador automatizado, como Playwright contra `npm run preview` en CI). Para una persona
+ * usando la app no existen:
+ * - `window.__pruebas`: muestra el aviso Deshacer y monta un GraficoBarras para medir su
+ *   geometría (LayoutApp los expone y los retira al desmontar).
+ * - `window.__aplicacion`: la aplicación real (los seis módulos), para preparar datos y
+ *   completar operaciones por los casos de uso mientras no existan las pantallas (main.ts).
+ * No dan acceso a nada que el código de la página no tenga ya (los datos son locales).
+ */
 import { createApp } from 'vue'
 import type { ContextoAvisoDeshacer } from './aviso-deshacer'
 import type { Aplicacion } from './composicion'

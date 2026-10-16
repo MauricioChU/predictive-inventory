@@ -107,6 +107,54 @@ test.describe('Ola 3: la app arranca con los datos guardados en el celular', () 
     await expect(page.getByText('ábrela en una ventana normal')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Intentar de nuevo' })).toBeVisible()
     await expect(page.getByRole('navigation')).toHaveCount(0)
+    await expect(page.getByText('Abriendo tus datos…')).toHaveCount(0)
+    await esperarSinViolacionesGraves(page)
+  })
+
+  test('M1: mientras la base no termina de abrir, se anuncia "Abriendo tus datos…"', async ({
+    page,
+  }) => {
+    // Una apertura de IndexedDB que nunca termina: la app no llega a montar.
+    await page.addInitScript(() => {
+      const real = window.indexedDB
+      const lenta = new Proxy(real, {
+        get(objetivo, propiedad) {
+          if (propiedad === 'open') return () => ({})
+          const valor = Reflect.get(objetivo, propiedad) as unknown
+          return typeof valor === 'function' ? valor.bind(objetivo) : valor
+        },
+      })
+      Object.defineProperty(window, 'indexedDB', { configurable: true, get: () => lenta })
+    })
+    await page.goto('./')
+
+    await expect(page.getByRole('status').filter({ hasText: 'Abriendo tus datos…' })).toBeVisible()
+    await expect(page.locator('[data-app-montada]')).toHaveCount(0)
+  })
+
+  test('M2: si otra pestaña actualiza la base, esta lo dice y ofrece volver a abrir la app', async ({
+    page,
+    context,
+  }) => {
+    await abrir(page, './')
+    // Otra pestaña con una versión más nueva de la app (una versión de la base más alta).
+    const otra = await context.newPage()
+    await abrir(otra, './')
+    await otra.evaluate(
+      () =>
+        new Promise<void>((resolver, rechazar) => {
+          const pedido = indexedDB.open('predictive-inventory', 1000)
+          pedido.onsuccess = () => {
+            pedido.result.close()
+            resolver()
+          }
+          pedido.onerror = () => rechazar(pedido.error)
+        }),
+    )
+
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('La app se actualizó')
+    await expect(page.getByRole('button', { name: 'Toca para volver a abrirla' })).toBeVisible()
+    await expect(page.locator('[data-app-montada]')).toHaveCount(0)
     await esperarSinViolacionesGraves(page)
   })
 })
