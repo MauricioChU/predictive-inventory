@@ -113,6 +113,15 @@ describe('validarFecha', () => {
     ['ilegible', 'ayer'],
     ['con una hora imposible', '2026-10-14T25:00:00Z'],
     ['con la zona mal escrita', '2026-10-14T18:30:00 -05'],
+    // Fix round 1, ruling 6: JavaScript las "corrige" al día siguiente; aquí se rechazan.
+    ['que no existe en el calendario (30 de febrero)', '2026-02-30T10:00Z'],
+    ['del 29 de febrero de un año no bisiesto', '2026-02-29T10:00:00-05:00'],
+    ['del 31 de abril', '2026-04-31T10:00-05:00'],
+    ['con la hora 24:00', '2026-02-28T24:00Z'],
+    ['con el minuto 60', '2026-02-28T23:60Z'],
+    ['con el segundo 60', '2026-02-28T23:59:60Z'],
+    ['con un desfase imposible', '2026-10-14T18:30+25:00'],
+    ['con un desfase con minutos imposibles', '2026-10-14T18:30-05:60'],
   ])('RN-OP-09: una fecha %s se rechaza con "Elige la fecha y la hora"', (_caso, texto) => {
     expect(() => normalizarInstante(texto)).toThrow(
       expect.objectContaining({ codigo: 'FECHA_INVALIDA', message: 'Elige la fecha y la hora' }),
@@ -123,6 +132,8 @@ describe('validarFecha', () => {
     expect(normalizarInstante(' 2026-10-14T18:30-05:00 ')).toBe('2026-10-14T23:30:00.000Z')
     expect(normalizarInstante('2026-10-14T23:30:00.5Z')).toBe('2026-10-14T23:30:00.500Z')
     expect(normalizarInstante('2026-10-15T04:30:00+05:00')).toBe('2026-10-14T23:30:00.000Z')
+    expect(normalizarInstante('2024-02-29T23:30-05:00')).toBe('2024-03-01T04:30:00.000Z')
+    expect(normalizarInstante('2026-10-14T23:30:00.123Z')).toBe('2026-10-14T23:30:00.123Z')
   })
 
   it('RN-OP-09: una fecha que no se puede leer es un error de programación', () => {

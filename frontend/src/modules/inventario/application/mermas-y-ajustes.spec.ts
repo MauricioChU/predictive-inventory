@@ -193,6 +193,18 @@ describe('stock inicial y retiro (lo que usa Catálogo)', () => {
     ])
   })
 
+  // Fix round 1, ruling 5: tampoco reemplazan la oferta de la última operación registrada.
+  it('RN-OP-18: tras el stock inicial o el retiro de Catálogo, el Deshacer sigue siendo el de la venta', async () => {
+    const { modulo } = await escenario()
+    const { operacionId } = await modulo.registrarVenta({
+      lineas: [{ productoId: 'lejia', cantidad: '1' }],
+    })
+    await modulo.consultable.registrarStockInicial('nuevo', kilos('2'), soles('1.20'))
+    expect(modulo.deshacer.disponible()?.operacionId).toBe(operacionId)
+    await modulo.consultable.retirarStock('carbon')
+    expect(modulo.deshacer.disponible()?.operacionId).toBe(operacionId)
+  })
+
   it('RN-CAT-11: retirarStock funciona aunque el producto ya esté archivado, pero no si no existe', async () => {
     const { modulo, stock, catalogo } = await escenario()
     catalogo.archivar('lejia')
