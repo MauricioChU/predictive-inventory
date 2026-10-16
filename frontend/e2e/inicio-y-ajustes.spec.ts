@@ -341,25 +341,25 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
     await abrirInicioCompleto(page, 'MUY_GRANDE', 320, 700)
 
-    const tapados: string[] = []
-    let revisados = 0
+    const medidas: { enContenido: boolean; texto: string; encima: boolean }[] = []
     for (let i = 0; i < 30; i += 1) {
       await page.keyboard.press('Tab')
-      const medida = await page.evaluate(() => {
-        const activo = document.activeElement
-        if (!activo?.closest('#contenido')) return null
-        const caja = activo.getBoundingClientRect()
-        const encima = [document.querySelector('nav'), document.querySelector('.vender-fijo')]
-          .filter((el): el is Element => el !== null && !el.contains(activo))
-          .map((el) => el.getBoundingClientRect())
-          .some((otra) => caja.bottom > otra.top + 1 && caja.top < otra.bottom - 1)
-        return { texto: activo.textContent?.trim() ?? '', encima }
-      })
-      if (!medida) continue
-      revisados += 1
-      if (medida.encima) tapados.push(medida.texto)
+      medidas.push(
+        await page.evaluate(() => {
+          const activo = document.activeElement
+          const enContenido = Boolean(activo?.closest('#contenido'))
+          const caja = activo?.getBoundingClientRect()
+          const encima = [document.querySelector('nav'), document.querySelector('.vender-fijo')]
+            .filter((el): el is Element => el !== null && activo !== null && !el.contains(activo))
+            .map((el) => el.getBoundingClientRect())
+            .some((otra) => caja !== undefined && caja.bottom > otra.top + 1 && caja.top < otra.bottom - 1)
+          return { enContenido, texto: activo?.textContent?.trim() ?? '', encima: enContenido && encima }
+        }),
+      )
     }
-    expect(revisados, 'se recorrió Inicio con Tab').toBeGreaterThanOrEqual(8)
+    const revisados = medidas.filter((m) => m.enContenido)
+    const tapados = revisados.filter((m) => m.encima).map((m) => m.texto)
+    expect(revisados.length, 'se recorrió Inicio con Tab').toBeGreaterThanOrEqual(8)
     expect(tapados, 'nada enfocado queda debajo de lo que está pegado abajo').toEqual([])
   })
 })

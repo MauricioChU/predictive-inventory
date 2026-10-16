@@ -25,9 +25,9 @@ describe('haciaPantalla (contrato de rutas de la Ola 4)', () => {
       path: '/productos/nuevo',
       query: { desde: 'primera-vez' },
     })
-    expect(sinRuta.resolve(haciaPantalla(sinRuta, 'producto-nuevo', { desde: 'primera-vez' })).fullPath).toBe(
-      '/productos/nuevo?desde=primera-vez',
-    )
+    expect(
+      sinRuta.resolve(haciaPantalla(sinRuta, 'producto-nuevo', { desde: 'primera-vez' })).fullPath,
+    ).toBe('/productos/nuevo?desde=primera-vez')
   })
 
   it('sin query, igual que antes', () => {

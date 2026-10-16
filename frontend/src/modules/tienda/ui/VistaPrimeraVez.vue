@@ -239,7 +239,11 @@ async function guardarPrimeraVez(): Promise<void> {
           :icono="ClipboardCheck"
           @click="router.push(haciaPantalla(router, 'contar-todo'))"
         />
-        <BotonPrincipal texto="Dejar para después" variante="secundario" @click="dejarParaDespues" />
+        <BotonPrincipal
+          texto="Dejar para después"
+          variante="secundario"
+          @click="dejarParaDespues"
+        />
       </div>
     </template>
   </div>
