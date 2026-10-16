@@ -104,6 +104,13 @@ export function probarRepositorioDeResumenes(crear: () => RepositorioDeResumenes
     expect(await repo.ultimoDiaConVentaDe('jabon')).toBeNull()
   })
 
+  it('primerDiaDeLaTienda cuenta el primer día con filas, aunque solo tenga una venta anulada ese mismo día', async () => {
+    const repo = crear()
+    await repo.guardar(filaSinMovimiento('lejia', '2026-08-01'))
+    await repo.guardar(fila('carbon', '2026-10-01'))
+    expect(await repo.primerDiaDeLaTienda()).toBe('2026-08-01')
+  })
+
   it('vaciar borra todas las filas', async () => {
     const repo = await conFilas()
     await repo.vaciar()

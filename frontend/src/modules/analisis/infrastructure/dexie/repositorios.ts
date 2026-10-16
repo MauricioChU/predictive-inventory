@@ -13,7 +13,8 @@ function enOrdenDeDia(a: ResumenDiarioRegistro, b: ResumenDiarioRegistro): numbe
 
 /**
  * Una fila sin ningún movimiento (todas las métricas y el cambio neto en cero), como la que
- * queda de un día cuya única venta se anuló ese mismo día: no cuenta como primer día.
+ * queda de un día cuya única venta se anuló ese mismo día: no cuenta como primer día de un
+ * producto (`primerDiaDe`; `primerDiaDeLaTienda` sí la cuenta, igual que en memoria).
  * Misma regla que `esFilaSinMovimiento` (analisis/domain/resumen-diario.ts, rama
  * feat/eventos-diferidos); al integrar, este predicado se reemplaza por ese.
  */
@@ -73,12 +74,9 @@ export class RepositorioDeResumenesDexie implements RepositorioDeResumenes {
     return fila?.dia ?? null
   }
 
+  /** Cualquier fila cuenta (como en memoria): la regla de las filas sin movimiento es solo de `primerDiaDe`. */
   async primerDiaDeLaTienda(): Promise<Dia | null> {
-    const fila = await this.db.resumenes
-      .orderBy('dia')
-      .filter((r) => !esFilaSinMovimiento(r))
-      .first()
-    return fila?.dia ?? null
+    return (await this.db.resumenes.orderBy('dia').first())?.dia ?? null
   }
 
   async ultimoDiaConVentaDe(productoId: string): Promise<Dia | null> {

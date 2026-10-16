@@ -15,7 +15,7 @@ probarRepositoriosDeAnalisis('Dexie', {
 })
 
 describe('RepositorioDeResumenesDexie', () => {
-  it('primerDiaDe y primerDiaDeLaTienda ignoran las filas sin ningún movimiento (p. ej. una venta anulada el mismo día)', async () => {
+  it('primerDiaDe ignora las filas sin ningún movimiento (p. ej. una venta anulada el mismo día)', async () => {
     const repo = new RepositorioDeResumenesDexie(crearBaseDePrueba())
     await repo.guardar(filaSinMovimiento('lejia', '2026-08-01'))
     await repo.guardar(fila('lejia', '2026-09-20', 1))
@@ -25,7 +25,6 @@ describe('RepositorioDeResumenesDexie', () => {
     expect(await repo.primerDiaDe('lejia')).toBe('2026-09-20')
     expect(await repo.primerDiaDe('carbon')).toBe('2026-10-01')
     expect(await repo.primerDiaDe('jabon')).toBeNull()
-    expect(await repo.primerDiaDeLaTienda()).toBe('2026-09-20')
     // Las demás consultas sí las devuelven: las filas siguen ahí.
     expect(await repo.obtener('lejia', '2026-08-01')).toEqual(
       filaSinMovimiento('lejia', '2026-08-01'),
