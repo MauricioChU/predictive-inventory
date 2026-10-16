@@ -7,7 +7,7 @@ import {
   type AplicacionDePrueba,
 } from '../../../tests/soporte/aplicacion-de-prueba'
 import { crearProductoDePrueba } from '../../../tests/soporte/productos-de-prueba'
-import { abrirApp } from '../abrir-app'
+import { abrirApp, pedirAlmacenamientoPersistente } from '../abrir-app'
 
 const HOY = instanteLocal('2026-10-15 08:00')
 
@@ -40,8 +40,9 @@ describe.each(ALMACENES)('abrirApp (%s)', (almacen) => {
     await app.cerrar()
   })
 
-  it('RN-RE-09: la primera vez crea el dispositivo, pide almacenamiento persistente, siembra las categorías y aplica la letra', async () => {
+  it('la primera vez crea el dispositivo, siembra las categorías y aplica la letra, sin pedir todavía el almacenamiento', async () => {
     nuevaApp()
+    const solicitar = vi.spyOn(app.almacenamiento, 'solicitar')
 
     const inicio = await abrirApp(app, { aplicarTamanoDeLetra })
 
@@ -53,22 +54,98 @@ describe.each(ALMACENES)('abrirApp (%s)', (almacen) => {
     })
     const estado = await app.tienda.consultable.estadoDelSistema()
     expect(estado.dispositivoId).toBe('id-1')
-    expect(estado.almacenamientoPersistente).toBe('CONCEDIDO')
+    // M1: el pedido de almacenamiento persistente va después de montar (pedirAlmacenamientoPersistente).
+    expect(solicitar).not.toHaveBeenCalled()
+    expect(estado.almacenamientoPersistente).toBe('DESCONOCIDO')
     expect((await app.catalogo.listarCategorias()).map((c) => c.nombre)).toEqual(
       CATEGORIAS_INICIALES_ESPERADAS,
     )
     expect(aplicarTamanoDeLetra).toHaveBeenCalledExactlyOnceWith('GRANDE')
   })
 
-  it('RN-RE-09: si el navegador no concede el almacenamiento, lo guarda y el recordatorio sale a los 3 días', async () => {
+  it('RN-RE-09: pedirAlmacenamientoPersistente pregunta la primera vez y guarda la respuesta', async () => {
+    nuevaApp()
+    await abrirApp(app, { aplicarTamanoDeLetra })
+
+    await pedirAlmacenamientoPersistente(app)
+
+    expect((await app.tienda.consultable.estadoDelSistema()).almacenamientoPersistente).toBe(
+      'CONCEDIDO',
+    )
+  })
+
+  it('RN-RE-09: si el navegador no concede el almacenamiento, lo guarda (el recordatorio sale a los 3 días)', async () => {
     nuevaApp()
     app.almacenamiento.fijarResultado(false)
 
-    await abrirApp(app, { aplicarTamanoDeLetra })
+    await pedirAlmacenamientoPersistente(app)
 
     expect((await app.tienda.consultable.estadoDelSistema()).almacenamientoPersistente).toBe(
       'RECHAZADO',
     )
+  })
+
+  it('RN-RE-09: si pedir el almacenamiento falla, se registra y no rechaza', async () => {
+    nuevaApp()
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.spyOn(app.almacenamiento, 'solicitar').mockRejectedValue(new Error('sin permiso'))
+
+    await expect(pedirAlmacenamientoPersistente(app)).resolves.toBeUndefined()
+
+    expect(error).toHaveBeenCalledWith(
+      'No se pudo pedir el almacenamiento persistente:',
+      expect.any(Error),
+    )
+  })
+
+  it.each([
+    [
+      'sembrar las categorías',
+      (a: AplicacionDePrueba) => vi.spyOn(a.catalogo, 'sembrarCategoriasIniciales'),
+    ],
+    ['el resumen del día', (a: AplicacionDePrueba) => vi.spyOn(a.alertas, 'resumenDelDia')],
+    [
+      'el recordatorio de copia',
+      (a: AplicacionDePrueba) => vi.spyOn(a.respaldo, 'recordatorioDeCopia'),
+    ],
+  ])('si falla %s, lo registra y la app abre igual', async (_paso, espiar) => {
+    nuevaApp()
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    espiar(app).mockRejectedValue(new Error('falla un paso'))
+
+    const inicio = await abrirApp(app, { aplicarTamanoDeLetra })
+
+    expect(inicio.primeraVez).toBe(true)
+    expect(inicio.tamanoDeLetra).toBe('GRANDE')
+    expect(error).toHaveBeenCalledWith(expect.stringMatching(/^No se pudo /), expect.any(Error))
+  })
+
+  it('si fallan las lecturas de Análisis (resumen y avisos), la app abre igual sin resumen del día', async () => {
+    nuevaApp()
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    app.infraestructura.repositorios.resumenes.entre = () =>
+      Promise.reject(new Error('lectura rota'))
+
+    const inicio = await abrirApp(app, { aplicarTamanoDeLetra })
+    await app.esperarTareasPendientes()
+
+    expect(inicio).toMatchObject({ primeraVez: true, resumenDelDia: null })
+    expect(error).toHaveBeenCalledWith('No se pudo preparar el resumen del día:', expect.any(Error))
+    expect(error).toHaveBeenCalledWith('Falló la evaluación de avisos:', expect.any(Error))
+  })
+
+  it.each([
+    [
+      'el estado del sistema',
+      (a: AplicacionDePrueba) => vi.spyOn(a.tienda.consultable, 'estadoDelSistema'),
+    ],
+    ['la configuración', (a: AplicacionDePrueba) => vi.spyOn(a.tienda, 'obtenerConfiguracion')],
+  ])('sin %s no se puede abrir: el error llega a quien arranca', async (_paso, espiar) => {
+    nuevaApp()
+    const sinDatos = new Error('no se pudo leer')
+    espiar(app).mockRejectedValue(sinDatos)
+
+    await expect(abrirApp(app, { aplicarTamanoDeLetra })).rejects.toBe(sinDatos)
   })
 
   it('RN-AL-02: al abrir se re-evalúan los avisos aunque no haya pasado ninguna operación', async () => {
@@ -97,6 +174,7 @@ describe.each(ALMACENES)('abrirApp (%s)', (almacen) => {
   it('RN-RE-09: al volver a abrir no pide otra vez el almacenamiento, no duplica categorías y usa la letra elegida', async () => {
     nuevaApp()
     await abrirApp(app, { aplicarTamanoDeLetra })
+    await pedirAlmacenamientoPersistente(app)
     const { dispositivoId } = await app.tienda.consultable.estadoDelSistema()
     await app.tienda.completarPrimeraVez({
       nombreTienda: 'Bodega Rosita',
@@ -105,6 +183,7 @@ describe.each(ALMACENES)('abrirApp (%s)', (almacen) => {
     const solicitar = vi.spyOn(app.almacenamiento, 'solicitar')
 
     const inicio = await abrirApp(app, { aplicarTamanoDeLetra })
+    await pedirAlmacenamientoPersistente(app)
 
     expect(inicio.primeraVez).toBe(false)
     expect(inicio.tamanoDeLetra).toBe('MUY_GRANDE')

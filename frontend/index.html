@@ -10,7 +10,8 @@
     <title>Inventario de la Tienda</title>
   </head>
   <body>
-    <div id="app"></div>
+    <!-- Mientras la app abre la base local; Vue lo reemplaza al montar (o la pantalla sin datos). -->
+    <div id="app"><p class="abriendo-datos" role="status">Abriendo tus datos…</p></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
