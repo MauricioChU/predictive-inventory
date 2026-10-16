@@ -96,18 +96,29 @@ export async function sembrarCategoriasIniciales(
   })
 }
 
+/** La categoría de "lo demás" va siempre al final de la lista (ruling de la Ola 3). */
+const CATEGORIA_AL_FINAL = normalizar('Otros')
+
+function compararCategorias(a: CategoriaRegistro, b: CategoriaRegistro): number {
+  const alFinal =
+    Number(a.nombreNormalizado === CATEGORIA_AL_FINAL) -
+    Number(b.nombreNormalizado === CATEGORIA_AL_FINAL)
+  if (alFinal !== 0) return alFinal
+  return (
+    Number(a.nombreNormalizado > b.nombreNormalizado) -
+    Number(a.nombreNormalizado < b.nombreNormalizado)
+  )
+}
+
 /**
- * Por nombre, como lo compara RN-CAT-01 (sin tildes ni mayúsculas): el orden no depende del
- * repositorio (en Dexie, por id; en memoria, por creación).
+ * Por nombre, como lo compara RN-CAT-01 (sin tildes ni mayúsculas), con "Otros" siempre al
+ * final: el orden no depende del repositorio (en Dexie, por id; en memoria, por creación).
  */
 export async function listarCategorias(
   categorias: RepositorioDeCategorias,
 ): Promise<CategoriaVista[]> {
   const todas = await categorias.todas()
-  return todas
-    .map((c) => ({ id: c.id, nombre: c.nombre, clave: c.nombreNormalizado }))
-    .sort((a, b) => Number(a.clave > b.clave) - Number(a.clave < b.clave))
-    .map(({ id, nombre }) => ({ id, nombre }))
+  return [...todas].sort(compararCategorias).map((c) => ({ id: c.id, nombre: c.nombre }))
 }
 
 export async function categoriaPorNombre(

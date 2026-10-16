@@ -1,4 +1,4 @@
-import { abrirApp, type InicioDeLaApp } from './abrir-app'
+import { abrirApp, pedirAlmacenamientoPersistente, type InicioDeLaApp } from './abrir-app'
 import { crearAplicacion, type Aplicacion } from './composicion'
 import type { InfraestructuraDelNavegador } from './infraestructura-navegador'
 
@@ -12,9 +12,12 @@ export interface PasosDeArranque {
 
 /**
  * El arranque de main.ts, en orden: infraestructura → abrir la base → aplicación → `abrirApp`
- * → montar. Si algo falla ANTES de montar (IndexedDB no disponible o bloqueado, sin espacio),
- * muestra la pantalla de error en vez de una app que no puede guardar nada. Lo que falle al
- * montar no es un problema de datos y no se disfraza como tal.
+ * → montar → pedir almacenamiento persistente (sin esperarlo: el navegador puede preguntar o no
+ * contestar nunca, RN-RE-09). Si falla lo imprescindible ANTES de montar (abrir la base, el
+ * estado del sistema o la configuración: IndexedDB no disponible o bloqueado, sin espacio),
+ * muestra la pantalla sin datos en vez de una app que no puede guardar nada; lo accesorio no
+ * detiene el arranque (`abrirApp`). Lo que falle al montar no es un problema de datos y no se
+ * disfraza como tal.
  */
 export async function arrancar(pasos: PasosDeArranque): Promise<void> {
   let aplicacion: Aplicacion
@@ -29,4 +32,5 @@ export async function arrancar(pasos: PasosDeArranque): Promise<void> {
     return
   }
   pasos.montar(aplicacion, inicio)
+  void pedirAlmacenamientoPersistente(aplicacion)
 }

@@ -65,7 +65,8 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
     COLUMNA DE CONTENIDO, sticky abajo y con el ancho del contenido (antes se dibujaba dentro
     de la barra lateral de 260 px: una letra por línea y los enlaces empujados fuera).
   -->
-  <div class="layout-app">
+  <!-- data-app-montada: solo existe si la app arrancó de verdad (las E2E lo esperan). -->
+  <div class="layout-app" data-app-montada>
     <main id="contenido" class="contenido" tabindex="-1">
       <RouterView />
     </main>
