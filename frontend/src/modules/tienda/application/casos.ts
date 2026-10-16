@@ -27,21 +27,23 @@ export async function obtenerConfiguracion(
 
 /** Crea el estado del sistema la primera vez que se consulta, y lo deja guardado. */
 export async function estadoDelSistema(deps: DependenciasDeTienda): Promise<EstadoDelSistema> {
-  const existente = await deps.repositorio.sistema()
-  if (existente) return sinClave(existente)
+  // Leer y crear va en una sola unidad de trabajo: dos primeras consultas simultáneas
+  // no pueden crear dos dispositivoId distintos.
+  return deps.uow.ejecutar(async () => {
+    const existente = await deps.repositorio.sistema()
+    if (existente) return sinClave(existente)
 
-  const nuevo: EstadoDelSistemaRegistro = {
-    clave: 'sistema',
-    dispositivoId: deps.ids.nuevo(),
-    primeraVezCompletada: false,
-    ultimoRespaldoEn: null,
-    almacenamientoPersistente: 'DESCONOCIDO',
-    ultimoResumenDelDiaMostrado: null,
-  }
-  await deps.uow.ejecutar(async () => {
+    const nuevo: EstadoDelSistemaRegistro = {
+      clave: 'sistema',
+      dispositivoId: deps.ids.nuevo(),
+      primeraVezCompletada: false,
+      ultimoRespaldoEn: null,
+      almacenamientoPersistente: 'DESCONOCIDO',
+      ultimoResumenDelDiaMostrado: null,
+    }
     await deps.repositorio.guardarSistema(nuevo)
+    return sinClave(nuevo)
   })
-  return sinClave(nuevo)
 }
 
 export async function actualizarConfiguracion(
@@ -53,7 +55,11 @@ export async function actualizarConfiguracion(
 
   await deps.uow.ejecutar(async () => {
     const actual = await obtenerConfiguracion(deps)
-    const actualizada: ConfiguracionRegistro = { ...actual, ...cambios, clave: 'negocio' }
+    const limpios =
+      cambios.nombreTienda === undefined
+        ? cambios
+        : { ...cambios, nombreTienda: cambios.nombreTienda.trim() }
+    const actualizada: ConfiguracionRegistro = { ...actual, ...limpios, clave: 'negocio' }
     await deps.repositorio.guardarNegocio(actualizada)
   })
 
@@ -82,7 +88,7 @@ export async function completarPrimeraVez(
     const actual = await obtenerConfiguracion(deps)
     const actualizada: ConfiguracionRegistro = {
       ...actual,
-      nombreTienda: datos.nombreTienda,
+      nombreTienda: datos.nombreTienda.trim(),
       tamanoDeLetra: datos.tamanoDeLetra,
       clave: 'negocio',
     }
@@ -96,4 +102,6 @@ export async function completarPrimeraVez(
     }
     await deps.repositorio.guardarSistema(estadoActualizado)
   })
+
+  await deps.bus.publicar({ tipo: 'ConfiguracionActualizada' })
 }

@@ -30,7 +30,7 @@ describe('ModuloTienda', () => {
     expect(await modulo.obtenerConfiguracion()).toEqual(CONFIGURACION_INICIAL)
   })
 
-  it('RN-TI-05: estadoDelSistema crea el registro la primera vez, con dispositivoId una sola vez', async () => {
+  it('estadoDelSistema crea el registro la primera vez, con dispositivoId una sola vez', async () => {
     const primero = await modulo.consultable.estadoDelSistema()
     expect(primero).toEqual({
       dispositivoId: 'dispositivo-1',
@@ -59,7 +59,7 @@ describe('ModuloTienda', () => {
     expect(configuracion.diasEntreCompras).toBe(CONFIGURACION_INICIAL.diasEntreCompras)
   })
 
-  it('RN-TI-01: actualizarConfiguracion rechaza un nombre vacío y no publica el evento', async () => {
+  it('actualizarConfiguracion rechaza un nombre vacío y no publica el evento', async () => {
     let publicado = false
     const { modulo: moduloConBus, deps } = crearModulo()
     deps.bus.suscribir('ConfiguracionActualizada', () => {
@@ -72,7 +72,7 @@ describe('ModuloTienda', () => {
     expect(publicado).toBe(false)
   })
 
-  it('RN-TI-02: actualizarConfiguracion rechaza días fuera de rango', async () => {
+  it('actualizarConfiguracion rechaza días fuera de rango', async () => {
     await expect(modulo.actualizarConfiguracion({ diasAnticipacion: 20 })).rejects.toThrow(
       'Elige un número entre 1 y 14',
     )
@@ -112,5 +112,68 @@ describe('ModuloTienda', () => {
   it('consultable.configuracion es equivalente a obtenerConfiguracion', async () => {
     await modulo.actualizarConfiguracion({ nombreTienda: 'Bodega Rosita' })
     expect(await modulo.consultable.configuracion()).toEqual(await modulo.obtenerConfiguracion())
+  })
+
+  it('dos primeras consultas concurrentes devuelven el mismo dispositivoId', async () => {
+    const [a, b] = await Promise.all([
+      modulo.consultable.estadoDelSistema(),
+      modulo.consultable.estadoDelSistema(),
+    ])
+    expect(a.dispositivoId).toBe(b.dispositivoId)
+    expect((await modulo.consultable.estadoDelSistema()).dispositivoId).toBe(a.dispositivoId)
+  })
+
+  it('estadoDelSistema concurrente con una actualización termina en CONCEDIDO', async () => {
+    await Promise.all([
+      modulo.consultable.estadoDelSistema(),
+      modulo.consultable.actualizarEstadoDelSistema({ almacenamientoPersistente: 'CONCEDIDO' }),
+    ])
+    const estado = await modulo.consultable.estadoDelSistema()
+    expect(estado.almacenamientoPersistente).toBe('CONCEDIDO')
+    expect(estado.dispositivoId).toBe('dispositivo-1')
+  })
+
+  it('guarda el nombre de la tienda sin espacios sobrantes', async () => {
+    await modulo.actualizarConfiguracion({ nombreTienda: '  Bodega Rosita  ' })
+    expect((await modulo.obtenerConfiguracion()).nombreTienda).toBe('Bodega Rosita')
+    await modulo.completarPrimeraVez({ nombreTienda: '  Casa Lola ', tamanoDeLetra: 'GRANDE' })
+    expect((await modulo.obtenerConfiguracion()).nombreTienda).toBe('Casa Lola')
+  })
+
+  it('completarPrimeraVez publica ConfiguracionActualizada después de guardar', async () => {
+    const { modulo: m, deps } = crearModulo()
+    let publicado = false
+    deps.bus.suscribir('ConfiguracionActualizada', () => {
+      publicado = true
+    })
+    await m.completarPrimeraVez({ nombreTienda: 'Casa Lola', tamanoDeLetra: 'GRANDE' })
+    expect(publicado).toBe(true)
+  })
+
+  it('si falla el guardado no se publica el evento', async () => {
+    const { deps } = crearModulo()
+    const repositorio = deps.repositorio
+    const fallido = crearModuloTienda({
+      ...deps,
+      repositorio: {
+        negocio: () => repositorio.negocio(),
+        sistema: () => repositorio.sistema(),
+        guardarSistema: (r) => repositorio.guardarSistema(r),
+        guardarNegocio: async () => {
+          throw new Error('disco lleno')
+        },
+      },
+    })
+    let publicado = false
+    deps.bus.suscribir('ConfiguracionActualizada', () => {
+      publicado = true
+    })
+    await expect(fallido.actualizarConfiguracion({ nombreTienda: 'X' })).rejects.toThrow(
+      'disco lleno',
+    )
+    await expect(
+      fallido.completarPrimeraVez({ nombreTienda: 'X', tamanoDeLetra: 'GRANDE' }),
+    ).rejects.toThrow('disco lleno')
+    expect(publicado).toBe(false)
   })
 })
