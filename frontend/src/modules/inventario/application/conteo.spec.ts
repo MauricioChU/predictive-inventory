@@ -160,7 +160,7 @@ describe('conteo guiado', () => {
     }
     expect(vistos).toEqual(['bolsa', 'agua', 'lejia'])
     expect(estado.resumen).toEqual([
-      'Contaste 0 productos. Todo cuadraba.',
+      'No contaste ningún producto.',
       'Te faltó contar 3: Bolsa chica, Agua de cal, Lejía 1 L',
     ])
   })
@@ -245,7 +245,7 @@ describe('conteo guiado', () => {
       producto: null,
       progreso: 'Llevas 0 de 0',
       terminado: true,
-      resumen: ['Contaste 0 productos. Todo cuadraba.'],
+      resumen: ['No contaste ningún producto.'],
     })
   })
 

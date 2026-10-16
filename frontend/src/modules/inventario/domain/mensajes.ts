@@ -129,16 +129,20 @@ export interface DatosDelResumenDelConteo {
   faltantes: readonly string[]
 }
 
-/** RN-OP-21: resumen al terminar el conteo guiado. */
-export function resumenDelConteo(datos: DatosDelResumenDelConteo): string[] {
-  const { contados, conDiferencia, valorDeDiferencias, faltantes } = datos
+function lineaDeContados(datos: DatosDelResumenDelConteo): string {
+  const { contados, conDiferencia, valorDeDiferencias } = datos
+  if (contados === 0) return 'No contaste ningún producto.'
   const resultado =
     conDiferencia === 0
       ? 'Todo cuadraba.'
       : `${formatearEntero(conDiferencia)} con diferencia: ${formatearDinero(valorDeDiferencias)}`
-  const lineas = [
-    `Contaste ${formatearEntero(contados)} ${plural(contados, 'producto', 'productos')}. ${resultado}`,
-  ]
+  return `Contaste ${formatearEntero(contados)} ${plural(contados, 'producto', 'productos')}. ${resultado}`
+}
+
+/** RN-OP-21: resumen al terminar el conteo guiado. */
+export function resumenDelConteo(datos: DatosDelResumenDelConteo): string[] {
+  const { faltantes } = datos
+  const lineas = [lineaDeContados(datos)]
   if (faltantes.length > 0) {
     lineas.push(`Te faltó contar ${formatearEntero(faltantes.length)}: ${faltantes.join(', ')}`)
   }

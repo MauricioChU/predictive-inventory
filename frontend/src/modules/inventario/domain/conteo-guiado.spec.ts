@@ -120,7 +120,7 @@ describe('ConteoGuiado', () => {
   it('RN-OP-21: sin productos para contar, el conteo ya está terminado', () => {
     const conteo = ConteoGuiado.iniciar([], AHORA)
     expect(conteo.terminado).toBe(true)
-    expect(conteo.resumen(nombreDe)).toEqual(['Contaste 0 productos. Todo cuadraba.'])
+    expect(conteo.resumen(nombreDe)).toEqual(['No contaste ningún producto.'])
   })
 
   it('un conteo terminado no se puede seguir', () => {

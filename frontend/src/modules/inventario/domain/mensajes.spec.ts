@@ -221,6 +221,25 @@ describe('mensajes del conteo guiado', () => {
     ).toEqual(['Contaste 1 producto. Todo cuadraba.'])
   })
 
+  it('RN-OP-21: si no contó ningún producto, lo dice (y nombra los que faltaron)', () => {
+    expect(
+      resumenDelConteo({
+        contados: 0,
+        conDiferencia: 0,
+        valorDeDiferencias: Dinero.cero(),
+        faltantes: [],
+      }),
+    ).toEqual(['No contaste ningún producto.'])
+    expect(
+      resumenDelConteo({
+        contados: 0,
+        conDiferencia: 0,
+        valorDeDiferencias: Dinero.cero(),
+        faltantes: ['Carbón', 'Lejía 1 L'],
+      }),
+    ).toEqual(['No contaste ningún producto.', 'Te faltó contar 2: Carbón, Lejía 1 L'])
+  })
+
   it('RN-OP-21: resumen con varios saltados', () => {
     expect(
       resumenDelConteo({
