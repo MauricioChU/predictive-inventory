@@ -1,6 +1,7 @@
 import type { SituacionDeProducto } from '@/shared/contratos/entre-modulos'
 import { agruparAvisos, empeoro } from '../domain/avisos'
 import type { DependenciasDeAlertas } from './modulo'
+import { notificacionesPermitidas } from './permiso'
 import type { Notificacion } from './puertos'
 
 /**
@@ -29,22 +30,22 @@ export async function evaluarAvisos(
     for (const situacion of situaciones) {
       const anterior = estadoAnteriorDe.get(situacion.productoId) ?? 'NORMAL'
       if (empeoro(anterior, situacion.estado)) empeoraron.push(situacion)
-      // Siempre se guarda el estado actual, incluso sin empeorar: así, si vuelve a NORMAL,
-      // el aviso queda rearmado para la próxima vez que empeore (RN-AL-04).
-      await d.avisos.guardar({
-        productoId: situacion.productoId,
-        ultimoEstadoAvisado: situacion.estado,
-      })
+      // Siempre se guarda el estado actual cuando CAMBIÓ, incluso sin empeorar: así, si vuelve
+      // a NORMAL, el aviso queda rearmado para la próxima vez que empeore (RN-AL-04). Si no
+      // cambió, no hay nada que escribir (evita escrituras redundantes en cada re-evaluación).
+      if (anterior !== situacion.estado) {
+        await d.avisos.guardar({
+          productoId: situacion.productoId,
+          ultimoEstadoAvisado: situacion.estado,
+        })
+      }
     }
 
     return agruparAvisos(empeoraron)
   })
 
   if (notificaciones.length === 0) return []
-
-  const configuracion = await d.tienda().configuracion()
-  const permitido = configuracion.notificacionesActivas && (await d.notificador.permitido())
-  if (!permitido) return []
+  if (!(await notificacionesPermitidas(d))) return []
 
   for (const notificacion of notificaciones) await d.notificador.mostrar(notificacion)
   return notificaciones

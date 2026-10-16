@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { Cantidad } from '@/shared/domain/cantidad'
 import { AlmacenEnMemoria } from '@/shared/infrastructure/memoria/almacen-en-memoria'
 import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'
@@ -11,7 +11,7 @@ function prepararContexto(ahora?: string) {
 }
 
 describe('crearModuloAlertas', () => {
-  it('evaluarAvisos delega en el caso de uso y notifica según corresponda', async () => {
+  it('RN-AL-06: evaluarAvisos delega en el caso de uso y notifica según corresponda', async () => {
     const { dependencias, analisisFalso, notificador } = prepararContexto()
     analisisFalso.situacionesActuales = [
       crearSituacion({
@@ -29,7 +29,7 @@ describe('crearModuloAlertas', () => {
     expect(notificador.mostradas).toEqual(notificaciones)
   })
 
-  it('resumenDeAtencion y resumenDelDia/cerrarResumenDelDia delegan correctamente', async () => {
+  it('RN-AL-09: resumenDeAtencion y resumenDelDia/cerrarResumenDelDia delegan correctamente', async () => {
     const { dependencias, analisisFalso } = prepararContexto()
     analisisFalso.situacionesActuales = [
       crearSituacion({
@@ -62,7 +62,7 @@ describe('crearModuloAlertas', () => {
     expect(notificador.solicitudes).toBe(1)
   })
 
-  it('notificacionesPermitidas: permiso del navegador Y configuración activa', async () => {
+  it('RN-AL-06: notificacionesPermitidas: permiso del navegador Y configuración activa', async () => {
     const { dependencias, notificador, tiendaFalsa } = prepararContexto()
     const modulo = crearModuloAlertas(dependencias)
 
@@ -103,8 +103,95 @@ describe('crearModuloAlertas', () => {
       tipoOperacion: 'VENTA',
       productoIds: ['p1'],
     })
+    await modulo.esperarEvaluacionesPendientes()
 
     expect(notificador.mostradas).toEqual([{ texto: 'Se acabó: Lejía 1 L', url: '/productos/p1' }])
+  })
+
+  it('RN-AL-02: evaluaciones superpuestas se serializan y el registro final no queda con datos viejos', async () => {
+    const { dependencias, analisisFalso, notificador, avisosAlmacen } = prepararContexto()
+    const modulo = crearModuloAlertas(dependencias)
+    analisisFalso.situacionesActuales = [
+      crearSituacion({
+        productoId: 'p1',
+        nombre: 'Lejía 1 L',
+        estado: 'POR_ACABARSE',
+        stock: Cantidad.deEntero(3),
+      }),
+    ]
+    let liberar: () => void = () => {}
+    analisisFalso.retrasarProximaLlamada(new Promise<void>((r) => (liberar = r)))
+
+    const primera = modulo.evaluarAvisos()
+    analisisFalso.situacionesActuales = [
+      crearSituacion({
+        productoId: 'p1',
+        nombre: 'Lejía 1 L',
+        estado: 'AGOTADO',
+        stock: Cantidad.cero(),
+      }),
+    ]
+    const segunda = modulo.evaluarAvisos()
+    liberar()
+    const [a, b] = await Promise.all([primera, segunda])
+
+    expect(a).toEqual([{ texto: 'Queda poco: Lejía 1 L (3 unid.)', url: '/productos/p1' }])
+    expect(b).toEqual([{ texto: 'Se acabó: Lejía 1 L', url: '/productos/p1' }])
+    expect(notificador.mostradas).toEqual([...a, ...b])
+    expect(avisosAlmacen.todos('avisos')).toEqual([
+      { productoId: 'p1', ultimoEstadoAvisado: 'AGOTADO' },
+    ])
+  })
+
+  it('RN-AL-02: publicar un evento no espera a la evaluación; esperarEvaluacionesPendientes sí', async () => {
+    const { dependencias, bus, analisisFalso, notificador } = prepararContexto()
+    const modulo = crearModuloAlertas(dependencias)
+    modulo.escucharEventos()
+    analisisFalso.situacionesActuales = [
+      crearSituacion({
+        productoId: 'p1',
+        nombre: 'Lejía 1 L',
+        estado: 'AGOTADO',
+        stock: Cantidad.cero(),
+      }),
+    ]
+    let liberar: () => void = () => {}
+    analisisFalso.retrasarProximaLlamada(new Promise<void>((r) => (liberar = r)))
+
+    await bus.publicar({
+      tipo: 'OperacionRegistrada',
+      operacionId: 'o1',
+      tipoOperacion: 'VENTA',
+      productoIds: ['p1'],
+    })
+    expect(notificador.mostradas).toEqual([])
+
+    liberar()
+    await modulo.esperarEvaluacionesPendientes()
+    expect(notificador.mostradas).toEqual([{ texto: 'Se acabó: Lejía 1 L', url: '/productos/p1' }])
+  })
+
+  it('RN-AL-02: una evaluación que falla se registra y no rompe la cola', async () => {
+    const { dependencias, analisisFalso, notificador } = prepararContexto()
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const modulo = crearModuloAlertas(dependencias)
+    vi.spyOn(analisisFalso, 'situaciones').mockRejectedValueOnce(new Error('falla'))
+
+    await expect(modulo.evaluarAvisos()).rejects.toThrow('falla')
+    await modulo.esperarEvaluacionesPendientes()
+    expect(error).toHaveBeenCalled()
+
+    analisisFalso.situacionesActuales = [
+      crearSituacion({
+        productoId: 'p1',
+        nombre: 'Lejía 1 L',
+        estado: 'AGOTADO',
+        stock: Cantidad.cero(),
+      }),
+    ]
+    await modulo.evaluarAvisos()
+    expect(notificador.mostradas).toHaveLength(1)
+    error.mockRestore()
   })
 
   it('RN-AL-02: escucharEventos también reacciona a los demás eventos relevantes', async () => {
@@ -134,11 +221,12 @@ describe('crearModuloAlertas', () => {
       avisosAlmacen.vaciar('avisos')
       notificador.mostradas = []
       await bus.publicar(evento)
+      await modulo.esperarEvaluacionesPendientes()
       expect(notificador.mostradas).toHaveLength(1)
     }
   })
 
-  it('escucharEventos() devuelve una función que cancela la suscripción', async () => {
+  it('RN-AL-02: escucharEventos() devuelve una función que cancela la suscripción', async () => {
     const { dependencias, bus, analisisFalso, notificador } = prepararContexto()
     analisisFalso.situacionesActuales = [
       crearSituacion({

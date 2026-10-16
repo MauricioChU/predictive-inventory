@@ -55,12 +55,30 @@ function totalesDeDiaVacios(dia: string): TotalesDeDia {
 export class AnalisisFalso implements Pick<AnalisisConsultable, 'situaciones' | 'totalesDelDia'> {
   situacionesActuales: SituacionDeProducto[] = []
   private readonly totalesPorDia = new Map<string, TotalesDeDia>()
+  private readonly respuestasRetrasadas: Array<() => Promise<SituacionDeProducto[]>> = []
 
   fijarTotalesDeDia(totales: TotalesDeDia): void {
     this.totalesPorDia.set(totales.dia, totales)
   }
 
+  /**
+   * Para probar RN-AL-02 bajo evaluaciones superpuestas: hace que la PRÓXIMA llamada a
+   * `situaciones()` espere `señal` antes de resolver, devolviendo el snapshot de
+   * `situacionesActuales` tal como estaba EN ESTE INSTANTE (no el que tenga más tarde,
+   * cuando `señal` se cumpla) — así se puede simular una lectura vieja que tarda en volver
+   * mientras el estado real ya cambió.
+   */
+  retrasarProximaLlamada(señal: Promise<unknown>): void {
+    const snapshot = this.situacionesActuales
+    this.respuestasRetrasadas.push(async () => {
+      await señal
+      return snapshot
+    })
+  }
+
   async situaciones(): Promise<SituacionDeProducto[]> {
+    const respuestaRetrasada = this.respuestasRetrasadas.shift()
+    if (respuestaRetrasada) return respuestaRetrasada()
     return this.situacionesActuales
   }
 

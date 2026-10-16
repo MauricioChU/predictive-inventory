@@ -3,6 +3,7 @@ import type { BusDeEventos, TipoDeEvento } from '@/shared/domain/eventos'
 import type { Reloj } from '@/shared/domain/reloj'
 import type { UnidadDeTrabajo } from '@/shared/application/unidad-de-trabajo'
 import { evaluarAvisos } from './evaluar-avisos'
+import { notificacionesPermitidas } from './permiso'
 import type { Notificacion, Notificador, RepositorioDeAvisos } from './puertos'
 import {
   cerrarResumenDelDia,
@@ -50,28 +51,44 @@ export interface ModuloAlertas {
   notificacionesPermitidas(): Promise<boolean>
   /** Suscribe evaluarAvisos a los eventos del bus (RN-AL-02). Devuelve la función para cancelar. */
   escucharEventos(): () => void
+  /** Espera a que termine la última evaluación encolada (incluida la que esté en curso). */
+  esperarEvaluacionesPendientes(): Promise<void>
 }
 
 export function crearModuloAlertas(d: DependenciasDeAlertas): ModuloAlertas {
+  // Cola serializada: cada evaluación empieza (y lee situaciones()) solo cuando terminó la
+  // anterior, así un snapshot viejo nunca se guarda después de uno nuevo. `cola` nunca rechaza.
+  let cola: Promise<void> = Promise.resolve()
+
+  function encolarEvaluacion(): Promise<Notificacion[]> {
+    const turno = cola.then(() => evaluarAvisos(d))
+    cola = turno.then(
+      (): void => undefined,
+      (error: unknown): void => {
+        console.error('Falló la evaluación de avisos:', error)
+      },
+    )
+    return turno
+  }
+
   return {
-    evaluarAvisos: () => evaluarAvisos(d),
+    evaluarAvisos: () => encolarEvaluacion(),
     resumenDeAtencion: () => resumenDeAtencion(d),
     resumenDelDia: () => resumenDelDia(d),
     cerrarResumenDelDia: () => cerrarResumenDelDia(d),
     solicitarPermiso: () => d.notificador.solicitarPermiso(),
-    notificacionesPermitidas: async () => {
-      const configuracion = await d.tienda().configuracion()
-      return configuracion.notificacionesActivas && (await d.notificador.permitido())
-    },
+    notificacionesPermitidas: () => notificacionesPermitidas(d),
     escucharEventos: () => {
       const cancelaciones = EVENTOS_QUE_RE_EVALUAN.map((tipo) =>
-        d.bus.suscribir(tipo, async (): Promise<void> => {
-          await evaluarAvisos(d)
+        // Solo encola y vuelve: quien publicó la operación no espera a los avisos.
+        d.bus.suscribir(tipo, (): void => {
+          void encolarEvaluacion()
         }),
       )
       return () => {
         for (const cancelar of cancelaciones) cancelar()
       }
     },
+    esperarEvaluacionesPendientes: () => cola,
   }
 }
