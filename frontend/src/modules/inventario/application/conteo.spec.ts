@@ -22,6 +22,7 @@ describe('conteo guiado', () => {
         tieneFoto: false,
       },
       progreso: 'Llevas 0 de 3',
+      avance: { hechos: 0, total: 3 },
       terminado: false,
       resumen: null,
     })
@@ -29,6 +30,7 @@ describe('conteo guiado', () => {
     const segundo = await modulo.responderConteo('10')
     expect(segundo.producto?.nombre).toBe('Detergente a granel')
     expect(segundo.progreso).toBe('Llevas 1 de 3')
+    expect(segundo.avance).toEqual({ hechos: 1, total: 3 })
 
     const tercero = await modulo.saltarEnConteo()
     expect(tercero.producto?.nombre).toBe('Lejía 1 L')
@@ -44,6 +46,7 @@ describe('conteo guiado', () => {
     expect(final).toEqual({
       producto: null,
       progreso: 'Llevas 3 de 3',
+      avance: { hechos: 3, total: 3 },
       terminado: true,
       resumen: [
         'Contaste 2 productos. 1 con diferencia: -S/ 4.80',
@@ -244,6 +247,7 @@ describe('conteo guiado', () => {
     expect(await modulo.iniciarConteoGuiado()).toEqual({
       producto: null,
       progreso: 'Llevas 0 de 0',
+      avance: { hechos: 0, total: 0 },
       terminado: true,
       resumen: ['No contaste ningún producto.'],
     })

@@ -61,7 +61,13 @@ export class ConteoGuiado {
 
   /** "Llevas 1 de 3": cuántos ya pasaron (contados, saltados u omitidos) de cuántos. */
   progreso(): string {
-    return progresoDelConteo(this.registro.posicion, this.registro.orden.length)
+    const { hechos, total } = this.avance()
+    return progresoDelConteo(hechos, total)
+  }
+
+  /** Lo mismo que `progreso()` en números, para la barra de progreso de la pantalla. */
+  avance(): { hechos: number; total: number } {
+    return { hechos: this.registro.posicion, total: this.registro.orden.length }
   }
 
   /** Registra lo contado del producto actual: diferencia (con signo) y su valor al costo. */

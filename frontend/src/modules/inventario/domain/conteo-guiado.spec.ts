@@ -36,6 +36,7 @@ describe('ConteoGuiado', () => {
     const conteo = iniciar()
     expect(conteo.productoActual).toBe('carbon')
     expect(conteo.progreso()).toBe('Llevas 0 de 3')
+    expect(conteo.avance()).toEqual({ hechos: 0, total: 3 })
     expect(conteo.terminado).toBe(false)
     expect(conteo.resumen(nombreDe)).toBeNull()
     expect(conteo.aRegistro()).toEqual({
@@ -57,6 +58,7 @@ describe('ConteoGuiado', () => {
     expect(conteo.terminado).toBe(true)
     expect(conteo.productoActual).toBeNull()
     expect(conteo.progreso()).toBe('Llevas 3 de 3')
+    expect(conteo.avance()).toEqual({ hechos: 3, total: 3 })
     expect(conteo.aRegistro()).toMatchObject({
       posicion: 3,
       contados: [

@@ -15,6 +15,8 @@ export interface EstadoDelConteo {
   } | null
   /** "Llevas 1 de 3". */
   progreso: string
+  /** El mismo avance en números (BarraDeProgreso de "Contar todo"). */
+  avance: { hechos: number; total: number }
   terminado: boolean
   /** Solo al terminar (RN-OP-21). */
   resumen: string[] | null
@@ -53,6 +55,7 @@ async function estadoDe(
         }
       : null,
     progreso: conteo.progreso(),
+    avance: conteo.avance(),
     terminado: conteo.terminado,
     resumen: conteo.resumen((productoId) => productos.get(productoId)?.nombre ?? productoId),
   }

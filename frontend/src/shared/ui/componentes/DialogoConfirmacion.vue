@@ -9,14 +9,21 @@ const props = withDefaults(
     textoConfirmar: string
     textoCancelar?: string
     peligro?: boolean
+    /**
+     * Qué opción recibe el foco al abrirse (la que elige Enter). Por defecto Cancelar: lo
+     * seguro cuando se confirma algo riesgoso. "confirmar" cuando la spec fija esa opción por
+     * defecto (RN-OP-14: "¿Actualizar el precio de compra…?", por defecto sí).
+     */
+    enfocar?: 'cancelar' | 'confirmar'
   }>(),
-  { textoCancelar: 'Cancelar', peligro: false },
+  { textoCancelar: 'Cancelar', peligro: false, enfocar: 'cancelar' },
 )
 const emit = defineEmits<{ confirmar: []; cancelar: [] }>()
 
 const idTitulo = useId()
 const dialogo = ref<HTMLDialogElement>()
 const botonCancelar = ref<HTMLButtonElement>()
+const botonConfirmar = ref<HTMLButtonElement>()
 
 watch(
   () => props.abierto,
@@ -24,7 +31,7 @@ watch(
     await nextTick()
     if (abierto) {
       if (!dialogo.value?.open) dialogo.value?.showModal()
-      botonCancelar.value?.focus()
+      ;(props.enfocar === 'confirmar' ? botonConfirmar : botonCancelar).value?.focus()
     } else {
       dialogo.value?.close()
     }
@@ -52,6 +59,7 @@ function alCancelarNativo(evento: Event) {
         {{ textoCancelar }}
       </button>
       <button
+        ref="botonConfirmar"
         type="button"
         class="confirmar"
         :class="{ 'confirmar--peligro': peligro }"

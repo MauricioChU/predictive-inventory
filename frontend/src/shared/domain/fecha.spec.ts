@@ -3,6 +3,7 @@ import {
   diaDe,
   diaDeLaSemana,
   diasEntre,
+  horaDe,
   inicioDelDia,
   instanteLocal,
   segundosEntre,
@@ -33,5 +34,10 @@ describe('fecha de negocio (America/Lima, UTC−5)', () => {
   it('suma y mide segundos', () => {
     const a = instanteLocal('2026-10-15 10:00')
     expect(segundosEntre(a, sumarSegundos(a, 11))).toBe(11)
+  })
+  it('hora del día en la tienda ("HH:mm", 24 h), aunque en UTC ya sea otro día', () => {
+    expect(horaDe(instanteLocal('2026-10-15 09:05'))).toBe('09:05')
+    expect(horaDe(instanteLocal('2026-10-15 22:40'))).toBe('22:40')
+    expect(horaDe('2026-10-16T03:40:00.000Z')).toBe('22:40')
   })
 })

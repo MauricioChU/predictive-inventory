@@ -11,6 +11,11 @@ export function diaDe(instante: Instante): Dia {
   return new Date(Date.parse(instante) + DESFASE_MS).toISOString().slice(0, 10)
 }
 
+/** Hora del día en la tienda, "HH:mm" (24 h): la del Historial ("Hoy, 10:32"). */
+export function horaDe(instante: Instante): string {
+  return new Date(Date.parse(instante) + DESFASE_MS).toISOString().slice(11, 16)
+}
+
 /** "AAAA-MM-DD HH:mm" en hora de la tienda → Instante. */
 export function instanteLocal(texto: string): Instante {
   const [dia, hora = '00:00'] = texto.trim().split(/\s+/)
