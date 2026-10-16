@@ -124,9 +124,10 @@ export interface Aplicacion {
  *   reconstruye las proyecciones (RN-RE-04).
  * - Alertas escucha los eventos del bus y junta en UNA re-evaluación los que llegan en ráfaga
  *   (RN-SIS-09); cada evaluación comparte su resumen de atención (`alCalcularLaAtencion`), que
- *   el estado global usa para el contador sin volver a leer. Tras revisar datos, reconstruir o restaurar una copia
- *   (sin evento de dominio) la composición vuelve a evaluar los avisos y avisa a quien escuche
- *   `alCambiarEnBloque` (p. ej. el estado global, que recarga la letra y el contador).
+ *   el estado global usa para el contador sin volver a leer.
+ * - Tras revisar datos, reconstruir o restaurar una copia (sin evento de dominio) la
+ *   composición vuelve a evaluar los avisos enseguida (el contador llega con esa evaluación) y
+ *   avisa a quien escuche `alCambiarEnBloque` (p. ej. el estado global, que recarga la letra).
  */
 export function crearAplicacion(
   infra: Infraestructura,

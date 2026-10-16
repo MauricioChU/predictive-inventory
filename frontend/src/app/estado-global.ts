@@ -8,7 +8,7 @@ import type { Aplicacion } from './composicion'
 
 /**
  * Corre `tarea` de a una: si la piden mientras corre, vuelve a correr UNA vez más al terminar
- * (varios eventos seguidos se juntan en una sola lectura), también si la que corría falló. La
+ * (varios pedidos seguidos se juntan en una sola lectura), también si la que corría falló. La
  * promesa resuelve cuando ya no queda nada pendiente y nunca rechaza (cada error se registra).
  */
 function deAUna(nombre: string, tarea: () => Promise<void>): () => Promise<void> {
