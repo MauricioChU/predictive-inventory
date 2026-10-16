@@ -231,6 +231,8 @@ function abrirProducto(id: string) {
   z-index: 5;
   padding-block: var(--espacio-3);
   background: var(--color-fondo);
+  /* Como BarraDeTotal: se nota que flota sobre la lista que pasa por debajo. */
+  box-shadow: var(--sombra-flotante);
 }
 
 /* Mismo corte que LayoutApp: desde 1024 px la navegación va al costado y lo único pegado abajo

@@ -189,6 +189,13 @@ describe('Formulario de producto: crear (/productos/nuevo)', () => {
     expect(vista!.router.currentRoute.value.params.id).toBe(creado!.id)
   })
 
+  it('sin stock inicial, el resumen no habla de "0 unid." (ni repite el punto)', async () => {
+    const w = await abrir()
+    await llenar(w, { '¿Cuántos tienes ahora?': '0' })
+    await guardar(w)
+    expect(leer(w.get('.pantalla-exito .detalle').text())).toBe('Lejía 1 L ya está en tu lista.')
+  })
+
   it('"Agregar otro producto" deja el formulario vacío para el siguiente', async () => {
     const w = await abrir()
     await llenar(w)

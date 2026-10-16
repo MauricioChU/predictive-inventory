@@ -254,16 +254,14 @@ async function crear(confirmado: boolean) {
   }
   const productoId = respuesta.valor.productoId
   const errorFoto = await guardarFotoDe(productoId)
-  const stock = formatearCantidad(
-    Cantidad.deTexto(valores.stockInicial.trim() || '0', valores.unidad),
-    valores.unidad,
-  )
-  exito.value = {
-    tipo: 'creado',
-    productoId,
-    detalle: `${valores.nombre.trim()} ya está en tu lista con ${stock}.`,
-    errorFoto,
-  }
+  const inicial = Cantidad.deTexto(valores.stockInicial.trim() || '0', valores.unidad)
+  const nombre = valores.nombre.trim()
+  // "unid." ya termina en punto: no se agrega otro.
+  const stock = formatearCantidad(inicial, valores.unidad)
+  const detalle = inicial.esPositiva()
+    ? `${nombre} ya está en tu lista con ${stock}${stock.endsWith('.') ? '' : '.'}`
+    : `${nombre} ya está en tu lista.`
+  exito.value = { tipo: 'creado', productoId, detalle, errorFoto }
 }
 
 async function editar(productoId: string, confirmado: boolean) {
@@ -356,17 +354,19 @@ function verProducto(productoId: string) {
 
 <template>
   <div class="formulario-de-producto">
-    <PantallaExito
-      v-if="exito"
-      :titulo="
-        exito.tipo === 'creado'
-          ? 'Producto guardado'
-          : exito.tipo === 'reactivado'
-            ? 'Producto reactivado'
-            : 'Cambios guardados'
-      "
-      :detalle="exito.detalle"
-    >
+    <template v-if="exito">
+      <PantallaExito
+        :titulo="
+          exito.tipo === 'creado'
+            ? 'Producto guardado'
+            : exito.tipo === 'reactivado'
+              ? 'Producto reactivado'
+              : 'Cambios guardados'
+        "
+        :detalle="exito.detalle"
+      />
+      <!-- Fuera del recuadro centrado de PantallaExito: con todo el ancho de la pantalla, el
+           texto de los botones entra por palabras enteras (320 px con letra Muy grande). -->
       <div class="despues">
         <template v-if="exito.tipo === 'creado' && exito.errorFoto">
           <MensajeDeError
@@ -391,7 +391,7 @@ function verProducto(productoId: string) {
           <Boton texto="Ver producto" @click="verProducto(exito.productoId)" />
         </template>
       </div>
-    </PantallaExito>
+    </template>
 
     <template v-else>
       <EncabezadoPagina :titulo="titulo" volver />
@@ -597,7 +597,5 @@ function verProducto(productoId: string) {
 .despues {
   display: grid;
   gap: var(--espacio-3);
-  inline-size: 100%;
-  text-align: start;
 }
 </style>

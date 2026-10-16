@@ -42,6 +42,19 @@ async function abrirCatalogo(page: Page, ancho: number, letra: Letra = 'MUY_GRAN
   await page.evaluate(() => document.fonts.ready)
 }
 
+/**
+ * Plan 11: /productos ya es la pantalla real, así que el catálogo empieza más abajo según lo
+ * que esa pantalla muestre. La BarraDeTotal va pegada (sticky) DENTRO del catálogo: se mide
+ * con el catálogo desplazado hasta arriba, no con la página en su tope.
+ */
+async function desplazarAlCatalogo(page: Page) {
+  await page.evaluate(() =>
+    document
+      .querySelector('.catalogo-kit-productos')
+      ?.scrollIntoView({ block: 'start', behavior: 'instant' }),
+  )
+}
+
 /** Como abrirCatalogo y, si `conAviso`, además muestra el aviso Deshacer global (10 s). */
 async function abrirCatalogoConAviso(page: Page, ancho: number, conAviso: boolean) {
   await abrirCatalogo(page, ancho)
@@ -366,7 +379,7 @@ test.describe('BarraDeTotal: pegada abajo de la columna, encima de lo que va fij
         page,
       }) => {
         await abrirCatalogoConAviso(page, ancho, conAviso)
-        await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+        await desplazarAlCatalogo(page)
         await expect
           .poll(async () => {
             const barra = await caja(page, '.barra-de-total')
@@ -393,7 +406,7 @@ test.describe('BarraDeTotal: pegada abajo de la columna, encima de lo que va fij
     page,
   }) => {
     await abrirCatalogo(page, 1280)
-    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+    await desplazarAlCatalogo(page)
     await expect
       .poll(async () => Math.abs((await caja(page, '.barra-de-total')).bottom - ALTO))
       .toBeLessThanOrEqual(1)
