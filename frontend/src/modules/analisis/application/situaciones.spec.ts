@@ -154,15 +154,15 @@ describe('situaciones de los productos (AnalisisConsultable)', () => {
     expect(deProducto).toHaveBeenCalledWith('lejia', '2026-08-16', '2026-10-15')
   })
 
-  it('ADR-0002: las existencias y las filas de la ventana se leen en una misma unidad de trabajo', async () => {
-    /** Marca cuándo corre el trabajo de una unidad de trabajo (no solo cuándo se pide). */
+  it('ADR-0002: las existencias y las filas de la ventana se leen en una misma lectura (uow.leer)', async () => {
+    /** Marca cuándo corre la consulta de una lectura (no solo cuándo se pide). */
     class UnidadQueMarca extends UnidadDeTrabajoEnMemoria {
       dentro = 0
-      override ejecutar<T>(trabajo: () => Promise<T>): Promise<T> {
-        return super.ejecutar(async () => {
+      override leer<T>(consulta: () => Promise<T>): Promise<T> {
+        return super.leer(async () => {
           this.dentro++
           try {
-            return await trabajo()
+            return await consulta()
           } finally {
             this.dentro--
           }

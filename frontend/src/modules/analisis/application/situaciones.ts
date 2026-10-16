@@ -39,9 +39,10 @@ export async function cargarDatos(d: DependenciasDeAnalisis): Promise<DatosDeAna
   const [configuracion, productos, [existencias, registros]] = await Promise.all([
     d.tienda().configuracion(),
     d.catalogo().productos(),
-    // El stock y las filas salen de la misma foto (una transacción): una venta confirmada a
-    // mitad de la lectura no puede aparecer en uno y no en el otro (ADR-0002).
-    d.uow.ejecutar(() =>
+    // El stock y las filas salen de la misma foto (una lectura): una venta confirmada a mitad
+    // de la lectura no puede aparecer en uno y no en el otro (ADR-0002). Dentro de una consulta
+    // que ya lee en una sola transacción (las del módulo), se une a ella.
+    d.uow.leer(() =>
       Promise.all([d.inventario().existencias(), d.resumenes.entre(inicioDeLaVentana(hoy), hoy)]),
     ),
   ])
