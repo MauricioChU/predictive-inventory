@@ -5,6 +5,7 @@ import {
   crearAplicacion,
   crearProducto,
   esperar,
+  esperarRuta,
   montarVista,
   type VistaMontada,
 } from '../../soporte/pantallas-de-productos'
@@ -90,8 +91,7 @@ describe('Productos (lista)', () => {
     expect(w.findAll('button').some((b) => b.text().trim() === 'Agregar producto')).toBe(false)
 
     await boton(w, 'Agregar el primero').trigger('click')
-    await esperar()
-    expect(vista.router.currentRoute.value.name).toBe('producto-nuevo')
+    await esperarRuta(vista.router, 'producto-nuevo')
   })
 
   it('cada fila: foto, nombre, stock con unidad, precio y estado con texto (los archivados no)', async () => {
@@ -128,8 +128,7 @@ describe('Productos (lista)', () => {
     await buscar(vista.wrapper, 'shampoo')
     expect(vista.wrapper.text()).toContain('No encontramos «shampoo»')
     await boton(vista.wrapper, 'Agregar producto').trigger('click')
-    await esperar()
-    expect(vista.router.currentRoute.value.name).toBe('producto-nuevo')
+    await esperarRuta(vista.router, 'producto-nuevo')
     expect(vista.router.currentRoute.value.query).toEqual({ nombre: 'shampoo' })
   })
 
@@ -188,14 +187,12 @@ describe('Productos (lista)', () => {
       .findAll('.tarjeta-de-producto')
       .find((t) => t.text().includes('Escoba'))!
       .trigger('click')
-    await esperar()
-    expect(vista.router.currentRoute.value.name).toBe('producto')
+    await esperarRuta(vista.router, 'producto')
 
     await vista.router.push('/productos')
     await esperar()
     await boton(vista.wrapper, 'Agregar producto').trigger('click')
-    await esperar()
-    expect(vista.router.currentRoute.value.name).toBe('producto-nuevo')
+    await esperarRuta(vista.router, 'producto-nuevo')
     expect(vista.router.currentRoute.value.query).toEqual({})
   })
 
@@ -218,7 +215,7 @@ describe('Productos (lista)', () => {
   it('"Categorías" abre la pantalla de categorías', async () => {
     vista = await montarVista(app, '/productos')
     await boton(vista.wrapper, 'Categorías').trigger('click')
-    await esperar()
-    expect(vista.router.currentRoute.value.name).toBe('categorias')
+    await esperarRuta(vista.router, 'categorias')
+    expect(vista.router.currentRoute.value.path).toBe('/productos/categorias')
   })
 })

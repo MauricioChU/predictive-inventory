@@ -1,4 +1,5 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
+import { expect, vi } from 'vitest'
 import { createPinia } from 'pinia'
 import { defineComponent, h } from 'vue'
 import { createMemoryHistory, createRouter, RouterView, type Router } from 'vue-router'
@@ -36,9 +37,11 @@ const Otra = defineComponent({
   setup: (props) => () => h('h1', props.titulo),
 })
 
-/** Las rutas de otras ramas que estas pantallas enlazan (contrato de rutas de la Ola 4). */
-const RUTAS_DE_OTRAS_RAMAS = [
-  { path: '/', name: 'inicio', component: Otra, props: { titulo: 'Inicio' } },
+/** Inicio (plan 14): existe en develop desde antes de la Ola 4 (Pendiente). */
+const INICIO = { path: '/', name: 'inicio', component: Otra, props: { titulo: 'Inicio' } }
+
+/** Las rutas del plan 12 que estas pantallas enlazan por nombre (contrato de rutas). */
+const RUTAS_DEL_PLAN_12 = [
   { path: '/productos/:id/merma', name: 'merma', component: Otra, props: { titulo: 'Merma' } },
   {
     path: '/productos/:id/contar',
@@ -58,8 +61,8 @@ export interface VistaMontada {
 /**
  * Monta la app de pantallas de Productos (las rutas reales de `rutas/productos.ts`) en `ruta`,
  * con la aplicación de prueba como `useAplicacion()`, el aviso Deshacer y el anunciador que
- * provee LayoutApp. `conOtrasRamas: false` deja afuera las rutas de otras ramas (como en
- * develop mientras no llegan).
+ * provee LayoutApp. `conOtrasRamas: false` deja afuera las rutas del plan 12 (como en develop
+ * mientras no llegan).
  */
 export async function montarVista(
   app: AplicacionDePrueba,
@@ -70,9 +73,11 @@ export async function montarVista(
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
+      INICIO,
       ...rutasDeProductos,
-      ...(opciones.conOtrasRamas === false ? [] : RUTAS_DE_OTRAS_RAMAS),
-      { path: '/:pathMatch(.*)*', redirect: '/productos' },
+      ...(opciones.conOtrasRamas === false ? [] : RUTAS_DEL_PLAN_12),
+      // Como en router/index.ts: lo que no existe (todavía) lleva a Inicio.
+      { path: '/:pathMatch(.*)*', redirect: '/' },
     ],
   })
   const anunciador = crearAnunciador()
@@ -100,6 +105,15 @@ export async function esperar(): Promise<void> {
     await flushPromises()
     await new Promise((listo) => setTimeout(listo, 0))
   }
+}
+
+/**
+ * Espera a que el router llegue a la ruta `nombre`: cada pantalla se carga diferida (import()),
+ * así que la navegación termina recién cuando su componente llegó.
+ */
+export async function esperarRuta(router: Router, nombre: string): Promise<void> {
+  await vi.waitFor(() => expect(router.currentRoute.value.name).toBe(nombre), { timeout: 3000 })
+  await esperar()
 }
 
 /** La aplicación de prueba con las categorías iniciales sembradas. */
