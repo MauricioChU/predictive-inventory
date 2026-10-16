@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { largoSinCorte, pegarCifras } from '../texto-sin-cortes'
 
-const NBSP = ' '
+const NBSP = '\u00A0'
 
 describe('pegarCifras: un monto o una cantidad nunca se parte entre dos líneas', () => {
   it('pega "S/" a su número y los grupos de miles entre sí', () => {

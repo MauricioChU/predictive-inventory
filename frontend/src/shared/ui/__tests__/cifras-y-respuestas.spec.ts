@@ -5,10 +5,10 @@ import FilaDeDato from '../componentes/FilaDeDato.vue'
 import RespuestaGrande from '../componentes/RespuestaGrande.vue'
 import TarjetaDeCifra from '../componentes/TarjetaDeCifra.vue'
 
-const NBSP = ' '
+const NBSP = '\u00A0'
 
 function proveer(anunciador: ReturnType<typeof crearAnunciador>) {
-  return { provide: { [CLAVE_ANUNCIADOR as unknown as string]: anunciador } }
+  return { provide: { [CLAVE_ANUNCIADOR]: anunciador } }
 }
 
 describe('TarjetaDeCifra', () => {
@@ -105,6 +105,22 @@ describe('RespuestaGrande ("¿Necesito comprar?")', () => {
     await w.setProps({ texto: 'No compres: no se vende hace 45 días', tono: 'peligro' })
     await vi.advanceTimersByTimeAsync(ESPERA_ANUNCIO_MS)
     expect(anunciador.texto.value).toBe('No compres: no se vende hace 45 días')
+  })
+
+  it('M5: si la frase cambia dos veces dentro de la ventana del anunciador, solo se anuncia la última', async () => {
+    const anunciador = crearAnunciador()
+    const w = mount(RespuestaGrande, {
+      props: { texto: 'Sí, compra ~12 unid.', tono: 'atencion' },
+      global: proveer(anunciador),
+    })
+    await vi.advanceTimersByTimeAsync(ESPERA_ANUNCIO_MS)
+    await w.setProps({ texto: 'No compres: no se vende hace 45 días', tono: 'peligro' })
+    await vi.advanceTimersByTimeAsync(ESPERA_ANUNCIO_MS / 3)
+    await w.setProps({ texto: 'No hace falta: te alcanza para ~20 días', tono: 'exito' })
+    await vi.advanceTimersByTimeAsync(ESPERA_ANUNCIO_MS / 3)
+    expect(anunciador.texto.value).toBe('')
+    await vi.advanceTimersByTimeAsync(ESPERA_ANUNCIO_MS)
+    expect(anunciador.texto.value).toBe('No hace falta: te alcanza para ~20 días')
   })
 
   it('al irse retira su anuncio, pero no uno más nuevo de otra pantalla', async () => {

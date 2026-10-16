@@ -34,6 +34,9 @@ const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.text
 
 <style scoped>
 .tarjeta-de-cifra {
+  /* Ocupa el ancho de su contenedor (con container-type, sin ancho propio colapsaría en un
+     flex o grid que se ajusta a su contenido). */
+  inline-size: 100%;
   /* La cifra ajusta su letra al ancho real de la tarjeta (cqi), no al del viewport. */
   container-type: inline-size;
   padding: var(--espacio-4);
@@ -58,6 +61,9 @@ const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.text
   trozo más largo (--caracteres letras, ~0.62em cada una en negrita) entre en el ancho de la
   tarjeta (100cqi). Sin consultas de contenedor, queda en 1.5rem y, como último recurso, el
   trozo se parte.
+  Límites a 320 px con letra Muy grande (tarjeta de ~218 px útiles): caben ~7 letras en 2rem y
+  ~14 en el piso de 1rem. El monto más grande de la app, "S/ 99 999.99" (12 letras), va a
+  ~29 px sin partirse; un trozo de más de ~14 letras se partiría.
 */
 .valor {
   display: block;

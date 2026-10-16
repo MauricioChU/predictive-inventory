@@ -50,6 +50,9 @@ const icono = computed(() => ICONOS[props.tono])
 
 <style scoped>
 .aviso-en-pagina {
+  /* Ocupa el ancho de su contenedor (con container-type, sin ancho propio colapsaría en un
+     flex o grid que se ajusta a su contenido). */
+  inline-size: 100%;
   /* Los botones se apilan según el ancho real del aviso, no del viewport. */
   container-type: inline-size;
   --tono: var(--color-primario);

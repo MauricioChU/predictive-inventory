@@ -28,6 +28,9 @@ withDefaults(
 
 <style scoped>
 .mensaje-de-error {
+  /* Ocupa el ancho de su contenedor (con container-type, sin ancho propio colapsaría en un
+     flex o grid que se ajusta a su contenido). */
+  inline-size: 100%;
   container-type: inline-size;
   padding: var(--espacio-3);
   border: 2px solid var(--color-peligro);

@@ -116,6 +116,21 @@ describe.each([
     expect(w.emitted('update:modelValue')?.at(-1)).toEqual(['agotados'])
   })
 
+  it.each(['altKey', 'ctrlKey', 'metaKey'] as const)(
+    'M7: con %s la flecha es un atajo del sistema o del navegador: ni elige ni se bloquea',
+    (modificador) => {
+      const w = abrir('todos')
+      const evento = new KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        cancelable: true,
+        [modificador]: true,
+      })
+      radios(w)[0]!.element.dispatchEvent(evento)
+      expect(evento.defaultPrevented).toBe(false)
+      expect(w.emitted('update:modelValue')).toBeUndefined()
+    },
+  )
+
   it('las flechas no desplazan la página (preventDefault) y las demás teclas no eligen nada', async () => {
     const w = abrir('todos')
     const flecha = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true })

@@ -14,7 +14,7 @@ const PASOS: Readonly<Record<string, 1 | -1>> = {
  * - un solo punto de tabulación ("roving tabindex"): la opción elegida, o la primera si
  *   ninguna lo está, así el Tab entra al grupo y sale de él de un solo paso;
  * - las flechas eligen la opción siguiente/anterior (dando la vuelta en los extremos) y le
- *   pasan el foco; no desplazan la página;
+ *   pasan el foco; no desplazan la página; con Alt, Ctrl o Meta no hacen nada (atajos);
  * - un toque (o Enter/Espacio, que en un <button> son un click) elige; tocar la ya elegida no
  *   emite nada.
  * Con TalkBack no hay flechas: se recorre deslizando y se elige con doble toque (un click).
@@ -35,6 +35,9 @@ export function usarGrupoDeRadio<V>(
       if (opcion && indice !== indiceElegido.value) elegir(opcion.valor)
     },
     alTeclear(evento: KeyboardEvent, indice: number) {
+      // Alt/Ctrl/Meta + flecha son atajos del sistema o del navegador (p. ej. Alt+← = atrás):
+      // no se tocan ni se bloquean.
+      if (evento.altKey || evento.ctrlKey || evento.metaKey) return
       const paso = PASOS[evento.key]
       const total = opciones().length
       if (paso === undefined || total === 0) return

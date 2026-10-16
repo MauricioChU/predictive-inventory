@@ -1,7 +1,7 @@
 import { SIMBOLO_DE_UNIDAD } from '@/shared/domain/formato'
 
 /** Espacio que no deja cortar la línea (U+00A0). */
-const NBSP = ' '
+const NBSP = '\u00A0'
 
 const escapar = (texto: string): string => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const UNIDADES = [...Object.values(SIMBOLO_DE_UNIDAD), 'días', 'día'].map(escapar).join('|')

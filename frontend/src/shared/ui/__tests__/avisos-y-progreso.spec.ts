@@ -4,6 +4,8 @@ import AvisoEnPagina from '../componentes/AvisoEnPagina.vue'
 import BarraDeProgreso from '../componentes/BarraDeProgreso.vue'
 import MensajeDeError from '../componentes/MensajeDeError.vue'
 
+const NBSP = '\u00A0'
+
 describe('AvisoEnPagina', () => {
   it('RN-UX-04: ícono (que no se lee) + título + texto, con el aspecto de su tono', () => {
     const w = mount(AvisoEnPagina, {
@@ -25,8 +27,8 @@ describe('AvisoEnPagina', () => {
         texto: 'Vendiste S/ 162.50 y ganaste S/ 48.20.',
       },
     })
-    expect(w.get('.titulo').text()).toBe('Hoy vendiste S/ 1 162.50')
-    expect(w.get('.texto').text()).toBe('Vendiste S/ 162.50 y ganaste S/ 48.20.')
+    expect(w.get('.titulo').text()).toBe(`Hoy vendiste S/${NBSP}1${NBSP}162.50`)
+    expect(w.get('.texto').text()).toBe(`Vendiste S/${NBSP}162.50 y ganaste S/${NBSP}48.20.`)
   })
 
   it('es contenido normal de la página: no es una región viva (no se anuncia solo al cargar)', () => {
@@ -81,7 +83,7 @@ describe('MensajeDeError', () => {
     })
     expect(w.attributes('role')).toBe('alert')
     // "Tal cual": las mismas palabras (los espacios de las cantidades no cortan la línea).
-    const sinNbsp = (texto: string) => texto.replaceAll(' ', ' ')
+    const sinNbsp = (texto: string) => texto.replaceAll(NBSP, ' ')
     expect(sinNbsp(w.get('.mensaje').text())).toBe('Solo quedan 2 unid. de Lejía 1 L.')
     expect(w.get('.ayuda').text()).toBe('Cambia la cantidad o registra la llegada de mercadería.')
     for (const icono of w.findAll('svg')) expect(icono.attributes('aria-hidden')).toBe('true')
@@ -91,8 +93,8 @@ describe('MensajeDeError', () => {
     const w = mount(MensajeDeError, {
       props: { mensaje: 'Solo quedan 2 unid. de Lejía 1 L.', ayuda: 'Vende hasta 2 unid.' },
     })
-    expect(w.get('.mensaje').text()).toBe('Solo quedan 2 unid. de Lejía 1 L.')
-    expect(w.get('.ayuda').text()).toBe('Vende hasta 2 unid.')
+    expect(w.get('.mensaje').text()).toBe(`Solo quedan 2${NBSP}unid. de Lejía 1${NBSP}L.`)
+    expect(w.get('.ayuda').text()).toBe(`Vende hasta 2${NBSP}unid.`)
   })
 
   it('sin ayuda, solo el mensaje', () => {
@@ -132,6 +134,18 @@ describe('BarraDeProgreso', () => {
     })
     expect(w.get('[role="progressbar"]').attributes('aria-label')).toBe('Conteo')
   })
+
+  it.each([0, -3])(
+    'M6: con total %d el máximo es 1 (nunca 0 ni negativo) y el valor se acota a él',
+    (total) => {
+      const w = mount(BarraDeProgreso, { props: { actual: 0, total, texto: 'Nada que contar' } })
+      const barra = w.get('[role="progressbar"]')
+      expect(barra.attributes('aria-valuemax')).toBe('1')
+      expect(barra.attributes('aria-valuenow')).toBe('0')
+      const conAvance = mount(BarraDeProgreso, { props: { actual: 4, total, texto: 'Listo' } })
+      expect(conAvance.get('[role="progressbar"]').attributes('aria-valuenow')).toBe('1')
+    },
+  )
 
   it('el relleno es la fracción hecha', () => {
     const w = mount(BarraDeProgreso, { props: { actual: 1, total: 4, texto: 'Llevas 1 de 4' } })

@@ -5,7 +5,11 @@ import { CLAVE_ANUNCIADOR } from '../anunciador'
 import { largoSinCorte, pegarCifras } from '../texto-sin-cortes'
 
 const props = defineProps<{
-  /** La frase de RN-AN-16: "Sí, compra ~12 unid.", "No hace falta: te alcanza para ~20 días". */
+  /**
+   * La frase de RN-AN-16: "Sí, compra ~12 unid.", "No hace falta: te alcanza para ~20 días".
+   * Se anuncia al aparecer y cada vez que cambia. Para volver a anunciar una frase idéntica
+   * (otro producto con la misma respuesta), cambia la :key del componente: se monta de nuevo.
+   */
   texto: string
   /** atencion = hay que comprar · exito = alcanza · peligro = no compres. El texto lo dice igual. */
   tono: 'atencion' | 'exito' | 'peligro'
@@ -19,9 +23,7 @@ const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.text
 
 // RN-UX-15: la frase se anuncia con el anunciador global de LayoutApp (opcional, como en
 // PantallaExito: montado suelto no falla) al aparecer y cada vez que cambia. Al cambiar o al
-// irse retira SOLO su anuncio anterior, nunca uno más nuevo de otra pantalla. Para volver a
-// anunciar una frase idéntica (otro producto con la misma respuesta), quien la usa cambia su
-// :key y el componente se monta de nuevo.
+// irse retira SOLO su anuncio anterior, nunca uno más nuevo de otra pantalla.
 const anunciador = inject(CLAVE_ANUNCIADOR, undefined)
 let idAnuncio: number | undefined
 
@@ -51,6 +53,9 @@ onUnmounted(retirar)
 
 <style scoped>
 .respuesta-grande {
+  /* Ocupa el ancho de su contenedor (con container-type, sin ancho propio colapsaría en un
+     flex o grid que se ajusta a su contenido). */
+  inline-size: 100%;
   container-type: inline-size;
   display: flex;
   flex-direction: column;
@@ -70,6 +75,9 @@ onUnmounted(retirar)
   Letra muy grande (hasta 2rem) en el color del texto (contraste máximo, RN-UX-03). Baja lo
   justo para que el trozo más largo que no se parte ("~12 unid.", "alcanza") entre en el ancho
   de la caja; nunca por debajo de 1.25rem. Sin consultas de contenedor, 1.75rem.
+  Límites a 320 px con letra Muy grande (caja de ~218 px útiles): caben ~7 letras seguidas en
+  2rem y ~11 en el piso de 1.25rem. Las frases de RN-AN-16 tienen trozos de 7 a 10 letras
+  ("alcanza", "~12 días", "~120 unid."); uno de más de ~11 letras se partiría.
 */
 .texto {
   width: 100%;

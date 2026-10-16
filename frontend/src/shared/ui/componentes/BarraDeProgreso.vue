@@ -13,9 +13,11 @@ const props = withDefaults(
   { etiqueta: 'Avance' },
 )
 
-const maximo = computed(() => Math.max(0, props.total))
+// aria-valuemax nunca 0 ni negativo (un progressbar con máximo ≤ mínimo no tiene sentido):
+// con total ≤ 0 el máximo es 1 y el valor se acota a [0, máximo].
+const maximo = computed(() => Math.max(1, props.total))
 const ahora = computed(() => Math.min(maximo.value, Math.max(0, props.actual)))
-const fraccion = computed(() => (maximo.value > 0 ? ahora.value / maximo.value : 0))
+const fraccion = computed(() => ahora.value / maximo.value)
 </script>
 
 <template>
