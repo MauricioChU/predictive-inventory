@@ -173,7 +173,7 @@ describe('venta diaria aproximada (detalle del producto)', () => {
     expect(textoVentaDiaria(null, 'UNIDAD')).toBeNull()
   })
 
-  it('RN-AN-14: con una VPD menor que 0.05, se dice que vende menos de 0.1', () => {
+  it('RN-AN-14: con una VPD mayor que 0 pero menor que 0.05, se dice que vende menos de 0.1', () => {
     // 1 en 28 días: 0.0357… se redondearía a "~0".
     expect(textoVentaDiaria({ vendido: cant('1'), diasValidos: 28 }, 'UNIDAD')).toBe(
       'Vendes menos de 0.1 unid. al día',
@@ -181,10 +181,15 @@ describe('venta diaria aproximada (detalle del producto)', () => {
     expect(textoVentaDiaria({ vendido: cant('1.3'), diasValidos: 28 }, 'KILO')).toBe(
       'Vendes menos de 0.1 kg al día',
     )
-    expect(textoVentaDiaria(prediccionCon('0'), 'LITRO')).toBe('Vendes menos de 0.1 L al día')
     // 0.05 exacto ya se redondea a 0.1.
     expect(textoVentaDiaria({ vendido: cant('1.4'), diasValidos: 28 }, 'KILO')).toBe(
       'Vendes ~0.1 kg al día',
     )
+  })
+
+  // Fix round 1, ruling 1: la cobertura ya dice "Sin ventas en las últimas 4 semanas".
+  it('RN-AN-14: con VPD 0 no se muestra la venta diaria', () => {
+    expect(textoVentaDiaria(prediccionCon('0'), 'LITRO')).toBeNull()
+    expect(textoVentaDiaria({ vendido: cant('0'), diasValidos: 28 }, 'UNIDAD')).toBeNull()
   })
 })

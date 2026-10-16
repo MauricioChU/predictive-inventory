@@ -6,7 +6,7 @@ import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad
 import { crearEntorno } from '../__pruebas__/entorno'
 import { historial } from '../domain/__pruebas__/historial'
 import { nuevaOperacion } from '../domain/__pruebas__/operaciones'
-import { cant, DETERGENTE, ESCOBA, JABON, LEJIA } from '../domain/__pruebas__/productos'
+import { CARBON, cant, DETERGENTE, ESCOBA, JABON, LEJIA } from '../domain/__pruebas__/productos'
 
 function entorno(productos: readonly ProductoResumido[]) {
   return crearEntorno({ productos, uow: (a) => new UnidadDeTrabajoEnMemoria(a) })
@@ -58,22 +58,31 @@ describe('RN-AN-16: ¿Necesito comprar?', () => {
   })
 
   // Ola 3 (ruling de la Ola 2): no contradecir la lista que el usuario acaba de editar.
-  it('RN-AN-16: usa la cantidad de la lista de hoy y, si se quitó, sigue con el caso 3', async () => {
-    const e = entorno([LEJIA])
+  it('RN-AN-16: usa la cantidad de la lista de hoy; quitar solo cambia la respuesta de uno NORMAL', async () => {
+    const e = entorno([LEJIA, CARBON])
     await e.cargar(
       historial('lejia')
         .primerMovimiento('2026-08-01', 61)
         .vendio(56, '2026-09-17', '2026-10-14')
         .construir(),
+      historial('carbon', { precioVenta: '4.00', precioCompra: '2.75' })
+        .primerMovimiento('2026-08-01', 28)
+        .vendio(21, '2026-09-17', '2026-10-14')
+        .construir(),
     )
-    const respuesta = async () => (await e.modulo.necesitoComprar('lejia')).respuesta
+    const respuesta = async (id: string) => (await e.modulo.necesitoComprar(id)).respuesta
     await e.modulo.cambiarCantidadEnLista('lejia', '24')
-    expect(await respuesta()).toBe('Sí, compra ~24 unid. (S/ 57.60)')
+    expect(await respuesta('lejia')).toBe('Sí, compra ~24 unid. (S/ 57.60)')
+    // Lejía se está acabando: quitarla de la lista no la vuelve "No hace falta".
     await e.modulo.quitarDeLista('lejia')
-    expect(await respuesta()).toBe('No hace falta: te alcanza para ~2 días')
+    expect(await respuesta('lejia')).toBe('Sí, compra ~12 unid. (S/ 28.80)')
+    // Carbón está bien (9 días) aunque entraba en la lista: quitado, sigue con el caso 3.
+    expect(await respuesta('carbon')).toBe('Sí, compra ~1.5 kg (S/ 4.13)')
+    await e.modulo.quitarDeLista('carbon')
+    expect(await respuesta('carbon')).toBe('No hace falta: te alcanza para ~9 días')
     // Al día siguiente los cambios ya no valen.
     e.reloj.fijar('2026-10-16T13:00:00.000Z')
-    expect(await respuesta()).toMatch(/^Sí, compra ~/)
+    expect(await respuesta('carbon')).toMatch(/^Sí, compra ~/)
   })
 
   it('RN-AN-16: debajo se muestra el stock actual y la última llegada de mercadería', async () => {

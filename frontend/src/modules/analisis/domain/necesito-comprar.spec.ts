@@ -24,6 +24,8 @@ function preguntar(
   return respuestaNecesitoComprar(situacion, p.precioCompra, cambioDelDia)
 }
 
+const quitado = (productoId: string) => ({ productoId, cantidad: null })
+
 describe('RN-AN-16: ¿Necesito comprar?', () => {
   it.each([
     ['Lejía 1 L', '5', '2', 'Sí, compra ~12 unid. (S/ 28.80)', LEJIA],
@@ -64,13 +66,25 @@ describe('RN-AN-16: ¿Necesito comprar?', () => {
     expect(preguntar(LEJIA, '5', '2', null, cambio)).toBe('Sí, compra ~20 unid. (S/ 48.00)')
   })
 
-  it('RN-AN-16: si el usuario lo quitó de la lista de hoy, sigue con el caso 3 (o el 4)', () => {
-    const quitado = (productoId: string) => ({ productoId, cantidad: null })
+  // Fix round 1, ruling 2: quitarlo de la lista no lo saca de "¿Necesito comprar?" si se acabó
+  // o se está acabando; solo uno NORMAL quitado sigue con el caso 3.
+  it('RN-AN-16: un producto NORMAL quitado de la lista de hoy sigue con el caso 3', () => {
+    // Carbón: stock 7 y VPD 0.75 → 9 días (NORMAL), pero entra en la lista (7 − 5.25 < 3).
+    expect(preguntar(CARBON, '7', '0.75')).toBe('Sí, compra ~1.5 kg (S/ 4.13)')
+    expect(preguntar(CARBON, '7', '0.75', null, quitado('carbon'))).toBe(
+      'No hace falta: te alcanza para ~9 días',
+    )
+  })
+
+  it('RN-AN-16: un producto POR_ACABARSE o AGOTADO quitado de la lista sigue diciendo que compres lo sugerido', () => {
     expect(preguntar(LEJIA, '5', '2', null, quitado('lejia'))).toBe(
-      'No hace falta: te alcanza para ~2 días',
+      'Sí, compra ~12 unid. (S/ 28.80)',
     )
     expect(preguntar(CARBON, '2.5', null, null, quitado('carbon'))).toBe(
-      'Tienes 2.5 kg. Todavía no sé cuánto vendes; vuelve a preguntar en unos días',
+      'Sí, compra ~3.5 kg (S/ 9.63)',
+    )
+    expect(preguntar(LEJIA, '0', '2', null, quitado('lejia'))).toBe(
+      'Sí, compra ~17 unid. (S/ 40.80)',
     )
   })
 

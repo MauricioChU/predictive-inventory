@@ -10,6 +10,11 @@ export function claveDeResumen(productoId: string, dia: Dia): string {
 /**
  * Una fila con todo en cero: solo quedó porque una operación se anuló el mismo día (sus aportes
  * se restaron). No es un movimiento del producto (RN-OP-17): `primerDiaDe` la ignora.
+ *
+ * Límite aceptado (fix round 1, ruling 3): solo detecta las anulaciones del MISMO día. Si la
+ * operación se anuló otro día, su fila conserva el cambio de stock (y la de la anulación, el
+ * inverso), así que no queda en cero y sigue fijando el primer día del producto. Es raro y no
+ * hace daño: ese día el producto sí tuvo stock.
  */
 export function esFilaSinMovimiento(r: ResumenDiarioRegistro): boolean {
   return (

@@ -70,9 +70,10 @@ describe('RepositorioDeResumenesEnMemoria', () => {
     expect(await repo.ultimoDiaConVentaDe('jabon')).toBeNull()
   })
 
-  // Ola 3 (revisión de la Ola 2): una operación anulada el mismo día deja su fila en cero;
-  // esa fila no es "el primer movimiento" del producto (RN-OP-17: no cuenta en ningún cálculo).
-  it('RN-AN-04: primerDiaDe ignora las filas que solo quedaron por operaciones anuladas', async () => {
+  // Ola 3 (revisión de la Ola 2) y fix round 1, ruling 3: una operación anulada el MISMO día
+  // deja su fila en cero, y esa fila no es "el primer movimiento" del producto (RN-OP-17). Una
+  // anulación en otro día deja filas con cambio de stock que siguen contando (caso raro, aceptado).
+  it('RN-AN-04: primerDiaDe ignora solo las filas en cero que deja una anulación del mismo día', async () => {
     const repo = await conFilas()
     await repo.guardar(sinMovimiento('lejia', '2026-07-01'))
     await repo.guardar(sinMovimiento('jabon', '2026-07-01'))

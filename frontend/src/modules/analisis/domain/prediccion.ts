@@ -87,11 +87,12 @@ export function ventaDiariaAproximada(prediccion: Prediccion): Cantidad {
 const VENTA_DIARIA_MINIMA_VISIBLE = Cantidad.deMilesimas(100)
 
 /**
- * "Vendes ~2 unid. al día" (detalle del producto, RN-AN-14); null sin predicción. Una VPD menor
- * que 0.05 se redondearía a "~0": se dice "Vendes menos de 0.1 unid. al día".
+ * "Vendes ~2 unid. al día" (detalle del producto, RN-AN-14). null sin predicción o con VPD 0 (la
+ * cobertura ya dice "Sin ventas en las últimas 4 semanas"). Una VPD mayor que 0 pero menor que
+ * 0.05 se redondearía a "~0": se dice "Vendes menos de 0.1 unid. al día".
  */
 export function textoVentaDiaria(prediccion: Prediccion | null, unidad: Unidad): string | null {
-  if (prediccion === null) return null
+  if (prediccion === null || prediccion.vendido.esCero()) return null
   const aproximada = ventaDiariaAproximada(prediccion)
   if (aproximada.esCero()) {
     return `Vendes menos de ${formatearCantidad(VENTA_DIARIA_MINIMA_VISIBLE, unidad)} al día`
