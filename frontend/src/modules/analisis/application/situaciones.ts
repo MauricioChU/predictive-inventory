@@ -32,18 +32,25 @@ export interface DatosDeAnalisis {
   existencias: Map<string, Cantidad>
   /** Filas de toda la tienda en la ventana de análisis, hasta hoy. */
   filas: ResumenDiario[]
+  /** RN-AN-04: el día del primer movimiento de cada producto (`primerosDias`). */
+  primerosDias: Map<string, Dia>
 }
 
 export async function cargarDatos(d: DependenciasDeAnalisis): Promise<DatosDeAnalisis> {
   const hoy = hoyDe(d)
-  const [configuracion, productos, [existencias, registros]] = await Promise.all([
+  const [configuracion, productos, [existencias, registros, primerosDias]] = await Promise.all([
     d.tienda().configuracion(),
     d.catalogo().productos(),
     // El stock y las filas salen de la misma foto (una lectura): una venta confirmada a mitad
     // de la lectura no puede aparecer en uno y no en el otro (ADR-0002). Dentro de una consulta
-    // que ya lee en una sola transacción (las del módulo), se une a ella.
+    // que ya lee en una sola transacción (las del módulo), se une a ella. Los primeros días, de
+    // una vez (RN-SIS-09): no uno por producto.
     d.uow.leer(() =>
-      Promise.all([d.inventario().existencias(), d.resumenes.entre(inicioDeLaVentana(hoy), hoy)]),
+      Promise.all([
+        d.inventario().existencias(),
+        d.resumenes.entre(inicioDeLaVentana(hoy), hoy),
+        d.resumenes.primerosDias(),
+      ]),
     ),
   ])
   return {
@@ -52,6 +59,7 @@ export async function cargarDatos(d: DependenciasDeAnalisis): Promise<DatosDeAna
     productos,
     existencias,
     filas: registros.map(ResumenDiario.desdeRegistro),
+    primerosDias,
   }
 }
 
@@ -70,11 +78,11 @@ async function evaluar(
     configuracion: ConfiguracionDeNegocio
     producto: ProductoResumido
     stock: Cantidad
+    primerDia: Dia | null
     filas: ResumenDiario[]
   },
 ): Promise<EvaluacionDeProducto> {
-  const { hoy, producto, stock, filas } = datos
-  const primerDia = await d.resumenes.primerDiaDe(producto.id)
+  const { hoy, producto, stock, primerDia, filas } = datos
   let ultimaVenta = ultimoDiaConVenta(filas, hoy)
   // La última venta puede ser anterior a la ventana: solo se busca si podría estar parado.
   if (ultimaVenta === null && podriaEstarParado({ hoy, stock, primerDia })) {
@@ -112,6 +120,7 @@ export async function evaluarProductos(
           configuracion: datos.configuracion,
           producto,
           stock: datos.existencias.get(producto.id) ?? Cantidad.cero(),
+          primerDia: datos.primerosDias.get(producto.id) ?? null,
           filas: filasPorProducto.get(producto.id) ?? [],
         }),
       ),
@@ -126,16 +135,18 @@ export async function evaluarProducto(
   const producto = await d.catalogo().producto(productoId)
   if (!producto?.activo) return null
   const hoy = hoyDe(d)
-  const [configuracion, stock, registros] = await Promise.all([
+  const [configuracion, stock, registros, primerDia] = await Promise.all([
     d.tienda().configuracion(),
     d.inventario().stockDe(productoId),
     d.resumenes.deProductoEntre(productoId, inicioDeLaVentana(hoy), hoy),
+    d.resumenes.primerDiaDe(productoId),
   ])
   return evaluar(d, {
     hoy,
     configuracion,
     producto,
     stock,
+    primerDia,
     filas: registros.map(ResumenDiario.desdeRegistro),
   })
 }

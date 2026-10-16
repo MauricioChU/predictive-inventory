@@ -3,7 +3,7 @@ import type { ProductoResumido } from '@/shared/contratos/entre-modulos'
 import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'
 import { crearEntorno } from '../__pruebas__/entorno'
 import { historial } from '../domain/__pruebas__/historial'
-import { nuevaOperacion } from '../domain/__pruebas__/operaciones'
+import { anulacionDe, nuevaOperacion } from '../domain/__pruebas__/operaciones'
 import { cant, ESCOBA, LEJIA, producto, TRAPEADOR } from '../domain/__pruebas__/productos'
 
 function entorno(productos: readonly ProductoResumido[]) {
@@ -143,6 +143,61 @@ describe('situaciones de los productos (AnalisisConsultable)', () => {
     expect(situaciones.every((s) => s.prediccion?.diasValidos === 28)).toBe(true)
     expect(entre).toHaveBeenCalledTimes(1)
     expect(entre).toHaveBeenCalledWith('2026-08-16', '2026-10-15')
+  })
+
+  it('RN-SIS-09: situaciones() lee el primer día de todos los productos de una vez, no uno por uno', async () => {
+    const productos = Array.from({ length: 20 }, (_, i) =>
+      producto(`p${i}`, `Producto ${i}`, 'UNIDAD', '1.00', '2.00', '1'),
+    )
+    const e = entorno(productos)
+    await e.cargar(
+      ...productos.map((p) => historial(p.id).primerMovimiento('2026-08-01', 100).construir()),
+    )
+    const primerosDias = vi.spyOn(e.resumenes, 'primerosDias')
+    const primerDiaDe = vi.spyOn(e.resumenes, 'primerDiaDe')
+    expect(await e.modulo.consultable.situaciones()).toHaveLength(20)
+    expect(await e.modulo.consultarTorre()).toBeDefined()
+    expect(primerosDias).toHaveBeenCalledTimes(2)
+    expect(primerDiaDe).not.toHaveBeenCalled()
+  })
+
+  // "Contra la implementación anterior": la misma consulta con un primerDiaDe por producto.
+  it('RN-AN-04, RN-AL-01: con primerosDias, situaciones y la torre dan lo mismo que con un primerDiaDe por producto', async () => {
+    const productos = [LEJIA, ESCOBA, TRAPEADOR, { ...LEJIA, id: 'archivada', activo: false }]
+    const e = entorno(productos)
+    const STOCK = (p: string, n: string) => [{ producto: p, cantidad: n, costo: '1.00' }]
+    const venta = (p: string, n: string) => [{ ...STOCK(p, n)[0]!, precio: '2.00' }]
+    await e.registrar(
+      nuevaOperacion('STOCK_INICIAL', '2026-08-01 08:00', STOCK('lejia', '40')),
+      nuevaOperacion('STOCK_INICIAL', '2026-08-01 08:00', STOCK('archivada', '5')),
+      nuevaOperacion('VENTA', '2026-09-20 10:00', venta('lejia', '3')),
+      nuevaOperacion('VENTA', '2026-10-14 10:00', venta('lejia', '2')),
+    )
+    // Escoba: su primera "venta" se anuló el mismo día (fila en cero); su primer movimiento real
+    // es después. Trapeador: sin movimientos.
+    const anulada = nuevaOperacion('STOCK_INICIAL', '2026-07-01 08:00', STOCK('escoba', '9'))
+    await e.registrar(anulada)
+    await e.anular(anulada, anulacionDe(anulada, '2026-07-01 09:00'))
+    await e.registrar(nuevaOperacion('INGRESO', '2026-09-01 08:00', STOCK('escoba', '6')))
+
+    const conLote = {
+      situaciones: await e.modulo.consultable.situaciones(),
+      torre: await e.modulo.consultarTorre(),
+    }
+    const anterior = e.resumenes
+    vi.spyOn(anterior, 'primerosDias').mockImplementation(async () => {
+      const dias = new Map<string, string>()
+      for (const p of productos) {
+        const dia = await anterior.primerDiaDe(p.id)
+        if (dia !== null) dias.set(p.id, dia)
+      }
+      return dias
+    })
+    expect({
+      situaciones: await e.modulo.consultable.situaciones(),
+      torre: await e.modulo.consultarTorre(),
+    }).toStrictEqual(conLote)
+    expect(conLote.situaciones.map((s) => s.productoId)).toEqual(['lejia', 'escoba', 'trapeador'])
   })
 
   it('RN-SIS-09: situacion(id) lee solo las filas de ese producto', async () => {

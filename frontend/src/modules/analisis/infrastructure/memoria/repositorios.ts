@@ -43,6 +43,15 @@ export class RepositorioDeResumenesEnMemoria implements RepositorioDeResumenes {
     return this.delProducto(productoId).find((r) => !esFilaSinMovimiento(r))?.dia ?? null
   }
 
+  /** Una sola pasada por las filas en orden de día: la primera con movimiento de cada producto. */
+  async primerosDias(): Promise<Map<string, Dia>> {
+    const dias = new Map<string, Dia>()
+    for (const r of this.almacen.todos('resumenes').sort(enOrdenDeDia)) {
+      if (!dias.has(r.productoId) && !esFilaSinMovimiento(r)) dias.set(r.productoId, r.dia)
+    }
+    return dias
+  }
+
   async primerDiaDeLaTienda(): Promise<Dia | null> {
     return this.almacen.todos('resumenes').sort(enOrdenDeDia)[0]?.dia ?? null
   }
