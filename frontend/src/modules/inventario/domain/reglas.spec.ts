@@ -103,8 +103,26 @@ describe('validarFecha', () => {
     expect(() => normalizarInstante(' 2026-10-15 ')).toThrow('Elige la fecha y la hora')
   })
 
-  it('RN-OP-09: una fecha que no se puede leer sigue siendo un error de programación', () => {
-    expect(() => normalizarInstante('ayer')).toThrow('Fecha inválida: ayer')
+  // Ola 3 (ruling de la Ola 2): una hora sin zona se leería en la zona del navegador, no en la
+  // de la tienda; lo vacío o ilegible tampoco dice cuándo ocurrió. Nunca un Error plano.
+  it.each([
+    ['con hora pero sin zona', '2026-10-14T18:30'],
+    ['con segundos pero sin zona', '2026-10-14T18:30:00.000'],
+    ['vacía', ''],
+    ['en blanco', '   '],
+    ['ilegible', 'ayer'],
+    ['con una hora imposible', '2026-10-14T25:00:00Z'],
+    ['con la zona mal escrita', '2026-10-14T18:30:00 -05'],
+  ])('RN-OP-09: una fecha %s se rechaza con "Elige la fecha y la hora"', (_caso, texto) => {
+    expect(() => normalizarInstante(texto)).toThrow(
+      expect.objectContaining({ codigo: 'FECHA_INVALIDA', message: 'Elige la fecha y la hora' }),
+    )
+  })
+
+  it('RN-OP-09: con zona explícita (Z u offset) se acepta, con o sin segundos', () => {
+    expect(normalizarInstante(' 2026-10-14T18:30-05:00 ')).toBe('2026-10-14T23:30:00.000Z')
+    expect(normalizarInstante('2026-10-14T23:30:00.5Z')).toBe('2026-10-14T23:30:00.500Z')
+    expect(normalizarInstante('2026-10-15T04:30:00+05:00')).toBe('2026-10-14T23:30:00.000Z')
   })
 
   it('RN-OP-09: una fecha que no se puede leer es un error de programación', () => {

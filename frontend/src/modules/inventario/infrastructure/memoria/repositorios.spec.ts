@@ -76,6 +76,27 @@ describe('RepositorioDeOperacionesEnMemoria', () => {
     expect(await repositorio.porProducto('detergente')).toEqual([])
     expect((await repositorio.todas()).map((r) => r.id)).toEqual(['op-1', 'op-2', 'op-3'])
   })
+
+  // Ola 3 (ruling de la Ola 2): el puerto promete orden de registro (registradaEn), no de
+  // inserción: tras restaurar una copia, o si el reloj del celular retrocedió, no coinciden.
+  it('RN-OP-02: porProducto y todas ordenan por registradaEn aunque se hayan guardado en otro orden', async () => {
+    const a = (hora: string) => `2026-10-15T${hora}:00.000Z`
+    almacen.guardar('operaciones', registro('op-3', { registradaEn: a('17:00') }))
+    almacen.guardar(
+      'operaciones',
+      registro('op-1', { registradaEn: a('15:00'), productoIds: ['lejia', 'carbon'] }),
+    )
+    almacen.guardar('operaciones', registro('op-2', { registradaEn: a('16:00') }))
+    almacen.guardar('operaciones', registro('op-2b', { registradaEn: a('16:00') }))
+    expect((await repositorio.porProducto('lejia')).map((r) => r.id)).toEqual([
+      'op-1',
+      'op-2',
+      'op-2b',
+      'op-3',
+    ])
+    expect((await repositorio.porProducto('carbon')).map((r) => r.id)).toEqual(['op-1'])
+    expect((await repositorio.todas()).map((r) => r.id)).toEqual(['op-1', 'op-2', 'op-2b', 'op-3'])
+  })
 })
 
 describe('RepositorioDeExistenciasEnMemoria', () => {

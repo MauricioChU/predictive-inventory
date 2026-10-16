@@ -44,18 +44,26 @@ export function leerContado(texto: string, unidad: Unidad): Cantidad {
 }
 
 const SOLO_FECHA = /^\d{4}-\d{2}-\d{2}$/
+/** Fecha y hora ISO 8601 con zona EXPLÍCITA: `Z` o `±hh:mm`. */
+const FECHA_HORA_CON_ZONA =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/
+
+const ELIGE_LA_FECHA_Y_LA_HORA = 'Elige la fecha y la hora'
 
 /**
  * RN-OP-09: la fecha-hora de una operación como instante ISO en UTC. Una fecha sin hora no
  * dice CUÁNDO ocurrió (y JavaScript la leería como medianoche UTC, otro día en Lima): se pide
- * la hora. Lo que no se puede leer es un error de programación (la pantalla manda instantes).
+ * la hora. Ola 3 (ruling de la Ola 2): la zona también es obligatoria (sin ella, JavaScript la
+ * leería en la zona del navegador, no en la de la tienda); lo vacío, ilegible o sin zona se
+ * rechaza con el mismo mensaje, nunca con un `Error` plano.
  */
 export function normalizarInstante(texto: Instante): Instante {
-  if (SOLO_FECHA.test(texto.trim())) {
-    throw new ErrorDeDominio('FECHA_SIN_HORA', 'Elige la fecha y la hora')
+  const limpio = texto.trim()
+  if (SOLO_FECHA.test(limpio)) {
+    throw new ErrorDeDominio('FECHA_SIN_HORA', ELIGE_LA_FECHA_Y_LA_HORA)
   }
-  const momento = Date.parse(texto)
-  if (Number.isNaN(momento)) throw new Error(`Fecha inválida: ${texto}`)
+  const momento = FECHA_HORA_CON_ZONA.test(limpio) ? Date.parse(limpio) : Number.NaN
+  if (Number.isNaN(momento)) throw new ErrorDeDominio('FECHA_INVALIDA', ELIGE_LA_FECHA_Y_LA_HORA)
   return new Date(momento).toISOString()
 }
 

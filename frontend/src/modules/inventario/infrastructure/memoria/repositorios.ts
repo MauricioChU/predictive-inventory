@@ -1,6 +1,7 @@
 import { Cantidad } from '@/shared/domain/cantidad'
 import type { ConteoGuiadoRegistro, OperacionRegistro } from '@/shared/contratos/registros'
 import type { AlmacenEnMemoria } from '@/shared/infrastructure/memoria/almacen-en-memoria'
+import { enOrdenDeRegistro } from '../../domain/orden'
 import type {
   RepositorioDeConteo,
   RepositorioDeExistencias,
@@ -27,12 +28,14 @@ export class RepositorioDeOperacionesEnMemoria implements RepositorioDeOperacion
     return todas.find((r) => r.tipo === 'ANULACION' && r.anulaA === operacionId) ?? null
   }
 
+  /** Por `registradaEn` (orden estable): tras restaurar una copia, el almacén no lo garantiza. */
   async porProducto(productoId: string): Promise<OperacionRegistro[]> {
-    return this.almacen.todos('operaciones').filter((r) => r.productoIds.includes(productoId))
+    return enOrdenDeRegistro(await this.todas()).filter((r) => r.productoIds.includes(productoId))
   }
 
+  /** Por `registradaEn` (orden estable). */
   async todas(): Promise<OperacionRegistro[]> {
-    return this.almacen.todos('operaciones')
+    return enOrdenDeRegistro(this.almacen.todos('operaciones'))
   }
 }
 
