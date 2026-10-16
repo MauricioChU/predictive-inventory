@@ -190,7 +190,7 @@ describe('listarCategorias', () => {
     const categorias = new RepositorioDeCategoriasEnMemoria(almacen)
     const uow = new UnidadDeTrabajoEnMemoria(almacen)
     const ids = new IdsSecuenciales('c')
-    for (const nombre of ['otros', 'Lejías', 'Bolsas', 'Ácidos', 'lavavajillas']) {
+    for (const nombre of ['Lejías', 'Bolsas', 'Ácidos', 'lavavajillas']) {
       await crearCategoria(categorias, ids, uow, nombre)
     }
     expect((await listarCategorias(categorias)).map((c) => c.nombre)).toEqual([
@@ -198,7 +198,23 @@ describe('listarCategorias', () => {
       'Bolsas',
       'lavavajillas',
       'Lejías',
-      'otros',
+    ])
+  })
+
+  it('RN-CAT-15: "Otros" va siempre al final, aunque otras se ordenen después por nombre', async () => {
+    const almacen = new AlmacenEnMemoria()
+    const categorias = new RepositorioDeCategoriasEnMemoria(almacen)
+    const uow = new UnidadDeTrabajoEnMemoria(almacen)
+    const ids = new IdsSecuenciales('c')
+    for (const nombre of ['Velas', 'ÓTROS', 'Papel y descartables', 'Bolsas', 'Otros productos']) {
+      await crearCategoria(categorias, ids, uow, nombre)
+    }
+    expect((await listarCategorias(categorias)).map((c) => c.nombre)).toEqual([
+      'Bolsas',
+      'Otros productos',
+      'Papel y descartables',
+      'Velas',
+      'ÓTROS',
     ])
   })
 })

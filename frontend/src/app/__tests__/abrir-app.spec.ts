@@ -11,7 +11,7 @@ import { abrirApp } from '../abrir-app'
 
 const HOY = instanteLocal('2026-10-15 08:00')
 
-/** 01-catalogo: las categorías iniciales (listarCategorias las da por nombre). */
+/** 01-catalogo: las categorías iniciales (listarCategorias: por nombre y "Otros" al final). */
 const CATEGORIAS_INICIALES_ESPERADAS = [
   'Ambientadores e insecticidas',
   'Bolsas',
@@ -21,8 +21,8 @@ const CATEGORIAS_INICIALES_ESPERADAS = [
   'Lavavajillas',
   'Lejías y desinfectantes',
   'Limpiadores y ceras',
-  'Otros',
   'Papel y descartables',
+  'Otros',
 ]
 
 describe.each(ALMACENES)('abrirApp (%s)', (almacen) => {
