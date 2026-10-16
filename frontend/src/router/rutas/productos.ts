@@ -1,11 +1,11 @@
 import type { RouteRecordRaw } from 'vue-router'
 import {
+  VistaCategorias,
   VistaDetalleProducto,
   VistaEditarProducto,
   VistaProductoNuevo,
   VistaProductos,
 } from '@/modules/catalogo'
-import { Pendiente } from './pendiente'
 
 /**
  * Ola 4, plan 11 (`feat/ui-productos`): lista, detalle, formulario y categorías (contrato de
@@ -28,7 +28,7 @@ export const rutasDeProductos: RouteRecordRaw[] = [
   {
     path: '/productos/categorias',
     name: 'categorias',
-    component: Pendiente,
+    component: VistaCategorias,
     meta: { titulo: 'Categorías' },
   },
   {
