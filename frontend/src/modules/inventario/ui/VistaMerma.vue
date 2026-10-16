@@ -181,7 +181,7 @@ function volverAlProducto(): void {
         <CampoTexto
           v-if="motivo === 'Otro'"
           v-model="nota"
-          etiqueta="Cuéntanos qué pasó"
+          etiqueta="Escribe qué pasó"
           :error="errorNota"
         />
         <CampoNumero

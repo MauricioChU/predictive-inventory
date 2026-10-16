@@ -9,6 +9,7 @@ import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
 import ListaAgrupadaPorDia from '@/shared/ui/componentes/ListaAgrupadaPorDia.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import SelectorSegmentado from '@/shared/ui/componentes/SelectorSegmentado.vue'
+import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
 import type { OperacionVista } from '../application/historial'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
 import {
@@ -113,13 +114,14 @@ function alAccionDelVacio(): void {
             <span class="tipo">{{ item.etiqueta }}</span>
             <span class="hora">{{ horaDe(item.ocurridaEn) }}</span>
           </span>
-          <span class="productos">{{ resumenDeProductos(item) }}</span>
+          <!-- "Lejía 1 L (12 unid.)": cantidades y montos nunca se parten (RN-UX-09). -->
+          <span class="productos">{{ pegarCifras(resumenDeProductos(item)) }}</span>
           <span v-if="item.anulada || montoDe(item)" class="pie">
             <span v-if="item.anulada" class="anulada">
               <Ban aria-hidden="true" class="icono" />
               <span>Anulada</span>
             </span>
-            <span v-if="montoDe(item)" class="monto">{{ montoDe(item) }}</span>
+            <span v-if="montoDe(item)" class="monto">{{ pegarCifras(montoDe(item) ?? '') }}</span>
           </span>
           <ChevronRight aria-hidden="true" class="flecha" />
         </RouterLink>

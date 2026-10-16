@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, useId } from 'vue'
 import { Banknote, Check, ShoppingCart } from 'lucide-vue-next'
 import type { ProductoVista } from '@/modules/catalogo'
 import { useAplicacion } from '@/app/proveer-aplicacion'
@@ -13,6 +13,7 @@ import FilaDeDato from '@/shared/ui/componentes/FilaDeDato.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import PantallaExito from '@/shared/ui/componentes/PantallaExito.vue'
 import SelectorDeBilletes from '@/shared/ui/componentes/SelectorDeBilletes.vue'
+import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
 import { BILLETES_DE_SOLES } from '@/shared/ui/tipos-de-productos'
 import { calcularVuelto } from '../domain/vuelto'
 import BuscadorDeProductos from './BuscadorDeProductos.vue'
@@ -35,6 +36,7 @@ const anunciador = useAnunciador()
 const carrito = usarCarrito('venta')
 const deshacer = usarDeshacer()
 
+const idResumen = useId()
 const paso = ref<Paso>('carrito')
 const pagado = ref('')
 const registrando = ref(false)
@@ -136,7 +138,10 @@ function pagoExacto(): void {
 const resumenDelCobro = computed(() =>
   carrito.lineas.value.map((l) => ({
     id: l.producto.id,
-    etiqueta: `${l.producto.nombre} × ${l.cantidadLeida ? formatearCantidad(l.cantidadLeida, l.producto.unidad) : l.cantidad}`,
+    // "× 1 kg" nunca se parte (la etiqueta de FilaDeDato no pasa por pegarCifras).
+    etiqueta: pegarCifras(
+      `${l.producto.nombre} × ${l.cantidadLeida ? formatearCantidad(l.cantidadLeida, l.producto.unidad) : l.cantidad}`,
+    ),
     valor: l.importe ? formatearDinero(l.importe) : '—',
   })),
 )
@@ -155,14 +160,6 @@ const resumenDelCobro = computed(() =>
 
     <div v-else-if="paso === 'cobro'" class="cobro">
       <EncabezadoPagina titulo="Cobrar" volver @volver="volverAlCarrito" />
-      <div class="resumen-del-cobro">
-        <FilaDeDato
-          v-for="fila in resumenDelCobro"
-          :key="fila.id"
-          :etiqueta="fila.etiqueta"
-          :texto-valor="fila.valor"
-        />
-      </div>
       <SelectorDeBilletes
         v-model="pagado"
         :texto-total="textoTotal"
@@ -172,11 +169,23 @@ const resumenDelCobro = computed(() =>
         @exacto="pagoExacto"
       />
       <MensajeDeError v-if="error" :mensaje="error.mensaje" :ayuda="error.ayuda" />
-      <BotonPrincipal
-        texto="Confirmar venta"
+      <section class="resumen-del-cobro" :aria-labelledby="idResumen">
+        <h2 :id="idResumen" class="subtitulo">Lo que se vende</h2>
+        <FilaDeDato
+          v-for="fila in resumenDelCobro"
+          :key="fila.id"
+          :etiqueta="fila.etiqueta"
+          :texto-valor="fila.valor"
+        />
+      </section>
+      <!-- Principio 1: "Confirmar venta" siempre a la vista, abajo, con el vuelto al lado. -->
+      <BarraDeTotal
+        :etiqueta="vuelto.vuelto ? 'Vuelto' : 'Total'"
+        :texto-total="vuelto.vuelto ? formatearDinero(vuelto.vuelto) : textoTotal"
+        texto-accion="Confirmar venta"
         :icono="Check"
         :deshabilitado="!vuelto.puedeConfirmar || registrando"
-        @click="confirmar"
+        @accion="confirmar"
       />
     </div>
 
@@ -242,8 +251,13 @@ const resumenDelCobro = computed(() =>
 .resumen-del-cobro {
   min-inline-size: 0;
 }
+.subtitulo {
+  margin: 0 0 var(--espacio-2);
+  font-size: 1.125rem;
+}
 .accion-exito {
-  margin-top: var(--espacio-4);
+  align-self: stretch;
+  margin: var(--espacio-4) auto 0;
   max-inline-size: 28rem;
 }
 </style>

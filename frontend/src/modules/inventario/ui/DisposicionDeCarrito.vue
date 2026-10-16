@@ -64,19 +64,30 @@ const idTitulo = useId()
     align-items: start;
     gap: var(--espacio-6);
   }
+  /* Columna flexible con alto máximo: si las líneas no entran, se achica SOLO la zona de las
+     líneas (min-block-size: 0) y esa zona se desplaza; el título y la barra del total quedan
+     siempre a la vista, y la barra nunca tapa una línea. */
   .columna-carrito {
     position: sticky;
     top: var(--espacio-4);
-    /* Toda la columna entra en la ventana (y deja libre el aviso Deshacer si aparece). */
-    max-block-size: calc(100dvh - 2 * var(--espacio-4) - var(--alto-aviso, 0px));
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    display: flex;
+    flex-direction: column;
+    /* Toda la columna entra en la ventana YA al abrir la pantalla, cuando todavía está debajo
+       del título (~6rem, que siguen la letra elegida), y deja libre el aviso Deshacer si
+       aparece: la barra del total nunca queda debajo del borde ni tapa una línea. */
+    max-block-size: calc(100dvh - 7rem - var(--alto-aviso, 0px));
   }
   .lineas-del-carrito {
+    flex: 0 1 auto;
+    min-block-size: 0;
     overflow-y: auto;
     /* Aire para el anillo de foco de los campos que tocan el borde de la zona desplazable. */
     padding: 4px;
     margin: -4px;
     align-content: start;
+  }
+  .columna-carrito > :last-child {
+    flex: none;
   }
 }
 </style>

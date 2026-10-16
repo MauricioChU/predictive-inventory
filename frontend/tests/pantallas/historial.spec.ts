@@ -85,8 +85,8 @@ describe('Historial (HU-OP-08)', () => {
     const primero = items(p)[0]!
     expect(primero.get('.tipo').text()).toBe('Venta')
     expect(primero.get('.hora').text()).toBe('10:00')
-    expect(primero.get('.productos').text()).toBe('Lejía 1 L (2 unid.)')
-    expect(primero.get('.monto').text()).toBe('S/ 7.00')
+    expect(leer(primero.get('.productos'))).toBe('Lejía 1 L (2 unid.)')
+    expect(leer(primero.get('.monto'))).toBe('S/ 7.00')
     expect(items(p)[1]!.get('.hora').text()).toBe('18:30')
   })
 

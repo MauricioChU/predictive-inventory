@@ -30,7 +30,9 @@ const lineaDe = (page: Page, nombre: string) =>
 
 async function agregarBuscando(page: Page, texto: string, nombre: string): Promise<void> {
   await page.getByLabel('Buscar producto').fill(texto)
-  await resultados(page).getByRole('button', { name: new RegExp(`^${nombre}`) }).click()
+  await resultados(page)
+    .getByRole('button', { name: new RegExp(`^${nombre}`) })
+    .click()
   await expect(lineaDe(page, nombre)).toBeVisible()
 }
 
@@ -58,7 +60,7 @@ test.describe('Vender (HU-OP-01, HU-OP-02)', () => {
 
     // RN-OP-18: Deshacer (10 s) anula la venta y deja el carrito para corregirlo.
     await page.getByRole('button', { name: /^Deshacer/ }).click()
-    await expect(page.getByText('Deshiciste la venta')).toBeVisible()
+    await expect(page.locator('.aviso-en-pagina')).toContainText('Deshiciste la venta')
     await expect.poll(() => stockDe(page, lejia)).toBe(9)
     await expect(lineaDe(page, 'Lejía 1 L')).toBeVisible()
   })
@@ -193,7 +195,9 @@ test.describe('Contar todo (HU-OP-10, RN-OP-21)', () => {
     await page.getByRole('button', { name: 'Saltar' }).click()
     await page.getByLabel('¿Cuántos hay? (unid.)').fill('8')
     await page.getByRole('button', { name: 'Siguiente' }).click()
-    await expect(page.getByRole('heading', { level: 1, name: 'Terminaste de contar' })).toBeVisible()
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Terminaste de contar' }),
+    ).toBeVisible()
     await expect(page.getByText('Contaste 2 productos. 1 con diferencia: -S/ 4.80')).toBeVisible()
     await expect(page.getByText('Te faltó contar 1: Detergente a granel')).toBeVisible()
   })
@@ -222,6 +226,31 @@ test.describe('Historial (HU-OP-08, RN-OP-17)', () => {
   })
 })
 
+interface FocoMedido {
+  arriba: number
+  abajo: number
+  /** Borde de arriba de la BarraDeTotal. */
+  barra: number
+  nombre: string
+}
+
+/** Aprieta Tab `veces` veces y mide cada control enfocado que está dentro del carrito. */
+async function recorrerElCarritoConTab(page: Page, veces: number): Promise<FocoMedido[]> {
+  const medidas: FocoMedido[] = []
+  for (let i = 0; i < veces; i += 1) {
+    await page.keyboard.press('Tab')
+    const medida = await page.evaluate(() => {
+      const activo = document.activeElement
+      if (!activo?.closest('.lista-del-carrito')) return null
+      const caja = activo.getBoundingClientRect()
+      const barra = document.querySelector('.barra-de-total')!.getBoundingClientRect()
+      return { arriba: caja.top, abajo: caja.bottom, barra: barra.top, nombre: activo.outerHTML }
+    })
+    if (medida) medidas.push(medida)
+  }
+  return medidas
+}
+
 test.describe('WCAG 2.4.11: el foco nunca queda tapado por la BarraDeTotal', () => {
   test('al recorrer el carrito con Tab, cada control enfocado queda entero por encima de la barra', async ({
     page,
@@ -238,24 +267,14 @@ test.describe('WCAG 2.4.11: el foco nunca queda tapado por la BarraDeTotal', () 
     await lineaDe(page, 'Lejía 1 L').getByLabel('Cantidad (unid.)').focus()
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
 
-    let enfocadosEnElCarrito = 0
-    for (let i = 0; i < 40; i += 1) {
-      await page.keyboard.press('Tab')
-      const medida = await page.evaluate(() => {
-        const activo = document.activeElement
-        if (!activo?.closest('.lista-del-carrito')) return null
-        const caja = activo.getBoundingClientRect()
-        const barra = document.querySelector('.barra-de-total')!.getBoundingClientRect()
-        return { arriba: caja.top, abajo: caja.bottom, barra: barra.top, nombre: activo.outerHTML }
-      })
-      if (!medida) continue
-      enfocadosEnElCarrito += 1
+    const enfocados = await recorrerElCarritoConTab(page, 40)
+    expect(enfocados.length, 'se recorrieron controles del carrito').toBeGreaterThan(10)
+    for (const medida of enfocados) {
       expect(medida.abajo, `tapado por la barra: ${medida.nombre}`).toBeLessThanOrEqual(
         medida.barra + 1,
       )
       expect(medida.arriba, `fuera de la vista: ${medida.nombre}`).toBeGreaterThanOrEqual(0)
     }
-    expect(enfocadosEnElCarrito, 'se recorrieron controles del carrito').toBeGreaterThan(10)
   })
 })
 
@@ -344,7 +363,10 @@ test.describe('Pantallas de operaciones: responsive, accesibles y tocables (letr
 
       await abrir(page, './historial')
       await revisar('Historial')
-      await page.getByRole('link', { name: /^Venta/ }).first().click()
+      await page
+        .getByRole('link', { name: /^Venta/ })
+        .first()
+        .click()
       await expect(page.getByRole('button', { name: 'Anular' })).toBeVisible()
       await revisar('Detalle de la operación')
     })

@@ -49,7 +49,9 @@ withDefaults(
   text-align: center;
 }
 .resumen-del-producto--grande .foto {
-  --foto-lado: min(100%, 14rem);
+  /* Grande para reconocerlo en el estante, pero sin empujar "¿Cuántos hay?" fuera de la
+     pantalla en un celular de 320 px con letra Muy grande. */
+  --foto-lado: min(55%, 11rem);
 }
 .datos {
   min-inline-size: 0;
