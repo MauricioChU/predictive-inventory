@@ -20,6 +20,7 @@ import type { Aplicacion } from './composicion'
 // `window.__pruebas.mostrarCatalogo(kit)`. Cada kit agrega SOLO su entrada en este objeto.
 const CATALOGOS_DE_KITS = {
   paneles: () => import('@/shared/ui/__catalogo__/CatalogoKitPaneles.vue'),
+  productos: () => import('@/shared/ui/__catalogo__/CatalogoKitProductos.vue'),
 } satisfies Record<string, () => Promise<{ default: Component }>>
 export type KitDeCatalogo = keyof typeof CATALOGOS_DE_KITS
 
