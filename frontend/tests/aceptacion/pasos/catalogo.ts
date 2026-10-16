@@ -288,7 +288,7 @@ export function pasosDeCatalogo(pasos: Pasos): void {
       const { ancho, alto } = await medidasDeFoto(foto)
       expect(Math.max(ancho, alto)).toBeLessThanOrEqual(LADO_MAYOR_MAXIMO)
       // Se reduce, no se recorta: conserva la proporción (4000 × 3000 → 512 × 384).
-      expect(Math.max(ancho, alto)).toBe(LADO_MAYOR_MAXIMO)
+      expect({ ancho, alto }).toEqual({ ancho: 512, alto: 384 })
     },
   )
 

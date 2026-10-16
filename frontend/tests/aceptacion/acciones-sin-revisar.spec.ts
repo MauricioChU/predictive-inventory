@@ -6,7 +6,8 @@ import { cerrarMundo, crearMundo, crearPasos } from './pasos'
 import type { Mundo } from './pasos/mundo'
 
 const pasos = crearPasos()
-const paso = (texto: string): PickleStep => ({ id: 'id', text: texto, astNodeIds: [] }) as PickleStep
+const paso = (texto: string): PickleStep =>
+  ({ id: 'id', text: texto, astNodeIds: [] }) as PickleStep
 
 async function correr(m: Mundo, ...textos: string[]): Promise<void> {
   for (const texto of textos) await ejecutarPaso(m, paso(texto), pasos)
@@ -50,9 +51,7 @@ describe('Una acción que termina en error no se traga en silencio', () => {
   it('si el escenario termina sin revisar el error, falla al cerrarse', async () => {
     await escenarioConVentaFallida()
 
-    await expect(cerrarMundo()).rejects.toThrow(
-      `El escenario terminó sin revisar "${SIN_STOCK}"`,
-    )
+    await expect(cerrarMundo()).rejects.toThrow(`El escenario terminó sin revisar "${SIN_STOCK}"`)
   })
 
   it('también una pregunta sin contestar (confirmar, sobrecompra, reactivar) debe revisarse', async () => {

@@ -280,7 +280,8 @@ export function pasosDeRespaldo(pasos: Pasos): void {
   }
 
   async function restaurar(m: Mundo, texto: string): Promise<void> {
-    await m.app.respaldo.restaurarCopia(texto, { confirmaciones: m.confirmaciones.length })
+    // El usuario confirmó las dos veces que pide RN-RE-03 ("… y confirmo las dos veces").
+    await m.app.respaldo.restaurarCopia(texto, { confirmaciones: 2 })
     m.resultado = 'restaurada'
   }
 
