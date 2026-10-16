@@ -75,7 +75,8 @@ describe('crearModuloCatalogo: delega en los casos de uso', () => {
   it('sembrarCategoriasIniciales + listarCategorias', async () => {
     const categorias = await modulo.listarCategorias()
     expect(categorias).toHaveLength(10)
-    expect(categorias[0]?.nombre).toBe('Lejías y desinfectantes')
+    // Por nombre (listarCategorias), no por orden de creación.
+    expect(categorias[0]?.nombre).toBe('Ambientadores e insecticidas')
   })
 
   it('crearCategoria, renombrarCategoria y eliminarCategoria', async () => {

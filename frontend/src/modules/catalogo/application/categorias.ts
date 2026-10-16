@@ -96,11 +96,18 @@ export async function sembrarCategoriasIniciales(
   })
 }
 
+/**
+ * Por nombre, como lo compara RN-CAT-01 (sin tildes ni mayúsculas): el orden no depende del
+ * repositorio (en Dexie, por id; en memoria, por creación).
+ */
 export async function listarCategorias(
   categorias: RepositorioDeCategorias,
 ): Promise<CategoriaVista[]> {
   const todas = await categorias.todas()
-  return todas.map((c) => ({ id: c.id, nombre: c.nombre }))
+  return todas
+    .map((c) => ({ id: c.id, nombre: c.nombre, clave: c.nombreNormalizado }))
+    .sort((a, b) => Number(a.clave > b.clave) - Number(a.clave < b.clave))
+    .map(({ id, nombre }) => ({ id, nombre }))
 }
 
 export async function categoriaPorNombre(
