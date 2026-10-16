@@ -87,6 +87,11 @@ function crearContexto() {
   }
 
   function seedProductosYOperaciones(): void {
+    almacenEnMemoria.guardar('categorias', {
+      id: 'cat-1',
+      nombre: 'Otros',
+      nombreNormalizado: 'otros',
+    })
     almacenEnMemoria.guardar('productos', producto({ id: 'lejia', nombre: 'Lejía 1 L' }))
     almacenEnMemoria.guardar(
       'productos',
@@ -119,7 +124,7 @@ function crearContexto() {
 
 describe('guardarCopia (RN-RE-02)', () => {
   it('genera "respaldo-bodega-rosita-2026-10-15-2030.json" y NO marca todavía el último respaldo', async () => {
-    const { deps, seedProductosYOperaciones, reconstructor, tienda, reloj } = crearContexto()
+    const { deps, seedProductosYOperaciones, reconstructor, tienda } = crearContexto()
     seedProductosYOperaciones()
     await reconstructor.reconstruirTodo()
 
@@ -130,7 +135,6 @@ describe('guardarCopia (RN-RE-02)', () => {
 
     const estado = await tienda.estadoDelSistema()
     expect(estado.ultimoRespaldoEn).toBeNull()
-    expect(reloj.ahora()).toBeTruthy()
   })
 
   it('el contenido tiene el control con 2 productos, 2 operaciones y el stock de Carbón', async () => {
@@ -221,7 +225,7 @@ describe('prepararRestauracion / restaurarCopia (RN-RE-03)', () => {
       control: { productos: 1, operaciones: 1, stockPorProducto: { carbon: 99000 } },
       datos: {
         configuracion: null,
-        categorias: [],
+        categorias: [{ id: 'cat-1', nombre: 'Otros', nombreNormalizado: 'otros' }],
         productos: [producto({ id: 'carbon', nombre: 'Carbón', unidad: 'KILO' })],
         operaciones: [
           stockInicial({
@@ -362,5 +366,37 @@ describe('copia consistente (RN-RE-02/03/04)', () => {
     await expect(prepararRestauracion(deps, JSON.stringify(respaldo))).rejects.toThrow(
       'Este archivo no es una copia válida de la app',
     )
+  })
+})
+
+describe('guardarCopia lee dentro de la unidad de trabajo', () => {
+  it('leerTodo se ejecuta dentro de uow.ejecutar (una sola foto coherente)', async () => {
+    const { deps, uow } = crearContexto()
+    let dentro = false
+    let leidoDentro = false
+    const conEspia: DependenciasDeRespaldo = {
+      ...deps,
+      uow: {
+        ejecutar: async (trabajo) => {
+          dentro = true
+          try {
+            return await uow.ejecutar(trabajo)
+          } finally {
+            dentro = false
+          }
+        },
+      },
+      almacen: {
+        leerTodo: async () => {
+          leidoDentro = dentro
+          return deps.almacen.leerTodo()
+        },
+        reemplazarTodo: (datos) => deps.almacen.reemplazarTodo(datos),
+      },
+    }
+
+    await guardarCopia(conEspia)
+
+    expect(leidoDentro).toBe(true)
   })
 })

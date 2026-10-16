@@ -1,3 +1,4 @@
+import { RANGOS_DE_CONFIGURACION } from '../../../shared/contratos/configuracion'
 import { UNIDADES } from '../../../shared/domain/cantidad'
 import { diaDe, type Dia, type Instante } from '../../../shared/domain/fecha'
 import { ErrorDeDominio } from '../../../shared/domain/errores'
@@ -95,8 +96,29 @@ function esTexto(v: unknown): v is string {
 function esEntero(v: unknown): v is number {
   return typeof v === 'number' && Number.isSafeInteger(v)
 }
+const PATRON_INSTANTE =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d{1,3})?(Z|[+-](\d{2}):(\d{2}))$/
+
+/** ISO-8601 estricto con zona, fecha real del calendario y año entre 2000 y 2100. */
 function esInstante(v: unknown): boolean {
-  return typeof v === 'string' && !Number.isNaN(Date.parse(v))
+  if (typeof v !== 'string') return false
+  const m = PATRON_INSTANTE.exec(v)
+  if (!m) return false
+  const [anio, mes, dia, hora, minuto, segundo] = m.slice(1, 7).map(Number) as [
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+  ]
+  if (anio < 2000 || anio > 2100) return false
+  if (hora > 23 || minuto > 59 || segundo > 59) return false
+  if (m[9] !== undefined && (Number(m[9]) > 23 || Number(m[10]) > 59)) return false
+  const fecha = new Date(Date.UTC(anio, mes - 1, dia))
+  return (
+    fecha.getUTCFullYear() === anio && fecha.getUTCMonth() === mes - 1 && fecha.getUTCDate() === dia
+  )
 }
 function esTextoONulo(v: unknown): boolean {
   return v === null || esTexto(v)
@@ -164,8 +186,18 @@ function avisoValido(a: unknown): boolean {
   return esPlano(a) && esTexto(a.productoId) && esUnoDe(ESTADOS_DE_STOCK, a.ultimoEstadoAvisado)
 }
 
+const PATRON_BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/
+const TIPOS_DE_FOTO = ['image/webp', 'image/jpeg', 'image/png']
+
 function fotoValida(f: unknown): boolean {
-  return esPlano(f) && esTexto(f.productoId) && esTexto(f.tipo) && esTexto(f.base64)
+  return (
+    esPlano(f) &&
+    esTexto(f.productoId) &&
+    esUnoDe(TIPOS_DE_FOTO, f.tipo) &&
+    esTexto(f.base64) &&
+    f.base64.length > 0 &&
+    PATRON_BASE64.test(f.base64)
+  )
 }
 
 function configuracionValida(c: unknown): boolean {
@@ -192,6 +224,67 @@ function controlValido(c: unknown): boolean {
   )
 }
 
+function sinRepetidos(ids: readonly string[]): boolean {
+  return new Set(ids).size === ids.length
+}
+
+function enRango(valor: number, rango: { min: number; max: number }): boolean {
+  return valor >= rango.min && valor <= rango.max
+}
+
+/** Reglas entre registros que un archivo bien formado todavía podría romper. */
+function invariantesDelLibro(d: DatosDelRespaldo): boolean {
+  const idsDeProductos = new Set(d.productos.map((p) => p.id))
+  const idsDeCategorias = new Set(d.categorias.map((c) => c.id))
+  const idsDeOperaciones = new Set(d.operaciones.map((o) => o.id))
+
+  if (
+    !sinRepetidos(d.productos.map((p) => p.id)) ||
+    !sinRepetidos(d.categorias.map((c) => c.id)) ||
+    !sinRepetidos(d.operaciones.map((o) => o.id)) ||
+    !sinRepetidos(d.avisos.map((a) => a.productoId)) ||
+    !sinRepetidos(d.fotos.map((f) => f.productoId))
+  ) {
+    return false
+  }
+
+  const productosOk = d.productos.every(
+    (p) =>
+      idsDeCategorias.has(p.categoriaId) &&
+      p.precioCompra >= 0 &&
+      p.precioVenta >= 1 &&
+      p.stockMinimo >= 0,
+  )
+  const operacionesOk = d.operaciones.every((o) => {
+    if (o.movimientos.length === 0) return false
+    const preciosOk = o.movimientos.every((m) =>
+      o.tipo === 'VENTA'
+        ? m.precioUnitario !== null && m.precioUnitario >= 1
+        : m.precioUnitario === null,
+    )
+    const anulaOk =
+      o.tipo === 'ANULACION'
+        ? o.anulaA !== null && idsDeOperaciones.has(o.anulaA)
+        : o.anulaA === null
+    return preciosOk && anulaOk && o.movimientos.every((m) => idsDeProductos.has(m.productoId))
+  })
+  const referenciasOk =
+    d.avisos.every((a) => idsDeProductos.has(a.productoId)) &&
+    d.fotos.every((f) => idsDeProductos.has(f.productoId))
+
+  const c = d.configuracion
+  const configuracionOk =
+    c === null ||
+    (enRango(c.nombreTienda.length, RANGOS_DE_CONFIGURACION.nombreTienda) &&
+      enRango(c.diasEntreCompras, RANGOS_DE_CONFIGURACION.diasEntreCompras) &&
+      enRango(c.diasAnticipacion, RANGOS_DE_CONFIGURACION.diasAnticipacion) &&
+      enRango(c.diasMaximosDeCompra, RANGOS_DE_CONFIGURACION.diasMaximosDeCompra))
+
+  const stockOk = Object.values(stockDesdeElLibro(d.productos, d.operaciones)).every((n) => n >= 0)
+
+  return productosOk && operacionesOk && referenciasOk && configuracionOk && stockOk
+}
+
 function datosValidos(d: unknown): boolean {
   return (
     esPlano(d) &&
@@ -200,7 +293,8 @@ function datosValidos(d: unknown): boolean {
     todos(d.productos, productoValido) &&
     todos(d.operaciones, operacionValida) &&
     todos(d.avisos, avisoValido) &&
-    todos(d.fotos, fotoValida)
+    todos(d.fotos, fotoValida) &&
+    invariantesDelLibro(d as unknown as DatosDelRespaldo)
   )
 }
 
@@ -228,12 +322,13 @@ export function leerRespaldo(texto: string): RespaldoV1 {
   }
 
   const version = bruto.versionDeFormato
-  if (typeof version !== 'number') throw new ErrorDeDominio('COPIA_INVALIDA', MENSAJE_INVALIDA)
+  if (!esEntero(version) || version < 1)
+    throw new ErrorDeDominio('COPIA_INVALIDA', MENSAJE_INVALIDA)
   if (version > VERSION_DE_FORMATO) {
     throw new ErrorDeDominio('COPIA_VERSION_FUTURA', MENSAJE_VERSION_FUTURA)
   }
 
-  const migrado = version < VERSION_DE_FORMATO ? migrar(bruto) : bruto
+  const migrado = migrar(bruto)
   if (
     !esInstante(migrado.creadoEn) ||
     !controlValido(migrado.control) ||

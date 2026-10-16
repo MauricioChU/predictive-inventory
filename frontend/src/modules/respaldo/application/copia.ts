@@ -76,7 +76,7 @@ export async function restaurarCopia(
         ([productoId, milesimas]) => (existencias.get(productoId)?.milesimas ?? 0) !== milesimas,
       ) ||
       [...existencias].some(
-        ([productoId, cantidad]) => !cantidad.esCero() && !(productoId in esperado),
+        ([productoId, cantidad]) => !cantidad.esCero() && !Object.hasOwn(esperado, productoId),
       )
     if (hayDiferencia) {
       throw new ErrorDeDominio(

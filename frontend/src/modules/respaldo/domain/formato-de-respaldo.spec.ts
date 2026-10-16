@@ -203,11 +203,6 @@ describe('leerRespaldo', () => {
     ).toThrow(INVALIDA)
   })
 
-  it('RN-RE-05: una versión anterior se migra (identidad) y se sigue validando', () => {
-    const r = leerRespaldo(JSON.stringify({ ...respaldoValido(), versionDeFormato: 0 }))
-    expect(r.control.productos).toBe(1)
-  })
-
   it('acepta configuracion null', () => {
     const r = JSON.parse(JSON.stringify(respaldoValido())) as Plano
     r.datos.configuracion = null

@@ -228,6 +228,7 @@ describe('AlmacenDeRespaldoEnMemoria', () => {
       ...DATOS_VACIOS,
       configuracion: {
         clave: 'sistema',
+        extra: 'campo ajeno',
         nombreTienda: 'Nueva',
         diasEntreCompras: 7,
         diasAnticipacion: 3,
@@ -240,5 +241,6 @@ describe('AlmacenDeRespaldoEnMemoria', () => {
       dispositivoId: 'dispositivo-1',
     })
     expect(memoria.obtener('configuracion', 'negocio')).toMatchObject({ nombreTienda: 'Nueva' })
+    expect(memoria.obtener('configuracion', 'negocio')).not.toHaveProperty('extra')
   })
 })
