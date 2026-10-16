@@ -1,51 +1,20 @@
 import { nextTick } from 'vue'
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { rutasDeControl } from './rutas/control'
+import { rutasDeInicioYAjustes } from './rutas/inicio-y-ajustes'
+import { rutasDeOperaciones } from './rutas/operaciones'
+import { rutasDeProductos } from './rutas/productos'
 
-const Pendiente = () => import('@/app/vistas/PendienteVista.vue')
-
+/**
+ * Cada rama de pantallas de la Ola 4 edita SOLO su archivo en `./rutas/`, para que los merges
+ * no choquen. El orden de esta lista es el de la navegación (RN-UX-12): Inicio · Vender ·
+ * Recibir · Productos · Control.
+ */
 export const rutas: RouteRecordRaw[] = [
-  {
-    path: '/',
-    name: 'inicio',
-    component: Pendiente,
-    meta: { titulo: 'Inicio', enNavegacion: true, icono: 'house' },
-  },
-  {
-    path: '/vender',
-    name: 'vender',
-    component: Pendiente,
-    meta: { titulo: 'Vender', enNavegacion: true, icono: 'shopping-cart' },
-  },
-  {
-    path: '/recibir',
-    name: 'recibir',
-    component: Pendiente,
-    meta: { titulo: 'Recibir', enNavegacion: true, icono: 'package-plus' },
-  },
-  {
-    path: '/productos',
-    name: 'productos',
-    component: Pendiente,
-    meta: { titulo: 'Productos', enNavegacion: true, icono: 'package' },
-  },
-  {
-    path: '/control',
-    name: 'control',
-    component: Pendiente,
-    meta: { titulo: 'Control', enNavegacion: true, icono: 'gauge' },
-  },
-  {
-    path: '/historial',
-    name: 'historial',
-    component: Pendiente,
-    meta: { titulo: 'Historial', icono: 'history' },
-  },
-  {
-    path: '/ajustes',
-    name: 'ajustes',
-    component: Pendiente,
-    meta: { titulo: 'Ajustes', icono: 'settings' },
-  },
+  ...rutasDeInicioYAjustes,
+  ...rutasDeOperaciones,
+  ...rutasDeProductos,
+  ...rutasDeControl,
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 
