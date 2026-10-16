@@ -50,7 +50,9 @@ const numero = computed(() => PASOS.indexOf(paso.value) + 1)
 
 const nombre = ref('')
 const errorDelNombre = ref<string>()
-const letra = ref<TamanoDeLetra>(estadoGlobal.tamanoDeLetra)
+/** La que eligió la persona; mientras no elija, la que la app tiene ahora. */
+const letraElegida = ref<TamanoDeLetra | null>(null)
+const letra = computed(() => letraElegida.value ?? estadoGlobal.tamanoDeLetra)
 const guardando = ref(false)
 const errorAlGuardar = ref<string>()
 
@@ -75,7 +77,7 @@ function seguirConElNombre(): void {
 
 /** RN-UX-01: la vista previa es la app entera (se aplica al elegir; se guarda al seguir). */
 function elegirLetra(tamano: TamanoDeLetra): void {
-  letra.value = tamano
+  letraElegida.value = tamano
   aplicarTamanoDeLetra(tamano)
 }
 

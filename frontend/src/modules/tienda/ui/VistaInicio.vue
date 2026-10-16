@@ -28,6 +28,8 @@ const atencion = ref<ResumenDeAtencion | null>(null)
 const hayProductos = ref(true)
 const fallo = ref(false)
 
+const saludo = computed(() => (nombreTienda.value ? `Hola, ${nombreTienda.value}` : 'Hola'))
+
 /** RN-AN-03: la ganancia neta de hoy (o la pérdida, dicha como tal) y las ventas. */
 const cifraDeHoy = computed(() => {
   if (!deHoy.value) return null
@@ -91,10 +93,7 @@ function ir(nombre: PantallaDeOtraRama): void {
 <template>
   <div class="vista-inicio">
     <header class="saludo">
-      <h1>
-        Hola<template v-if="nombreTienda">, {{ nombreTienda }}</template>
-        <span aria-hidden="true">👋</span>
-      </h1>
+      <h1>{{ saludo }} <span aria-hidden="true">👋</span></h1>
       <RouterLink :to="{ name: 'ajustes' }" class="enlace-ajustes">
         <Settings aria-hidden="true" class="icono" />
         <span>Ajustes</span>

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { instanteLocal } from '@/shared/domain/fecha'
 import { crearAplicacionDePrueba, type AplicacionDePrueba } from '../soporte/aplicacion-de-prueba'
 import { esperarPantalla, montarPantalla, type PantallaMontada } from '../soporte/montar-pantalla'
@@ -77,6 +77,20 @@ describe('Primera vez', () => {
     expect(configuracion.tamanoDeLetra).toBe('MUY_GRANDE')
     expect((await app.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(true)
     expect(pantalla.estadoGlobal.primeraVez).toBe(false)
+  })
+
+  it('RN-UX-01: el paso de la letra parte de la que la app tiene ahora', async () => {
+    pantalla = await montarPantalla(app, '/')
+    await app.tienda.actualizarConfiguracion({ tamanoDeLetra: 'MUY_GRANDE' })
+    await vi.waitFor(() => expect(pantalla!.estadoGlobal.tamanoDeLetra).toBe('MUY_GRANDE'))
+
+    await tocar('Empezar')
+    await escribirNombre('Bodega Rosita')
+    await tocar('Seguir')
+
+    expect(boton('Muy grande').attributes('aria-checked')).toBe('true')
+    await tocar('Seguir')
+    expect((await app.tienda.obtenerConfiguracion()).tamanoDeLetra).toBe('MUY_GRANDE')
   })
 
   it('el nombre tiene hasta 40 letras', async () => {
