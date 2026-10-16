@@ -1,5 +1,8 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
-import type { UnidadDeTrabajo } from '../../application/unidad-de-trabajo'
+import {
+  errorDeEscrituraEnLectura,
+  type UnidadDeTrabajo,
+} from '../../application/unidad-de-trabajo'
 import type { AlmacenEnMemoria } from './almacen-en-memoria'
 
 /**
@@ -50,6 +53,8 @@ import type { AlmacenEnMemoria } from './almacen-en-memoria'
  */
 interface TokenDeTransaccion {
   activa: boolean
+  /** RN-SIS-09: un `leer` de nivel superior; ahí no se escribe ni se registran acciones. */
+  readonly soloLectura: boolean
   /** Ola 3, ruling 1: lo que corre tras el commit; las llamadas anidadas también agregan aquí. */
   readonly alConfirmar: AccionAlConfirmar[]
 }
@@ -72,6 +77,11 @@ async function correrSinPropagar(accion: AccionAlConfirmar): Promise<void> {
  * la corre enseguida. Tras el commit, las acciones corren FUERA de la cola de transacciones
  * (`colaDeEjecucion` ya avanzó) y con el token inactivo, así que un `ejecutar()` dentro de una
  * acción espera su turno como transacción independiente: nunca se une ni se bloquea.
+ *
+ * `leer` (RN-SIS-09) también toma su turno en la cola (así nunca ve a medias una escritura en
+ * curso ni la ve aparecer mientras lee) pero sin foto ni rollback: no hay nada que revertir.
+ * Su token es de solo lectura: ahí `ejecutar` rechaza y `alConfirmar` lanza. Dentro de un
+ * `ejecutar` o de otro `leer` activos, se une a ellos (con su token).
  */
 export class UnidadDeTrabajoEnMemoria implements UnidadDeTrabajo {
   private readonly contexto = new AsyncLocalStorage<TokenDeTransaccion>()
@@ -82,22 +92,27 @@ export class UnidadDeTrabajoEnMemoria implements UnidadDeTrabajo {
   constructor(private readonly almacen: AlmacenEnMemoria) {}
 
   async ejecutar<T>(trabajo: () => Promise<T>): Promise<T> {
-    if (this.contexto.getStore()?.activa) return trabajo()
+    const token = this.contexto.getStore()
+    if (token?.activa) {
+      if (token.soloLectura) throw errorDeEscrituraEnLectura()
+      return trabajo()
+    }
 
-    // No es anidada: reserva su turno en la cola antes de tocar el almacén. `.catch` evita
-    // que el fallo de un turno anterior impida que este turno se ejecute.
-    const miTurno = this.colaDeEjecucion
-      .catch(() => undefined)
-      .then(() => this.comoTransaccion(trabajo))
-    this.colaDeEjecucion = miTurno
-    const { resultado, acciones } = await miTurno
+    // No es anidada: reserva su turno en la cola antes de tocar el almacén.
+    const { resultado, acciones } = await this.enSuTurno(() => this.comoTransaccion(trabajo))
     for (const accion of acciones) await correrSinPropagar(accion)
     return resultado
+  }
+
+  async leer<T>(consulta: () => Promise<T>): Promise<T> {
+    if (this.contexto.getStore()?.activa) return consulta()
+    return this.enSuTurno(() => this.comoLectura(consulta))
   }
 
   alConfirmar(accion: AccionAlConfirmar): void {
     const token = this.contexto.getStore()
     if (token?.activa) {
+      if (token.soloLectura) throw errorDeEscrituraEnLectura()
       token.alConfirmar.push(accion)
       return
     }
@@ -114,11 +129,27 @@ export class UnidadDeTrabajoEnMemoria implements UnidadDeTrabajo {
     while (this.accionesSueltas.size > 0) await Promise.all(this.accionesSueltas)
   }
 
+  /** Encola `turno` detrás del anterior; `.catch`: el fallo de uno no impide los siguientes. */
+  private enSuTurno<T>(turno: () => Promise<T>): Promise<T> {
+    const miTurno = this.colaDeEjecucion.catch(() => undefined).then(turno)
+    this.colaDeEjecucion = miTurno
+    return miTurno
+  }
+
+  private async comoLectura<T>(consulta: () => Promise<T>): Promise<T> {
+    const token: TokenDeTransaccion = { activa: true, soloLectura: true, alConfirmar: [] }
+    try {
+      return await this.contexto.run(token, consulta)
+    } finally {
+      token.activa = false
+    }
+  }
+
   private async comoTransaccion<T>(
     trabajo: () => Promise<T>,
   ): Promise<{ resultado: T; acciones: AccionAlConfirmar[] }> {
     const antes = this.almacen.instantanea()
-    const token: TokenDeTransaccion = { activa: true, alConfirmar: [] }
+    const token: TokenDeTransaccion = { activa: true, soloLectura: false, alConfirmar: [] }
     try {
       const resultado = await this.contexto.run(token, trabajo)
       return { resultado, acciones: token.alConfirmar }

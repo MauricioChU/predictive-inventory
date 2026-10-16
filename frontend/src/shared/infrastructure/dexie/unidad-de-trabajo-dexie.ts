@@ -1,5 +1,8 @@
 import Dexie, { type Table, type Transaction } from 'dexie'
-import type { UnidadDeTrabajo } from '../../application/unidad-de-trabajo'
+import {
+  errorDeEscrituraEnLectura,
+  type UnidadDeTrabajo,
+} from '../../application/unidad-de-trabajo'
 import type { BaseDeDatos } from './base-de-datos'
 
 type Accion = () => void | Promise<void>
@@ -27,20 +30,28 @@ async function correrEnOrden(acciones: readonly Accion[]): Promise<void> {
   }
 }
 
+/** Una transacción de solo lectura (`uow.leer` o un `db.transaction('r', …)` directo). */
+function esDeLectura(transaccion: Transaction): boolean {
+  return transaccion.mode === 'readonly'
+}
+
 /**
  * Corre `trabajo` en la transacción de `db` en curso o, si no hay, en una nueva de lectura y
  * escritura sobre `tablas`; en ese caso, al confirmarla corre (y espera) sus acciones
  * `alConfirmar`. Se UNE a la transacción en curso en vez de abrir una subtransacción de
  * Dexie: en Dexie, el fallo de una subtransacción aborta la transacción padre aunque quien
  * llama atrape el error; así, un error atrapado no revierte nada por sí solo, igual que en la
- * unidad de trabajo en memoria.
+ * unidad de trabajo en memoria. Dentro de una transacción de solo lectura rechaza sin correr
+ * nada (`UnidadDeTrabajo.leer`: ahí no se escribe).
  */
 export async function enTransaccion<T>(
   db: Dexie,
   tablas: Table[],
   trabajo: () => Promise<T>,
 ): Promise<T> {
-  if (transaccionEnCurso(db)) return trabajo()
+  const enCurso = transaccionEnCurso(db)
+  if (enCurso && esDeLectura(enCurso)) throw errorDeEscrituraEnLectura()
+  if (enCurso) return trabajo()
 
   const acciones: Accion[] = []
   // '!': siempre una transacción nueva, aunque el código corra en la zona de una que ya
@@ -78,6 +89,18 @@ export async function enTransaccion<T>(
  * Si hay rollback, la lista se pierde con la transacción. Fuera de una transacción, o desde
  * una continuación tardía cuya transacción ya cerró, la acción corre enseguida. Una acción que
  * lanza o rechaza se registra con `console.error` y no afecta a las demás ni a `ejecutar`.
+ *
+ * `leer` (RN-SIS-09) abre una transacción 'r' sobre todas las tablas: IndexedDB la deja correr
+ * a la par de otras lecturas, la hace esperar a las escrituras que empezaron antes y hace
+ * esperar a las que empiezan después (así cada una ve una foto coherente). Dentro de una
+ * transacción en curso (de escritura o de lectura) se une a ella, sin subtransacción. En una
+ * de solo lectura, `ejecutar` (`enTransaccion`) rechaza y `alConfirmar` lanza.
+ *
+ * Ojo con las zonas de Dexie: una promesa que se resuelve DENTRO de una transacción activa y se
+ * espera desde afuera puede continuar en la zona de esa transacción ("eco" de zona); ahí un
+ * `ejecutar` independiente se uniría a ella (o rechazaría, si es una lectura). Por eso los
+ * resultados de una lectura se entregan cuando terminó (`await uow.leer(…)`), nunca desde
+ * adentro de la consulta.
  */
 export class UnidadDeTrabajoDexie implements UnidadDeTrabajo {
   /** Acciones que nadie espera: las de fuera de una transacción y las de una ajena. */
@@ -89,12 +112,19 @@ export class UnidadDeTrabajoDexie implements UnidadDeTrabajo {
     return enTransaccion(this.db, this.db.tables, trabajo)
   }
 
+  async leer<T>(consulta: () => Promise<T>): Promise<T> {
+    if (transaccionEnCurso(this.db)) return consulta()
+    // '!': siempre una nueva, aunque el código corra en la zona de una que ya terminó.
+    return this.db.transaction('r!', this.db.tables, consulta)
+  }
+
   alConfirmar(accion: Accion): void {
     const transaccion = transaccionEnCurso(this.db)
     if (!transaccion) {
       this.seguir(correrEnOrden([accion]))
       return
     }
+    if (esDeLectura(transaccion)) throw errorDeEscrituraEnLectura()
     let pendientes = accionesPorTransaccion.get(transaccion.idbtrans)
     if (!pendientes) {
       // Una transacción que no abrió `enTransaccion` (p. ej. un `db.transaction` directo):

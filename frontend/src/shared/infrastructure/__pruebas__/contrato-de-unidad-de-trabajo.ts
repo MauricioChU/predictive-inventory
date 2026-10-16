@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import type { UnidadDeTrabajo } from '../../application/unidad-de-trabajo'
+import { probarLecturas } from './contrato-de-lecturas'
 
 /**
  * Una unidad de trabajo con un almacén mínimo para observarla: `escribir` guarda una marca
@@ -262,4 +263,6 @@ export function probarUnidadDeTrabajo(crear: () => EntornoDeUnidadDeTrabajo): vo
     expect(corrieron).toEqual(['de la segunda'])
     expect(await leer()).toEqual(['c2'])
   })
+
+  probarLecturas(crear)
 }
