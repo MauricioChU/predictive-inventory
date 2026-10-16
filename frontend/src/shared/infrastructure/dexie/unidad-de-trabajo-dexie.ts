@@ -114,8 +114,12 @@ export class UnidadDeTrabajoDexie implements UnidadDeTrabajo {
 
   async leer<T>(consulta: () => Promise<T>): Promise<T> {
     if (transaccionEnCurso(this.db)) return consulta()
-    // '!': siempre una nueva, aunque el código corra en la zona de una que ya terminó.
-    return this.db.transaction('r!', this.db.tables, consulta)
+    // '!': siempre una nueva, aunque el código corra en la zona de una que ya terminó. El
+    // `async` del alcance NO sobra: Dexie solo sigue su zona a través de los `await` nativos
+    // anidados cuando la función de alcance es una `async function`; con una flecha común que
+    // devuelve la promesa de otra (`() => casoDeUso()`), la zona se pierde y la transacción
+    // se confirma antes de tiempo (PrematureCommitError).
+    return this.db.transaction('r!', this.db.tables, async () => consulta())
   }
 
   alConfirmar(accion: Accion): void {

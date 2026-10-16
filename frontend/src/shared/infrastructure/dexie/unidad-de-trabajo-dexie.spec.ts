@@ -181,6 +181,34 @@ describe('UnidadDeTrabajoDexie', () => {
       expect(await uow.leer(async () => transaccionNativa()?.mode)).toBe('readonly')
     })
 
+    it('RN-SIS-09: una consulta que no es async (devuelve la promesa de otra función) sigue en la lectura tras awaits anidados', async () => {
+      const { db, uow } = crear()
+      await db.categorias.put(categoria('c1'))
+      // Como un caso de uso que llama a otro módulo, que llama a su repositorio.
+      async function repositorio() {
+        const filas = await db.categorias.toArray()
+        return filas.map((c) => c.id)
+      }
+      async function otroModulo() {
+        return [...(await repositorio())]
+      }
+      async function casoDeUso() {
+        return otroModulo()
+      }
+      async function consultaAnidada() {
+        const conteo = await db.categorias.count()
+        const primera = await casoDeUso()
+        const segunda = await casoDeUso()
+        return { primera, segunda, tercera: conteo, modo: transaccionNativa()?.mode }
+      }
+      expect(await uow.leer(() => consultaAnidada())).toEqual({
+        primera: ['c1'],
+        segunda: ['c1'],
+        tercera: 1,
+        modo: 'readonly',
+      })
+    })
+
     it('RN-SIS-09: dentro de un ejecutar corre en la MISMA transacción nativa (de escritura)', async () => {
       const { uow } = crear()
       await uow.ejecutar(async () => {
