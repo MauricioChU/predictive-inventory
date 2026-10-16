@@ -109,6 +109,15 @@ describe('solicitarAlmacenamientoSiHaceFalta (RN-RE-09)', () => {
     expect(estado.almacenamientoPersistente).toBe('CONCEDIDO')
   })
 
+  it('se pide una sola vez: la segunda apertura ya conoce la respuesta', async () => {
+    const { deps, almacenamiento } = crearContexto()
+
+    await solicitarAlmacenamientoSiHaceFalta(deps)
+    await solicitarAlmacenamientoSiHaceFalta(deps)
+
+    expect(almacenamiento.solicitudes).toBe(1)
+  })
+
   it('DESCONOCIDO y rechazado: se guarda RECHAZADO', async () => {
     const { deps, tienda, almacenamiento } = crearContexto()
     almacenamiento.fijarResultado(false)
