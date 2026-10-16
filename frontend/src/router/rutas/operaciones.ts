@@ -2,11 +2,12 @@ import type { RouteRecordRaw } from 'vue-router'
 import {
   VistaContarStock,
   VistaContarTodo,
+  VistaHistorial,
   VistaMerma,
+  VistaOperacion,
   VistaRecibir,
   VistaVender,
 } from '@/modules/inventario'
-import { Pendiente } from './pendiente'
 
 /** Ola 4, plan 12 (`feat/ui-operaciones`): Vender, Recibir, merma, conteos e Historial. */
 export const rutasDeOperaciones: RouteRecordRaw[] = [
@@ -45,7 +46,13 @@ export const rutasDeOperaciones: RouteRecordRaw[] = [
   {
     path: '/historial',
     name: 'historial',
-    component: Pendiente,
+    component: VistaHistorial,
     meta: { titulo: 'Historial', icono: 'history' },
+  },
+  {
+    path: '/historial/:id',
+    name: 'operacion',
+    component: VistaOperacion,
+    meta: { titulo: 'Operación' },
   },
 ]

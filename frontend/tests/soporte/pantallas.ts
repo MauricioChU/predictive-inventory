@@ -85,7 +85,7 @@ export function desmontar(pantalla: PantallaMontada | undefined): void {
 }
 
 /** El botón (o enlace) cuyo texto visible es `texto`, dentro de `w`. Falla si no está. */
-export function boton(w: VueWrapper | DOMWrapper<Element>, texto: string) {
+export function boton(w: Pick<DOMWrapper<Element>, 'findAll'>, texto: string) {
   const candidatos = w.findAll('button, a').filter((b) => b.text().trim() === texto)
   if (candidatos.length === 0) {
     const vistos = w.findAll('button, a').map((b) => `"${b.text().trim()}"`)
