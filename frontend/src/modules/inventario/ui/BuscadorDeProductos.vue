@@ -140,14 +140,6 @@ function borrarBusqueda(): void {
 }
 
 onMounted(cargarTodo)
-
-defineExpose({
-  /** Después de registrar: el stock y los más vendidos cambiaron. */
-  recargar: async () => {
-    await cargarTodo()
-    await buscar(texto.value)
-  },
-})
 </script>
 
 <template>
