@@ -185,5 +185,11 @@ const descripcion = computed(() => {
   .cifras {
     flex-direction: column;
   }
+  /* Ronda 1: con el nombre a todo el ancho caben 3 líneas; las variantes de un producto
+     ("… Lejía 1 L" / "… Lejía 5 L") suelen diferir al final, y con 2 se cortaba justo eso. */
+  .nombre {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
 }
 </style>

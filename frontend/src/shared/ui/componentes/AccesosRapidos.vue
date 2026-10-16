@@ -39,10 +39,15 @@ const visibles = computed(() => props.productos.slice(0, MAXIMO_DE_ACCESOS_RAPID
 
 <style scoped>
 /*
-  2 columnas en celular (320–599 px) y 4 desde 600 px (plan 09b). Además, el componente es
-  contenedor de consulta: si él mismo es angosto (letra Muy grande en una tablet chica, o la
-  columna del buscador en PC), vuelve a 2 columnas — con 4 columnas de ~130 px y letra de 24 px
-  una palabra como "Limpiavidrios" ya no entraría y se partiría (RN-UX-09).
+  Ronda 1 (RN-UX-01): el nombre va SIEMPRE a 1rem (la letra elegida); lo que cambia con el ancho
+  es la cantidad de columnas, nunca la letra. Una palabra de 13 letras ("Limpiavidrios",
+  "Desinfectante") en negrita mide ~6.4rem, y cada botón suma ~1rem de relleno y borde:
+  - 4 columnas desde 600 px (plan 09b), si el componente mide más de 32rem;
+  - si no, 2 columnas, si mide más de 15.75rem;
+  - si no (celular con letra Muy grande, 320 px con Grande), UNA columna de filas: foto al lado
+    del nombre, como una tarjeta (≥ 64 px de alto).
+  En rem, los cortes siguen la letra elegida. El componente es el contenedor de consulta: mide
+  lo que tiene de verdad (p. ej. la columna del buscador en PC), no el viewport.
 */
 .accesos-rapidos {
   container-type: inline-size;
@@ -60,7 +65,7 @@ const visibles = computed(() => props.productos.slice(0, MAXIMO_DE_ACCESOS_RAPID
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
-@container (max-width: 26rem) {
+@container (max-width: 32rem) {
   .grilla {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -70,8 +75,6 @@ const visibles = computed(() => props.productos.slice(0, MAXIMO_DE_ACCESOS_RAPID
   min-inline-size: 0;
 }
 .acceso {
-  /* Cada botón es contenedor: la letra del nombre se ajusta a SU ancho (ver .nombre). */
-  container-type: inline-size;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -103,10 +106,7 @@ const visibles = computed(() => props.productos.slice(0, MAXIMO_DE_ACCESOS_RAPID
   max-inline-size: 100%;
 }
 .nombre {
-  /* Una palabra de 13 letras ("Limpiavidrios", "Desinfectante") mide ~6.4 veces la letra: en
-     un botón angosto (2 columnas a 320 px con letra Muy grande) la letra baja lo justo para
-     que entre entera (15cqi = 15 % del ancho del botón). Nunca pasa de 0.9rem. */
-  font-size: min(0.9rem, 15cqi);
+  font-size: 1rem;
   /* Un flex item no se encoge por debajo de su palabra más larga: sin esto, una palabra que no
      entra sale por los costados del botón en vez de partirse como último recurso. */
   min-inline-size: 0;
@@ -123,5 +123,24 @@ const visibles = computed(() => props.productos.slice(0, MAXIMO_DE_ACCESOS_RAPID
   overflow-wrap: break-word;
   word-break: normal;
   hyphens: none;
+}
+
+/* Una columna de filas: foto a la izquierda, nombre a la derecha (como TarjetaDeProducto). */
+@container (max-width: 15.75rem) {
+  .grilla {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .acceso {
+    flex-direction: row;
+    gap: var(--espacio-3);
+    min-block-size: max(64px, 3.5rem);
+    padding: var(--espacio-2) var(--espacio-3);
+  }
+  .foto {
+    --foto-lado: 56px;
+  }
+  .nombre {
+    text-align: start;
+  }
 }
 </style>

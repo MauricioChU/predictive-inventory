@@ -4,6 +4,12 @@ import { Search, X } from 'lucide-vue-next'
 
 const props = withDefaults(
   defineProps<{
+    /**
+     * v-model. Quien lo usa debe actualizarlo en el mismo handler de `update:modelValue`
+     * (sincrónico, sin await antes). Si su eco llega tarde igual se reconoce y no pisa lo que se
+     * siguió escribiendo; pero para vaciar el buscador desde la pantalla hay que llamar a
+     * `vaciar()`: volver a poner "" en modelValue no avisa nada si ya valía "".
+     */
     modelValue: string
     etiqueta: string
     marcador?: string
@@ -22,9 +28,12 @@ const id = useId()
 const refCampo = ref<HTMLInputElement>()
 /** Lo que se ve escrito; puede ir por delante de modelValue mientras corre la espera. */
 const texto = ref(props.modelValue)
-/** Último valor que este buscador avisó: su eco en modelValue no debe pisar lo que se siguió
- * escribiendo durante la espera. */
-let ultimoAvisado = props.modelValue
+/** Valores que este buscador avisó y cuyo eco por modelValue todavía no llegó, en orden.
+ * Ronda 1: una lista (no solo el último): si la pantalla responde tarde, el eco de un aviso
+ * viejo ("lej") llega cuando ya se avisó otro ("lejia") y no debe pisar lo escrito. */
+const avisadosSinEco: string[] = []
+/** Tope por si quien lo usa no hace eco de nada (sin v-model): la lista no crece sin fin. */
+const MAXIMO_SIN_ECO = 20
 let temporizador: ReturnType<typeof setTimeout> | undefined
 
 function cancelarEspera() {
@@ -35,17 +44,24 @@ function cancelarEspera() {
 
 function avisar(valor: string) {
   cancelarEspera()
-  ultimoAvisado = valor
+  avisadosSinEco.push(valor)
+  if (avisadosSinEco.length > MAXIMO_SIN_ECO) avisadosSinEco.shift()
   emit('update:modelValue', valor)
 }
 
 watch(
   () => props.modelValue,
   (valor) => {
-    if (valor === ultimoAvisado) return // eco de lo que ya avisamos
+    const posicion = avisadosSinEco.indexOf(valor)
+    if (posicion >= 0) {
+      // Eco de un aviso nuestro (a tiempo o tarde): se descarta con los anteriores y no toca
+      // lo que se ve escrito.
+      avisadosSinEco.splice(0, posicion + 1)
+      return
+    }
     // Quien lo usa cambió el valor (p. ej. lo vació tras elegir un producto): manda él.
+    avisadosSinEco.length = 0
     cancelarEspera()
-    ultimoAvisado = valor
     texto.value = valor
   },
 )
@@ -66,9 +82,16 @@ function enfocar() {
   refCampo.value?.focus()
 }
 
-function borrar() {
+/** Vacía el buscador ya mismo: borra lo escrito, anula el aviso que estaba esperando y avisa
+ * "" en el acto. Para la pantalla (p. ej. después de agregar el producto elegido al carrito). */
+function vaciar() {
+  cancelarEspera()
   texto.value = ''
   avisar('')
+}
+
+function borrar() {
+  vaciar()
   emit('limpiar')
   // El botón "Borrar" desaparece: el foco vuelve al campo para seguir buscando.
   enfocar()
@@ -79,29 +102,31 @@ onMounted(() => {
 })
 onBeforeUnmount(cancelarEspera)
 
-defineExpose({ enfocar })
+defineExpose({ enfocar, vaciar })
 </script>
 
 <template>
   <div class="buscador-grande">
     <label :for="id" class="etiqueta">{{ etiqueta }}</label>
-    <div class="caja">
-      <Search aria-hidden="true" class="lupa" />
-      <input
-        :id="id"
-        ref="refCampo"
-        :value="texto"
-        type="search"
-        inputmode="search"
-        enterkeyhint="search"
-        autocomplete="off"
-        autocapitalize="none"
-        spellcheck="false"
-        :placeholder="marcador"
-        class="campo"
-        @input="alEscribir"
-        @keydown.enter="alPresionarEnter"
-      />
+    <div class="fila">
+      <div class="caja">
+        <Search aria-hidden="true" class="lupa" />
+        <input
+          :id="id"
+          ref="refCampo"
+          :value="texto"
+          type="search"
+          inputmode="search"
+          enterkeyhint="search"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          :placeholder="marcador"
+          class="campo"
+          @input="alEscribir"
+          @keydown.enter="alPresionarEnter"
+        />
+      </div>
       <button v-if="texto !== ''" type="button" class="borrar" @click="borrar">
         <X aria-hidden="true" class="icono-borrar" />
         <span>Borrar</span>
@@ -120,14 +145,23 @@ defineExpose({ enfocar })
   font-weight: 700;
   margin-bottom: var(--espacio-2);
 }
-/* La caja dibuja el borde (no el input): así la lupa, el texto y "Borrar" se ven como un
-   solo campo grande. */
+/* Ronda 1 (RN-UX-01): "Borrar" va al lado del campo, con su letra normal (nunca más chica que
+   la elegida). Si no entran los dos, pasa a su propia fila debajo, a todo el ancho. */
+.fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--separacion-toque);
+}
+/* La caja dibuja el borde (no el input): así la lupa y el texto se ven como un solo campo. */
 .caja {
   display: flex;
+  flex: 1 1 10rem;
   align-items: center;
   gap: var(--espacio-2);
+  min-inline-size: 0;
   min-block-size: var(--alto-boton-principal);
-  padding-inline: var(--espacio-3) var(--espacio-1);
+  padding-inline: var(--espacio-3);
   border: 2px solid var(--color-borde);
   border-radius: var(--radio);
   background: var(--color-fondo);
@@ -178,20 +212,21 @@ defineExpose({ enfocar })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--espacio-1);
+  gap: var(--espacio-2);
   flex: none;
   min-block-size: var(--alto-toque);
   min-inline-size: var(--alto-toque);
-  padding-inline: var(--espacio-2);
-  border: 2px solid transparent;
-  border-radius: var(--radio-chico);
+  padding-inline: var(--espacio-4);
+  border: 2px solid var(--color-borde);
+  border-radius: var(--radio);
   background: var(--color-superficie);
   color: var(--color-texto);
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
 }
 .borrar:hover {
-  border-color: var(--color-borde);
+  background: var(--color-primario-suave);
 }
 .icono-borrar {
   inline-size: 1.2em;
@@ -201,25 +236,11 @@ defineExpose({ enfocar })
   flex: none;
 }
 
-/* Angosto (celular con letra Grande o Muy grande): "Borrar" pone el texto debajo de la ✕
-   (como la barra de navegación), para dejarle al texto buscado todo el ancho posible. */
-@container (max-width: 16rem) {
-  .caja {
-    padding-inline-start: var(--espacio-2);
-  }
-  .campo {
-    font-size: 1.1rem;
-  }
+/* Angosto (celular con letra Grande o Muy grande): "Borrar" no entra al lado sin achicar el
+   campo o su letra, así que va en su propia fila, a todo el ancho y con 48 px de alto. */
+@container (max-width: 18rem) {
   .borrar {
-    flex-direction: column;
-    gap: 0;
-    padding: 2px var(--espacio-1);
-    font-size: 0.7rem;
-    line-height: 1.1;
-  }
-  .icono-borrar {
-    inline-size: 1.1rem;
-    block-size: 1.1rem;
+    flex: 1 1 100%;
   }
 }
 </style>

@@ -120,6 +120,41 @@ describe('BuscadorGrande', () => {
     expect(w.emitted('update:modelValue')).toBeUndefined()
   })
 
+  it('ronda 1 (a): vaciar() limpia aunque modelValue ya sea "" y anula lo que estaba por avisarse', async () => {
+    // La pantalla quiere vaciar el buscador mientras corre la espera: poner otra vez "" en
+    // modelValue no cambia nada (ya era ""), así que no alcanza; para eso está vaciar().
+    const w = montar()
+    const input = w.get('input')
+    await input.setValue('lej')
+    ;(w.vm as unknown as { vaciar: () => void }).vaciar()
+    await w.vm.$nextTick()
+    expect((input.element as HTMLInputElement).value).toBe('')
+    expect(w.emitted('update:modelValue')).toEqual([['']])
+    await vi.advanceTimersByTimeAsync(ESPERA_MS)
+    expect(w.emitted('update:modelValue')).toEqual([['']])
+    expect(w.find('button').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('ronda 1 (b): un eco tardío (asíncrono) de un aviso viejo no pisa lo escrito después', async () => {
+    const w = montar()
+    const input = w.get('input')
+    await input.setValue('lej')
+    await vi.advanceTimersByTimeAsync(ESPERA_MS) // avisa "lej"
+    await input.setValue('lejia')
+    await vi.advanceTimersByTimeAsync(ESPERA_MS) // avisa "lejia"
+    await input.setValue('lejias') // sigue escribiendo
+    // Recién ahora llegan, en orden, los ecos de "lej" y "lejia".
+    await w.setProps({ modelValue: 'lej' })
+    expect((input.element as HTMLInputElement).value).toBe('lejias')
+    await w.setProps({ modelValue: 'lejia' })
+    expect((input.element as HTMLInputElement).value).toBe('lejias')
+    // Un cambio que no es eco (la pantalla lo vacía) sí manda.
+    await w.setProps({ modelValue: '' })
+    expect((input.element as HTMLInputElement).value).toBe('')
+    w.unmount()
+  })
+
   it('expone enfocar() para que la pantalla devuelva el foco al buscador', () => {
     const w = montar()
     ;(w.vm as unknown as { enfocar: () => void }).enfocar()
