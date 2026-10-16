@@ -1,5 +1,11 @@
 import type { RouteRecordRaw } from 'vue-router'
-import { VistaContarStock, VistaMerma, VistaRecibir, VistaVender } from '@/modules/inventario'
+import {
+  VistaContarStock,
+  VistaContarTodo,
+  VistaMerma,
+  VistaRecibir,
+  VistaVender,
+} from '@/modules/inventario'
 import { Pendiente } from './pendiente'
 
 /** Ola 4, plan 12 (`feat/ui-operaciones`): Vender, Recibir, merma, conteos e Historial. */
@@ -29,6 +35,12 @@ export const rutasDeOperaciones: RouteRecordRaw[] = [
     name: 'contar-stock',
     component: VistaContarStock,
     meta: { titulo: 'Contar stock' },
+  },
+  {
+    path: '/contar',
+    name: 'contar-todo',
+    component: VistaContarTodo,
+    meta: { titulo: 'Contar todo' },
   },
   {
     path: '/historial',
