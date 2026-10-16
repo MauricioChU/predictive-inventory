@@ -15,9 +15,19 @@ const ALTO = 800
 /** Plan 09b: el catálogo se verifica a 320/360/768/1280 px con letra Muy grande. */
 const ANCHOS = [320, 360, 768, 1280]
 const CELULAR = [320, 360]
+/** I1: con letra Muy grande, columnas de AccesosRapidos y alto mínimo de cada botón. En celular
+ * no entran 2 nombres de 13 letras a 1rem lado a lado: 1 columna de filas (foto al lado del
+ * nombre, ≥ 64 px como una tarjeta); a 768 px, 2; en PC, 4 (celdas de ≥ 48 px). */
+const ACCESOS_POR_ANCHO: Record<number, { columnas: number; enFilas: boolean; alto: number }> = {
+  320: { columnas: 1, enFilas: true, alto: 64 },
+  360: { columnas: 1, enFilas: true, alto: 64 },
+  768: { columnas: 2, enFilas: false, alto: 48 },
+  1280: { columnas: 4, enFilas: false, alto: 48 },
+}
 
 /** Monta el catálogo del kit A (src/shared/ui/__catalogo__/CatalogoKitProductos.vue) al final
- * de #contenido con el gancho de pruebas de la app, y espera a la letra y a las fotos. */
+ * de #contenido con el gancho de pruebas de la app, y espera a la letra. Las fotos no se
+ * esperan: van con loading="lazy" y su caja es cuadrada y de medida fija, cargue o no. */
 async function abrirCatalogo(page: Page, ancho: number, letra: Letra = 'MUY_GRANDE') {
   await usarLetra(page, letra)
   await page.setViewportSize({ width: ancho, height: ALTO })
@@ -29,12 +39,6 @@ async function abrirCatalogo(page: Page, ancho: number, letra: Letra = 'MUY_GRAN
   })
   await expect(page.getByRole('heading', { name: 'Kit de productos' })).toBeVisible()
   await page.evaluate(() => document.fonts.ready)
-  // Fotos ya cargadas (o caídas al ícono de la categoría): se mide la forma final.
-  await page.waitForFunction(() =>
-    [...document.querySelectorAll<HTMLImageElement>('.catalogo-kit-productos img')].every(
-      (img) => img.complete,
-    ),
-  )
 }
 
 /** Como abrirCatalogo y, si `conAviso`, además muestra el aviso Deshacer global (10 s). */
@@ -49,8 +53,11 @@ async function abrirEstadosInteractivos(page: Page) {
   await page.getByLabel('Buscar producto').fill('l')
   await page.getByRole('button', { name: 'Cambiar precio de Lejía Clorox 1 L' }).click()
   await page.getByRole('button', { name: 'S/ 20', exact: true }).click()
+  // I2: el error de cantidad junto al campo (hay 2.5 kg de carbón).
+  await page.getByRole('group', { name: 'Carbón vegetal' }).getByLabel('Cantidad (kg)').fill('3')
   await expect(page.getByRole('button', { name: 'Borrar' })).toBeVisible()
   await expect(page.getByLabel('Nuevo precio en S/')).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('Solo quedan 2.5 kg de Carbón vegetal')
 }
 
 for (const ancho of ANCHOS) {
@@ -93,30 +100,66 @@ for (const ancho of ANCHOS) {
       expect(medidas).toEqual({ chicos: [], principalesBajos: [], tarjetasBajas: [] })
     })
 
-    test('AccesosRapidos: 2 columnas en celular, 4 desde 600 px (si el ancho le alcanza)', async ({
+    test('AccesosRapidos: tantas columnas como entren con el nombre a 1rem entero (I1)', async ({
       page,
     }) => {
       await abrirCatalogo(page, ancho)
-      const columnas = await page
-        .getByRole('list', { name: 'Más vendidos' })
-        .evaluate(
-          (lista) =>
-            new Set([...lista.children].map((li) => Math.round(li.getBoundingClientRect().left)))
-              .size,
-        )
-      expect(columnas).toBe(ancho < 600 ? 2 : 4)
-      await expect(
-        page.getByRole('list', { name: 'Más vendidos' }).getByRole('button'),
-      ).toHaveCount(8)
+      const lista = page.getByRole('list', { name: 'Más vendidos' })
+      const medida = await lista.evaluate((ul) => ({
+        columnas: new Set([...ul.children].map((li) => Math.round(li.getBoundingClientRect().left)))
+          .size,
+        raiz: parseFloat(getComputedStyle(document.documentElement).fontSize),
+        botones: [...ul.querySelectorAll('button')].map((boton) => {
+          const foto = boton.querySelector('.foto-de-producto')!.getBoundingClientRect()
+          const el = boton.querySelector('.nombre')!
+          const nombre = el.getBoundingClientRect()
+          const caja = boton.getBoundingClientRect()
+          // Palabras partidas entre dos líneas (un Range por palabra).
+          const nodo = el.firstChild!
+          const texto = nodo.textContent ?? ''
+          let inicio = 0
+          const partidas = texto.split(' ').filter((palabra) => {
+            const rango = document.createRange()
+            rango.setStart(nodo, inicio)
+            rango.setEnd(nodo, inicio + palabra.length)
+            inicio += palabra.length + 1
+            const tops = [...rango.getClientRects()].filter((r) => r.width > 0).map((r) => r.top)
+            return new Set(tops.map(Math.round)).size > 1
+          })
+          return {
+            texto,
+            alto: caja.height,
+            nombreAlLado: nombre.left >= foto.right - 0.5,
+            letra: parseFloat(getComputedStyle(el).fontSize),
+            partidas,
+            seSale:
+              nombre.left < caja.left - 0.5 ||
+              nombre.right > caja.right + 0.5 ||
+              el.scrollWidth > el.clientWidth + 1,
+          }
+        }),
+      }))
+      const esperado = ACCESOS_POR_ANCHO[ancho]!
+      expect(medida.columnas).toBe(esperado.columnas)
+      expect(medida.botones).toHaveLength(8)
+      for (const boton of medida.botones) {
+        expect(boton.nombreAlLado).toBe(esperado.enFilas)
+        expect(boton.alto).toBeGreaterThanOrEqual(esperado.alto)
+        // RN-UX-01: a la letra elegida, entero y adentro de su botón, en cualquier ancho.
+        expect(boton.letra, boton.texto).toBeGreaterThanOrEqual(medida.raiz)
+        expect(boton.partidas, boton.texto).toEqual([])
+        expect(boton.seSale, boton.texto).toBe(false)
+      }
     })
   })
 }
 
 for (const ancho of CELULAR) {
-  test(`celular ${ancho}px, letra Muy grande: nombres en 2 líneas como máximo y sin palabras partidas`, async ({
+  test(`celular ${ancho}px, letra Muy grande: nombres en 3 líneas como máximo, enteros y sin achicar`, async ({
     page,
   }) => {
     await abrirCatalogo(page, ancho)
+    await page.getByLabel('Buscar producto').fill('l') // para que aparezca "Borrar"
     const nombres = await page.locator('.catalogo-kit-productos').evaluate((raiz) => {
       const medir = (el: Element) => {
         const nodo = el.firstChild!
@@ -140,6 +183,8 @@ for (const ancho of CELULAR) {
           texto,
           partidas,
           lineas: propia.height / parseFloat(estilo.lineHeight),
+          tope: estilo.webkitLineClamp,
+          letra: parseFloat(estilo.fontSize),
           // El nombre no sale de su botón ni queda recortado adentro (una palabra entera que no
           // entra no se "parte", pero se sale por los costados: también es un defecto).
           seSale:
@@ -148,18 +193,41 @@ for (const ancho of CELULAR) {
             el.scrollWidth > el.clientWidth + 1,
         }
       }
+      const borrar = raiz.querySelector('.buscador-grande .borrar span')!
       return {
+        raiz: parseFloat(getComputedStyle(document.documentElement).fontSize),
         tarjetas: [...raiz.querySelectorAll('.tarjeta-de-producto .nombre')].map(medir),
         accesos: [...raiz.querySelectorAll('.accesos-rapidos .nombre')].map(medir),
+        borrar: parseFloat(getComputedStyle(borrar).fontSize),
       }
     })
+    expect(nombres.raiz).toBe(24) // letra Muy grande
     expect(nombres.tarjetas.length).toBeGreaterThan(0)
     for (const nombre of nombres.tarjetas) {
-      expect(nombre.lineas, nombre.texto).toBeLessThanOrEqual(2.05)
+      // En angosto la tarjeta deja 3 líneas: las variantes ("… 1 L" / "… 5 L") difieren al final.
+      expect(nombre.tope, nombre.texto).toBe('3')
+      expect(nombre.lineas, nombre.texto).toBeLessThanOrEqual(3.05)
     }
+    // RN-UX-01 (I1): ningún texto del kit baja de la letra elegida para que entre.
+    for (const nombre of nombres.accesos) {
+      expect(nombre.letra, nombre.texto).toBeGreaterThanOrEqual(nombres.raiz)
+    }
+    expect(nombres.borrar, '"Borrar"').toBeGreaterThanOrEqual(nombres.raiz)
     const todos = [...nombres.tarjetas, ...nombres.accesos]
     expect(todos.flatMap((n) => n.partidas)).toEqual([])
     expect(todos.filter((n) => n.seSale).map((n) => n.texto)).toEqual([])
+  })
+
+  test(`celular ${ancho}px, letra Muy grande: "Borrar" pasa a su propia fila, a todo el ancho (I1)`, async ({
+    page,
+  }) => {
+    await abrirCatalogo(page, ancho)
+    await page.getByLabel('Buscar producto').fill('l')
+    const borrar = await caja(page, '.buscador-grande .borrar')
+    const campo = await caja(page, '.buscador-grande .caja')
+    expect(borrar.top).toBeGreaterThanOrEqual(campo.bottom)
+    expect(Math.abs(borrar.width - campo.width)).toBeLessThanOrEqual(1)
+    expect(borrar.height).toBeGreaterThanOrEqual(48)
   })
 }
 
@@ -197,8 +265,23 @@ test.describe('Comportamiento en el navegador (360 px, letra Muy grande)', () =>
     await expect(page.getByText('Buscando: «»')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Borrar' })).toHaveCount(0)
 
-    await campo.fill('zzz')
-    await campo.press('Enter')
+    // Escribir y Enter en el mismo instante; se mira a los 50 ms, dentro de la espera de 200.
+    const ecos = await campo.evaluate(async (input: HTMLInputElement) => {
+      const eco = () => document.querySelector('[data-prueba="eco-busqueda"]')?.textContent
+      const escribir = (valor: string) => {
+        input.value = valor
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+      const pausa = (ms: number) => new Promise((listo) => setTimeout(listo, ms))
+      escribir('bol')
+      await pausa(50)
+      const sinEnter = eco()
+      escribir('zzz')
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+      await pausa(50)
+      return { sinEnter, conEnter: eco() }
+    })
+    expect(ecos).toEqual({ sinEnter: 'Buscando: «»', conEnter: 'Buscando: «zzz»' })
     await expect(page.getByText('No encontramos ese producto')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Agregar producto' })).toBeVisible()
   })
@@ -210,6 +293,12 @@ test.describe('Comportamiento en el navegador (360 px, letra Muy grande)', () =>
     const precio = page.getByLabel('Nuevo precio en S/')
     await expect(precio).toBeFocused()
     await expect(precio).toHaveValue('4.50')
+    // I2: un precio que no sirve deja la edición abierta, con lo escrito y el error al lado.
+    await precio.fill('4..2')
+    await precio.press('Enter')
+    await expect(page.getByRole('alert')).toHaveText('Escribe un precio válido, por ejemplo 4.50')
+    await expect(precio).toHaveValue('4..2')
+    await expect(precio).toBeFocused()
     await precio.fill('4.20')
     await page.getByRole('button', { name: 'Guardar precio' }).click()
     const fila = page.getByRole('group', { name: 'Lejía Clorox 1 L' })
@@ -217,6 +306,7 @@ test.describe('Comportamiento en el navegador (360 px, letra Muy grande)', () =>
     await expect(fila.getByText('Precio especial')).toBeVisible()
     await expect(fila.getByText('S/ 8.40')).toBeVisible()
     await expect(cambiar).toBeFocused()
+    await expect(page.getByRole('alert')).toHaveCount(0)
 
     await page.getByRole('button', { name: 'Quitar Lejía Clorox 1 L' }).click()
     await expect(fila).toHaveCount(0)

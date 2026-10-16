@@ -147,9 +147,22 @@ const numero = (texto: string) => Number(texto.replace(',', '.')) || 0
 const soles = (valor: number) => `S/ ${valor.toFixed(2)}`
 const importe = (linea: LineaDeEjemplo) => numero(linea.cantidad) * numero(linea.precio)
 const total = computed(() => lineas.value.reduce((suma, linea) => suma + importe(linea), 0))
+/** Como una pantalla real: valida en el acto (sincrónico) y, si no sirve, deja el error al
+ * lado del campo; la fila queda abierta (contrato de errorPrecio en FilaDeCarrito). */
+const erroresDePrecio = ref<Record<string, string | undefined>>({})
 function cambiarPrecio(linea: LineaDeEjemplo, precio: string) {
-  linea.precio = precio
+  if (!/^\d+([.,]\d{1,2})?$/.test(precio.trim())) {
+    erroresDePrecio.value[linea.id] = 'Escribe un precio válido, por ejemplo 4.50'
+    return
+  }
+  erroresDePrecio.value[linea.id] = undefined
+  linea.precio = precio.trim().replace(',', '.')
   linea.especial = true
+}
+/** RN-UX-07: qué pasó y qué hacer, junto al campo de cantidad. */
+function errorDeCantidad(linea: LineaDeEjemplo): string | undefined {
+  if (linea.unidad !== 'KILO' || numero(linea.cantidad) <= 2.5) return undefined
+  return `Solo quedan 2.5 kg de ${linea.nombre}. Cambia la cantidad o registra la llegada de mercadería.`
 }
 function quitar(id: string) {
   lineas.value = lineas.value.filter((linea) => linea.id !== id)
@@ -264,7 +277,10 @@ const cobros = ref(0)
             :texto-precio-especial="linea.especial ? 'Precio especial' : undefined"
             :valor-precio="linea.precio"
             :precio-editable="linea.unidad === 'UNIDAD'"
+            :error-precio="erroresDePrecio[linea.id]"
+            :error-cantidad="errorDeCantidad(linea)"
             @cambiar-precio="cambiarPrecio(linea, $event)"
+            @cancelar-precio="erroresDePrecio[linea.id] = undefined"
             @quitar="quitar(linea.id)"
           />
         </li>
