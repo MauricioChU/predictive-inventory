@@ -2,7 +2,6 @@ import { createPinia } from 'pinia'
 import { expect } from 'vitest'
 import { useEstadoGlobal } from '@/app/estado-global'
 import { RUTA_PARA_COMPRAR } from '@/modules/alertas'
-import type { EstadoDeStock } from '@/shared/contratos/estado-de-stock'
 import { sumarDias } from '@/shared/domain/fecha'
 import { PRESENTACION_DE_ESTADO, type EstadoVisual } from '@/shared/ui/presentacion-estado'
 import type { Mundo } from './mundo'
@@ -12,22 +11,16 @@ import { accion, afirmacion, preparacion, type Pasos } from './registro'
 const RUTAS_DE_PANTALLA: Record<string, string> = { 'Para comprar': RUTA_PARA_COMPRAR }
 
 /**
- * "El estado guardado / el último aviso de X fue Y" (RN-AL-02/03/04). Es el dato que guarda
- * Alertas (`RepositorioDeAvisos`, sin registro = NORMAL). Con los `.feature` actuales el flujo
- * real ya lo deja así (crear el producto con ese stock avisó ese estado), y el paso solo lo
- * comprueba. Si algún día no coincidiera, EXCEPCIÓN documentada: se fija en el repositorio,
- * porque el paso habla justamente de ese dato guardado.
+ * "El estado guardado / el último aviso de X fue Y" (RN-AL-02/03/04): el dato que guarda
+ * Alertas (`RepositorioDeAvisos`, sin registro = NORMAL). No se escribe: el flujo real ya tiene
+ * que haberlo dejado así (crear el producto con ese stock avisó ese estado), y se comprueba.
  */
-async function fijarEstadoAvisado(m: Mundo, nombre: string, estado: string): Promise<void> {
+async function exigirEstadoAvisado(m: Mundo, nombre: string, estado: string): Promise<void> {
   const productoId = await m.idDe(nombre)
-  const repositorio = m.app.infraestructura.repositorios.avisos
-  const guardado =
-    (await repositorio.todos()).find((r) => r.productoId === productoId)?.ultimoEstadoAvisado ??
-    'NORMAL'
-  if (guardado === estado) return
-  await m.app.infraestructura.uow.ejecutar(() =>
-    repositorio.guardar({ productoId, ultimoEstadoAvisado: estado as EstadoDeStock }),
+  const registro = (await m.app.infraestructura.repositorios.avisos.todos()).find(
+    (r) => r.productoId === productoId,
   )
+  expect(registro?.ultimoEstadoAvisado ?? 'NORMAL', `Estado avisado de ${nombre}`).toBe(estado)
 }
 
 /** Pasos de Alertas (03-alertas, RN-AL). */
@@ -41,8 +34,8 @@ export function pasosDeAlertas(pasos: Pasos): void {
     },
   )
 
-  preparacion(pasos, 'el estado guardado de {string} es {string}', fijarEstadoAvisado)
-  preparacion(pasos, 'el último aviso de {string} fue {string}', fijarEstadoAvisado)
+  preparacion(pasos, 'el estado guardado de {string} es {string}', exigirEstadoAvisado)
+  preparacion(pasos, 'el último aviso de {string} fue {string}', exigirEstadoAvisado)
 
   afirmacion(pasos, '{string} no tiene estado de stock', async (m: Mundo, nombre: string) => {
     expect(await m.app.analisis.consultable.situacion(await m.idDe(nombre))).toBeNull()
@@ -66,11 +59,13 @@ export function pasosDeAlertas(pasos: Pasos): void {
     m.app.notificador.mostradas.length = 0
   })
 
+  // RN-AL-03/07: lo que envió la ÚLTIMA acción (no lo que ya se había enviado antes).
   afirmacion(pasos, 'se envía la notificación {string}', (m: Mundo, texto: string) => {
-    const notificacion = m.app.notificador.mostradas.find((n) => n.texto === texto)
+    const enviadas = m.app.notificador.mostradas.slice(m.notificacionesAntes)
+    const notificacion = enviadas.find((n) => n.texto === texto)
     expect(
       notificacion,
-      `Se enviaron: ${JSON.stringify(m.app.notificador.mostradas.map((n) => n.texto))}`,
+      `La última acción envió: ${JSON.stringify(enviadas.map((n) => n.texto))}`,
     ).toBeDefined()
     m.ultimaNotificacion = notificacion ?? null
   })
@@ -80,7 +75,7 @@ export function pasosDeAlertas(pasos: Pasos): void {
   })
 
   afirmacion(pasos, 'no se envía ninguna notificación del sistema', (m: Mundo) => {
-    expect(m.app.notificador.mostradas).toEqual([])
+    expect(m.app.notificador.mostradas.slice(m.notificacionesAntes)).toEqual([])
   })
 
   afirmacion(pasos, 'Inicio muestra {string}', async (m: Mundo, texto: string) => {
