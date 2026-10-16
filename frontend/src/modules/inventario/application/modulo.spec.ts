@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { Cantidad } from '@/shared/domain/cantidad'
 import { Dinero } from '@/shared/domain/dinero'
 import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'
-import { crearEscenario } from '../__pruebas__/escenario'
+import { alReves } from '../__pruebas__/dobles'
+import { ANTECEDENTES, crearEscenario } from '../__pruebas__/escenario'
 
 const escenario = () => crearEscenario((almacen) => new UnidadDeTrabajoEnMemoria(almacen))
 const kilos = (texto: string) => Cantidad.deTexto(texto, 'KILO')
@@ -43,6 +44,36 @@ describe('consultable (InventarioParaCatalogo)', () => {
       'VENTA',
     ])
     expect(registros.at(-1)?.id).toBe(operacionId)
+  })
+})
+
+describe('orden del libro', () => {
+  it('operaciones() y el historial siguen el orden de registro aunque el repositorio no lo dé', async () => {
+    const e = await crearEscenario(
+      (almacen) => new UnidadDeTrabajoEnMemoria(almacen),
+      ANTECEDENTES,
+      {
+        envolverOperaciones: alReves,
+      },
+    )
+    e.reloj.avanzarSegundos(1)
+    await e.modulo.registrarVenta({ lineas: [{ productoId: 'lejia', cantidad: '1' }] })
+    e.reloj.avanzarSegundos(1)
+    await e.modulo.registrarIngreso({
+      lineas: [{ productoId: 'lejia', cantidad: '6', costo: '2.40' }],
+    })
+    expect((await e.modulo.consultable.operaciones()).map((r) => r.tipo)).toEqual([
+      'STOCK_INICIAL',
+      'STOCK_INICIAL',
+      'STOCK_INICIAL',
+      'VENTA',
+      'INGRESO',
+    ])
+    expect((await e.modulo.historial({ productoId: 'lejia' })).map((o) => o.tipo)).toEqual([
+      'INGRESO',
+      'VENTA',
+      'STOCK_INICIAL',
+    ])
   })
 })
 

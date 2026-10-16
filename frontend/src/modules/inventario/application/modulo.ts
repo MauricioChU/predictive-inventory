@@ -1,4 +1,5 @@
 import type { InventarioParaCatalogo } from '@/shared/contratos/entre-modulos'
+import { enOrdenDeRegistro } from '../domain/orden'
 import { anularOperacion, type DatosDeAnulacion } from './anulaciones'
 import {
   conteoActual,
@@ -73,7 +74,7 @@ export function crearModuloInventario(d: DependenciasDeInventario): ModuloInvent
     tieneOperaciones: async (productoId) =>
       (await d.operaciones.porProducto(productoId)).length > 0,
     ultimoIngresoDe: (productoId) => ultimoIngresoDe(ctx, productoId),
-    operaciones: () => d.operaciones.todas(),
+    operaciones: async () => enOrdenDeRegistro(await d.operaciones.todas()),
     registrarStockInicial: (productoId, cantidad, costo) =>
       registrarStockInicial(ctx, productoId, cantidad, costo),
     retirarStock: (productoId) => retirarStock(ctx, productoId),

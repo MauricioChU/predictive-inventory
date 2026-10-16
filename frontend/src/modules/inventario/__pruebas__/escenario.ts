@@ -9,6 +9,7 @@ import { normalizar } from '@/shared/domain/texto'
 import type { ProductoResumido } from '@/shared/contratos/entre-modulos'
 import { AlmacenEnMemoria } from '@/shared/infrastructure/memoria/almacen-en-memoria'
 import { crearModuloInventario } from '../application/modulo'
+import type { RepositorioDeOperaciones } from '../application/puertos'
 import {
   RepositorioDeConteoEnMemoria,
   RepositorioDeExistenciasEnMemoria,
@@ -88,6 +89,10 @@ export function productoResumido(producto: ProductoDePrueba): ProductoResumido {
 export async function crearEscenario(
   crearUow: (almacen: AlmacenEnMemoria) => UnidadDeTrabajo,
   productos: readonly ProductoDePrueba[] = ANTECEDENTES,
+  opciones: {
+    /** Para probar un repositorio que no devuelve el libro en orden de registro. */
+    envolverOperaciones?: (repositorio: RepositorioDeOperaciones) => RepositorioDeOperaciones
+  } = {},
 ) {
   const almacen = new AlmacenEnMemoria()
   const reloj = new RelojFijo(AHORA)
@@ -103,7 +108,8 @@ export async function crearEscenario(
   const analisis = new AnalisisFalso()
   const tienda = new TiendaFalsa()
   const proyeccion = new ProyeccionEspia()
-  const operaciones = new RepositorioDeOperacionesEnMemoria(almacen)
+  const enMemoria = new RepositorioDeOperacionesEnMemoria(almacen)
+  const operaciones = opciones.envolverOperaciones?.(enMemoria) ?? enMemoria
   const existencias = new RepositorioDeExistenciasEnMemoria(almacen)
   const conteo = new RepositorioDeConteoEnMemoria(almacen)
   const dependencias = {

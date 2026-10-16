@@ -17,9 +17,9 @@ export interface RepositorioDeOperaciones {
   porId(id: string): Promise<OperacionRegistro | null>
   /** La ANULACION que revierte a `operacionId`, si existe. */
   anulacionDe(operacionId: string): Promise<OperacionRegistro | null>
-  /** En el orden en que se registraron. */
+  /** Ordenadas por `registradaEn` (a igual `registradaEn`, cualquier orden estable). */
   porProducto(productoId: string): Promise<OperacionRegistro[]>
-  /** En el orden en que se registraron. */
+  /** Ordenadas por `registradaEn` (a igual `registradaEn`, cualquier orden estable). */
   todas(): Promise<OperacionRegistro[]>
 }
 

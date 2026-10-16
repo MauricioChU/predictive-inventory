@@ -10,6 +10,7 @@ import type {
   TiendaConsultable,
 } from '@/shared/contratos/entre-modulos'
 import type { OperacionRegistro } from '@/shared/contratos/registros'
+import type { RepositorioDeOperaciones } from '../application/puertos'
 
 /** Proyección que anota lo que recibe y puede fallar a pedido (RN-OP-06). */
 export class ProyeccionEspia implements ProyeccionDeOperaciones {
@@ -130,5 +131,16 @@ export class TiendaFalsa implements TiendaConsultable {
 
   async actualizarEstadoDelSistema(cambios: Partial<EstadoDelSistema>): Promise<void> {
     Object.assign(this.estado, cambios)
+  }
+}
+
+/** Repositorio que devuelve las listas AL REVÉS del orden de registro (un orden adversario). */
+export function alReves(repositorio: RepositorioDeOperaciones): RepositorioDeOperaciones {
+  return {
+    agregar: (registro) => repositorio.agregar(registro),
+    porId: (id) => repositorio.porId(id),
+    anulacionDe: (operacionId) => repositorio.anulacionDe(operacionId),
+    porProducto: async (productoId) => (await repositorio.porProducto(productoId)).reverse(),
+    todas: async () => (await repositorio.todas()).reverse(),
   }
 }

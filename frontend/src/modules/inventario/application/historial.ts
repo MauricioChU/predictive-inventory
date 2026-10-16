@@ -6,6 +6,7 @@ import type { TipoDeOperacion } from '@/shared/contratos/operaciones'
 import type { OperacionRegistro } from '@/shared/contratos/registros'
 import { etiquetaDeOperacion } from '../domain/etiquetas'
 import { Operacion } from '../domain/operacion'
+import { enOrdenDeRegistro } from '../domain/orden'
 import type { ContextoDeInventario } from './contexto'
 
 export interface LineaDeOperacionVista {
@@ -49,10 +50,10 @@ function idsAnulados(registros: readonly OperacionRegistro[]): Set<string> {
 
 /**
  * Del más reciente al más antiguo según cuándo ocurrió; a igual momento, lo registrado
- * después va primero (el libro está en orden de registro).
+ * después va primero.
  */
 function delMasReciente(registros: readonly OperacionRegistro[]): OperacionRegistro[] {
-  return [...registros]
+  return enOrdenDeRegistro(registros)
     .reverse()
     .sort(
       (a, b) =>

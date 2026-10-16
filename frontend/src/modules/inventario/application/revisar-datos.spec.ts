@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { Cantidad } from '@/shared/domain/cantidad'
 import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'
-import { crearEscenario } from '../__pruebas__/escenario'
+import { alReves } from '../__pruebas__/dobles'
+import { ANTECEDENTES, crearEscenario } from '../__pruebas__/escenario'
 
 const escenario = () => crearEscenario((almacen) => new UnidadDeTrabajoEnMemoria(almacen))
 const kilos = (texto: string) => Cantidad.deTexto(texto, 'KILO')
@@ -50,6 +51,28 @@ describe('revisarDatos', () => {
     const { modulo, proyeccion, operaciones } = await escenario()
     await modulo.revisarDatos()
     expect(proyeccion.reconstrucciones).toEqual([await operaciones.todas()])
+  })
+
+  it('RN-OP-19: reconstruye las proyecciones en orden de registro aunque el repositorio no lo dé', async () => {
+    const e = await crearEscenario(
+      (almacen) => new UnidadDeTrabajoEnMemoria(almacen),
+      ANTECEDENTES,
+      {
+        envolverOperaciones: alReves,
+      },
+    )
+    e.reloj.avanzarSegundos(1)
+    await e.modulo.registrarVenta({ lineas: [{ productoId: 'lejia', cantidad: '1' }] })
+    e.reloj.avanzarSegundos(1)
+    await e.modulo.registrarMerma({ productoId: 'carbon', cantidad: '1', motivo: 'Se venció' })
+    await e.modulo.revisarDatos()
+    expect(e.proyeccion.reconstrucciones[0]?.map((r) => r.tipo)).toEqual([
+      'STOCK_INICIAL',
+      'STOCK_INICIAL',
+      'STOCK_INICIAL',
+      'VENTA',
+      'MERMA',
+    ])
   })
 
   it('RN-OP-06: si una proyección falla al reconstruir, las existencias no cambian', async () => {

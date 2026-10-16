@@ -1,5 +1,5 @@
 import { mensajeDeRevisionDeDatos } from '../domain/mensajes'
-import { compararNormalizados } from '../domain/orden'
+import { compararNormalizados, enOrdenDeRegistro } from '../domain/orden'
 import {
   diferenciasDeExistencias,
   existenciasDelLibro,
@@ -18,7 +18,7 @@ export interface ResultadoDeRevision {
  */
 async function reconstruir(ctx: ContextoDeInventario): Promise<DiferenciaDeExistencia[]> {
   return ctx.uow.ejecutar(async () => {
-    const operaciones = await ctx.operaciones.todas()
+    const operaciones = enOrdenDeRegistro(await ctx.operaciones.todas())
     const delLibro = existenciasDelLibro(operaciones)
     const corregidos = diferenciasDeExistencias(await ctx.existencias.todas(), delLibro)
     if (corregidos.length > 0) await ctx.existencias.reemplazarTodas(delLibro)
