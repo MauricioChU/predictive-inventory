@@ -87,7 +87,8 @@ test.describe('RN-SIS-05: primera vez', () => {
     )
     await abrirTiendaLista(page, './bienvenida?paso=productos')
     await page.getByRole('button', { name: 'Uno por uno' }).click()
-    await expect(page).toHaveURL(/\/productos\/nuevo$/)
+    // Contrato de rutas: Producto nuevo ofrece "Seguir" → primera-vez?paso=contar.
+    await expect(page).toHaveURL(/\/productos\/nuevo\?desde=primera-vez$/)
   })
 })
 

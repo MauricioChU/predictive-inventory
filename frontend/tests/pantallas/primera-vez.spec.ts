@@ -118,6 +118,25 @@ describe('Primera vez', () => {
     expect(titulo()).toBe('Te damos la bienvenida')
   })
 
+  it('"Volver" usa el "atrás" del historial si el paso anterior es la entrada anterior (el botón atrás del celular sigue en orden)', async () => {
+    pantalla = await montarPantalla(app, '/')
+    await tocar('Empezar')
+    await escribirNombre('Bodega Rosita')
+    await tocar('Seguir')
+    // Como en el navegador real: la entrada anterior del historial es el paso del nombre.
+    Object.defineProperty(pantalla.router.options.history, 'state', {
+      configurable: true,
+      value: { back: '/bienvenida?paso=nombre' },
+    })
+    const atras = vi.spyOn(pantalla.router, 'back')
+    const reemplazar = vi.spyOn(pantalla.router, 'replace')
+
+    await tocar('Volver')
+
+    expect(atras).toHaveBeenCalledTimes(1)
+    expect(reemplazar).not.toHaveBeenCalled()
+  })
+
   describe('después de guardar el nombre y la letra', () => {
     beforeEach(async () => {
       await app.tienda.completarPrimeraVez({
@@ -127,10 +146,10 @@ describe('Primera vez', () => {
     })
 
     it.each([
-      ['Uno por uno', 'producto-nuevo', {}],
+      ['Uno por uno', 'producto-nuevo', { desde: 'primera-vez' }],
       ['Desde Excel', 'importar-productos', { desde: 'primera-vez' }],
-      ['Lo hago después', 'inicio', {}],
-    ])('"%s" abre %s', async (texto, nombre, query) => {
+      ['Dejar para después', 'inicio', {}],
+    ])('"%s" abre %s (y vuelve a la primera vez al terminar)', async (texto, nombre, query) => {
       pantalla = await montarPantalla(app, '/bienvenida?paso=productos')
       expect(titulo()).toBe('¿Cómo quieres cargar tus productos?')
 
@@ -152,6 +171,21 @@ describe('Primera vez', () => {
 
       expect(pantalla.router.currentRoute.value.name).toBe(nombre)
     })
+
+    it.each(['productos', 'contar'])(
+      'paso %s: "Dejar para después" reemplaza la bienvenida por Inicio (atrás no vuelve a ella)',
+      async (paso) => {
+        pantalla = await montarPantalla(app, `/bienvenida?paso=${paso}`)
+        const reemplazar = vi.spyOn(pantalla.router, 'replace')
+        const empujar = vi.spyOn(pantalla.router, 'push')
+
+        await tocar('Dejar para después')
+
+        expect(reemplazar).toHaveBeenCalledWith({ name: 'inicio' })
+        expect(empujar).not.toHaveBeenCalled()
+        expect(pantalla.wrapper.text()).not.toContain('Lo hago después')
+      },
+    )
 
     it('la bienvenida ya no se repite: lleva a Inicio', async () => {
       pantalla = await montarPantalla(app, '/bienvenida')

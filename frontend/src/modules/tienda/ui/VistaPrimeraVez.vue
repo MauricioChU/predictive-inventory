@@ -64,16 +64,32 @@ aplicacion.tienda
   })
   .catch((error: unknown) => console.error('No se pudo leer el nombre de la tienda:', error))
 
+function ubicacionDe(paso: Paso) {
+  return { name: 'primera-vez', query: paso === 'bienvenida' ? {} : { paso } }
+}
+
 function irA(destino: Paso, como: 'push' | 'replace' = 'push'): void {
-  const ubicacion = {
-    name: 'primera-vez',
-    query: destino === 'bienvenida' ? {} : { paso: destino },
-  }
+  const ubicacion = ubicacionDe(destino)
   void (como === 'push' ? router.push(ubicacion) : router.replace(ubicacion))
 }
 
+/**
+ * Si la entrada anterior del historial ES el paso anterior, "Volver" hace lo mismo que el botón
+ * atrás del celular (así los dos siguen en orden); si no (se abrió directo en un paso), lo
+ * reemplaza para no dejar un paso repetido en el historial.
+ */
 function alVolver(): void {
-  irA(PASOS[Math.max(0, numero.value - 2)]!, 'replace')
+  const anterior = PASOS[Math.max(0, numero.value - 2)]!
+  if (router.options.history.state.back === router.resolve(ubicacionDe(anterior)).fullPath) {
+    router.back()
+  } else {
+    irA(anterior, 'replace')
+  }
+}
+
+/** "Dejar para después": Inicio en lugar de la bienvenida (atrás no vuelve a ella). */
+function dejarParaDespues(): void {
+  void router.replace({ name: 'inicio' })
 }
 
 function seguirConElNombre(): void {
@@ -197,7 +213,7 @@ async function guardarPrimeraVez(): Promise<void> {
         <BotonPrincipal
           texto="Uno por uno"
           :icono="Plus"
-          @click="router.push(haciaPantalla(router, 'producto-nuevo'))"
+          @click="router.push(haciaPantalla(router, 'producto-nuevo', { desde: 'primera-vez' }))"
         />
         <BotonPrincipal
           texto="Desde Excel"
@@ -205,7 +221,7 @@ async function guardarPrimeraVez(): Promise<void> {
           :icono="FileSpreadsheet"
           @click="router.push({ name: 'importar-productos', query: { desde: 'primera-vez' } })"
         />
-        <Boton texto="Lo hago después" class="despues" @click="router.push({ name: 'inicio' })" />
+        <Boton texto="Dejar para después" class="despues" @click="dejarParaDespues" />
       </div>
     </template>
 
@@ -223,11 +239,7 @@ async function guardarPrimeraVez(): Promise<void> {
           :icono="ClipboardCheck"
           @click="router.push(haciaPantalla(router, 'contar-todo'))"
         />
-        <BotonPrincipal
-          texto="Dejar para después"
-          variante="secundario"
-          @click="router.push({ name: 'inicio' })"
-        />
+        <BotonPrincipal texto="Dejar para después" variante="secundario" @click="dejarParaDespues" />
       </div>
     </template>
   </div>

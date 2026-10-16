@@ -1,4 +1,4 @@
-import type { RouteLocationRaw, Router } from 'vue-router'
+import type { LocationQueryRaw, RouteLocationRaw, Router } from 'vue-router'
 
 /**
  * Contrato de rutas entre las ramas de pantallas de la Ola 4 (ola-4-comun.md): las de otras
@@ -18,6 +18,12 @@ const CAMINOS = {
 
 export type PantallaDeOtraRama = keyof typeof CAMINOS
 
-export function haciaPantalla(router: Router, nombre: PantallaDeOtraRama): RouteLocationRaw {
-  return router.hasRoute(nombre) ? { name: nombre } : CAMINOS[nombre]
+/** Con `query` (p. ej. `{ desde: 'primera-vez' }`, ver el contrato), igual por nombre o camino. */
+export function haciaPantalla(
+  router: Router,
+  nombre: PantallaDeOtraRama,
+  query?: LocationQueryRaw,
+): RouteLocationRaw {
+  const destino = router.hasRoute(nombre) ? { name: nombre } : { path: CAMINOS[nombre] }
+  return query ? { ...destino, query } : destino
 }
