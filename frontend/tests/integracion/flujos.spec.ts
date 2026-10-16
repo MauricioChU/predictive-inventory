@@ -32,7 +32,8 @@ async function enAmbosAlmacenes<T>(flujo: (app: AplicacionDePrueba) => Promise<T
     }
   }
   const memoria = resultados.get('memoria') as T
-  expect(resultados.get('dexie'), 'Dexie da lo mismo que memoria').toEqual(memoria)
+  // Estricta: mismas clases, mismas propiedades (también las `undefined`), mismos ids e instantes.
+  expect(resultados.get('dexie'), 'Dexie da lo mismo que memoria').toStrictEqual(memoria)
   return memoria
 }
 
@@ -43,6 +44,11 @@ function enTexto(historial: readonly OperacionVista[]): string[] {
     const total = o.total ? ` = ${formatearDinero(o.total)}` : ''
     return `${o.id} ${o.etiqueta}: ${lineas}${total}${o.anulada ? ' (anulada)' : ''}`
   })
+}
+
+/** Para las expectativas de la regla (la paridad entre almacenes compara las líneas con su id). */
+function sinIds(lineas: readonly string[]): string[] {
+  return lineas.map((linea) => linea.replace(/^\S+ /, ''))
 }
 
 async function stockDe(app: AplicacionDePrueba, productoId: string): Promise<string> {
@@ -263,7 +269,7 @@ describe('Integración (d): guardar copia → vender → restaurar', () => {
         conUnaConfirmacion,
         ventasAntesDeRestaurar: formatearDinero(ventasAntesDeRestaurar),
         stock: [await stockDe(app, lejia), await stockDe(app, carbon)],
-        historial: enTexto(await app.inventario.historial()).map((l) => l.replace(/^\S+ /, '')),
+        historial: enTexto(await app.inventario.historial()),
         ventasDeHoy: formatearDinero((await app.analisis.consultarResumen('HOY')).ventas),
         configuracion: await app.tienda.obtenerConfiguracion(),
         sistemaIgual: await app.tienda.consultable.estadoDelSistema(),
@@ -277,11 +283,14 @@ describe('Integración (d): guardar copia → vender → restaurar', () => {
       conUnaConfirmacion: 'Confirma dos veces para restaurar',
       ventasAntesDeRestaurar: 'S/ 20.00',
       stock: ['10', '5.5'],
-      historial: ['Stock inicial: Carbón 5.5', 'Stock inicial: Lejía 1 L 10'],
       ventasDeHoy: 'S/ 0.00',
       configuracion: { nombreTienda: 'Bodega Rosita', tamanoDeLetra: 'GRANDE' },
       recordatorio: null,
     })
+    expect(sinIds(resultado.historial)).toEqual([
+      'Stock inicial: Carbón 5.5',
+      'Stock inicial: Lejía 1 L 10',
+    ])
     expect(resultado.resumen).toContain('2 productos')
     // El estado del sistema (dispositivo, último respaldo) no viaja en la copia: queda igual.
     expect(resultado.sistemaIgual).toEqual(resultado.sistemaAntes)
@@ -326,7 +335,7 @@ describe('Integración (e): importar productos desde Excel', () => {
         categoriasEmpaques: (await app.catalogo.listarCategorias()).filter(
           (c) => c.nombre === 'Empaques',
         ).length,
-        historial: enTexto(await app.inventario.historial()).map((l) => l.replace(/^\S+ /, '')),
+        historial: enTexto(await app.inventario.historial()),
         deshacer: app.inventario.deshacer.disponible(),
         atencion: (await app.alertas.resumenDeAtencion()).texto,
       }
@@ -342,17 +351,18 @@ describe('Integración (e): importar productos desde Excel', () => {
       'Fila 6: ya existe un producto llamado "Escoba"',
       expect.stringMatching(/^Fila 7: /),
     ])
-    expect([...resultado.productos].sort()).toEqual([
+    expect(resultado.productos).toEqual([
       'Bolsa de papel (Empaques): 0',
       'Carbón (Carbón y combustibles): 10.5',
       'Escoba (Otros): 0',
       'Lejía 1 L (Lejías y desinfectantes): 12',
       'Vela (Empaques): 20',
     ])
-    expect([...resultado.historial].sort()).toEqual([
+    // Del más reciente al más antiguo: las filas se importan en orden.
+    expect(sinIds(resultado.historial)).toEqual([
+      'Stock inicial: Vela 20',
       'Stock inicial: Carbón 10.5',
       'Stock inicial: Lejía 1 L 12',
-      'Stock inicial: Vela 20',
     ])
     expect(resultado.atencion).toBe('2 agotados')
   })
@@ -395,9 +405,7 @@ describe('Integración (f): conteo guiado', () => {
         retomado: retomado && { producto: retomado.producto?.nombre, progreso: retomado.progreso },
         fin: { terminado: fin.terminado, resumen: fin.resumen },
         stock: [await stockDe(app, lejia), await stockDe(app, carbon)],
-        ajustes: enTexto(await app.inventario.historial({ tipo: 'AJUSTE' })).map((l) =>
-          l.replace(/^\S+ /, ''),
-        ),
+        ajustes: enTexto(await app.inventario.historial({ tipo: 'AJUSTE' })),
         diferencias: formatearDinero(
           (await app.analisis.consultarResumen('HOY')).diferenciasDeConteo,
         ),
@@ -405,7 +413,7 @@ describe('Integración (f): conteo guiado', () => {
       }
     })
 
-    expect(resultado).toEqual({
+    expect(resultado).toMatchObject({
       recorrido: ['Carbón', 'Detergente a granel', 'Lejía 1 L'],
       retomado: { producto: 'Detergente a granel', progreso: 'Llevas 1 de 3' },
       fin: {
@@ -416,9 +424,9 @@ describe('Integración (f): conteo guiado', () => {
         ],
       },
       stock: ['8', '10'],
-      ajustes: ['Conteo de stock: Lejía 1 L -2'],
       diferencias: '-S/ 4.80',
       enCurso: null,
     })
+    expect(sinIds(resultado.ajustes)).toEqual(['Conteo de stock: Lejía 1 L -2'])
   })
 })
