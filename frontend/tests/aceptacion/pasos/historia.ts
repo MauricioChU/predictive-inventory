@@ -53,6 +53,12 @@ const MARGEN_DE_STOCK = 1000
 const SABADO = 6
 const DOMINGO = 7
 
+/** La parte `i` de `partes` iguales de un monto, al céntimo (el resto va en la última). */
+function parteDe(monto: Dinero, i: number, partes: number): Dinero {
+  const base = Math.floor(monto.centimos / partes)
+  return Dinero.deCentimos(i === partes - 1 ? monto.centimos - base * (partes - 1) : base)
+}
+
 /** Lo mínimo que se puede vender de un producto (1 unidad, o 0.001 kg / L). */
 function pasoDe(producto: ProductoResumido): number {
   return producto.unidad === 'UNIDAD' ? 1000 : 1
@@ -276,15 +282,33 @@ export class PlanDeHistoria {
     return respuesta.valor.productoId
   }
 
-  /** Una venta de la tienda en `dia` por `ventas`, con esa ganancia neta (costo = la diferencia). */
-  async ventaDeLaTienda(dia: Dia, ventas: string, gananciaNeta: string): Promise<void> {
+  /**
+   * Ventas de la tienda entre `desde` y `hasta` por `ventas`, con esa ganancia neta (costo =
+   * la diferencia). Si son días distintos, el monto se reparte entre el PRIMER y el ÚLTIMO día
+   * (una venta en cada punta): así, si una ventana de RN-AN-12 se corriera un día hacia
+   * cualquier lado, dejaría afuera una de las dos y el escenario fallaría.
+   */
+  async ventaDeLaTienda(
+    desde: Dia,
+    hasta: Dia,
+    ventas: string,
+    gananciaNeta: string,
+  ): Promise<void> {
     const venta = Dinero.deTexto(ventas)
     const compra = venta.restar(Dinero.deTexto(gananciaNeta))
+    const dias = desde === hasta ? [desde] : [desde, hasta]
+    const partes = dias.map((dia, i) => ({
+      dia,
+      venta: parteDe(venta, i, dias.length),
+      compra: parteDe(compra, i, dias.length),
+    }))
     await this.m.app.sinEventos(async () => {
-      const productoId = await this.productoAuxiliar(dia, { compra, venta, stock: 2 })
-      await this.enElDia(dia, '12:00', () =>
-        this.m.app.inventario.registrarVenta({ lineas: [{ productoId, cantidad: '1' }] }),
-      )
+      for (const parte of partes) {
+        const productoId = await this.productoAuxiliar(parte.dia, { ...parte, stock: 2 })
+        await this.enElDia(parte.dia, '12:00', () =>
+          this.m.app.inventario.registrarVenta({ lineas: [{ productoId, cantidad: '1' }] }),
+        )
+      }
     })
   }
 

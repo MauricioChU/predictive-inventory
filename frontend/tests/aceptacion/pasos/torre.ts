@@ -162,17 +162,30 @@ export function pasosDeTorre(pasos: Pasos): void {
   )
 
   // RN-AN-14: el bloque k (0 = el más antiguo) son los 7 días que empiezan en hoy − 7·(8 − k).
+  // Lo de cada bloque se vende entre su PRIMER y su ÚLTIMO día (mitad y mitad): si los bloques
+  // de la tendencia se corrieran un día hacia cualquier lado, una de las dos ventas cambiaría de
+  // bloque y el escenario fallaría.
   declaracion(
     pasos,
     '{string} vendió por bloques de 7 días completos, del más antiguo al más reciente: {string}',
     async (m: Mundo, nombre: string, bloques: string) => {
       const { unidad } = await m.producto(nombre)
+      const paso = unidad === 'UNIDAD' ? 1000 : 1 // milésimas: 1 unidad, o 0.001 kg / L
       const valores = lista(bloques)
       valores.forEach((valor, k) => {
-        const dia = sumarDias(m.dia, -7 * (valores.length - k))
-        m.historia
-          .de(nombre)
-          .ventas.push({ total: Cantidad.deTexto(valor, unidad), desde: dia, hasta: dia })
+        const total = Cantidad.deTexto(valor, unidad).milesimas
+        const primero = sumarDias(m.dia, -7 * (valores.length - k))
+        const mitad = Math.floor(total / 2 / paso) * paso
+        const partes = [
+          { dia: primero, cantidad: mitad },
+          { dia: sumarDias(primero, 6), cantidad: total - mitad },
+        ]
+        for (const { dia, cantidad } of partes) {
+          if (cantidad === 0) continue
+          m.historia
+            .de(nombre)
+            .ventas.push({ total: Cantidad.deMilesimas(cantidad), desde: dia, hasta: dia })
+        }
       })
     },
   )
@@ -219,12 +232,12 @@ export function pasosDeTorre(pasos: Pasos): void {
   preparacion(
     pasos,
     '(que )entre {string} y {string} se vendió {string} con ganancia neta {string}',
-    (m: Mundo, desde: string, _hasta: string, ventas: string, neta: string) =>
-      m.historia.ventaDeLaTienda(desde, ventas, neta),
+    (m: Mundo, desde: string, hasta: string, ventas: string, neta: string) =>
+      m.historia.ventaDeLaTienda(desde, hasta, ventas, neta),
   )
 
   preparacion(pasos, '(que )hoy se vendió {string}', (m: Mundo, ventas: string) =>
-    m.historia.ventaDeLaTienda(m.dia, ventas, ventas),
+    m.historia.ventaDeLaTienda(m.dia, m.dia, ventas, ventas),
   )
 
   preparacion(

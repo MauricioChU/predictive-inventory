@@ -137,7 +137,8 @@ export function pasosDeAlertas(pasos: Pasos): void {
   // RN-AL-09 (M13): la ganancia de ayer es de la tienda, no de un producto; se fabrica con
   // una venta real de ayer de un producto auxiliar (costo 0, precio = la ganancia).
   preparacion(pasos, 'ayer la ganancia neta fue {string}', async (m: Mundo, monto: string) => {
-    await m.historia.ventaDeLaTienda(sumarDias(m.dia, -1), monto, monto)
+    const ayer = sumarDias(m.dia, -1)
+    await m.historia.ventaDeLaTienda(ayer, ayer, monto, monto)
   })
 
   afirmacion(
