@@ -29,14 +29,18 @@ export class LectorDeExcelEnMemoria implements LectorDeExcel {
   }
 }
 
+/** Doble del pedido de almacenamiento persistente (RN-RE-09): responde lo fijado y cuenta
+ * cuántas veces se pidió (`solicitudes`), como `NotificadorEnMemoria` con el permiso. */
 export class AlmacenamientoPersistenteEnMemoria implements AlmacenamientoPersistente {
   private concedido = true
+  solicitudes = 0
 
   fijarResultado(concedido: boolean): void {
     this.concedido = concedido
   }
 
   async solicitar(): Promise<boolean> {
+    this.solicitudes += 1
     return this.concedido
   }
 }

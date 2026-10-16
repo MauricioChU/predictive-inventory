@@ -80,18 +80,30 @@ export async function ejecutarPaso<M>(
   }
 }
 
+export interface OpcionesDeFeature {
+  /** Milisegundos por escenario (por defecto, el de Vitest): para .feature con escenarios pesados. */
+  timeout?: number
+  /**
+   * Un paso sin definir hace fallar el escenario en vez de dejarlo pendiente. Por defecto,
+   * GHERKIN_ESTRICTO=1 (CI). El ejemplo del propio runner lo fija en false: su escenario
+   * pendiente es a propósito y no debe fallar en CI.
+   */
+  estricto?: boolean
+}
+
 /** Convierte un .feature en tests de Vitest. Un paso sin definir deja el escenario pendiente (o lo hace fallar con GHERKIN_ESTRICTO=1). */
 export function ejecutarFeature<M>(
   ruta: string,
   pasos: RegistroDePasos<M>,
   crearMundo: () => M | Promise<M>,
+  opciones: OpcionesDeFeature = {},
 ): void {
   const nuevoId = IdGenerator.uuid()
   const documento = new Parser(new AstBuilder(nuevoId), new GherkinClassicTokenMatcher('es')).parse(
     readFileSync(ruta, 'utf8'),
   )
   const pickles = compile(documento, ruta, nuevoId)
-  const estricto = process.env.GHERKIN_ESTRICTO === '1'
+  const estricto = opciones.estricto ?? process.env.GHERKIN_ESTRICTO === '1'
   const nombres = nombresVisibles(pickles)
 
   describe(documento.feature?.name ?? ruta, () => {
@@ -104,12 +116,16 @@ export function ejecutarFeature<M>(
         return
       }
 
-      it(nombre, async () => {
-        const mundo = await crearMundo()
-        for (const paso of pickle.steps) {
-          await ejecutarPaso(mundo, paso, pasos)
-        }
-      })
+      it(
+        nombre,
+        async () => {
+          const mundo = await crearMundo()
+          for (const paso of pickle.steps) {
+            await ejecutarPaso(mundo, paso, pasos)
+          }
+        },
+        opciones.timeout,
+      )
     })
   })
 }
