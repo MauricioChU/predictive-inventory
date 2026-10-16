@@ -101,3 +101,11 @@ export async function buscar(pantalla: PantallaMontada, texto: string): Promise<
   await campo.trigger('keydown', { key: 'Enter' })
   await esperarDatos(pantalla.app)
 }
+
+/**
+ * El texto de un elemento con los espacios duros como espacios normales: las pantallas no dejan
+ * partir "S/ 2.60" ni "9 kg" (pegarCifras), pero las pruebas comparan con el texto de la spec.
+ */
+export function leer(elemento: { text(): string }): string {
+  return elemento.text().replace(/ /g, ' ')
+}

@@ -7,6 +7,7 @@ import {
   desmontar,
   esperarDatos,
   HOY,
+  leer,
   montarPantalla,
   type PantallaMontada,
 } from '../soporte/pantallas'
@@ -162,9 +163,7 @@ describe('Historial (HU-OP-08)', () => {
     await esperarDatos(app)
 
     const error = p.w.get('.mensaje-de-error')
-    expect(error.get('.mensaje').text().replace(/ /g, ' ')).toBe(
-      'Solo queda 1 kg de Detergente a granel',
-    )
+    expect(leer(error.get('.mensaje'))).toBe('Solo queda 1 kg de Detergente a granel')
     expect(error.get('.ayuda').text()).toBe(
       'Esa mercadería ya se vendió o se usó. Si el stock no cuadra, cuéntalo con Contar stock.',
     )

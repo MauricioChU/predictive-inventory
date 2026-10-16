@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { inject, onMounted, onUnmounted, ref } from 'vue'
 import { CircleCheck } from 'lucide-vue-next'
+import { pegarCifras } from '../texto-sin-cortes'
 import { CLAVE_ANUNCIADOR } from '../anunciador'
 
 const props = defineProps<{ titulo: string; detalle?: string }>()
@@ -40,7 +41,8 @@ onUnmounted(() => {
   <div class="pantalla-exito">
     <CircleCheck aria-hidden="true" class="icono" />
     <h1 ref="refEncabezado">{{ titulo }}</h1>
-    <p v-if="detalle" class="detalle">{{ detalle }}</p>
+    <!-- Plan 12: "Total S/ 46.80" nunca se parte (RN-UX-09). -->
+    <p v-if="detalle" class="detalle">{{ pegarCifras(detalle) }}</p>
     <slot />
   </div>
 </template>

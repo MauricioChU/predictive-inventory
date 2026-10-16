@@ -8,6 +8,7 @@ import {
   desmontar,
   esperarDatos,
   HOY,
+  leer,
   montarPantalla,
   type PantallaMontada,
 } from '../soporte/pantallas'
@@ -88,8 +89,8 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     await registrar(p)
     expect(await stock(app, lejia)).toBe('16')
     expect(p.w.get('.pantalla-exito h1').text()).toBe('Mercadería registrada')
-    expect(p.w.get('.pantalla-exito .detalle').text()).toBe('1 producto · Costo total S/ 14.40')
-    expect(p.w.get('.aviso-deshacer').text()).toContain('Mercadería registrada')
+    expect(leer(p.w.get('.pantalla-exito .detalle'))).toBe('1 producto · Costo total S/ 14.40')
+    expect(leer(p.w.get('.aviso-deshacer'))).toContain('Mercadería registrada')
 
     await p.w.get('.aviso-deshacer .deshacer').trigger('click')
     await esperarDatos(app)
@@ -110,7 +111,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
 
     const dialogo = dialogoAbierto(p)
     expect(dialogo.exists()).toBe(true)
-    expect(dialogo.get('p').text()).toBe(
+    expect(leer(dialogo.get('p'))).toBe(
       '¿Actualizar el precio de compra a S/ 2.60? Ganarás S/ 0.90 por unidad',
     )
     expect(document.activeElement?.textContent?.trim()).toBe('Sí, actualizar')
@@ -175,7 +176,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
       await cantidad(p, 0, '2')
       await registrar(p)
       const dialogo = dialogoAbierto(p)
-      expect(dialogo.get('p').text()).toBe('Escoba no se vende hace 45 días y aún tienes 4 unid.')
+      expect(leer(dialogo.get('p'))).toBe('Escoba no se vende hace 45 días y aún tienes 4 unid.')
       expect(dialogo.findAll('button').map((b) => b.text())).toEqual([
         'Cambiar cantidad',
         'Registrar igual',

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, useId, watch } from 'vue'
+import { pegarCifras } from '../texto-sin-cortes'
 
 const props = withDefaults(
   defineProps<{
@@ -52,8 +53,9 @@ function alCancelarNativo(evento: Event) {
     :aria-labelledby="idTitulo"
     @cancel="alCancelarNativo"
   >
-    <h2 :id="idTitulo">{{ titulo }}</h2>
-    <p>{{ mensaje }}</p>
+    <!-- Plan 12: "S/ 2.60" o "1 L" nunca se parten en dos líneas (RN-UX-09). -->
+    <h2 :id="idTitulo">{{ pegarCifras(titulo) }}</h2>
+    <p>{{ pegarCifras(mensaje) }}</p>
     <div class="acciones">
       <button ref="botonCancelar" type="button" class="cancelar" @click="emit('cancelar')">
         {{ textoCancelar }}

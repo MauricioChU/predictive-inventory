@@ -6,6 +6,7 @@ import {
   desmontar,
   esperarDatos,
   HOY,
+  leer,
   montarPantalla,
   type PantallaMontada,
 } from '../soporte/pantallas'
@@ -93,10 +94,10 @@ describe('Contar todo (HU-OP-10, RN-OP-21)', () => {
     const [ajuste] = await app.inventario.historial({ tipo: 'AJUSTE' })
     expect(ajuste?.lineas[0]?.cantidad.milesimas).toBe(-2000)
     expect(p.w.get('.pantalla-exito h1').text()).toBe('Terminaste de contar')
-    expect(p.w.get('.pantalla-exito').text()).toContain(
+    expect(leer(p.w.get('.pantalla-exito'))).toContain(
       'Contaste 2 productos. 1 con diferencia: -S/ 4.80',
     )
-    expect(p.w.get('.pantalla-exito').text()).toContain('Te faltó contar 1: Detergente a granel')
+    expect(leer(p.w.get('.pantalla-exito'))).toContain('Te faltó contar 1: Detergente a granel')
   })
 
   it('RN-OP-18: si el conteo cambió el stock ofrece Deshacer; si cuadraba, no', async () => {
@@ -106,7 +107,7 @@ describe('Contar todo (HU-OP-10, RN-OP-21)', () => {
     await responder(p, '10')
     expect(p.w.find('.aviso-deshacer').exists()).toBe(false)
     await responder(p, '4')
-    expect(p.w.get('.aviso-deshacer').text()).toContain('Detergente a granel: ahora hay 4 kg')
+    expect(leer(p.w.get('.aviso-deshacer'))).toContain('Detergente a granel: ahora hay 4 kg')
   })
 
   it('RN-OP-21: "No contaste ningún producto." si se saltaron todos', async () => {
@@ -116,7 +117,7 @@ describe('Contar todo (HU-OP-10, RN-OP-21)', () => {
     await tocar(p, 'Saltar')
     await tocar(p, 'Saltar')
     await tocar(p, 'Saltar')
-    expect(p.w.get('.pantalla-exito').text()).toContain('No contaste ningún producto.')
+    expect(leer(p.w.get('.pantalla-exito'))).toContain('No contaste ningún producto.')
   })
 
   it('RN-OP-16: una cantidad negativa se rechaza junto al campo y no avanza', async () => {
@@ -135,7 +136,7 @@ describe('Contar todo (HU-OP-10, RN-OP-21)', () => {
     await responder(p, '10')
     await tocar(p, 'Seguir después')
     expect(p.w.get('.pantalla-exito h1').text()).toBe('Guardamos tu avance')
-    expect(p.w.get('.pantalla-exito .detalle').text()).toBe(
+    expect(leer(p.w.get('.pantalla-exito .detalle'))).toBe(
       'Llevas 1 de 3. Para seguir, vuelve a Contar todo.',
     )
     await tocar(p, 'Ir a Inicio')

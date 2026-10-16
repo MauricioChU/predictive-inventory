@@ -6,6 +6,7 @@ import {
   desmontar,
   esperarDatos,
   HOY,
+  leer,
   montarPantalla,
   type PantallaMontada,
 } from '../soporte/pantallas'
@@ -75,10 +76,10 @@ describe('Registrar merma (HU-OP-04, RN-OP-15)', () => {
     const [merma] = await app.inventario.historial({ tipo: 'MERMA' })
     expect(merma?.motivo).toBe('Se derramó')
     expect(p.w.get('.pantalla-exito h1').text()).toBe('Lo anotamos')
-    expect(p.w.get('.pantalla-exito .detalle').text()).toBe(
+    expect(leer(p.w.get('.pantalla-exito .detalle'))).toBe(
       'Se derramó: 2 unid. de Lejía 1 L. Ahora hay 8 unid.',
     )
-    expect(p.w.get('.aviso-deshacer').text()).toContain('Se derramó: 2 unid. de Lejía 1 L')
+    expect(leer(p.w.get('.aviso-deshacer'))).toContain('Se derramó: 2 unid. de Lejía 1 L')
 
     await p.w.get('.aviso-deshacer .deshacer').trigger('click')
     await esperarDatos(app)
@@ -146,7 +147,7 @@ describe('Contar stock (HU-OP-05, RN-OP-16)', () => {
     expect(await stock(app, lejia)).toBe('8')
     expect(await tipos(app, lejia)).toEqual(['AJUSTE', 'STOCK_INICIAL'])
     expect(p.w.get('.pantalla-exito h1').text()).toBe('Stock corregido')
-    expect(p.w.get('.pantalla-exito .detalle').text()).toBe(
+    expect(leer(p.w.get('.pantalla-exito .detalle'))).toBe(
       'Lejía 1 L: ahora hay 8 unid. (2 unid. menos)',
     )
     expect(p.w.find('.aviso-deshacer').exists()).toBe(true)
@@ -175,7 +176,7 @@ describe('Contar stock (HU-OP-05, RN-OP-16)', () => {
     const p = await abrir(app, `/productos/${lejia}/contar`)
     await p.w.get('.campo-numero input').setValue('13')
     await tocar(p, 'Guardar conteo')
-    expect(p.w.get('.pantalla-exito .detalle').text()).toBe(
+    expect(leer(p.w.get('.pantalla-exito .detalle'))).toBe(
       'Lejía 1 L: ahora hay 13 unid. (3 unid. más)',
     )
   })

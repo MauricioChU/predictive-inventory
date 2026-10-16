@@ -6,6 +6,7 @@ import {
   desmontar,
   esperarDatos,
   HOY,
+  leer,
   montarPantalla,
   type PantallaMontada,
 } from '../soporte/pantallas'
@@ -250,8 +251,8 @@ describe('Vender (HU-OP-01, HU-OP-02)', () => {
 
     expect(await stock(app, ids.lejia)).toBe('8')
     expect(p.w.get('.pantalla-exito h1').text()).toBe('Venta registrada')
-    expect(p.w.get('.pantalla-exito .detalle').text()).toBe('Total S/ 7.00 · Vuelto S/ 13.00')
-    expect(p.w.get('.aviso-deshacer').text()).toContain('Venta registrada')
+    expect(leer(p.w.get('.pantalla-exito .detalle'))).toBe('Total S/ 7.00 · Vuelto S/ 13.00')
+    expect(leer(p.w.get('.aviso-deshacer'))).toContain('Venta registrada')
 
     await boton(p.w, 'Nueva venta').trigger('click')
     await esperarDatos(app)
