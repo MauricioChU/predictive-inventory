@@ -1,5 +1,10 @@
 import type { RouteRecordRaw } from 'vue-router'
-import { VistaDetalleProducto, VistaProductos } from '@/modules/catalogo'
+import {
+  VistaDetalleProducto,
+  VistaEditarProducto,
+  VistaProductoNuevo,
+  VistaProductos,
+} from '@/modules/catalogo'
 import { Pendiente } from './pendiente'
 
 /**
@@ -17,7 +22,7 @@ export const rutasDeProductos: RouteRecordRaw[] = [
   {
     path: '/productos/nuevo',
     name: 'producto-nuevo',
-    component: Pendiente,
+    component: VistaProductoNuevo,
     meta: { titulo: 'Producto nuevo' },
   },
   {
@@ -36,7 +41,7 @@ export const rutasDeProductos: RouteRecordRaw[] = [
   {
     path: '/productos/:id/editar',
     name: 'producto-editar',
-    component: Pendiente,
+    component: VistaEditarProducto,
     props: true,
     meta: { titulo: 'Editar producto' },
   },
