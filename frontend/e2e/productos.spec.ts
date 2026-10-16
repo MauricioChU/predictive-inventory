@@ -291,10 +291,8 @@ for (const ancho of [320, 360, 768, 1280]) {
   })
 }
 
-// Defecto de EncabezadoPagina (base) a 320 px con letra Muy grande: "Volver" queda aplastado
-// letra por letra al lado de un título largo. El arreglo compartido llega por develop (el
-// controlador pidió no tocar EncabezadoPagina.vue en esta rama); hasta entonces, fixme.
-test.fixme('un título largo pasa debajo de "Volver" sin aplastarlo ni partir palabras (320 px, letra Muy grande)', async ({
+// Con nombres de producto largos (plan 11; el arreglo de EncabezadoPagina llegó con PR #9).
+test('un título largo pasa debajo de "Volver" sin aplastarlo ni partir palabras (320 px, letra Muy grande)', async ({
   page,
 }) => {
   await usarLetra(page, 'MUY_GRANDE')
