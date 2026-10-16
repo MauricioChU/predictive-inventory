@@ -4,7 +4,15 @@
 
 **Objetivo:** que los seis módulos funcionen juntos, persistan en IndexedDB (Dexie) y la app arranque en el navegador con datos reales; más los ajustes transversales que dejaron las revisiones de la Ola 2.
 
-**Rama:** `feat/composicion-dexie` (sale de `develop` con las cinco ramas de la Ola 2 ya integradas).
+**Ramas (ejecución en paralelo):**
+
+| Rama | Tareas | Depende de |
+|---|---|---|
+| `feat/eventos-diferidos` (A) | Tarea 1 completa + Tarea 5 salvo los puntos de Dexie | — |
+| `feat/persistencia-dexie` (B) | Tarea 2 + puntos de Dexie de la Tarea 5 (`guardarVarios`/bulkPut en Análisis, lecturas de `cargarDatos` dentro de `uow.ejecutar`, orden de `porProducto`/`todas` en Dexie) | — (implementa `alConfirmar` en la UoW Dexie según la interfaz de este plan) |
+| `feat/composicion` (C) | Tareas 3 y 4 | A y B integradas |
+
+A y B salen de `develop` al mismo tiempo; C sale de `develop` después de integrarlas.
 
 **Spec:** ADR-0001, ADR-0002, ADR-0005, ADR-0007; [03-alertas.md](../../specs/fase-1/03-alertas.md) (tocar la notificación abre su pantalla); [05-respaldo-e-importacion.md](../../specs/fase-1/05-respaldo-e-importacion.md) (RN-RE-09); [07-calidad.md](../../specs/fase-1/07-calidad.md) (RN-SIS-08, RN-SIS-09).
 
