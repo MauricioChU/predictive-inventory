@@ -8,11 +8,13 @@ import {
   irA,
   llenarProductoNuevo,
 } from '../utilidades/recorridos'
+import { anotarTextosVistos, esperarSinPalabrasQueEvitar } from '../utilidades/textos'
 
 test.describe('Recorrido: la primera vez, uno por uno', () => {
   test('nombre → letra → un producto con foto y stock → "Seguir" → conteo guiado → Inicio con el saludo', async ({
     page,
   }) => {
+    await anotarTextosVistos(page)
     await empezarElDia(page)
     await hacerPrimeraVezHastaCargar(page, 'Bodega Rosita', 'Muy grande')
     await expect(page.locator('html')).toHaveAttribute('data-letra', 'MUY_GRANDE')
@@ -63,5 +65,6 @@ test.describe('Recorrido: la primera vez, uno por uno', () => {
     await expect(h1(page)).toHaveText('Productos')
     await irA(page, 'Inicio')
     await expect(h1(page)).toHaveText(/^Hola, Bodega Rosita/)
+    await esperarSinPalabrasQueEvitar(page)
   })
 })

@@ -22,6 +22,7 @@ import {
   textoVisible,
   venderPorPantalla,
 } from '../utilidades/recorridos'
+import { anotarTextosVistos, esperarSinPalabrasQueEvitar } from '../utilidades/textos'
 
 const LEJIA = 'Lejía Tradicional 1 L'
 const JABON = 'Jabón Bolívar'
@@ -41,6 +42,7 @@ test.describe('Recorrido: un día de tienda', () => {
     page,
   }) => {
     test.setTimeout(90_000)
+    await anotarTextosVistos(page)
     await empezarElDia(page)
     await hacerPrimeraVez(page)
     await crearProductoPorPantalla(page, {
@@ -194,5 +196,8 @@ test.describe('Recorrido: un día de tienda', () => {
         'Hoy ganaste S/ 0.50 Vendiste S/ 9.00',
       )
     })
+
+    // Plan 16, ítem 5: nada de lo que se vio en el día usa palabras que la guía manda evitar.
+    await esperarSinPalabrasQueEvitar(page)
   })
 })
