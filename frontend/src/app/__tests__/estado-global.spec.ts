@@ -16,7 +16,9 @@ describe('estado global (Pinia)', () => {
   let app: AplicacionDePrueba
 
   async function conectar() {
-    app = crearAplicacionDePrueba({ ahora: HOY })
+    // Sin ventana para juntar re-evaluaciones: el contador llega enseguida (la ventana y sus
+    // consecuencias se prueban en estado-global-rafaga.spec.ts).
+    app = crearAplicacionDePrueba({ ahora: HOY, ventanaDeReevaluacionMs: 0 })
     const inicio = await abrirApp(app, { aplicarTamanoDeLetra: () => undefined })
     const estado = useEstadoGlobal()
     estado.conectar(app, inicio)
@@ -61,7 +63,7 @@ describe('estado global (Pinia)', () => {
 
   it('ADR-0002: los manejadores son "dispara y olvida": publicar no espera la lectura del contador', async () => {
     const estado = await conectar()
-    vi.spyOn(app.alertas, 'resumenDeAtencion').mockReturnValue(new Promise(() => undefined))
+    vi.spyOn(app.analisis.consultable, 'situaciones').mockReturnValue(new Promise(() => undefined))
 
     const resultado = await Promise.race([
       app.bus.publicar({ tipo: 'ProductoCreado', productoId: 'x' }).then(() => 'publicó'),
@@ -72,8 +74,8 @@ describe('estado global (Pinia)', () => {
     expect(estado.contadorDeAtencion).toBe(0)
   })
 
-  it('varios eventos seguidos se juntan: mientras lee, a lo sumo una lectura más', async () => {
-    await conectar()
+  it('varias lecturas pedidas seguidas se juntan: mientras lee, a lo sumo una más', async () => {
+    const estado = await conectar()
     let terminar: () => void = () => undefined
     const leer = vi.spyOn(app.alertas, 'resumenDeAtencion').mockImplementation(
       () =>
@@ -82,9 +84,7 @@ describe('estado global (Pinia)', () => {
         }),
     )
 
-    for (let i = 0; i < 5; i += 1) {
-      await app.bus.publicar({ tipo: 'ProductoActualizado', productoId: 'x' })
-    }
+    for (let i = 0; i < 5; i += 1) void estado.refrescarAtencion()
     terminar()
     await vi.waitFor(() => expect(leer).toHaveBeenCalledTimes(2))
     terminar()
@@ -154,15 +154,38 @@ describe('estado global (Pinia)', () => {
     expect(estado.recordatorioDeCopia).toBeNull()
   })
 
-  it('desconectar deja de escuchar los eventos', async () => {
+  it('desconectar deja de escuchar los eventos y los resúmenes de Alertas', async () => {
     const estado = await conectar()
     const leer = vi.spyOn(app.alertas, 'resumenDeAtencion')
     estado.desconectar()
 
-    await app.bus.publicar({ tipo: 'ProductoCreado', productoId: 'x' })
+    await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '0' })
     await app.inventario.reconstruirExistencias()
+    await app.esperarTareasPendientes()
 
     expect(leer).not.toHaveBeenCalled()
+    expect((await app.alertas.resumenDeAtencion()).contador).toBe(1)
+    expect(estado.contadorDeAtencion).toBe(0)
+  })
+
+  it('RN-AL-06: una lectura propia que termina después de un resumen de Alertas no lo pisa', async () => {
+    const estado = await conectar()
+    let terminar: () => void = () => undefined
+    vi.spyOn(app.alertas, 'resumenDeAtencion').mockImplementationOnce(
+      () =>
+        new Promise((resolver) => {
+          // Lo que leyó ANTES de que se agotara el producto.
+          terminar = () => resolver({ agotados: 0, porAcabarse: 0, contador: 0, texto: '' })
+        }),
+    )
+    const lectura = estado.refrescarAtencion()
+    await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '0' })
+    await app.esperarTareasPendientes()
+    expect(estado.contadorDeAtencion).toBe(1)
+
+    terminar()
+    await lectura
+    expect(estado.contadorDeAtencion).toBe(1)
   })
 
   it('una actualización pedida mientras otra está en curso no se pierde si la que corría falla', async () => {
@@ -180,8 +203,8 @@ describe('estado global (Pinia)', () => {
       .mockResolvedValue({ agotados: 1, porAcabarse: 0, contador: 1, texto: '1 agotado' })
 
     const primera = estado.refrescarAtencion()
-    // Llega otro evento mientras la primera lectura sigue en curso.
-    await app.bus.publicar({ tipo: 'ProductoCreado', productoId: 'x' })
+    // Se pide otra mientras la primera lectura sigue en curso.
+    void estado.refrescarAtencion()
     fallar(new Error('falla la primera'))
     await primera
 
@@ -189,21 +212,31 @@ describe('estado global (Pinia)', () => {
     expect(estado.contadorDeAtencion).toBe(1)
   })
 
-  it('un error al leer el contador se registra y no rompe a quien publicó', async () => {
+  it('un error al leer el contador se registra y no rechaza', async () => {
     const estado = await conectar()
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     vi.spyOn(app.alertas, 'resumenDeAtencion').mockRejectedValue(new Error('sin base'))
 
+    await expect(estado.refrescarAtencion()).resolves.toBeUndefined()
+
+    expect(error).toHaveBeenCalledWith(
+      'No se pudo actualizar el contador de atención:',
+      expect.any(Error),
+    )
+    expect(estado.contadorDeAtencion).toBe(0)
+  })
+
+  it('si falla la re-evaluación, se registra, no rompe a quien publicó y el contador queda como estaba', async () => {
+    const estado = await conectar()
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.spyOn(app.analisis.consultable, 'situaciones').mockRejectedValue(new Error('sin base'))
+
     await expect(
       app.bus.publicar({ tipo: 'ProductoCreado', productoId: 'x' }),
     ).resolves.toBeUndefined()
+    await app.esperarTareasPendientes()
 
-    await vi.waitFor(() =>
-      expect(error).toHaveBeenCalledWith(
-        'No se pudo actualizar el contador de atención:',
-        expect.any(Error),
-      ),
-    )
+    expect(error).toHaveBeenCalledWith('Falló la evaluación de avisos:', expect.any(Error))
     expect(estado.contadorDeAtencion).toBe(0)
   })
 })

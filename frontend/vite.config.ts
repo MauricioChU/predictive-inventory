@@ -10,6 +10,19 @@ const { version } = JSON.parse(
   readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf8'),
 ) as { version: string }
 
+/**
+ * Lo que el service worker guarda para usar sin conexión (RN-UX-14 / RN-SIS-08): todo lo que
+ * la app necesita, letra incluida. Afuera (RN-SIS-09, primera carga más liviana): las páginas
+ * del kit de pantallas de prueba (`src/shared/ui/__catalogo__/CatalogoKit*.vue`, chunks
+ * `CatalogoKit*`) y, como por defecto en workbox, node_modules. Lo demás SÍ va: las pantallas del
+ * módulo Catálogo (p. ej. `CatalogoVista-*`) y el chunk de GraficoBarras (la Torre lo usa).
+ * Workbox agrega solo `sw.js` y `workbox-*.js` a lo ignorado.
+ */
+export const PRECACHE = {
+  globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+  globIgnores: ['**/node_modules/**/*', '**/CatalogoKit*'],
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   base: '/predictive-inventory/',
@@ -25,8 +38,7 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png', 'logo.svg'],
       workbox: {
         navigateFallback: 'index.html',
-        // RN-UX-14 / RN-SIS-08: todo lo que la app necesita sin conexión, letra incluida.
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        ...PRECACHE,
         // Ola 3, ruling 5: tocar una notificación abre su pantalla (public/sw-notificaciones.js).
         importScripts: ['sw-notificaciones.js'],
       },

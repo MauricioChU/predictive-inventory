@@ -134,6 +134,39 @@ export function probarRepositorioDeResumenes(crear: () => RepositorioDeResumenes
     ).toEqual(['2026-07-01', '2026-10-01'])
   })
 
+  // RN-SIS-09: una sola consulta en vez de un primerDiaDe por producto, con la MISMA regla.
+  it('RN-AN-04: primerosDias da de una vez, para cada producto con movimientos, lo mismo que primerDiaDe', async () => {
+    const repo = await conFilas()
+    for (const r of [
+      filaSinMovimiento('lejia', '2026-07-01'), // anulada el mismo día, antes del primer movimiento
+      filaSinMovimiento('jabon', '2026-07-01'),
+      fila('jabon', '2026-07-02'),
+      filaSinMovimiento('jabon', '2026-07-03'),
+      filaSinMovimiento('escoba', '2026-07-01'), // solo una venta anulada: sin primer día
+      fila('lejia-2', '2026-06-01'), // un id que empieza como otro
+      fila('archivado', '2026-05-01', 1), // un producto archivado conserva sus filas
+    ]) {
+      await repo.guardar(r)
+    }
+    const dias = await repo.primerosDias()
+    expect(dias).toEqual(
+      new Map([
+        ['lejia', '2026-08-01'],
+        ['carbon', '2026-10-01'],
+        ['jabon', '2026-07-02'],
+        ['lejia-2', '2026-06-01'],
+        ['archivado', '2026-05-01'],
+      ]),
+    )
+    for (const id of ['lejia', 'carbon', 'jabon', 'escoba', 'lejia-2', 'archivado', 'nada']) {
+      expect(dias.get(id) ?? null).toBe(await repo.primerDiaDe(id))
+    }
+  })
+
+  it('RN-AN-04: primerosDias sin filas es un mapa vacío', async () => {
+    expect(await crear().primerosDias()).toEqual(new Map())
+  })
+
   it('primerDiaDeLaTienda cuenta el primer día con filas, aunque solo tenga una venta anulada ese mismo día', async () => {
     const repo = crear()
     await repo.guardar(filaSinMovimiento('lejia', '2026-08-01'))

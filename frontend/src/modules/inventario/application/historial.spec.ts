@@ -3,6 +3,7 @@ import { Cantidad } from '@/shared/domain/cantidad'
 import { Dinero } from '@/shared/domain/dinero'
 import { instanteLocal } from '@/shared/domain/fecha'
 import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'
+import { UnidadDeTrabajoEspia } from '@/shared/application/__pruebas__/unidad-de-trabajo-espia'
 import { crearEscenario } from '../__pruebas__/escenario'
 
 const escenario = () => crearEscenario((almacen) => new UnidadDeTrabajoEnMemoria(almacen))
@@ -190,5 +191,21 @@ describe('ultimoIngresoDe', () => {
       instanteLocal('2026-10-13 09:00'),
     )
     expect(primero.tipo).toBe('hecho')
+  })
+})
+
+describe('RN-SIS-09: el historial lee en una sola transacción de solo lectura', () => {
+  it.each([
+    ['de toda la tienda', {}],
+    ['de un producto', { productoId: 'lejia' }],
+  ])('RN-SIS-09: el historial %s lee dentro de UN leer y no abre escrituras', async (_, filtro) => {
+    let espia!: UnidadDeTrabajoEspia
+    const { modulo } = await crearEscenario(
+      (almacen) => (espia = new UnidadDeTrabajoEspia(new UnidadDeTrabajoEnMemoria(almacen))),
+    )
+    await modulo.registrarVenta({ lineas: [{ productoId: 'lejia', cantidad: '1' }] })
+    espia.reiniciar()
+    expect((await modulo.historial(filtro)).length).toBeGreaterThan(0)
+    expect(espia.transacciones()).toEqual({ lecturas: 1, escrituras: 0 })
   })
 })
