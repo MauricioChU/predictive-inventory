@@ -20,15 +20,11 @@ import GraficoBarras from '@/shared/ui/componentes/GraficoBarras.vue'
 import InsigniaEstado from '@/shared/ui/componentes/InsigniaEstado.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import TarjetaDeCifra from '@/shared/ui/componentes/TarjetaDeCifra.vue'
+import { hoyEnLaTienda } from '@/shared/domain/fecha'
 import type { ProductoVista } from '../application/modulo'
 import { NOMBRE_DE_UNIDAD } from '../domain/mensajes'
 import { aPantalla } from './enlaces'
-import {
-  barrasDeTendencia,
-  hoyEnLaTienda,
-  movimientoDeProducto,
-  retiradoAlArchivar,
-} from './presentacion'
+import { barrasDeTendencia, movimientoDeProducto, retiradoAlArchivar } from './presentacion'
 
 const props = defineProps<{ id: string }>()
 
@@ -131,12 +127,12 @@ const barras = computed(() => {
   const p = producto.value
   const d = detalle.value
   if (!p || !d) return []
-  return barrasDeTendencia(d.tendencia, p.unidad, hoyEnLaTienda())
+  return barrasDeTendencia(d.tendencia, p.unidad, hoyEnLaTienda(new Date()))
 })
 const huboVentas = computed(() => barras.value.some((b) => b.valor > 0))
 
 const movimientos = computed(() => {
-  const hoy = hoyEnLaTienda()
+  const hoy = hoyEnLaTienda(new Date())
   return operaciones.value
     .slice(0, MOVIMIENTOS_A_LA_VISTA)
     .map((o) => movimientoDeProducto(o, props.id, hoy))

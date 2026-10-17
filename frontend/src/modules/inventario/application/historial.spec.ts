@@ -209,3 +209,46 @@ describe('RN-SIS-09: el historial lee en una sola transacción de solo lectura',
     expect(espia.transacciones()).toEqual({ lecturas: 1, escrituras: 0 })
   })
 })
+
+describe('operación por id (plan 12, detalle del Historial)', () => {
+  it('HU-OP-08: devuelve la misma vista que el historial, sin leer todo el libro', async () => {
+    const { modulo } = await escenario()
+    const { operacionId } = await modulo.registrarVenta({
+      lineas: [{ productoId: 'lejia', cantidad: '2' }],
+    })
+    const [enElHistorial] = await modulo.historial({ tipo: 'VENTA' })
+    expect(await modulo.operacion(operacionId)).toEqual(enElHistorial)
+  })
+
+  it('RN-OP-17: dice si está anulada; una anulación trae a quién anula', async () => {
+    const { modulo } = await escenario()
+    const { operacionId } = await modulo.registrarVenta({
+      lineas: [{ productoId: 'lejia', cantidad: '2' }],
+    })
+    const { anulacionId } = await modulo.anularOperacion({ operacionId })
+    expect((await modulo.operacion(operacionId))?.anulada).toBe(true)
+    expect(await modulo.operacion(anulacionId)).toMatchObject({
+      tipo: 'ANULACION',
+      anulaA: operacionId,
+      anulada: false,
+    })
+  })
+
+  it('una operación que no existe es null', async () => {
+    const { modulo } = await escenario()
+    expect(await modulo.operacion('no-existe')).toBeNull()
+  })
+
+  it('RN-SIS-09: lee dentro de UN leer y no abre escrituras', async () => {
+    let espia!: UnidadDeTrabajoEspia
+    const { modulo } = await crearEscenario(
+      (almacen) => (espia = new UnidadDeTrabajoEspia(new UnidadDeTrabajoEnMemoria(almacen))),
+    )
+    const { operacionId } = await modulo.registrarVenta({
+      lineas: [{ productoId: 'lejia', cantidad: '1' }],
+    })
+    espia.reiniciar()
+    expect(await modulo.operacion(operacionId)).not.toBeNull()
+    expect(espia.transacciones()).toEqual({ lecturas: 1, escrituras: 0 })
+  })
+})

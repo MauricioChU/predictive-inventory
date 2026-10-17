@@ -110,6 +110,26 @@ export async function historial(
     .map((r) => vista(r, anuladas.has(r.id), productos))
 }
 
+/**
+ * HU-OP-08 (plan 12, detalle del Historial): una sola operación, con la misma vista que en el
+ * historial, sin leer todo el libro: el registro, si tiene anulación y sus productos. null si
+ * no existe.
+ */
+export async function operacionPorId(
+  ctx: ContextoDeInventario,
+  operacionId: string,
+): Promise<OperacionVista | null> {
+  const registro = await ctx.operaciones.porId(operacionId)
+  if (!registro) return null
+  const anulada = (await ctx.operaciones.anulacionDe(operacionId)) !== null
+  const productos = new Map<string, ProductoResumido>()
+  for (const productoId of registro.productoIds) {
+    const producto = await ctx.catalogo().producto(productoId)
+    if (producto) productos.set(producto.id, producto)
+  }
+  return vista(registro, anulada, productos)
+}
+
 /** RN-AN-16: cuándo llegó mercadería por última vez (sin contar ingresos anulados). */
 export async function ultimoIngresoDe(
   ctx: ContextoDeInventario,

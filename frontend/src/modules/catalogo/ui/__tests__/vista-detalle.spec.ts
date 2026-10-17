@@ -223,7 +223,10 @@ describe('Detalle del producto', () => {
     await esperar()
     const dialogo = w.get('dialog')
     expect(dialogo.attributes('open')).toBeDefined()
-    expect(dialogo.text()).toContain('Aún quedan 4 unid. ¿Las retiramos del stock?')
+    // DialogoConfirmacion no deja partir "4 unid." (pegarCifras, plan 12): espacios duros.
+    expect(dialogo.text().replace(/\u00a0/g, ' ')).toContain(
+      'Aún quedan 4 unid. ¿Las retiramos del stock?',
+    )
 
     await boton(w, 'No, dejarlo').trigger('click')
     await esperar()

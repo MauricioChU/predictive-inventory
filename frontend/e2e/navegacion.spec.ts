@@ -5,8 +5,14 @@ import { abrirTiendaLista } from './utilidades/tienda'
 
 const DESTINOS = ['Inicio', 'Vender', 'Recibir', 'Productos', 'Control']
 const ANCHOS = [320, 360, 768, 1280]
-/** Plan 14: Inicio saluda con el nombre de la tienda (el resto, por ahora, se titula como su destino). */
-const TITULOS: Partial<Record<string, RegExp>> = { Inicio: /^Hola, Bodega Rosita/ }
+/**
+ * Plan 14: Inicio saluda con el nombre de la tienda. Plan 12 (RN-UX-12): "Recibir" abre la
+ * pantalla titulada "Llegó mercadería". El resto se titula como su destino.
+ */
+const TITULOS: Partial<Record<string, string | RegExp>> = {
+  Inicio: /^Hola, Bodega Rosita/,
+  Recibir: 'Llegó mercadería',
+}
 
 test.describe('RN-UX-12: navegación', () => {
   test('los cinco destinos están visibles y funcionan', async ({ page }) => {

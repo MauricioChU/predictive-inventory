@@ -429,4 +429,48 @@ describe('Integración (f): conteo guiado', () => {
     })
     expect(sinIds(resultado.ajustes)).toEqual(['Conteo de stock: Lejía 1 L -2'])
   })
+
+  it('RN-OP-18 (plan 12): deshacer la última respuesta del conteo anula su AJUSTE en la misma transacción y el producto queda en "Te faltó contar"', async () => {
+    const resultado = await enAmbosAlmacenes(async (app) => {
+      const lejia = await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '10' })
+      await app.inventario.iniciarConteoGuiado()
+      const { operacionId } = await app.inventario.responderConteo('8')
+      const fin = await app.inventario.deshacerRespuestaDeConteo(operacionId!)
+      return {
+        resumen: fin.resumen,
+        stock: await stockDe(app, lejia),
+        tipos: (await app.inventario.historial({ productoId: lejia })).map((o) => o.tipo),
+        diferencias: formatearDinero(
+          (await app.analisis.consultarResumen('HOY')).diferenciasDeConteo,
+        ),
+      }
+    })
+    expect(resultado).toEqual({
+      resumen: ['No contaste ningún producto.', 'Te faltó contar 1: Lejía 1 L'],
+      stock: '10',
+      tipos: ['ANULACION', 'AJUSTE', 'STOCK_INICIAL'],
+      diferencias: 'S/ 0.00',
+    })
+  })
+
+  it('HU-OP-08 (plan 12): el detalle de una operación se lee por id, igual en memoria y en Dexie', async () => {
+    const resultado = await enAmbosAlmacenes(async (app) => {
+      const lejia = await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '10' })
+      const { operacionId } = await app.inventario.registrarVenta({
+        lineas: [{ productoId: lejia, cantidad: '2' }],
+      })
+      const { anulacionId } = await app.inventario.anularOperacion({ operacionId })
+      const [anulacion, venta] = await app.inventario.historial({ productoId: lejia })
+      return {
+        venta: await app.inventario.operacion(operacionId),
+        anulacion: await app.inventario.operacion(anulacionId),
+        enElHistorial: { venta, anulacion },
+        inexistente: await app.inventario.operacion('no-existe'),
+      }
+    })
+    expect(resultado.venta).toEqual(resultado.enElHistorial.venta)
+    expect(resultado.anulacion).toEqual(resultado.enElHistorial.anulacion)
+    expect(resultado.venta?.anulada).toBe(true)
+    expect(resultado.inexistente).toBeNull()
+  })
 })

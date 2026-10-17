@@ -3,6 +3,7 @@ import type { ProductoResumido } from '@/shared/contratos/entre-modulos'
 import { ConteoGuiado, ordenarParaConteo } from '../domain/conteo-guiado'
 import { leerContado } from '../domain/reglas'
 import type { ContextoDeInventario } from './contexto'
+import type { ServicioDeDeshacer } from './deshacer'
 import { contarEn } from './mermas-y-ajustes'
 
 export interface EstadoDelConteo {
@@ -15,9 +16,17 @@ export interface EstadoDelConteo {
   } | null
   /** "Llevas 1 de 3". */
   progreso: string
+  /** El mismo avance en números (BarraDeProgreso de "Contar todo"). */
+  avance: { hechos: number; total: number }
   terminado: boolean
   /** Solo al terminar (RN-OP-21). */
   resumen: string[] | null
+}
+
+/** Lo que devuelve "¿Cuántos hay?": el estado nuevo y el AJUSTE que registró, si hubo. */
+export interface RespuestaDelConteoGuiado extends EstadoDelConteo {
+  /** El AJUSTE registrado por esta respuesta (para Deshacer), o null si el stock ya estaba bien. */
+  operacionId: string | null
 }
 
 type Productos = ReadonlyMap<string, ProductoResumido>
@@ -53,6 +62,7 @@ async function estadoDe(
         }
       : null,
     progreso: conteo.progreso(),
+    avance: conteo.avance(),
     terminado: conteo.terminado,
     resumen: conteo.resumen((productoId) => productos.get(productoId)?.nombre ?? productoId),
   }
@@ -101,8 +111,9 @@ export async function conteoActual(ctx: ContextoDeInventario): Promise<EstadoDel
 export async function responderConteo(
   ctx: ContextoDeInventario,
   contado: string,
-): Promise<EstadoDelConteo> {
+): Promise<RespuestaDelConteoGuiado> {
   const productos = await productosPorId(ctx)
+  let operacionId: string | null = null
   const siguiente = await ctx.libro.enTransaccion(async (escritura) => {
     const conteo = await cargarEnCurso(ctx, productos)
     const id = conteo.productoActual
@@ -113,6 +124,7 @@ export async function responderConteo(
     }
     const cantidad = leerContado(contado, producto.unidad)
     const respuesta = await contarEn(ctx, escritura, producto, cantidad)
+    operacionId = respuesta.tipo === 'ajustado' ? respuesta.operacionId : null
     const diferencia = respuesta.tipo === 'ajustado' ? respuesta.diferencia : Cantidad.cero()
     const valor = producto.precioCompra.multiplicarPor(diferencia)
     const avanzado = seguirConContables(
@@ -122,6 +134,31 @@ export async function responderConteo(
     )
     await ctx.conteo.guardar(avanzado.aRegistro())
     return avanzado
+  })
+  return { operacionId, ...(await estadoDe(ctx, siguiente, productos)) }
+}
+
+/**
+ * RN-OP-18 en el conteo guiado (plan 12): deshacer la respuesta que registró el AJUSTE
+ * `operacionId`. En UNA unidad de trabajo: lo anula con el Deshacer del módulo (que exige que
+ * siga siendo la operación ofrecida y dentro del tiempo) y el producto deja de contar en el
+ * resumen y pasa a "Te faltó contar". Si el Deshacer se rechaza, no cambia nada.
+ */
+export async function deshacerRespuestaDeConteo(
+  ctx: ContextoDeInventario,
+  deshacer: ServicioDeDeshacer,
+  operacionId: string,
+): Promise<EstadoDelConteo> {
+  const productos = await productosPorId(ctx)
+  const siguiente = await ctx.uow.ejecutar(async () => {
+    const ajuste = await ctx.operaciones.porId(operacionId)
+    if (ajuste?.tipo !== 'AJUSTE') throw new Error(`${operacionId} no es un conteo`)
+    await deshacer.deshacer(operacionId)
+    const conteo = await cargarEnCurso(ctx, productos)
+    const productoId = ajuste.movimientos[0]?.productoId
+    const actualizado = productoId ? conteo.deshacerRespuesta(productoId) : conteo
+    await ctx.conteo.guardar(actualizado.aRegistro())
+    return actualizado
   })
   return estadoDe(ctx, siguiente, productos)
 }

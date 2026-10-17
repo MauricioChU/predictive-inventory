@@ -8,7 +8,9 @@ import { abrirTiendaLista } from './utilidades/tienda'
 interface AplicacionEnLaPagina {
   catalogo: {
     listarCategorias(): Promise<{ id: string; nombre: string }[]>
-    crearProducto(datos: Record<string, unknown>): Promise<{ tipo: string; valor?: { productoId: string } }>
+    crearProducto(
+      datos: Record<string, unknown>,
+    ): Promise<{ tipo: string; valor?: { productoId: string } }>
   }
   inventario: {
     registrarVenta(datos: { lineas: { productoId: string; cantidad: string }[] }): Promise<unknown>
@@ -33,7 +35,8 @@ async function leerBaseLocal(page: Page): Promise<{ categorias: number; disposit
             db.close()
             resolver({
               categorias: categorias.result,
-              dispositivoId: (sistema.result as { dispositivoId?: string } | undefined)?.dispositivoId,
+              dispositivoId: (sistema.result as { dispositivoId?: string } | undefined)
+                ?.dispositivoId,
             })
           }
         }
@@ -87,13 +90,19 @@ test.describe('Ola 3: la app arranca con los datos guardados en el celular', () 
     expect((await leerBaseLocal(page)).dispositivoId).toBe(base.dispositivoId)
   })
 
+  /** Plan 14: Inicio saluda. Plan 12 (RN-UX-12): "Recibir" abre la pantalla "Llegó mercadería". */
+  const TITULOS: Partial<Record<string, string | RegExp>> = {
+    Inicio: /^Hola, Bodega Rosita/,
+    Recibir: 'Llegó mercadería',
+  }
+
   test('la navegación sigue funcionando con la aplicación montada', async ({ page }) => {
     // Plan 14: con la primera vez hecha (si no, Inicio es la bienvenida); Inicio saluda.
     await abrirTiendaLista(page, './')
     for (const destino of ['Vender', 'Recibir', 'Productos', 'Control', 'Inicio']) {
       await page.getByRole('link', { name: new RegExp(`^${destino}`) }).click()
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-        destino === 'Inicio' ? /^Hola, Bodega Rosita/ : destino,
+        TITULOS[destino] ?? destino,
       )
     }
   })
@@ -164,21 +173,32 @@ test.describe('Ola 3: la app arranca con los datos guardados en el celular', () 
 })
 
 test.describe('RN-SIS-08: sin conexión después de la primera carga (build de producción)', () => {
-  test.skip(!process.env.CI, 'El Service Worker solo existe en el build de producción (npm run preview)')
+  test.skip(
+    !process.env.CI,
+    'El Service Worker solo existe en el build de producción (npm run preview)',
+  )
 
-  test('el Service Worker atiende la app y carga el aviso de notificaciones', async ({ page, request }) => {
+  test('el Service Worker atiende la app y carga el aviso de notificaciones', async ({
+    page,
+    request,
+  }) => {
     await abrir(page, './')
     const alcance = await page.evaluate(async () => (await navigator.serviceWorker.ready).scope)
     expect(new URL(alcance).pathname).toBe('/predictive-inventory/')
 
     const sw = await (await request.get('./sw.js')).text()
-    expect(sw, 'workbox importa el manejador de notificationclick').toContain('sw-notificaciones.js')
+    expect(sw, 'workbox importa el manejador de notificationclick').toContain(
+      'sw-notificaciones.js',
+    )
     const manejador = await request.get('./sw-notificaciones.js')
     expect(manejador.ok()).toBe(true)
     expect(await manejador.text()).toContain('notificationclick')
   })
 
-  test('abre sin conexión, con todos sus recursos, y completa una venta', async ({ page, context }) => {
+  test('abre sin conexión, con todos sus recursos, y completa una venta', async ({
+    page,
+    context,
+  }) => {
     await abrir(page, './')
     await page.evaluate(async () => {
       await navigator.serviceWorker.ready

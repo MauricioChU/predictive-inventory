@@ -1,3 +1,4 @@
+import { simularDialogos } from '@/shared/ui/__tests__/dialogo-en-jsdom'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia, type Pinia } from 'pinia'
 import { defineComponent, h } from 'vue'
@@ -123,16 +124,5 @@ export async function esperarPantalla(): Promise<void> {
   }
 }
 
-/** jsdom no implementa <dialog>.showModal(): lo mínimo para DialogoConfirmacion. */
-export function simularDialogos(): void {
-  const prototipo = HTMLDialogElement.prototype as HTMLDialogElement & {
-    showModal?: () => void
-    close?: () => void
-  }
-  prototipo.showModal = function (this: HTMLDialogElement) {
-    this.setAttribute('open', '')
-  }
-  prototipo.close = function (this: HTMLDialogElement) {
-    this.removeAttribute('open')
-  }
-}
+/** El doble de <dialog> de todas las pruebas (uno solo: src/shared/ui/__tests__/dialogo-en-jsdom). */
+export { simularDialogos }

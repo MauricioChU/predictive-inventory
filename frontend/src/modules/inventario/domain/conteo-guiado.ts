@@ -61,7 +61,13 @@ export class ConteoGuiado {
 
   /** "Llevas 1 de 3": cuántos ya pasaron (contados, saltados u omitidos) de cuántos. */
   progreso(): string {
-    return progresoDelConteo(this.registro.posicion, this.registro.orden.length)
+    const { hechos, total } = this.avance()
+    return progresoDelConteo(hechos, total)
+  }
+
+  /** Lo mismo que `progreso()` en números, para la barra de progreso de la pantalla. */
+  avance(): { hechos: number; total: number } {
+    return { hechos: this.registro.posicion, total: this.registro.orden.length }
   }
 
   /** Registra lo contado del producto actual: diferencia (con signo) y su valor al costo. */
@@ -79,6 +85,22 @@ export class ConteoGuiado {
   saltar(ahora: Instante): ConteoGuiado {
     const productoId = this.exigirActual()
     return this.avanzar(ahora, { saltados: [...this.registro.saltados, productoId] })
+  }
+
+  /**
+   * RN-OP-18 en el conteo guiado: la respuesta de `productoId` se deshizo (su AJUSTE se anuló).
+   * Deja de contar en el resumen y pasa a "Te faltó contar", en el orden del recorrido. No
+   * mueve el producto actual. Un producto que no estaba contado no cambia nada.
+   */
+  deshacerRespuesta(productoId: string): ConteoGuiado {
+    const { contados, saltados, orden } = this.registro
+    if (!contados.some((c) => c.productoId === productoId)) return this
+    const posicion = (id: string) => orden.indexOf(id)
+    return new ConteoGuiado({
+      ...this.registro,
+      contados: contados.filter((c) => c.productoId !== productoId),
+      saltados: [...saltados, productoId].sort((a, b) => posicion(a) - posicion(b)),
+    })
   }
 
   /** Pasa de largo los productos que ya no se pueden contar (p. ej. archivados durante el conteo). */

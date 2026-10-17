@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, useId, watch } from 'vue'
+import { pegarCifras } from '../texto-sin-cortes'
 
 const props = withDefaults(
   defineProps<{
@@ -9,14 +10,27 @@ const props = withDefaults(
     textoConfirmar: string
     textoCancelar?: string
     peligro?: boolean
+    /**
+     * Qué opción recibe el foco al abrirse (la que elige Enter). Por defecto Cancelar: lo
+     * seguro cuando se confirma algo riesgoso. "confirmar" cuando la spec fija esa opción por
+     * defecto (RN-OP-14: "¿Actualizar el precio de compra…?", por defecto sí).
+     */
+    enfocar?: 'cancelar' | 'confirmar'
+    /**
+     * Qué hace el cierre nativo (Escape, o "atrás" en Android). Por defecto es Cancelar. Con
+     * "cerrar" (plan 12, r1 M1) emite `cerrar`: se cierra SIN responder, para cuando las dos
+     * opciones hacen algo (p. ej. las dos respuestas de RN-OP-14 registran la llegada).
+     */
+    cierreNativo?: 'cancelar' | 'cerrar'
   }>(),
-  { textoCancelar: 'Cancelar', peligro: false },
+  { textoCancelar: 'Cancelar', peligro: false, enfocar: 'cancelar', cierreNativo: 'cancelar' },
 )
-const emit = defineEmits<{ confirmar: []; cancelar: [] }>()
+const emit = defineEmits<{ confirmar: []; cancelar: []; cerrar: [] }>()
 
 const idTitulo = useId()
 const dialogo = ref<HTMLDialogElement>()
 const botonCancelar = ref<HTMLButtonElement>()
+const botonConfirmar = ref<HTMLButtonElement>()
 
 watch(
   () => props.abierto,
@@ -24,7 +38,7 @@ watch(
     await nextTick()
     if (abierto) {
       if (!dialogo.value?.open) dialogo.value?.showModal()
-      botonCancelar.value?.focus()
+      ;(props.enfocar === 'confirmar' ? botonConfirmar : botonCancelar).value?.focus()
     } else {
       dialogo.value?.close()
     }
@@ -34,7 +48,8 @@ watch(
 
 function alCancelarNativo(evento: Event) {
   evento.preventDefault()
-  emit('cancelar')
+  if (props.cierreNativo === 'cerrar') emit('cerrar')
+  else emit('cancelar')
 }
 </script>
 
@@ -45,13 +60,15 @@ function alCancelarNativo(evento: Event) {
     :aria-labelledby="idTitulo"
     @cancel="alCancelarNativo"
   >
-    <h2 :id="idTitulo">{{ titulo }}</h2>
-    <p>{{ mensaje }}</p>
+    <!-- Plan 12: "S/ 2.60" o "1 L" nunca se parten en dos líneas (RN-UX-09). -->
+    <h2 :id="idTitulo">{{ pegarCifras(titulo) }}</h2>
+    <p>{{ pegarCifras(mensaje) }}</p>
     <div class="acciones">
       <button ref="botonCancelar" type="button" class="cancelar" @click="emit('cancelar')">
         {{ textoCancelar }}
       </button>
       <button
+        ref="botonConfirmar"
         type="button"
         class="confirmar"
         :class="{ 'confirmar--peligro': peligro }"

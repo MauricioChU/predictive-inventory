@@ -151,7 +151,32 @@ describe('index', () => {
         'calcularVuelto',
         'crearModuloInventario',
         'etiquetaDeOperacion',
+        // Plan 12: las pantallas, como cargadores diferidos para el router.
+        'VistaContarStock',
+        'VistaContarTodo',
+        'VistaHistorial',
+        'VistaMerma',
+        'VistaOperacion',
+        'VistaRecibir',
+        'VistaVender',
       ].sort(),
     )
+  })
+
+  it('plan 12: las siete pantallas se cargan recién al abrirlas (cada una es un componente)', async () => {
+    const api = await import('../index')
+    const vistas = [
+      api.VistaVender,
+      api.VistaRecibir,
+      api.VistaMerma,
+      api.VistaContarStock,
+      api.VistaContarTodo,
+      api.VistaHistorial,
+      api.VistaOperacion,
+    ]
+    for (const cargar of vistas) {
+      const modulo = await cargar()
+      expect(modulo.default).toBeTypeOf('object')
+    }
   })
 })

@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Undo2 } from 'lucide-vue-next'
+import { SEGUNDOS_PARA_DESHACER } from '@/shared/contratos/operaciones'
+import { pegarCifras } from '../texto-sin-cortes'
 
-const props = withDefaults(defineProps<{ mensaje: string; segundos?: number }>(), { segundos: 10 })
+const props = withDefaults(defineProps<{ mensaje: string; segundos?: number }>(), {
+  segundos: SEGUNDOS_PARA_DESHACER,
+})
 const emit = defineEmits<{ deshacer: []; cerrar: [] }>()
 
 const restante = ref(props.segundos)
@@ -42,7 +46,8 @@ function alDeshacer() {
   -->
   <div class="aviso-deshacer">
     <div class="cuerpo">
-      <p class="mensaje">{{ mensaje }}</p>
+      <!-- Plan 12: "9 kg" o "S/ 3.20" nunca se parten (RN-UX-09); el anuncio lleva el texto tal cual. -->
+      <p class="mensaje">{{ pegarCifras(mensaje) }}</p>
       <button type="button" class="deshacer" @click="alDeshacer">
         <Undo2 aria-hidden="true" class="icono" />
         <span>Deshacer</span>

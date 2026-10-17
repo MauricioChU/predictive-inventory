@@ -4,6 +4,7 @@ import { instanteLocal } from '@/shared/domain/fecha'
 import { RelojFijo } from '@/shared/domain/reloj'
 import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'
 import { crearEscenario } from '../__pruebas__/escenario'
+import { SEGUNDOS_PARA_DESHACER as COMPARTIDA } from '@/shared/contratos/operaciones'
 import { SEGUNDOS_PARA_DESHACER, ServicioDeDeshacer } from './deshacer'
 
 const AHORA = instanteLocal('2026-10-15 10:00')
@@ -19,6 +20,10 @@ function servicio() {
 }
 
 describe('ServicioDeDeshacer', () => {
+  it('RN-OP-18 (M8): la regla usa la misma constante que el aviso de la pantalla', () => {
+    expect(SEGUNDOS_PARA_DESHACER).toBe(COMPARTIDA)
+  })
+
   it('RN-OP-18: se ofrece durante 10 segundos', () => {
     expect(SEGUNDOS_PARA_DESHACER).toBe(10)
     const { reloj, deshacer } = servicio()
@@ -57,6 +62,18 @@ describe('ServicioDeDeshacer', () => {
     deshacer.ofrecer('op-2', AHORA)
     expect(deshacer.disponible()?.operacionId).toBe('op-2')
     await deshacer.deshacer()
+    expect(anuladas).toEqual(['op-2'])
+  })
+
+  it('RN-OP-18: deshacer una operación que ya no es la ofrecida se rechaza y no anula nada', async () => {
+    const { deshacer, anuladas } = servicio()
+    deshacer.ofrecer('op-1', AHORA)
+    deshacer.ofrecer('op-2', AHORA)
+    await expect(deshacer.deshacer('op-1')).rejects.toThrow(
+      'Ya pasó el tiempo para deshacer. Puedes anularla desde el Historial.',
+    )
+    expect(anuladas).toEqual([])
+    await deshacer.deshacer('op-2')
     expect(anuladas).toEqual(['op-2'])
   })
 

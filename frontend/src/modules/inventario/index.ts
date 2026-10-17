@@ -15,6 +15,7 @@ export type {
   OperacionVista,
   RespuestaDeConteo,
   RespuestaDeIngreso,
+  RespuestaDelConteoGuiado,
   ResultadoDeRevision,
 } from './application/modulo'
 export type {
@@ -41,3 +42,12 @@ export {
   RepositorioDeExistenciasDexie,
   RepositorioDeOperacionesDexie,
 } from './infrastructure/dexie/repositorios'
+
+// Ola 4, plan 12: pantallas de operaciones, cargadas recién al abrirlas (cada una es su chunk).
+export const VistaVender = () => import('./ui/VistaVender.vue')
+export const VistaRecibir = () => import('./ui/VistaRecibir.vue')
+export const VistaMerma = () => import('./ui/VistaMerma.vue')
+export const VistaContarStock = () => import('./ui/VistaContarStock.vue')
+export const VistaContarTodo = () => import('./ui/VistaContarTodo.vue')
+export const VistaHistorial = () => import('./ui/VistaHistorial.vue')
+export const VistaOperacion = () => import('./ui/VistaOperacion.vue')

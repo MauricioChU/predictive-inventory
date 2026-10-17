@@ -8,7 +8,6 @@ import {
   aFilaDeLista,
   barrasDeTendencia,
   filtrarProductos,
-  hoyEnLaTienda,
   horaDe,
   montoParaEditar,
   movimientoDeProducto,
@@ -195,11 +194,8 @@ describe('montoParaEditar (el precio en el campo, sin "S/")', () => {
   })
 })
 
-describe('hoyEnLaTienda y horaDe (zona de la tienda, America/Lima)', () => {
-  it('el día de negocio, no el del reloj UTC', () => {
-    expect(hoyEnLaTienda(new Date('2026-10-17T03:00:00.000Z'))).toBe('2026-10-16')
-  })
-
+// hoyEnLaTienda vive en shared/domain/fecha (un solo ayudante): su prueba está en fecha.spec.
+describe('horaDe (zona de la tienda, America/Lima)', () => {
   it('la hora en formato de 12 horas, como se dice en la tienda', () => {
     expect(horaDe(instanteLocal('2026-10-16 10:30'))).toBe('10:30 a. m.')
     expect(horaDe(instanteLocal('2026-10-16 15:05'))).toBe('3:05 p. m.')

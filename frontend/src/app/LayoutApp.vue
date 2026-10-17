@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onBeforeUnmount, provide, ref } from 'vue'
+import { nextTick, onBeforeUnmount, provide, ref, watch } from 'vue'
 import AvisoDeshacer from '@/shared/ui/componentes/AvisoDeshacer.vue'
+import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import BarraNavegacion from '@/shared/ui/componentes/BarraNavegacion.vue'
-import { usarAltoComoVariable } from './alto-como-variable'
+import { usarAltoObservado } from '@/shared/ui/alto-observado'
 import { CLAVE_ANUNCIADOR, crearAnunciador } from '@/shared/ui/anunciador'
 import {
   CLAVE_AVISO_DESHACER,
@@ -26,11 +27,29 @@ function alDeshacer() {
   contextoAvisoDeshacer.cerrar()
 }
 
+// Plan 12, r1 #2 (RN-UX-11): el botón Deshacer desaparece al tocarlo y el foco quedaría en
+// <body>; cuando llega el resultado, el foco pasa a su "Cerrar" (no si la persona ya siguió).
+// r2 #3: y si se cierra (solo o con "Cerrar") con el foco adentro, el foco va al título de la
+// pantalla, no a <body>.
+watch(contextoAvisoDeshacer.resultado, async (resultado, anterior) => {
+  if (!resultado && anterior) {
+    if (!document.activeElement?.closest('.resultado-de-deshacer')) return
+    await nextTick()
+    const titulo = document.querySelector<HTMLElement>('#contenido h1')
+    if (titulo && !titulo.hasAttribute('tabindex')) titulo.setAttribute('tabindex', '-1')
+    titulo?.focus()
+    return
+  }
+  if (!resultado || (document.activeElement && document.activeElement !== document.body)) return
+  await nextTick()
+  document.querySelector<HTMLElement>('.resultado-de-deshacer .cerrar')?.focus()
+})
+
 // m5: alto real de lo que queda pegado abajo, para scroll-padding-bottom (ver estilos).
 const refPie = ref<HTMLElement>()
 const refZonaAviso = ref<HTMLElement>()
-usarAltoComoVariable(refPie, '--alto-pie')
-usarAltoComoVariable(refZonaAviso, '--alto-aviso')
+usarAltoObservado(refPie, { variable: '--alto-pie' })
+usarAltoObservado(refZonaAviso, { variable: '--alto-aviso' })
 
 onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
 </script>
@@ -71,13 +90,30 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
       <RouterView />
     </main>
     <div ref="refPie" class="pie">
-      <div v-if="contextoAvisoDeshacer.activo.value" ref="refZonaAviso" class="zona-aviso-deshacer">
+      <div
+        v-if="contextoAvisoDeshacer.activo.value || contextoAvisoDeshacer.resultado.value"
+        ref="refZonaAviso"
+        class="zona-aviso-deshacer"
+      >
         <AvisoDeshacer
+          v-if="contextoAvisoDeshacer.activo.value"
           :key="contextoAvisoDeshacer.activo.value.id"
           :mensaje="contextoAvisoDeshacer.activo.value.mensaje"
           :segundos="SEGUNDOS_PARA_DESHACER"
           @deshacer="alDeshacer"
           @cerrar="contextoAvisoDeshacer.cerrar"
+        />
+        <!-- Plan 12, r1 #2 (RN-UX-11): en el mismo lugar, qué se deshizo (o por qué no se
+             pudo), esté donde esté la persona; una sola vez para toda la app. -->
+        <AvisoEnPagina
+          v-else-if="contextoAvisoDeshacer.resultado.value"
+          :key="contextoAvisoDeshacer.resultado.value.id"
+          class="resultado-de-deshacer"
+          :tono="contextoAvisoDeshacer.resultado.value.tono"
+          :titulo="contextoAvisoDeshacer.resultado.value.titulo"
+          :texto="contextoAvisoDeshacer.resultado.value.texto"
+          texto-cerrar="Cerrar"
+          @cerrar="contextoAvisoDeshacer.cerrarResultado"
         />
       </div>
       <BarraNavegacion class="navegacion" :contador-control="estadoGlobal.contadorDeAtencion" />
@@ -104,9 +140,11 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
 
 /* m5 (WCAG 2.4.11): lo que queda pegado abajo no tapa al elemento que recibe el foco por
    teclado — el navegador desplaza la página dejando libre ese alto, medido en vivo
-   (alto-como-variable.ts), nunca adivinado. En celular es todo el pie (aviso + barra). */
+   (alto-observado.ts), nunca adivinado. En celular es todo el pie (aviso + barra).
+   Plan 12: más la BarraDeTotal de Vender/Recibir (pegada justo encima del pie), que publica
+   su alto en --alto-barra-de-total mientras está en pantalla (0px si no hay ninguna). */
 :global(html) {
-  scroll-padding-bottom: var(--alto-pie, 0px);
+  scroll-padding-bottom: calc(var(--alto-pie, 0px) + var(--alto-barra-de-total, 0px));
 }
 
 .layout-app {
@@ -154,9 +192,10 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
 }
 
 @media (min-width: 1024px) {
-  /* En PC lo único pegado abajo es el aviso (la navegación está al costado). */
+  /* En PC lo único pegado abajo es el aviso (la navegación está al costado), y la BarraDeTotal
+     si la pantalla tiene una (plan 12). */
   :global(html) {
-    scroll-padding-bottom: var(--alto-aviso, 0px);
+    scroll-padding-bottom: calc(var(--alto-aviso, 0px) + var(--alto-barra-de-total, 0px));
   }
   .layout-app {
     grid-template-columns: 260px minmax(0, 1fr);
