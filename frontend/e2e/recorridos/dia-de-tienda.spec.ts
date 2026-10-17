@@ -152,7 +152,7 @@ test.describe('Recorrido: un día de tienda', () => {
         'Hoy ganaste S/ 4.00 Vendiste S/ 18.50',
       )
       const filas = await resumen.locator('.fila-de-dato').allInnerTexts()
-      expect(filas.map((f) => f.replaceAll(' ', ' ').replace(/\s+/g, ' ').trim())).toEqual([
+      expect(filas.map((f) => f.replace(/\s+/g, ' ').trim())).toEqual([
         'Ventas S/ 18.50',
         'Costo de lo vendido S/ 12.10',
         'Pérdidas (se dañó, se derramó o se venció) S/ 2.40',
