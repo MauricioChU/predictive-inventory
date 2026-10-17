@@ -312,15 +312,20 @@ h1 {
   position: sticky;
   bottom: var(--alto-pie, 0px);
   z-index: 5;
-  /* Un poco más ancha que el botón: el borde de la franja (que el navegador dibuja aparte) es
-     del color del fondo y no deja una línea del color del botón. */
-  margin: calc(-1 * var(--espacio-2)) calc(-1 * var(--espacio-1));
-  padding: var(--espacio-2) var(--espacio-1);
+  /* De borde a borde del contenido (cubre el relleno de <main>): el navegador dibuja la franja
+     pegada aparte y sus bordes laterales dejaban una línea fina junto al botón; así quedan en el
+     borde de la pantalla. */
+  margin: calc(-1 * var(--espacio-2)) calc(-1 * var(--espacio-4));
+  padding: var(--espacio-2) var(--espacio-4);
   background: var(--color-fondo);
 }
-/* Lo enfocado con el teclado no queda debajo de "Vender" pegado (WCAG 2.4.11). */
+/* Lo enfocado con el teclado no queda debajo de "Vender" pegado (WCAG 2.4.11)... */
 .vista-inicio :is(a, button) {
   scroll-margin-bottom: calc(var(--alto-boton-principal) + 2 * var(--espacio-2));
+}
+/* ...salvo el propio "Vender": ya está a la vista, enfocarlo no mueve la página. */
+.vender-fijo button {
+  scroll-margin-bottom: 0;
 }
 
 .resumen-del-dia {
@@ -345,23 +350,22 @@ h1 {
   margin-top: var(--espacio-1);
 }
 
-/* PC: lo que hay que saber a la izquierda y lo que hay que hacer a la derecha (sin filas vacías:
-   la separación es el margen de cada tarjeta, no el espacio entre filas). */
+/* PC, en el mismo orden que el código (WCAG 1.3.2 / 2.4.3): arriba, las cifras y el aviso a la
+   izquierda y las acciones a la derecha; debajo, el resumen del día y las tarjetas (copia,
+   instalación) una al lado de la otra. Sin filas vacías: la separación es el margen de cada
+   bloque, no el espacio entre filas. */
 @media (min-width: 1024px) {
   .cuerpo {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    grid-template-rows: auto auto auto 1fr;
+    grid-template-rows: auto 1fr auto auto;
     grid-template-areas:
-      'resumen acciones'
       'cifra acciones'
       'atencion acciones'
-      'extras acciones';
+      'resumen .'
+      'extras extras';
     align-items: start;
     gap: 0 var(--espacio-6);
-  }
-  .resumen-del-dia {
-    grid-area: resumen;
   }
   .cifra {
     grid-area: cifra;
@@ -369,24 +373,32 @@ h1 {
   .atencion {
     grid-area: atencion;
   }
-  .resumen-del-dia,
-  .cifra,
-  .atencion {
-    margin-bottom: var(--espacio-4);
-  }
-  .extras {
-    grid-area: extras;
-  }
   .acciones {
     grid-area: acciones;
     display: flex;
     flex-direction: column;
     gap: var(--espacio-3);
   }
+  .resumen-del-dia {
+    grid-area: resumen;
+  }
+  .extras {
+    grid-area: extras;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    align-items: start;
+  }
+  .cifra,
+  .atencion,
+  .acciones,
+  .resumen-del-dia {
+    margin-bottom: var(--espacio-4);
+  }
   .vender-fijo {
     position: static;
     margin: 0;
     padding: 0;
+    background: none;
   }
   .vista-inicio :is(a, button) {
     scroll-margin-bottom: 0;

@@ -348,6 +348,17 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     }
   }
 
+  test('320×700 Muy grande: enfocar "Vender" pegado no mueve la página', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
+    await abrirInicioCompleto(page, 'MUY_GRANDE', 320, 700)
+    const antes = await page.evaluate(() => window.scrollY)
+
+    await page.locator('.vender-fijo button').focus()
+
+    await expect(page.locator('.vender-fijo button')).toBeFocused()
+    expect(await page.evaluate(() => window.scrollY)).toBe(antes)
+  })
+
   test('320×700 Muy grande: al recorrer con Tab, nada enfocado queda tapado por "Vender" ni por la navegación', async ({
     page,
   }, testInfo) => {
@@ -374,6 +385,47 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     const tapados = revisados.filter((m) => m.encima).map((m) => m.texto)
     expect(revisados.length, 'se recorrió Inicio con Tab').toBeGreaterThanOrEqual(8)
     expect(tapados, 'nada enfocado queda debajo de lo que está pegado abajo').toEqual([])
+  })
+})
+
+test.describe('Inicio en PC (1280 px): el orden de lectura es el del código (WCAG 1.3.2 / 2.4.3)', () => {
+  test('cifras y aviso a la izquierda, acciones a la derecha, y después el resumen y las tarjetas', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'pc', 'La disposición en columnas es de PC')
+    await abrirInicioCompleto(page, 'GRANDE', 1280, 800)
+
+    const caja = async (selector: string) => {
+      // Hijos directos del cuerpo de Inicio (los avisos del kit también tienen un `.acciones`).
+      const medida = await page.locator(`#contenido .cuerpo > ${selector}`).boundingBox()
+      expect(medida, `${selector} tiene caja`).not.toBeNull()
+      return medida!
+    }
+    const cifra = await caja('.cifra')
+    const atencion = await caja('.atencion')
+    const acciones = await caja('.acciones')
+    const resumen = await caja('.resumen-del-dia')
+    const extras = await caja('.extras')
+
+    // Arriba, en dos columnas: cifras sobre el aviso a la izquierda, acciones a la derecha.
+    expect(atencion.y).toBeGreaterThanOrEqual(cifra.y + cifra.height - 1)
+    expect(Math.abs(atencion.x - cifra.x)).toBeLessThanOrEqual(1)
+    expect(acciones.x).toBeGreaterThanOrEqual(cifra.x + cifra.width - 1)
+    expect(Math.abs(acciones.y - cifra.y)).toBeLessThanOrEqual(1)
+    // Después, debajo de todo lo de arriba y en este orden: el resumen del día y las tarjetas.
+    const finDeArriba = Math.max(atencion.y + atencion.height, acciones.y + acciones.height)
+    expect(resumen.y).toBeGreaterThanOrEqual(finDeArriba - 1)
+    expect(extras.y).toBeGreaterThanOrEqual(resumen.y + resumen.height - 1)
+
+    // Y el código va en ese mismo orden.
+    const ordenEnElCodigo = await page.evaluate(() =>
+      ['.cifra', '.atencion', '.acciones', '.resumen-del-dia', '.extras'].map((selector) =>
+        Array.from(document.querySelectorAll('#contenido .cuerpo > *')).indexOf(
+          document.querySelector(`#contenido .cuerpo > ${selector}`)!,
+        ),
+      ),
+    )
+    expect(ordenEnElCodigo).toEqual([...ordenEnElCodigo].sort((a, b) => a - b))
   })
 })
 
