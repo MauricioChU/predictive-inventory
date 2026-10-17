@@ -25,7 +25,7 @@ import { cuandoInicial, ERRORES_DE_FECHA, instanteDe } from './cuando'
 import { enfocarPrimerError, enfocarTitulo, vibrar } from './foco-y-respuesta'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
 import { usarDeshacer } from './usar-deshacer'
-import { hoyEnLaTienda } from './usar-destinos'
+import { hoyEnLaTienda } from './hoy-en-la-tienda'
 
 /**
  * Vender (HU-OP-01, HU-OP-02; 06-experiencia-de-uso): buscar o tocar un más vendido → carrito

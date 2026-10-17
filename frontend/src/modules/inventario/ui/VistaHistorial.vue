@@ -18,7 +18,7 @@ import {
   resumenDeProductos,
   type FiltroDeTipo,
 } from './presentacion-de-operaciones'
-import { hoyEnLaTienda } from './usar-destinos'
+import { hoyEnLaTienda } from './hoy-en-la-tienda'
 
 /**
  * Historial (HU-OP-08; 06-experiencia-de-uso): todo lo que pasó, agrupado por día ("Hoy",

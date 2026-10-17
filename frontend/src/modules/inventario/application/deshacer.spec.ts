@@ -4,6 +4,7 @@ import { instanteLocal } from '@/shared/domain/fecha'
 import { RelojFijo } from '@/shared/domain/reloj'
 import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'
 import { crearEscenario } from '../__pruebas__/escenario'
+import { SEGUNDOS_PARA_DESHACER as COMPARTIDA } from '@/shared/contratos/operaciones'
 import { SEGUNDOS_PARA_DESHACER, ServicioDeDeshacer } from './deshacer'
 
 const AHORA = instanteLocal('2026-10-15 10:00')
@@ -19,6 +20,10 @@ function servicio() {
 }
 
 describe('ServicioDeDeshacer', () => {
+  it('RN-OP-18 (M8): la regla usa la misma constante que el aviso de la pantalla', () => {
+    expect(SEGUNDOS_PARA_DESHACER).toBe(COMPARTIDA)
+  })
+
   it('RN-OP-18: se ofrece durante 10 segundos', () => {
     expect(SEGUNDOS_PARA_DESHACER).toBe(10)
     const { reloj, deshacer } = servicio()

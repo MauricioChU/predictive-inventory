@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Undo2 } from 'lucide-vue-next'
+import { SEGUNDOS_PARA_DESHACER } from '@/shared/contratos/operaciones'
 import { pegarCifras } from '../texto-sin-cortes'
 
-const props = withDefaults(defineProps<{ mensaje: string; segundos?: number }>(), { segundos: 10 })
+const props = withDefaults(defineProps<{ mensaje: string; segundos?: number }>(), {
+  segundos: SEGUNDOS_PARA_DESHACER,
+})
 const emit = defineEmits<{ deshacer: []; cerrar: [] }>()
 
 const restante = ref(props.segundos)

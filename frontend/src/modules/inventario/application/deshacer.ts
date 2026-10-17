@@ -1,9 +1,10 @@
 import { ErrorDeDominio } from '@/shared/domain/errores'
 import { segundosEntre, type Instante } from '@/shared/domain/fecha'
 import type { Reloj } from '@/shared/domain/reloj'
+import { SEGUNDOS_PARA_DESHACER } from '@/shared/contratos/operaciones'
 
-/** RN-OP-18: "Deshacer" se ofrece durante 10 segundos. */
-export const SEGUNDOS_PARA_DESHACER = 10
+/** RN-OP-18: "Deshacer" se ofrece durante 10 segundos (la constante compartida). */
+export { SEGUNDOS_PARA_DESHACER }
 /** Margen para un toque hecho justo cuando el aviso se cerraba (no amplía lo que se muestra). */
 export const SEGUNDOS_DE_MARGEN_PARA_DESHACER = 2
 

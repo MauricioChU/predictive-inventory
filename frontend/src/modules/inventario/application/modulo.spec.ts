@@ -163,9 +163,17 @@ describe('index', () => {
     )
   })
 
-  it('plan 12: las pantallas se cargan recién al abrirlas (cada una es un componente)', async () => {
+  it('plan 12: las siete pantallas se cargan recién al abrirlas (cada una es un componente)', async () => {
     const api = await import('../index')
-    const vistas = [api.VistaVender, api.VistaRecibir, api.VistaHistorial, api.VistaOperacion]
+    const vistas = [
+      api.VistaVender,
+      api.VistaRecibir,
+      api.VistaMerma,
+      api.VistaContarStock,
+      api.VistaContarTodo,
+      api.VistaHistorial,
+      api.VistaOperacion,
+    ]
     for (const cargar of vistas) {
       const modulo = await cargar()
       expect(modulo.default).toBeTypeOf('object')

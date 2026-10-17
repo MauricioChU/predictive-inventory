@@ -17,7 +17,8 @@ import {
 } from '@/shared/ui/tipos-de-productos'
 import type { Concepto } from './carrito-de-pantalla'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
-import { hoyEnLaTienda, usarDestinos } from './usar-destinos'
+import { hoyEnLaTienda } from './hoy-en-la-tienda'
+import { usarDestinos } from './usar-destinos'
 import { usarFotos } from './usar-fotos'
 
 /**

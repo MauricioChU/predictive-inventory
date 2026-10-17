@@ -23,7 +23,7 @@ import { cuandoInicial, ERRORES_DE_FECHA, instanteDe } from './cuando'
 import { enfocarPrimerError, enfocarTitulo, vibrar } from './foco-y-respuesta'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
 import { usarDeshacer } from './usar-deshacer'
-import { hoyEnLaTienda } from './usar-destinos'
+import { hoyEnLaTienda } from './hoy-en-la-tienda'
 
 /**
  * Llegó mercadería (HU-OP-03, HU-OP-09; en la navegación "Recibir"): igual que Vender, pero cada
@@ -294,7 +294,7 @@ onMounted(() => {
 
       <DialogoConfirmacion
         :abierto="dialogo?.tipo === 'sobrecompra'"
-        titulo="¿Seguro que compras tanto?"
+        titulo="Revisa antes de registrar"
         :mensaje="dialogo?.tipo === 'sobrecompra' ? textoDelDialogo : ''"
         texto-confirmar="Registrar igual"
         texto-cancelar="Cambiar cantidad"

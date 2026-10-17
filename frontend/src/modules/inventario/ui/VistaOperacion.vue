@@ -17,7 +17,7 @@ import type { OperacionVista } from '../application/historial'
 import { enfocarTitulo } from './foco-y-respuesta'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
 import { cuentaDeLinea, nombreConArticulo, totalesDe } from './presentacion-de-operaciones'
-import { hoyEnLaTienda } from './usar-destinos'
+import { hoyEnLaTienda } from './hoy-en-la-tienda'
 
 /**
  * Detalle de una operación del Historial y **Anular** (RN-OP-02, RN-OP-17): invierte todos sus
