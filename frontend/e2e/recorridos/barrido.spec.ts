@@ -33,22 +33,18 @@ interface Tamano {
 
 /**
  * Celular: 320 y 360 px de ancho y el celular en horizontal. PC: 768 (tablet), 1280 y 1920 px.
- * Las pruebas de cada pantalla (planes 11 a 14) ya revisan 320, 360, 768 y 1280 px; por defecto
- * este barrido agrega lo que faltaba: el celular en horizontal y 1920 px, con el orden de foco
- * (navegación abajo y lateral), en TODAS las pantallas y diálogos; axe-core, que es lo más lento
- * y casi no depende del ancho, corre una vez por pantalla (a 1920 px). Con BARRIDO_COMPLETO=1
- * pasa además por los otros cuatro tamaños, con axe en cada uno (unos 3 minutos más).
+ * Por defecto, en TODAS las pantallas y diálogos: el celular en horizontal y 320 px (el más
+ * angosto, con letra Muy grande) y 1920 px, con el orden de foco en horizontal y a 1920 px
+ * (navegación abajo y lateral). axe-core, que es lo más lento y casi no depende del ancho, corre
+ * una vez por pantalla (a 1920 px). Con BARRIDO_COMPLETO=1 suma 360, 768 y 1280 px, con axe en
+ * cada tamaño (unos 3 minutos más).
  */
 const COMPLETO = Boolean(process.env.BARRIDO_COMPLETO)
 const TAMANOS: Record<string, readonly Tamano[]> = {
   celular: [
     { nombre: 'celular en horizontal', ancho: 740, alto: 360, foco: true, axe: COMPLETO },
-    ...(COMPLETO
-      ? [
-          { nombre: '320 px', ancho: 320, alto: 640, axe: true },
-          { nombre: '360 px', ancho: 360, alto: 740, foco: true, axe: true },
-        ]
-      : []),
+    { nombre: '320 px', ancho: 320, alto: 640, axe: COMPLETO },
+    ...(COMPLETO ? [{ nombre: '360 px', ancho: 360, alto: 740, foco: true, axe: true }] : []),
   ],
   pc: [
     { nombre: '1920 px', ancho: 1920, alto: 1080, foco: true, axe: true },
