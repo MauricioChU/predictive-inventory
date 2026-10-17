@@ -37,6 +37,46 @@ async function agregarBuscando(page: Page, texto: string, nombre: string): Promi
   await expect(lineaDe(page, nombre)).toBeVisible()
 }
 
+/**
+ * Plan 17, ronda 1 (RN-UX-02): la forma compacta de la BarraDeTotal es SOLO para letra Muy
+ * grande en 320–360 px. Con la letra por defecto (Grande) en celulares comunes y en la columna
+ * del carrito en PC, el total sigue a 1.6rem y "Cobrar" va en su propia fila, a todo el ancho.
+ */
+test.describe('BarraDeTotal fuera de la forma compacta', () => {
+  for (const ancho of [360, 412, 1280]) {
+    test(`${ancho} px con letra Grande: total a 1.6rem y botón a todo el ancho en su fila`, async ({
+      page,
+    }) => {
+      await usarLetra(page, 'GRANDE')
+      await page.setViewportSize({ width: ancho, height: 800 })
+      await abrir(page, './')
+      await crearProducto(page, LEJIA)
+      await abrir(page, './vender')
+      await agregarBuscando(page, 'lejia', 'Lejía 1 L')
+      const m = await page.evaluate(() => {
+        const contenido = document.querySelector<HTMLElement>('.barra-de-total .contenido')!
+        const total = document.querySelector<HTMLElement>('.barra-de-total .total')!
+        const boton = document.querySelector<HTMLElement>('.barra-de-total .accion')!
+        const estilo = getComputedStyle(contenido)
+        const ancho =
+          contenido.clientWidth - parseFloat(estilo.paddingLeft) - parseFloat(estilo.paddingRight)
+        const raiz = parseFloat(getComputedStyle(document.documentElement).fontSize)
+        return {
+          letraTotal: parseFloat(getComputedStyle(total).fontSize) / raiz,
+          anchoBoton: boton.getBoundingClientRect().width,
+          ancho,
+          debajo: boton.getBoundingClientRect().top >= total.getBoundingClientRect().bottom,
+          icono: getComputedStyle(boton.querySelector('.icono')!).display,
+        }
+      })
+      expect(m.letraTotal).toBeCloseTo(1.6, 2)
+      expect(m.debajo).toBe(true)
+      expect(m.anchoBoton).toBeGreaterThanOrEqual(m.ancho - 1)
+      expect(m.icono).not.toBe('none')
+    })
+  }
+})
+
 test.describe('Vender (HU-OP-01, HU-OP-02)', () => {
   test('criterio de éxito 1: una venta de un producto en menos de 15 s desde Inicio, con vuelto y Deshacer', async ({
     page,

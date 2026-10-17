@@ -109,45 +109,43 @@ usarAltoObservado(refBarra, { variable: '--alto-barra-de-total' })
 }
 
 /*
- * Plan 17 — forma compacta (celular con letra Grande o Muy grande: la barra mide menos de
- * 22rem). Antes eran dos filas (etiqueta y total arriba, el botón abajo) y a 320 px con letra
- * Muy grande la barra ocupaba ~200 de 740 px. Ahora la etiqueta va en su propia línea, chica, y
- * el total y el botón comparten una fila. Si el texto del botón no entra al lado del total
- * ("Confirmar venta", "Registrar llegada", o un total muy largo), el botón baja entero a su
- * propia fila, a todo el ancho: nunca se parte una palabra ni se sale de la barra.
+ * Plan 17 — forma compacta, SOLO con letra Muy grande en un celular angosto (320–360 px: la
+ * barra mide 320 px o menos). Ahí, en dos filas, la barra ocupaba ~200 de 740 px; ahora la
+ * etiqueta va en su propia línea y el total comparte fila con el botón (sin ícono: RN-UX-04 pide
+ * texto junto al ícono, no al revés). Si el texto del botón no entra al lado del total
+ * ("Confirmar venta", "Registrar llegada" o un total largo), el botón baja entero a su propia
+ * fila, a todo el ancho: nunca se parte una palabra ni se sale de la barra.
+ *
+ * EXCEPCIÓN DELIBERADA a RN-UX-02 (anotada en 06-experiencia-de-uso.md): en ese caso el botón
+ * principal no ocupa todo el ancho cuando va al lado del total. Con cualquier otra letra, otro
+ * ancho de celular o la columna del carrito en PC, el total sigue a 1.6rem y el botón va en su
+ * fila a todo el ancho (E2E en operaciones.spec.ts). El ancho va en px (no en rem): un rem en
+ * una consulta de contenedor es el de la raíz, que cambia con la letra elegida.
  */
-@container (max-width: 22rem) {
-  .contenido {
+@container (max-width: 320px) {
+  :root[data-letra='MUY_GRANDE'] .contenido {
     gap: var(--espacio-1) var(--separacion-toque);
     padding: var(--espacio-1) var(--espacio-2) var(--espacio-2);
   }
-  .resumen {
+  :root[data-letra='MUY_GRANDE'] .resumen {
     display: contents;
   }
-  .etiqueta {
+  :root[data-letra='MUY_GRANDE'] .etiqueta {
     flex: 1 0 100%;
     line-height: 1.2;
   }
-  .total {
+  :root[data-letra='MUY_GRANDE'] .total {
     flex: none;
     font-size: clamp(1rem, 9cqi, 1.1rem);
   }
-  .contenido .accion {
+  :root[data-letra='MUY_GRANDE'] .contenido .accion {
     flex: 1 1 auto;
     inline-size: auto;
     padding-inline: var(--espacio-1);
     font-size: 1rem;
     white-space: nowrap;
   }
-  .contenido .accion :deep(.icono) {
-    width: 1.2em;
-    height: 1.2em;
-  }
-}
-/* Muy angosta (320–360 px con letra Muy grande): sin el ícono el botón cabe al lado del total.
-   El texto queda (RN-UX-04: el ícono acompaña al texto, nunca al revés). */
-@container (max-width: 13.5rem) {
-  .contenido .accion :deep(.icono) {
+  :root[data-letra='MUY_GRANDE'] .contenido .accion :deep(.icono) {
     display: none;
   }
 }
