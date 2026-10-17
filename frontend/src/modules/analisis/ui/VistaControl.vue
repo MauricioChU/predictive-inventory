@@ -408,7 +408,7 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar'): void {
             <template v-else>
               <p class="frase">{{ mejorDia.frase }}</p>
               <GraficoBarras titulo="Venta promedio por día" :barras="mejorDia.barras" />
-              <p class="nota">Promedio de las últimas 8 semanas (sin hoy).</p>
+              <p class="nota">Promedio por día de la semana, sin contar hoy.</p>
             </template>
           </template>
         </SeccionDeControl>

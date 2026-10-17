@@ -324,6 +324,8 @@ describe('Control (Torre de control)', () => {
       const { envoltura } = await abrirControl(await tiendaConDosSemanas())
       const mejorDia = seccion(envoltura, 'Mejor día de la semana')
       expect(texto(mejorDia)).toContain('Tu mejor día es el sábado')
+      // Ronda 1: vale también para una tienda con menos de 8 semanas de historia.
+      expect(texto(mejorDia.get('.nota'))).toBe('Promedio por día de la semana, sin contar hoy.')
       const grafico = mejorDia.get('figure.grafico-barras')
       expect(grafico.findAll('.fila .etiqueta').map(texto)).toEqual([
         'Lunes',
