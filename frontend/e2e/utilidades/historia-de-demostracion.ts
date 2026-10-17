@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test'
+import { prepararTienda } from './control'
 import { abrir } from './navegacion'
 
 /**
@@ -162,16 +163,6 @@ export const PRODUCTOS_DE_DEMOSTRACION: readonly ProductoDeDemostracion[] = [
 
 /** Lo que el generador usa de la aplicación real (src/app/ganchos-de-prueba.ts). */
 interface AplicacionEnLaPagina {
-  tienda: {
-    obtenerConfiguracion(): Promise<{ tamanoDeLetra: string }>
-    completarPrimeraVez(d: { nombreTienda: string; tamanoDeLetra: string }): Promise<void>
-  }
-  catalogo: {
-    listarCategorias(): Promise<{ id: string; nombre: string }[]>
-    crearProducto(
-      d: Record<string, unknown>,
-    ): Promise<{ tipo: string; valor?: { productoId: string } }>
-  }
   inventario: {
     registrarVenta(d: { lineas: { productoId: string; cantidad: string }[] }): Promise<unknown>
     registrarMerma(d: { productoId: string; cantidad: string; motivo: string }): Promise<unknown>
@@ -182,51 +173,6 @@ interface AplicacionEnLaPagina {
 type VentanaConAplicacion = Window & { __aplicacion?: AplicacionEnLaPagina }
 
 export type IdsDeDemostracion = Record<string, string>
-
-async function crearProductos(page: Page): Promise<IdsDeDemostracion> {
-  // Sin `vendeEl`: una función no viaja a la página.
-  const productos = PRODUCTOS_DE_DEMOSTRACION.map((p) => ({
-    nombre: p.nombre,
-    categoria: p.categoria,
-    unidad: p.unidad,
-    compra: p.compra,
-    venta: p.venta,
-    minimo: p.minimo,
-    stockInicial: p.stockInicial,
-  }))
-  return page.evaluate(
-    async ({ productos, nombreTienda }) => {
-      const app = (window as VentanaConAplicacion).__aplicacion
-      if (!app) throw new Error('La app no expuso window.__aplicacion')
-      // La primera vez ya pasó (si no, Inicio llevaría a la bienvenida); la letra no cambia.
-      const { tamanoDeLetra } = await app.tienda.obtenerConfiguracion()
-      await app.tienda.completarPrimeraVez({ nombreTienda, tamanoDeLetra })
-      const categorias = await app.catalogo.listarCategorias()
-      const ids: Record<string, string> = {}
-      for (const p of productos) {
-        const categoria = categorias.find((c) => c.nombre === p.categoria)
-        if (!categoria) throw new Error(`Falta la categoría "${p.categoria}"`)
-        const respuesta = await app.catalogo.crearProducto({
-          nombre: p.nombre,
-          categoriaId: categoria.id,
-          unidad: p.unidad,
-          precioCompra: p.compra,
-          precioVenta: p.venta,
-          stockMinimo: p.minimo,
-          stockInicial: String(p.stockInicial),
-          confirmado: true,
-        })
-        if (respuesta.tipo !== 'hecho' || !respuesta.valor) {
-          throw new Error(`No se creó "${p.nombre}": ${JSON.stringify(respuesta)}`)
-        }
-        ids[p.nombre] = respuesta.valor.productoId
-      }
-      await app.esperarTareasPendientes()
-      return ids
-    },
-    { productos, nombreTienda: NOMBRE_DE_LA_TIENDA },
-  )
-}
 
 interface VentaDelDia {
   lineas: { productoId: string; cantidad: string }[]
@@ -258,9 +204,51 @@ async function registrarVentas(page: Page, ventas: VentaDelDia[]): Promise<void>
   }, ventas)
 }
 
+/** Una Lejía derramada (RN-OP-15). */
+async function registrarMerma(page: Page, productoId: string): Promise<void> {
+  await page.evaluate(async (id) => {
+    const app = (window as VentanaConAplicacion).__aplicacion!
+    await app.inventario.registrarMerma({ productoId: id, cantidad: '1', motivo: 'Se derramó' })
+    await app.esperarTareasPendientes()
+  }, productoId)
+}
+
+/** Un conteo con diferencia (RN-OP-16). */
+async function contar(page: Page, productoId: string, contado: number): Promise<void> {
+  await page.evaluate(
+    async (datos) => {
+      const app = (window as VentanaConAplicacion).__aplicacion!
+      await app.inventario.contarStock(datos)
+      await app.esperarTareasPendientes()
+    },
+    { productoId, contado: String(contado) },
+  )
+}
+
 /**
- * Instala el reloj en el primer día, abre la app, arma las ocho semanas y deja el reloj en
- * "hoy" a las 18:00, con algunas ventas de hoy. Llamar ANTES de cualquier `abrir` (el reloj de
+ * El reloj de la página solo avanza: cada operación queda después de la anterior, como en una
+ * tienda de verdad (una operación fechada antes que otra ya registrada no puede ocurrir).
+ */
+function crearReloj(page: Page): (dia: string, hora: string) => Promise<void> {
+  let ultimo = 0
+  return async (dia, hora) => {
+    const instante = enLima(dia, hora)
+    if (instante.getTime() <= ultimo) {
+      throw new Error(`El reloj no puede volver atrás: ${dia} ${hora}`)
+    }
+    ultimo = instante.getTime()
+    await page.clock.setSystemTime(instante)
+  }
+}
+
+/** Día de la merma de Lejía y del conteo del papel (la última semana completa). */
+const DIA_DE_LA_MERMA = '2026-10-12'
+const DIA_DEL_CONTEO = '2026-10-13'
+
+/**
+ * Instala el reloj en el primer día, abre la app, arma las ocho semanas EN ORDEN (cada día sus
+ * ventas a las 10:00 y, si toca, la merma o el conteo a las 19:00) y deja el reloj en "hoy" a
+ * las 18:00, con algunas ventas de hoy. Llamar ANTES de cualquier `abrir` (el reloj de
  * Playwright se instala antes de cargar la página). Después, navegar dentro de la app (sin
  * recargar) para que cada pantalla calcule con el "hoy" nuevo.
  */
@@ -269,44 +257,54 @@ export async function prepararHistoriaDeDemostracion(
   ruta = './',
 ): Promise<IdsDeDemostracion> {
   await page.clock.install({ time: enLima(PRIMER_DIA, '08:00') })
+  const moverReloj = crearReloj(page)
   await abrir(page, ruta)
-  const ids = await crearProductos(page)
+  // Los productos se crean el primer día: ese es su primer movimiento.
+  const ids = await prepararTienda(
+    page,
+    PRODUCTOS_DE_DEMOSTRACION.map((p) => ({
+      nombre: p.nombre,
+      categoria: p.categoria,
+      unidad: p.unidad,
+      compra: p.compra,
+      venta: p.venta,
+      minimo: p.minimo,
+      stockInicial: String(p.stockInicial),
+    })),
+    NOMBRE_DE_LA_TIENDA,
+  )
   const stock = new Map(PRODUCTOS_DE_DEMOSTRACION.map((p) => [p.nombre, p.stockInicial]))
+  const lejia = 'Lejía Tradicional 1 L'
+  const papel = 'Papel higiénico x4'
 
   for (let n = 0; n < DIAS_DE_HISTORIA; n += 1) {
     const dia = sumarDias(PRIMER_DIA, n)
-    await page.clock.setSystemTime(enLima(dia, '10:00'))
+    await moverReloj(dia, '10:00')
     await registrarVentas(page, ventasDelDia(ids, stock, dia, Math.floor(n / 7)))
+    if (dia === DIA_DE_LA_MERMA) {
+      await moverReloj(dia, '19:00')
+      await registrarMerma(page, ids[lejia]!)
+      stock.set(lejia, stock.get(lejia)! - 1)
+    }
+    if (dia === DIA_DEL_CONTEO) {
+      await moverReloj(dia, '19:00')
+      // Se cuenta uno menos de lo que debería haber.
+      const contado = stock.get(papel)! - 1
+      await contar(page, ids[papel]!, contado)
+      stock.set(papel, contado)
+    }
   }
 
-  // La última semana: una Lejía derramada y el papel contado con uno menos.
-  await page.clock.setSystemTime(enLima('2026-10-12', '19:00'))
-  await page.evaluate(async (lejia) => {
-    const app = (window as VentanaConAplicacion).__aplicacion!
-    await app.inventario.registrarMerma({ productoId: lejia, cantidad: '1', motivo: 'Se derramó' })
-  }, ids['Lejía Tradicional 1 L']!)
-  stock.set('Lejía Tradicional 1 L', stock.get('Lejía Tradicional 1 L')! - 1)
-  await page.clock.setSystemTime(enLima('2026-10-13', '19:00'))
-  const papel = ids['Papel higiénico x4']!
-  const contado = String(stock.get('Papel higiénico x4')! - 1)
-  await page.evaluate(
-    async ({ productoId, contado }) => {
-      const app = (window as VentanaConAplicacion).__aplicacion!
-      await app.inventario.contarStock({ productoId, contado })
-    },
-    { productoId: papel, contado },
-  )
-
   // Hoy, hasta las 18:00.
-  await page.clock.setSystemTime(enLima(HOY_DE_DEMOSTRACION, '18:00'))
+  await moverReloj(HOY_DE_DEMOSTRACION, '18:00')
   await registrarVentas(page, [
     {
       lineas: [
-        { productoId: ids['Lejía Tradicional 1 L']!, cantidad: '2' },
+        { productoId: ids[lejia]!, cantidad: '2' },
         { productoId: ids['Detergente Bolívar 900 g']!, cantidad: '1' },
       ],
     },
-    { lineas: [{ productoId: papel, cantidad: '1' }] },
+    { lineas: [{ productoId: ids[papel]!, cantidad: '1' }] },
   ])
   return ids
 }
