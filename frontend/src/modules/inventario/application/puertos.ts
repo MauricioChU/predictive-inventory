@@ -43,8 +43,9 @@ export interface RepositorioDeOperaciones {
   todas(): Promise<OperacionRegistro[]>
   /**
    * Plan 17: una página del libro, de lo más reciente a lo más antiguo según `ocurridaEn`.
-   * Supone los instantes como los escribe la app (ISO UTC de `toISOString`): en ese formato el
-   * orden del texto es el del tiempo, y Dexie usa su índice sin leer todo el libro.
+   * Supone los instantes como los escribe la app (ISO UTC de `toISOString`; restaurar una copia
+   * los deja así): en ese formato el orden del texto es el del tiempo, y Dexie usa su índice
+   * sin leer todo el libro.
    */
   recientes(consulta: ConsultaDeRecientes): Promise<PaginaDeOperaciones>
   /** Plan 17: cuáles de esas operaciones tienen una ANULACION (RN-OP-17). */

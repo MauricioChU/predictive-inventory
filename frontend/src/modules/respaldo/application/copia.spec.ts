@@ -213,6 +213,57 @@ describe('prepararRestauracion / restaurarCopia (RN-RE-03)', () => {
     expect(almacenEnMemoria.todos('productos')).toHaveLength(2)
   })
 
+  // Plan 17, ronda 1: el Historial pagina por el texto de `ocurridaEn` (índice de Dexie); con
+  // instantes canónicos, el orden del texto es el del tiempo.
+  it('RN-RE-02: al restaurar, los instantes de las operaciones quedan en ISO UTC (toISOString)', async () => {
+    const { deps, almacenEnMemoria } = crearContexto()
+    const copia = {
+      versionDeFormato: 1,
+      app: 'predictive-inventory',
+      creadoEn: '2026-10-15T20:30:00-05:00',
+      control: { productos: 1, operaciones: 2, stockPorProducto: { carbon: 25000 } },
+      datos: {
+        configuracion: null,
+        categorias: [{ id: 'cat-1', nombre: 'Otros', nombreNormalizado: 'otros' }],
+        productos: [producto({ id: 'carbon', nombre: 'Carbón', unidad: 'KILO' })],
+        operaciones: [
+          stockInicial({
+            id: 'op-lima',
+            productoIds: ['carbon'],
+            movimientos: [
+              { productoId: 'carbon', cantidad: 12500, costoUnitario: 275, precioUnitario: null },
+            ],
+            ocurridaEn: '2026-10-01T10:30:00-05:00',
+            registradaEn: '2026-10-01T10:31:00-05:00',
+          }),
+          stockInicial({
+            id: 'op-sin-ms',
+            productoIds: ['carbon'],
+            movimientos: [
+              { productoId: 'carbon', cantidad: 12500, costoUnitario: 275, precioUnitario: null },
+            ],
+            ocurridaEn: '2026-10-01T15:00:00Z',
+            registradaEn: '2026-10-01T15:00:00Z',
+          }),
+        ],
+        avisos: [],
+        fotos: [],
+      },
+    }
+
+    await restaurarCopia(deps, JSON.stringify(copia), { confirmaciones: 2 })
+
+    const guardadas = new Map(almacenEnMemoria.todos('operaciones').map((o) => [o.id, o]))
+    expect(guardadas.get('op-lima')).toMatchObject({
+      ocurridaEn: '2026-10-01T15:30:00.000Z',
+      registradaEn: '2026-10-01T15:31:00.000Z',
+    })
+    expect(guardadas.get('op-sin-ms')).toMatchObject({
+      ocurridaEn: '2026-10-01T15:00:00.000Z',
+      registradaEn: '2026-10-01T15:00:00.000Z',
+    })
+  })
+
   it('RN-RE-04: si el control no coincide tras reconstruir, se revierte todo', async () => {
     const { deps, almacenEnMemoria, seedProductosYOperaciones, reconstructor } = crearContexto()
     seedProductosYOperaciones()

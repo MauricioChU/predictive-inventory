@@ -351,6 +351,24 @@ export function leerRespaldo(texto: string): RespaldoV1 {
   return respaldo
 }
 
+/**
+ * Plan 17, ronda 1: los instantes de las operaciones en la forma que escribe la app (ISO UTC de
+ * `toISOString`: "2026-10-01T15:30:00.000Z"). Una copia puede traer otra zona ("…-05:00") o no
+ * traer milisegundos; es el mismo instante, pero el Historial pagina por el TEXTO de
+ * `ocurridaEn` (índice de Dexie) y solo en esta forma el orden del texto es el del tiempo.
+ */
+export function conInstantesCanonicos(datos: DatosDelRespaldo): DatosDelRespaldo {
+  const canonico = (instante: string) => new Date(instante).toISOString()
+  return {
+    ...datos,
+    operaciones: datos.operaciones.map((o) => ({
+      ...o,
+      ocurridaEn: canonico(o.ocurridaEn),
+      registradaEn: canonico(o.registradaEn),
+    })),
+  }
+}
+
 /** RN-RE-03: lo que se le muestra al usuario antes de confirmar la restauración. */
 export function resumenDeCopia(
   control: Pick<ControlDeRespaldo, 'productos' | 'operaciones'>,
