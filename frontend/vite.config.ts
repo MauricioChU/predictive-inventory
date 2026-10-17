@@ -1,8 +1,14 @@
+import { readFileSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
+
+// Plan 14: la versión de package.json, para "Acerca de" en Ajustes.
+const { version } = JSON.parse(
+  readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf8'),
+) as { version: string }
 
 /**
  * Lo que el service worker guarda para usar sin conexión (RN-UX-14 / RN-SIS-08): todo lo que
@@ -20,6 +26,7 @@ export const PRECACHE = {
 // https://vite.dev/config/
 export default defineConfig({
   base: '/predictive-inventory/',
+  define: { __VERSION_DE_LA_APP__: JSON.stringify(version) },
   plugins: [
     vue(),
     // vite-plugin-vue-devtools queda fuera: su panel flotante inyecta un atributo

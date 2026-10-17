@@ -21,3 +21,6 @@ export {
   NotificadorDelSistema,
   soportaNotificaciones,
 } from './infrastructure/navegador/notificador-del-sistema'
+
+// Ola 4, plan 14: "Avisos en tu celular" (RN-AL-08), cargada al navegar.
+export const VistaAvisos = () => import('./ui/VistaAvisos.vue')
