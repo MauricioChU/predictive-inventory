@@ -15,6 +15,7 @@ import {
   entraEnLista,
   ordenarLista,
   registrarCambio,
+  restaurarCambio,
   textoParaCompartir,
   type LineaParaComprar,
   type ListaParaComprar,
@@ -298,5 +299,24 @@ describe('RN-AN-08: cantidad escrita en la lista', () => {
     })
     expect(cambiosDesdeRegistro(registro)).toEqual(cambios)
     expect(cambiosDesdeRegistro(null)).toEqual([])
+  })
+})
+
+// Plan 13, ronda 1: Deshacer después de Quitar devuelve la lista del día tal como estaba.
+describe('RN-AN-08 / RN-OP-18: deshacer un cambio de la lista del día', () => {
+  it('si el producto no tenía cambio, lo saca de los cambios (vuelve a seguir la sugerencia)', () => {
+    const cambios = registrarCambio([{ productoId: 'carbon', cantidad: cant('2') }], {
+      productoId: 'lejia',
+      cantidad: null,
+    })
+    expect(restaurarCambio(cambios, 'lejia', null)).toEqual([
+      { productoId: 'carbon', cantidad: cant('2') },
+    ])
+  })
+
+  it('si tenía un cambio, lo deja como estaba', () => {
+    const anterior = { productoId: 'lejia', cantidad: cant('24') }
+    const cambios = registrarCambio([anterior], { productoId: 'lejia', cantidad: null })
+    expect(restaurarCambio(cambios, 'lejia', anterior)).toEqual([anterior])
   })
 })

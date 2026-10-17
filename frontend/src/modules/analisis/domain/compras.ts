@@ -174,6 +174,19 @@ export function registrarCambio(
   return [...cambios.filter((c) => c.productoId !== cambio.productoId), cambio]
 }
 
+/**
+ * RN-AN-08 / RN-OP-18: deshace el último cambio de un producto dejando los cambios del día como
+ * estaban antes: con el cambio `anterior`, o sin ninguno (la línea vuelve a seguir la sugerencia).
+ */
+export function restaurarCambio(
+  cambios: readonly CambioEnLista[],
+  productoId: string,
+  anterior: CambioEnLista | null,
+): CambioEnLista[] {
+  const sinEse = cambios.filter((c) => c.productoId !== productoId)
+  return anterior ? [...sinEse, anterior] : sinEse
+}
+
 /** RN-AN-08: texto para WhatsApp u otra app. */
 export function textoParaCompartir(
   lista: ListaParaComprar,

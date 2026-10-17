@@ -9,6 +9,7 @@ export type {
 } from './application/puertos'
 export type { OpcionesDeTorre, TorreDeControl } from './application/torre'
 export type { DetalleDeProducto, RespuestaNecesitoComprar } from './application/producto'
+export type { QuitadoDeLista } from './application/lista-de-compras'
 export type { LineaParaComprar, ListaParaComprar } from './domain/compras'
 export type { CasoNecesitoComprar } from './domain/necesito-comprar'
 export {
