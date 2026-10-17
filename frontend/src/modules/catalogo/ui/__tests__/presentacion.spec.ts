@@ -12,6 +12,7 @@ import {
   horaDe,
   montoParaEditar,
   movimientoDeProducto,
+  retiradoAlArchivar,
   textoDeConteo,
   vacioDeLista,
 } from '../presentacion'
@@ -295,5 +296,43 @@ describe('movimientoDeProducto (últimos movimientos del detalle)', () => {
       ],
     })
     expect(movimientoDeProducto(conOtro, 'p-1', HOY).cantidad).toBe('-2 unid.')
+  })
+})
+
+describe('retiradoAlArchivar (RN-CAT-11: lo que de verdad se retiró al archivar)', () => {
+  function ajuste(motivo: string, cantidad: number): OperacionVista {
+    return {
+      id: `op-${motivo}`,
+      tipo: 'AJUSTE',
+      etiqueta: motivo,
+      ocurridaEn: instanteLocal('2026-10-16 10:30'),
+      lineas: [
+        {
+          productoId: 'p-1',
+          nombre: 'Escoba',
+          unidad: 'UNIDAD',
+          cantidad: Cantidad.deEntero(cantidad),
+          precioUnitario: null,
+          costoUnitario: Dinero.deTexto('6.00'),
+          importe: null,
+          ganancia: null,
+        },
+      ],
+      total: null,
+      ganancia: null,
+      anulada: false,
+      anulaA: null,
+      motivo,
+      nota: null,
+    }
+  }
+
+  it('la cantidad (sin signo) del ajuste "Producto retirado" más reciente', () => {
+    expect(retiradoAlArchivar([ajuste('Producto retirado', -4)], 'p-1')).toBe('4 unid.')
+  })
+
+  it('null si no hubo retiro (se archivó sin stock)', () => {
+    expect(retiradoAlArchivar([ajuste('Conteo de stock', -1)], 'p-1')).toBeNull()
+    expect(retiradoAlArchivar([], 'p-1')).toBeNull()
   })
 })

@@ -143,9 +143,13 @@ describe('Categorías (/productos/categorias)', () => {
     const w = await abrir()
     await botonEn(fila(w, 'Otros'), 'Eliminar').trigger('click')
     await esperar()
-    expect(fila(w, 'Otros').get('[role="alert"]').text()).toContain(
+    // Debajo de su fila y a todo el ancho (no apretado dentro del recuadro de la fila).
+    const item = fila(w, 'Otros').element.closest('li')!
+    const alerta = item.querySelector('[role="alert"]')
+    expect(alerta?.textContent).toContain(
       'La categoría tiene productos. Puedes cambiarle el nombre',
     )
+    expect(fila(w, 'Otros').find('[role="alert"]').exists()).toBe(false)
     expect(nombres(w)).toContain('Otros')
   })
 

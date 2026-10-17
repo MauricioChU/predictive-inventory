@@ -1,5 +1,6 @@
 import type { OperacionVista } from '@/modules/inventario'
 import type { EstadoDeStock } from '@/shared/contratos/estado-de-stock'
+import { MOTIVO_PRODUCTO_RETIRADO } from '@/shared/contratos/operaciones'
 import { Cantidad, type Unidad } from '@/shared/domain/cantidad'
 import type { Dinero } from '@/shared/domain/dinero'
 import { diaDe, sumarDias, type Dia, type Instante } from '@/shared/domain/fecha'
@@ -227,4 +228,22 @@ export function movimientoDeProducto(
     cuando: `${etiquetaDeDia(diaDe(operacion.ocurridaEn), hoy)}, ${horaDe(operacion.ocurridaEn)}`,
     cantidad: cambio.esPositiva() ? `+${texto}` : texto,
   }
+}
+
+/**
+ * RN-CAT-11: cuánto retiró del stock el archivado que se acaba de confirmar ("4 unid."), leído
+ * del ajuste "Producto retirado" más reciente del historial (del más nuevo al más viejo); null
+ * si no hubo retiro.
+ */
+export function retiradoAlArchivar(
+  operaciones: readonly OperacionVista[],
+  productoId: string,
+): string | null {
+  const retiro = operaciones.find(
+    (o) => o.tipo === 'AJUSTE' && o.motivo === MOTIVO_PRODUCTO_RETIRADO && !o.anulada,
+  )
+  const lineas = retiro?.lineas.filter((l) => l.productoId === productoId) ?? []
+  if (lineas.length === 0) return null
+  const retirado = Cantidad.sumarTodas(lineas.map((l) => l.cantidad)).abs()
+  return formatearCantidad(retirado, lineas[0]!.unidad)
 }

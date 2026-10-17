@@ -43,44 +43,48 @@ watch(
 </script>
 
 <template>
-  <div ref="refFila" class="fila-de-categoria">
-    <form v-if="editando" class="edicion" novalidate @submit.prevent="emit('guardar')">
-      <CampoTexto
-        :model-value="nombreNuevo"
-        :etiqueta="`Nuevo nombre para ${nombre}`"
-        autocompletar="off"
-        :error="errorNombre"
-        @update:model-value="emit('update:nombreNuevo', $event)"
-      />
-      <div class="botones">
-        <Boton tipo="submit" texto="Guardar nombre" variante="primario" :icono="Check" />
-        <Boton texto="Cancelar" :icono="X" @click="emit('cancelar')" />
-      </div>
-    </form>
+  <div ref="refFila" class="categoria">
+    <div class="fila-de-categoria">
+      <form v-if="editando" class="edicion" novalidate @submit.prevent="emit('guardar')">
+        <CampoTexto
+          :model-value="nombreNuevo"
+          :etiqueta="`Nuevo nombre para ${nombre}`"
+          autocompletar="off"
+          :error="errorNombre"
+          @update:model-value="emit('update:nombreNuevo', $event)"
+        />
+        <div class="botones">
+          <Boton tipo="submit" texto="Guardar nombre" variante="primario" :icono="Check" />
+          <Boton texto="Cancelar" :icono="X" @click="emit('cancelar')" />
+        </div>
+      </form>
 
-    <template v-else>
-      <p class="datos">
-        <span class="nombre">{{ nombre }}</span>
-        <span class="cantidad">{{ textoCantidad }}</span>
-      </p>
-      <div class="botones">
-        <Boton
-          class="cambiar-nombre"
-          texto="Cambiar nombre"
-          :aria-label="`Cambiar nombre de ${nombre}`"
-          :icono="Pencil"
-          @click="emit('editar')"
-        />
-        <Boton
-          texto="Eliminar"
-          :aria-label="`Eliminar ${nombre}`"
-          variante="peligro"
-          :icono="Trash2"
-          @click="emit('eliminar')"
-        />
-      </div>
-      <MensajeDeError v-if="errorEliminar" class="error-eliminar" :mensaje="errorEliminar" />
-    </template>
+      <template v-else>
+        <p class="datos">
+          <span class="nombre">{{ nombre }}</span>
+          <span class="cantidad">{{ textoCantidad }}</span>
+        </p>
+        <div class="botones">
+          <Boton
+            class="cambiar-nombre"
+            texto="Cambiar nombre"
+            :aria-label="`Cambiar nombre de ${nombre}`"
+            :icono="Pencil"
+            @click="emit('editar')"
+          />
+          <Boton
+            texto="Eliminar"
+            :aria-label="`Eliminar ${nombre}`"
+            variante="peligro"
+            :icono="Trash2"
+            @click="emit('eliminar')"
+          />
+        </div>
+      </template>
+    </div>
+    <!-- Fuera del recuadro de la fila y a todo el ancho: a 320 px con letra Muy grande no queda
+         apretado dentro de su relleno. -->
+    <MensajeDeError v-if="errorEliminar && !editando" :mensaje="errorEliminar" />
   </div>
 </template>
 
@@ -119,7 +123,8 @@ watch(
   gap: var(--espacio-3);
   inline-size: 100%;
 }
-.error-eliminar {
-  flex-basis: 100%;
+.categoria {
+  display: grid;
+  gap: var(--espacio-2);
 }
 </style>

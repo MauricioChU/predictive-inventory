@@ -135,10 +135,16 @@ test.describe('Productos: flujos críticos', () => {
     await dialogo.getByRole('button', { name: 'Sí, retirar y archivar' }).click()
 
     await expect(dialogo).toBeHidden()
-    await expect(page.getByText('Producto archivado', { exact: true })).toBeVisible()
-    await expect(page.getByText(comoSeLee('Retiramos 4 unid. del stock.'))).toBeVisible()
-    await expect(page.getByText('Este producto está archivado')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Reactivar producto' })).toBeFocused()
+    // RN-UX-11: la única confirmación (sin Deshacer) va junto a las acciones, con el foco y a
+    // la vista; arriba queda el aviso de que está archivado.
+    const resultado = page.locator('.resultado')
+    await expect(resultado).toContainText('Producto archivado')
+    await expect(resultado).toContainText(comoSeLee('Retiramos 4 unid. del stock.'))
+    await expect(resultado).toBeFocused()
+    await expect(resultado).toBeInViewport()
+    await expect(page.getByRole('button', { name: 'Reactivar producto' })).toBeInViewport()
+    await expect(page.locator('.aviso-deshacer')).toHaveCount(0)
+    await expect(page.getByText('Este producto no aparece en Vender', { exact: false })).toBeVisible()
     await expect(page.getByText(comoSeLee('Producto retirado'))).toBeVisible()
 
     // Ya no está entre los activos; sí en Archivados.

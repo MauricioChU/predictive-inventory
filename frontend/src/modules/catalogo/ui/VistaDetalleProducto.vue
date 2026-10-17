@@ -23,9 +23,16 @@ import TarjetaDeCifra from '@/shared/ui/componentes/TarjetaDeCifra.vue'
 import type { ProductoVista } from '../application/modulo'
 import { NOMBRE_DE_UNIDAD } from '../domain/mensajes'
 import { aPantalla } from './enlaces'
-import { barrasDeTendencia, hoyEnLaTienda, movimientoDeProducto } from './presentacion'
+import {
+  barrasDeTendencia,
+  hoyEnLaTienda,
+  movimientoDeProducto,
+  retiradoAlArchivar,
+} from './presentacion'
 
 const props = defineProps<{ id: string }>()
+
+const REINTENTAR = 'Vuelve a intentarlo en un momento.'
 
 /** Cuántos movimientos recientes se muestran (el historial completo está en Historial). */
 const MOVIMIENTOS_A_LA_VISTA = 5
@@ -43,10 +50,12 @@ const foto = ref<Blob | null>(null)
 /** Mensaje de RN-CAT-11 mientras se pide confirmar el retiro del stock. */
 const confirmacion = ref<string | null>(null)
 /** RN-UX-11: lo que se acaba de hacer (visible y anunciado). */
-const hecho = ref<{ titulo: string; texto: string } | null>(null)
-const error = ref<string | null>(null)
+const hecho = ref<{ titulo: string; texto?: string } | null>(null)
+/** RN-UX-07: qué pasó y qué hacer. */
+const error = ref<{ mensaje: string; ayuda: string } | null>(null)
 const ocupado = ref(false)
 const refAcciones = ref<HTMLElement>()
+const refResultado = ref<HTMLElement>()
 let montada = true
 onBeforeUnmount(() => {
   montada = false
@@ -77,7 +86,7 @@ watch(
     confirmacion.value = null
     cargar().catch((e: unknown) => {
       console.error('No se pudo leer el producto:', e)
-      error.value = 'No pudimos abrir este producto.'
+      error.value = { mensaje: 'No pudimos abrir este producto.', ayuda: REINTENTAR }
     })
   },
   { immediate: true },
@@ -149,22 +158,30 @@ async function enfocarAccion() {
 
 function mostrarError(e: unknown) {
   if (esErrorDeDominio(e)) {
-    error.value = e.message
+    error.value = { mensaje: e.message, ayuda: REINTENTAR }
     return
   }
   console.error('No se pudo cambiar el producto:', e)
-  error.value = 'No pudimos guardar el cambio.'
+  error.value = { mensaje: 'No pudimos guardar el cambio.', ayuda: REINTENTAR }
 }
 
-/** RN-CAT-10/11: archiva; con stock, primero pide confirmar el retiro (AJUSTE hasta 0). */
+/** El resultado (junto a las acciones) recibe el foco: se ve y se oye donde está la persona. */
+async function enfocarResultado() {
+  await nextTick()
+  refResultado.value?.focus()
+}
+
+/**
+ * RN-CAT-10/11: archiva. Lo decide el caso de uso: si pide confirmar (queda stock), se muestra
+ * su mensaje; confirmado, se retira el stock y se archiva en el mismo paso.
+ */
 async function archivar(confirmado = false) {
   const p = producto.value
   if (!p || ocupado.value) return
   ocupado.value = true
   error.value = null
-  let cambio = false
+  let enfocar: (() => Promise<void>) | null = null
   try {
-    const retirado = p.stock.esPositiva() ? formatearCantidad(p.stock, p.unidad) : null
     const respuesta = await app.catalogo.archivarProducto({ productoId: p.id, confirmado })
     if (respuesta.tipo === 'confirmar') {
       confirmacion.value = respuesta.mensaje
@@ -172,26 +189,33 @@ async function archivar(confirmado = false) {
     }
     confirmacion.value = null
     await cargar()
-    if (confirmado && retirado) {
-      // Confirmado a propósito (RN-UX-08): no se ofrece Deshacer, se muestra lo que pasó.
-      hecho.value = { titulo: 'Producto archivado', texto: `Retiramos ${retirado} del stock.` }
-      anunciador.anunciar(`${hecho.value.titulo}. ${hecho.value.texto}`)
+    if (confirmado) {
+      // Confirmado a propósito (RN-UX-08): no se ofrece Deshacer; esta es la única
+      // confirmación, así que va junto a las acciones, con el foco y anunciada.
+      const retirado = retiradoAlArchivar(operaciones.value, p.id)
+      hecho.value = {
+        titulo: 'Producto archivado',
+        ...(retirado ? { texto: `Retiramos ${retirado} del stock.` } : {}),
+      }
+      anunciador.anunciar([hecho.value.titulo, hecho.value.texto].filter(Boolean).join('. '))
+      enfocar = enfocarResultado
     } else {
       hecho.value = null
       aviso.mostrar({
         mensaje: `Archivaste ${p.nombre}`,
         alDeshacer: () => void cambiarSinPreguntar(p.id, 'reactivar'),
       })
+      enfocar = enfocarAccion
     }
-    cambio = true
   } catch (e) {
     confirmacion.value = null
     mostrarError(e)
+    enfocar = enfocarResultado
   } finally {
     ocupado.value = false
   }
   // Recién ahora: mientras se guardaba, el botón nuevo estaba deshabilitado (no toma el foco).
-  if (cambio) await enfocarAccion()
+  await enfocar?.()
 }
 
 async function reactivar() {
@@ -199,7 +223,7 @@ async function reactivar() {
   if (!p || ocupado.value) return
   ocupado.value = true
   error.value = null
-  let cambio = false
+  let enfocar: (() => Promise<void>) | null = null
   try {
     await app.catalogo.reactivarProducto(p.id)
     hecho.value = null
@@ -208,23 +232,38 @@ async function reactivar() {
       mensaje: `Reactivaste ${p.nombre}`,
       alDeshacer: () => void cambiarSinPreguntar(p.id, 'archivar'),
     })
-    cambio = true
+    enfocar = enfocarAccion
   } catch (e) {
     mostrarError(e)
+    enfocar = enfocarResultado
   } finally {
     ocupado.value = false
   }
-  if (cambio) await enfocarAccion()
+  await enfocar?.()
 }
 
-/** Deshacer: vuelve al estado anterior (sin stock no hay nada que confirmar). */
+/**
+ * Deshacer: vuelve al estado anterior. Archivar otra vez puede pedir confirmar (llegó stock
+ * mientras tanto): eso no se hace en silencio ni sin preguntar, se dice qué hacer.
+ */
 async function cambiarSinPreguntar(id: string, accion: 'archivar' | 'reactivar') {
   try {
-    if (accion === 'reactivar') await app.catalogo.reactivarProducto(id)
-    else await app.catalogo.archivarProducto({ productoId: id })
+    let noSePudo = false
+    if (accion === 'reactivar') {
+      await app.catalogo.reactivarProducto(id)
+    } else {
+      const respuesta = await app.catalogo.archivarProducto({ productoId: id })
+      noSePudo = respuesta.tipo !== 'hecho'
+    }
+    const mensaje = noSePudo ? 'No pudimos deshacer: el producto ya tiene stock.' : null
     if (montada && props.id === id) {
       hecho.value = null
       await cargar()
+      if (mensaje) {
+        error.value = { mensaje, ayuda: 'Si quieres archivarlo, toca «Archivar producto».' }
+      }
+    } else if (mensaje) {
+      anunciador.anunciar(mensaje)
     }
   } catch (e) {
     console.error('No se pudo deshacer:', e)
@@ -235,11 +274,7 @@ async function cambiarSinPreguntar(id: string, accion: 'archivar' | 'reactivar')
 <template>
   <div class="vista-detalle-producto">
     <EncabezadoPagina :titulo="titulo" volver />
-    <MensajeDeError
-      v-if="error && cargando"
-      :mensaje="error"
-      ayuda="Vuelve a intentarlo en un momento."
-    />
+    <MensajeDeError v-if="error && cargando" :mensaje="error.mensaje" :ayuda="error.ayuda" />
 
     <template v-if="!cargando && !producto">
       <!-- Un enlace viejo (o una notificación) a un producto que ya no existe (01-catalogo). -->
@@ -248,14 +283,13 @@ async function cambiarSinPreguntar(id: string, accion: 'archivar' | 'reactivar')
     </template>
 
     <template v-else-if="producto">
-      <AvisoEnPagina v-if="hecho" tono="exito" :titulo="hecho.titulo" :texto="hecho.texto" />
+      <!-- Título corto: a 320 px con letra Muy grande entra al lado del ícono sin apretarse. -->
       <AvisoEnPagina
         v-if="!producto.activo"
         tono="info"
-        titulo="Este producto está archivado"
-        texto="No aparece en Vender, en Llegó mercadería ni en las alertas. Sus ventas pasadas siguen contando en tus reportes."
+        titulo="Archivado"
+        texto="Este producto no aparece en Vender, en Llegó mercadería ni en las alertas. Sus ventas pasadas siguen contando en tus reportes."
       />
-      <MensajeDeError v-if="error" :mensaje="error" ayuda="Vuelve a intentarlo en un momento." />
 
       <div class="columnas">
         <div class="columna">
@@ -351,6 +385,12 @@ async function cambiarSinPreguntar(id: string, accion: 'archivar' | 'reactivar')
         </div>
       </div>
 
+      <!-- RN-UX-11 / RN-UX-07: el resultado de archivar o reactivar va junto a las acciones
+           (donde está la persona), no arriba de todo; recibe el foco y se anuncia. -->
+      <div v-if="hecho || (error && !cargando)" ref="refResultado" class="resultado" tabindex="-1">
+        <AvisoEnPagina v-if="hecho" tono="exito" :titulo="hecho.titulo" :texto="hecho.texto" />
+        <MensajeDeError v-else-if="error" :mensaje="error.mensaje" :ayuda="error.ayuda" />
+      </div>
       <div ref="refAcciones" class="acciones-finales">
         <template v-if="producto.activo">
           <BotonPrincipal texto="Editar producto" :icono="Pencil" @click="editar" />
@@ -448,6 +488,13 @@ async function cambiarSinPreguntar(id: string, accion: 'archivar' | 'reactivar')
 .acciones-finales {
   display: grid;
   gap: var(--espacio-3);
+}
+.resultado {
+  scroll-margin-block: var(--espacio-4);
+}
+.resultado:focus {
+  /* Foco programático (para que se lea), no interactivo: sin anillo. */
+  outline: none;
 }
 
 /* Mismo corte que LayoutApp: en PC, stock y precios a la izquierda; ventas y movimientos a

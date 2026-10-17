@@ -31,6 +31,16 @@ function texto(w: VueWrapper): string {
   return leer(w.text())
 }
 
+/** El aviso de archivado (arriba, a todo el ancho: "Archivado" y por qué no aparece). */
+function estaArchivado(w: VueWrapper): boolean {
+  return w
+    .findAll('.aviso-en-pagina')
+    .some(
+      (a) =>
+        leer(a.text()).startsWith('Archivado') && leer(a.text()).includes('no aparece en Vender'),
+    )
+}
+
 /** Etiqueta → valor de cada FilaDeDato de la pantalla. */
 function datos(w: VueWrapper): Record<string, string> {
   return Object.fromEntries(
@@ -226,13 +236,39 @@ describe('Detalle del producto', () => {
     expect((await app.catalogo.obtenerProducto(id))?.activo).toBe(false)
     const [retiro] = await app.inventario.historial({ productoId: id, tipo: 'AJUSTE' })
     expect(retiro?.motivo).toBe('Producto retirado')
-    expect(texto(w)).toContain('Producto archivado')
-    expect(texto(w)).toContain('Retiramos 4 unid. del stock.')
-    expect(texto(w)).toContain('Este producto está archivado')
+    expect(estaArchivado(w)).toBe(true)
     expect(hayBoton(w, 'Reactivar producto')).toBe(true)
     expect(hayBoton(w, 'Archivar producto')).toBe(false)
-    // El botón tocado desapareció: el foco pasa al que lo reemplaza (y no queda en <body>).
-    expect(document.activeElement).toBe(boton(w, 'Reactivar producto').element)
+    // RN-UX-11: la única confirmación (no hay Deshacer: se confirmó a propósito) queda junto a
+    // las acciones, recibe el foco y se anuncia; así se ve y se oye donde estaba la persona.
+    const hecho = w.get('.resultado')
+    expect(leer(hecho.text())).toContain('Producto archivado')
+    expect(leer(hecho.text())).toContain('Retiramos 4 unid. del stock.')
+    expect(document.activeElement).toBe(hecho.element)
+    expect(hecho.element.nextElementSibling?.classList.contains('acciones-finales')).toBe(true)
+    expect(vista.aviso.activo.value).toBeUndefined()
+    await vi.waitFor(() =>
+      expect(vista!.anunciador.texto.value).toContain('Retiramos 4 unid. del stock.'),
+    )
+  })
+
+  it('RN-CAT-11: decide con lo que dice el caso de uso, no con el stock de cuando se abrió', async () => {
+    // Se abre sin stock y, mientras tanto, llega mercadería (otra pantalla): pide confirmar.
+    const id = await crearProducto(app, ESCOBA)
+    vista = await montarVista(app, `/productos/${id}`)
+    await app.inventario.registrarIngreso({
+      lineas: [{ productoId: id, cantidad: '2', costo: '6.00' }],
+      confirmarSobrecompra: true,
+    })
+    await app.esperarTareasPendientes()
+
+    await boton(vista.wrapper, 'Archivar producto').trigger('click')
+    await esperar()
+    expect(leer(vista.wrapper.get('dialog').text())).toContain('Aún quedan 2 unid.')
+    await boton(vista.wrapper, 'Sí, retirar y archivar').trigger('click')
+    await esperar()
+    expect(leer(vista.wrapper.get('.resultado').text())).toContain('Retiramos 2 unid. del stock.')
+    expect(vista.aviso.activo.value).toBeUndefined()
   })
 
   it('RN-UX-08: archivar sin stock no pregunta y ofrece Deshacer', async () => {
@@ -256,7 +292,7 @@ describe('Detalle del producto', () => {
     vista = await montarVista(app, `/productos/${id}`)
     const w = vista.wrapper
     expect(w.get('h1').text()).toBe('Escoba')
-    expect(texto(w)).toContain('Este producto está archivado')
+    expect(estaArchivado(w)).toBe(true)
     expect(hayBoton(w, 'Contar stock')).toBe(false)
     expect(hayBoton(w, 'Registrar pérdida')).toBe(false)
 
@@ -264,12 +300,32 @@ describe('Detalle del producto', () => {
     await esperar()
     expect((await app.catalogo.obtenerProducto(id))?.activo).toBe(true)
     expect(vista.aviso.activo.value?.mensaje).toBe('Reactivaste Escoba')
-    expect(texto(w)).not.toContain('Este producto está archivado')
+    expect(estaArchivado(w)).toBe(false)
     expect(document.activeElement).toBe(boton(w, 'Editar producto').element)
 
     vista.aviso.activo.value?.alDeshacer()
     await esperar()
     expect((await app.catalogo.obtenerProducto(id))?.activo).toBe(false)
+  })
+
+  it('si "Deshacer" ya no puede archivarlo (llegó stock), lo dice en vez de callar', async () => {
+    const id = await crearProducto(app, ESCOBA)
+    await app.catalogo.archivarProducto({ productoId: id })
+    vista = await montarVista(app, `/productos/${id}`)
+    await boton(vista.wrapper, 'Reactivar producto').trigger('click')
+    await esperar()
+    await app.inventario.registrarIngreso({
+      lineas: [{ productoId: id, cantidad: '3', costo: '6.00' }],
+      confirmarSobrecompra: true,
+    })
+    await app.esperarTareasPendientes()
+
+    vista.aviso.activo.value?.alDeshacer()
+    await esperar()
+    expect((await app.catalogo.obtenerProducto(id))?.activo).toBe(true)
+    const alerta = vista.wrapper.get('[role="alert"]')
+    expect(leer(alerta.text())).toContain('No pudimos deshacer: el producto ya tiene stock.')
+    expect(leer(alerta.text())).toContain('Si quieres archivarlo, toca «Archivar producto».')
   })
 
   it('un producto que no existe: "No encontramos ese producto" y un camino de vuelta', async () => {
