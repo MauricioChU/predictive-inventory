@@ -157,18 +157,27 @@ test.describe('Para comprar', () => {
       await usarLetra(page, 'MUY_GRANDE')
       await page.setViewportSize({ width: ancho, height: 740 })
       await abrirParaComprar(page)
-      const medidas = await page.evaluate(() => {
-        const caja = (selector: string) =>
-          document.querySelector(`.barra-de-total ${selector}`)!.getBoundingClientRect()
-        const barra = document.querySelector('.barra-de-total')!.getBoundingClientRect()
-        const total = caja('.total')
-        const boton = caja('.accion')
-        return {
-          altoBarra: barra.height,
-          mismaFila: total.top < boton.bottom && boton.top < total.bottom,
-          botonAlto: boton.height,
-        }
-      })
+      // La lista se carga después de abrir: se espera a que la barra tenga su total y su botón
+      // (sin esto, medirla al vuelo fallaba a veces en el CI con la barra todavía incompleta).
+      const barra = page.locator('.barra-de-total')
+      const totalVisible = barra.locator('.total')
+      const botonVisible = barra.locator('.accion')
+      await expect(totalVisible).toBeVisible()
+      await expect(botonVisible).toBeVisible()
+      await expect
+        .poll(async () => {
+          const t = await totalVisible.boundingBox()
+          const b = await botonVisible.boundingBox()
+          return Boolean(t && b && t.y < b.y + b.height && b.y < t.y + t.height)
+        })
+        .toBe(true)
+      const cajaBarra = (await barra.boundingBox())!
+      const cajaBoton = (await botonVisible.boundingBox())!
+      const medidas = {
+        altoBarra: cajaBarra.height,
+        mismaFila: true,
+        botonAlto: cajaBoton.height,
+      }
       expect(medidas.mismaFila).toBe(true)
       expect(medidas.botonAlto).toBeGreaterThanOrEqual(56)
       expect(medidas.altoBarra).toBeLessThan(130)
