@@ -452,4 +452,25 @@ describe('Integración (f): conteo guiado', () => {
       diferencias: 'S/ 0.00',
     })
   })
+
+  it('HU-OP-08 (plan 12): el detalle de una operación se lee por id, igual en memoria y en Dexie', async () => {
+    const resultado = await enAmbosAlmacenes(async (app) => {
+      const lejia = await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '10' })
+      const { operacionId } = await app.inventario.registrarVenta({
+        lineas: [{ productoId: lejia, cantidad: '2' }],
+      })
+      const { anulacionId } = await app.inventario.anularOperacion({ operacionId })
+      const [anulacion, venta] = await app.inventario.historial({ productoId: lejia })
+      return {
+        venta: await app.inventario.operacion(operacionId),
+        anulacion: await app.inventario.operacion(anulacionId),
+        enElHistorial: { venta, anulacion },
+        inexistente: await app.inventario.operacion('no-existe'),
+      }
+    })
+    expect(resultado.venta).toEqual(resultado.enElHistorial.venta)
+    expect(resultado.anulacion).toEqual(resultado.enElHistorial.anulacion)
+    expect(resultado.venta?.anulada).toBe(true)
+    expect(resultado.inexistente).toBeNull()
+  })
 })

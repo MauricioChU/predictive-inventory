@@ -14,6 +14,7 @@ import type { ContextoDeInventario } from './contexto'
 import { ServicioDeDeshacer } from './deshacer'
 import {
   historial,
+  operacionPorId,
   ultimoIngresoDe,
   type FiltroDeHistorial,
   type OperacionVista,
@@ -50,6 +51,8 @@ export interface ModuloInventario {
   anularOperacion(datos: DatosDeAnulacion): Promise<{ anulacionId: string }>
   deshacer: ServicioDeDeshacer
   historial(filtro?: FiltroDeHistorial): Promise<OperacionVista[]>
+  /** HU-OP-08: el detalle de una operación (null si no existe). */
+  operacion(operacionId: string): Promise<OperacionVista | null>
   revisarDatos(): Promise<ResultadoDeRevision>
   reconstruirExistencias(): Promise<void>
   iniciarConteoGuiado(): Promise<EstadoDelConteo>
@@ -93,6 +96,8 @@ export function crearModuloInventario(d: DependenciasDeInventario): ModuloInvent
     deshacer,
     // RN-SIS-09: el libro y los productos, en una sola transacción de solo lectura.
     historial: (filtro) => d.uow.leer(() => historial(ctx, filtro)),
+    // RN-SIS-09: también en una sola transacción de solo lectura.
+    operacion: (operacionId) => d.uow.leer(() => operacionPorId(ctx, operacionId)),
     revisarDatos: () => revisarDatos(ctx),
     reconstruirExistencias: () => reconstruirExistencias(ctx),
     iniciarConteoGuiado: () => iniciarConteoGuiado(ctx),

@@ -44,10 +44,10 @@ const idProductos = useId()
 
 async function cargar(): Promise<void> {
   try {
-    const todas = await aplicacion.inventario.historial()
-    operacion.value = todas.find((o) => o.id === id.value) ?? null
+    // M5: solo esta operación (y la que anula, si es una anulación), no todo el libro.
+    operacion.value = await aplicacion.inventario.operacion(id.value)
     const anulaA = operacion.value?.anulaA
-    original.value = anulaA ? (todas.find((o) => o.id === anulaA) ?? null) : null
+    original.value = anulaA ? await aplicacion.inventario.operacion(anulaA) : null
     error.value = null
   } catch (causa) {
     error.value = errorParaMostrar(causa, 'anulacion')
