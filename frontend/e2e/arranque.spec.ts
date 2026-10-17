@@ -2,6 +2,7 @@ import process from 'node:process'
 import { expect, test, type Page } from '@playwright/test'
 import { esperarSinViolacionesGraves } from './utilidades/calidad'
 import { abrir } from './utilidades/navegacion'
+import { abrirTiendaLista } from './utilidades/tienda'
 
 /** Lo que estas pruebas usan de la aplicación real (window.__aplicacion, ganchos de prueba). */
 interface AplicacionEnLaPagina {
@@ -89,15 +90,19 @@ test.describe('Ola 3: la app arranca con los datos guardados en el celular', () 
     expect((await leerBaseLocal(page)).dispositivoId).toBe(base.dispositivoId)
   })
 
-  /** Plan 12 (RN-UX-12): el destino "Recibir" abre la pantalla titulada "Llegó mercadería". */
-  const TITULO_DE_LA_PANTALLA: Record<string, string> = { Recibir: 'Llegó mercadería' }
+  /** Plan 14: Inicio saluda. Plan 12 (RN-UX-12): "Recibir" abre la pantalla "Llegó mercadería". */
+  const TITULOS: Partial<Record<string, string | RegExp>> = {
+    Inicio: /^Hola, Bodega Rosita/,
+    Recibir: 'Llegó mercadería',
+  }
 
   test('la navegación sigue funcionando con la aplicación montada', async ({ page }) => {
-    await abrir(page, './')
+    // Plan 14: con la primera vez hecha (si no, Inicio es la bienvenida); Inicio saluda.
+    await abrirTiendaLista(page, './')
     for (const destino of ['Vender', 'Recibir', 'Productos', 'Control', 'Inicio']) {
       await page.getByRole('link', { name: new RegExp(`^${destino}`) }).click()
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-        TITULO_DE_LA_PANTALLA[destino] ?? destino,
+        TITULOS[destino] ?? destino,
       )
     }
   })

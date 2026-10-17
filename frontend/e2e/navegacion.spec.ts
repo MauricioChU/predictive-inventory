@@ -1,20 +1,26 @@
 import { expect, test } from '@playwright/test'
 import { esperarSinDesplazamientoHorizontal, esperarSinViolacionesGraves, usarLetra } from './utilidades/calidad'
 import { abrir } from './utilidades/navegacion'
+import { abrirTiendaLista } from './utilidades/tienda'
 
 const DESTINOS = ['Inicio', 'Vender', 'Recibir', 'Productos', 'Control']
-/** Plan 12 (RN-UX-12): el destino "Recibir" abre la pantalla titulada "Llegó mercadería". */
-const TITULO_DE_LA_PANTALLA: Record<string, string> = { Recibir: 'Llegó mercadería' }
 const ANCHOS = [320, 360, 768, 1280]
+/**
+ * Plan 14: Inicio saluda con el nombre de la tienda. Plan 12 (RN-UX-12): "Recibir" abre la
+ * pantalla titulada "Llegó mercadería". El resto se titula como su destino.
+ */
+const TITULOS: Partial<Record<string, string | RegExp>> = {
+  Inicio: /^Hola, Bodega Rosita/,
+  Recibir: 'Llegó mercadería',
+}
 
 test.describe('RN-UX-12: navegación', () => {
   test('los cinco destinos están visibles y funcionan', async ({ page }) => {
-    await abrir(page, './')
+    // Plan 14: con la primera vez sin hacer, Inicio es la bienvenida.
+    await abrirTiendaLista(page, './')
     for (const destino of DESTINOS) {
       await page.getByRole('link', { name: destino }).click()
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-        TITULO_DE_LA_PANTALLA[destino] ?? destino,
-      )
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(TITULOS[destino] ?? destino)
     }
   })
 })
