@@ -12,6 +12,7 @@ import ListaDeProductos from '@/shared/ui/componentes/ListaDeProductos.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import SelectorSegmentado from '@/shared/ui/componentes/SelectorSegmentado.vue'
 import type { CategoriaVista, ProductoVista } from '../application/modulo'
+import { usarAltoObservado } from './alto-observado'
 import FiltroDeCategoria from './FiltroDeCategoria.vue'
 import { useFiltrosDeProductos, vuelveAtrasDelDetalle } from './filtros-de-productos'
 import {
@@ -37,6 +38,8 @@ const estados = ref<ReadonlyMap<string, EstadoDeStock>>(new Map())
 /** Se reemplaza entera (no se modifica): un solo redibujo por tanda de fotos. */
 const fotos = shallowRef<ReadonlyMap<string, Blob>>(new Map())
 const fotosPedidas = new Set<string>()
+const refAccion = ref<HTMLElement>()
+const altoDeLaAccion = usarAltoObservado(refAccion)
 const error = ref<string | null>(null)
 
 /** Solo cuenta la última búsqueda: una respuesta vieja que llega tarde no pisa la nueva. */
@@ -173,7 +176,7 @@ function abrirProducto(id: string) {
 </script>
 
 <template>
-  <div class="vista-productos">
+  <div class="vista-productos" :style="{ '--alto-accion': `${altoDeLaAccion}px` }">
     <div class="cabecera">
       <EncabezadoPagina titulo="Productos" />
       <Boton
@@ -218,7 +221,7 @@ function abrirProducto(id: string) {
           <!-- Principio 1: la acción principal, abajo y al alcance del pulgar: pegada al fondo
                de la columna de la lista, sobre el pie. Sin productos, la del estado vacío ya
                es "Agregar el primero". -->
-          <div v-if="hayProductos && !agregarEnElVacio" class="accion-principal">
+          <div v-if="hayProductos && !agregarEnElVacio" ref="refAccion" class="accion-principal">
             <BotonPrincipal texto="Agregar producto" :icono="Plus" @click="agregar()" />
           </div>
         </section>
@@ -233,9 +236,10 @@ function abrirProducto(id: string) {
   gap: var(--espacio-4);
   min-inline-size: 0;
 }
-/* WCAG 2.4.11: lo que recibe el foco nunca queda tapado por el botón pegado abajo. */
+/* WCAG 2.4.11: lo que recibe el foco nunca queda tapado por el botón pegado abajo (su alto
+   real, medido). */
 .vista-productos :deep(:is(button, input, a)) {
-  scroll-margin-bottom: calc(var(--alto-boton-principal) + 2 * var(--espacio-3));
+  scroll-margin-bottom: calc(var(--alto-accion, 0px) + var(--espacio-3));
 }
 .cabecera {
   display: flex;

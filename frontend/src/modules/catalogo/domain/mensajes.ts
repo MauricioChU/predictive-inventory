@@ -6,6 +6,10 @@ import { formatearCantidad, formatearDinero } from '@/shared/domain/formato'
 /** Sin categoría (o con una que ya no existe) al crear o editar un producto. */
 export const MENSAJE_ELIGE_CATEGORIA = 'Elige una categoría'
 
+/** RN-CAT-03: la unidad no cambia si el producto ya tiene operaciones. */
+export const MENSAJE_UNIDAD_CON_MOVIMIENTOS =
+  'No puedes cambiar la unidad de un producto que ya tiene movimientos'
+
 /** "unidad", "kilo" o "litro": cómo se nombra la unidad en "por cada …" (RN-CAT-05). */
 export const NOMBRE_DE_UNIDAD: Record<Unidad, string> = {
   UNIDAD: 'unidad',

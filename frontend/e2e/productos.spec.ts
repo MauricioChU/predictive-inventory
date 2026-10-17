@@ -4,6 +4,7 @@ import {
   esperarSinViolacionesGraves,
   usarLetra,
 } from './utilidades/calidad'
+import { caja } from './utilidades/escenarios'
 import { abrir } from './utilidades/navegacion'
 import { crearConHistoria, crearProductos, FOTO_PNG, objetivosChicos } from './utilidades/productos'
 
@@ -331,6 +332,26 @@ test('un título largo pasa debajo de "Volver" sin aplastarlo ni partir palabras
     })
     expect(medida.lineasVolver, ruta).toBeLessThan(1.5)
     expect(medida.partidas, ruta).toEqual([])
+  }
+})
+
+test('celular: "Guardar producto" va fijo abajo y nunca tapa el campo con el foco (06, responsive)', async ({
+  page,
+}) => {
+  await usarLetra(page, 'MUY_GRANDE')
+  await page.setViewportSize({ width: 360, height: 800 })
+  await abrir(page, './productos/nuevo')
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+  const boton = await caja(page, '.formulario-de-producto .accion-principal')
+  const pie = await caja(page, '.pie')
+  expect(Math.abs(boton.bottom - pie.top), 'pegado justo encima de la navegación').toBeLessThanOrEqual(1)
+
+  // WCAG 2.4.11: al enfocar campos más abajo, el navegador los deja por encima del botón.
+  for (const etiqueta of ['Precio de compra por unidad (S/)', 'Stock mínimo']) {
+    await page.getByLabel(etiqueta).focus()
+    const campo = await page.getByLabel(etiqueta).boundingBox()
+    const fijo = await caja(page, '.formulario-de-producto .accion-principal')
+    expect(campo!.y + campo!.height, etiqueta).toBeLessThanOrEqual(fijo.top + 1)
   }
 })
 

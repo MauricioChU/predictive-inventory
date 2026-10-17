@@ -6,6 +6,7 @@ import { useAplicacion } from '@/app/proveer-aplicacion'
 import { Cantidad, type Unidad } from '@/shared/domain/cantidad'
 import { Dinero } from '@/shared/domain/dinero'
 import { esErrorDeDominio } from '@/shared/domain/errores'
+import { normalizar } from '@/shared/domain/texto'
 import {
   formatearCantidad,
   formatearDinero,
@@ -23,7 +24,7 @@ import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import PantallaExito from '@/shared/ui/componentes/PantallaExito.vue'
 import type { CategoriaVista } from '../application/modulo'
-import { NOMBRE_DE_UNIDAD } from '../domain/mensajes'
+import { MENSAJE_UNIDAD_CON_MOVIMIENTOS, NOMBRE_DE_UNIDAD } from '../domain/mensajes'
 import {
   campoDelError,
   erroresDeCampos,
@@ -34,6 +35,7 @@ import {
   type ValoresDeProducto,
 } from './formulario'
 import { aPantalla } from './enlaces'
+import { usarAltoObservado } from './alto-observado'
 import { montoParaEditar } from './presentacion'
 
 const props = withDefaults(
@@ -57,7 +59,6 @@ const OPCIONES_DE_UNIDAD: readonly { valor: Unidad; etiqueta: string }[] = [
   { valor: 'KILO', etiqueta: 'Por kilo' },
   { valor: 'LITRO', etiqueta: 'Por litro' },
 ]
-const MENSAJE_UNIDAD_FIJA = 'No puedes cambiar la unidad de un producto que ya tiene movimientos'
 
 const app = useAplicacion()
 const router = useRouter()
@@ -100,6 +101,9 @@ type Exito =
 const exito = ref<Exito | null>(null)
 
 const refFormulario = ref<HTMLFormElement>()
+const refAccion = ref<HTMLElement>()
+/** Alto real del botón pegado abajo: lo que recibe el foco se queda por encima (WCAG 2.4.11). */
+const altoDeLaAccion = usarAltoObservado(refAccion)
 let montado = true
 onBeforeUnmount(() => {
   montado = false
@@ -309,7 +313,19 @@ async function guardar(confirmado = false) {
   const encontrados = erroresDeCampos(valores, { conStockInicial: !editando.value })
   const errorDeFoto = errores.value.foto
   if (Object.keys(encontrados).length > 0) {
-    mostrarErrores({ ...encontrados, ...(errorDeFoto ? { foto: errorDeFoto } : {}) })
+    const todos = { ...encontrados, ...(errorDeFoto ? { foto: errorDeFoto } : {}) }
+    // RN-CAT-02: si el nombre es de un archivado, primero se ofrece reactivarlo (lo demás que
+    // falte por escribir se descartaría). Los errores quedan a la vista por si dice que no.
+    ocupado.value = true
+    const archivado =
+      !editando.value && !encontrados.nombre ? await archivadoConEseNombre(valores.nombre) : null
+    ocupado.value = false
+    if (archivado) {
+      errores.value = todos
+      ofertaDeReactivar.value = archivado
+      return
+    }
+    mostrarErrores(todos)
     return
   }
   errores.value = errorDeFoto && !fotoCambiada.value ? { foto: errorDeFoto } : {}
@@ -321,6 +337,21 @@ async function guardar(confirmado = false) {
     mostrarFallo(error)
   } finally {
     ocupado.value = false
+  }
+}
+
+/** Un producto archivado cuyo nombre es el escrito (misma comparación que RN-CAT-01). */
+async function archivadoConEseNombre(
+  nombre: string,
+): Promise<{ productoId: string; nombre: string } | null> {
+  try {
+    const buscado = normalizar(nombre)
+    const archivados = await app.catalogo.buscarProductos({ texto: nombre, archivados: true })
+    const igual = archivados.find((p) => normalizar(p.nombre) === buscado)
+    return igual ? { productoId: igual.id, nombre: igual.nombre } : null
+  } catch (error) {
+    console.error('No se pudo buscar entre los archivados:', error)
+    return null
   }
 }
 
@@ -425,6 +456,7 @@ function verProducto(productoId: string) {
         v-else-if="!cargando"
         ref="refFormulario"
         class="campos"
+        :style="{ '--alto-accion': `${altoDeLaAccion}px` }"
         novalidate
         @submit.prevent="guardar()"
       >
@@ -470,7 +502,7 @@ function verProducto(productoId: string) {
           <div v-if="unidadFija" class="unidad-fija">
             <p class="etiqueta">¿Cómo se vende?</p>
             <p class="valor-fijo">{{ nombreDeLaUnidad }}</p>
-            <p class="nota">{{ MENSAJE_UNIDAD_FIJA }}</p>
+            <p class="nota">{{ MENSAJE_UNIDAD_CON_MOVIMIENTOS }}</p>
           </div>
           <BotonesDeOpcion
             v-else
@@ -529,7 +561,7 @@ function verProducto(productoId: string) {
           />
         </div>
 
-        <div class="accion-principal">
+        <div ref="refAccion" class="accion-principal">
           <BotonPrincipal
             tipo="submit"
             :texto="editando ? 'Guardar cambios' : 'Guardar producto'"
@@ -613,6 +645,22 @@ function verProducto(productoId: string) {
 }
 .accion-principal {
   padding-block: var(--espacio-2);
+}
+/* 06 (responsive): en celular el botón principal va fijo abajo, sobre la navegación (como
+   "Agregar producto" en la lista); desde 1024 px queda al final del formulario. Los campos
+   dejan su lugar al enfocarse para que el botón nunca los tape (WCAG 2.4.11). */
+@media (max-width: 1023px) {
+  .accion-principal {
+    position: sticky;
+    bottom: var(--alto-pie, 0px);
+    z-index: 5;
+    padding-block: var(--espacio-3);
+    background: var(--color-fondo);
+    box-shadow: var(--sombra-flotante);
+  }
+  .campos :deep(:is(button, input, a)) {
+    scroll-margin-bottom: calc(var(--alto-accion, 0px) + var(--espacio-3));
+  }
 }
 .despues {
   display: grid;

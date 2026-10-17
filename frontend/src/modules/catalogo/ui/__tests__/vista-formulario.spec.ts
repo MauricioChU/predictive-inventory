@@ -307,6 +307,33 @@ describe('Formulario de producto: crear (/productos/nuevo)', () => {
     expect(await app.catalogo.buscarProductos({ texto: '' })).toHaveLength(1)
   })
 
+  it('RN-CAT-02: ofrece reactivar apenas el nombre es de un archivado, aunque falten datos', async () => {
+    const escoba = await crearProducto(app, { nombre: 'Escoba', compra: '6', venta: '9' })
+    await app.catalogo.archivarProducto({ productoId: escoba })
+    const w = await abrir()
+    await escribir(w, 'Nombre del producto', 'ESCOBA')
+    await guardar(w)
+    // Sin escribir precios ni elegir categoría (se descartarían): primero la oferta.
+    const dialogo = w.get('dialog[open]')
+    expect(dialogo.text()).toContain('Escoba está archivado')
+    await boton(w, 'Sí, reactivarlo').trigger('click')
+    await esperar()
+    expect(w.get('h1').text()).toBe('Producto reactivado')
+    expect((await app.catalogo.obtenerProducto(escoba))?.activo).toBe(true)
+  })
+
+  it('"No, cambiar el nombre" deja los errores de los demás campos a la vista', async () => {
+    const escoba = await crearProducto(app, { nombre: 'Escoba', compra: '6', venta: '9' })
+    await app.catalogo.archivarProducto({ productoId: escoba })
+    const w = await abrir()
+    await escribir(w, 'Nombre del producto', 'escoba')
+    await guardar(w)
+    await boton(w, 'No, cambiar el nombre').trigger('click')
+    await esperar()
+    expect(errorDe(w, '¿De qué categoría es?')).toBe('Elige una categoría')
+    expect(document.activeElement).toBe(entrada(w, 'Nombre del producto').element)
+  })
+
   it('RN-CAT-14: si la foto no se puede leer, el producto queda guardado y lo dice', async () => {
     vi.spyOn(app.procesadorDeFotos, 'reducir').mockRejectedValue(
       new ErrorDeDominio('FOTO_INVALIDA', 'No pudimos leer la foto. Prueba con otra.'),
