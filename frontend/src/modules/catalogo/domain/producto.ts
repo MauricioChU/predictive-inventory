@@ -4,6 +4,7 @@ import { ErrorDeDominio } from '@/shared/domain/errores'
 import type { Instante } from '@/shared/domain/fecha'
 import { normalizar } from '@/shared/domain/texto'
 import type { ProductoRegistro } from '@/shared/contratos/registros'
+import { MENSAJE_UNIDAD_CON_MOVIMIENTOS } from './mensajes'
 
 type EstadoDeProducto = 'ACTIVO' | 'ARCHIVADO'
 
@@ -139,10 +140,7 @@ export class Producto {
   /** RN-CAT-03: no se puede cambiar si el producto ya tiene operaciones. */
   cambiarUnidad(unidad: Unidad, tieneOperaciones: boolean, ahora: Instante): void {
     if (tieneOperaciones) {
-      throw new ErrorDeDominio(
-        'UNIDAD_CON_MOVIMIENTOS',
-        'No puedes cambiar la unidad de un producto que ya tiene movimientos',
-      )
+      throw new ErrorDeDominio('UNIDAD_CON_MOVIMIENTOS', MENSAJE_UNIDAD_CON_MOVIMIENTOS)
     }
     this.datos.unidad = unidad
     this.tocar(ahora)

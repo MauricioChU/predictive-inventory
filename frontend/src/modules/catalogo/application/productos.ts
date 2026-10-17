@@ -7,7 +7,7 @@ import { confirmar, hecho, ofrecerReactivar, type Respuesta } from '@/shared/app
 import type { DatosDeProductoNuevo, ErrorDeValidacion } from '@/shared/contratos/entre-modulos'
 import type { ProductoRegistro } from '@/shared/contratos/registros'
 import { coincide, ordenarResultados } from '../domain/busqueda'
-import { mensajePerdida, mensajeRetiro } from '../domain/mensajes'
+import { MENSAJE_ELIGE_CATEGORIA, mensajePerdida, mensajeRetiro } from '../domain/mensajes'
 import { Producto } from '../domain/producto'
 import {
   leerNombre,
@@ -74,7 +74,7 @@ export async function crearProducto(
   }
 
   const categoria = await deps.categorias.porId(datos.categoriaId)
-  if (!categoria) throw new ErrorDeDominio('CATEGORIA_INEXISTENTE', 'Elige una categoría')
+  if (!categoria) throw new ErrorDeDominio('CATEGORIA_INEXISTENTE', MENSAJE_ELIGE_CATEGORIA)
 
   const precioCompra = leerPrecioCompra(datos.precioCompra)
   const precioVenta = leerPrecioVenta(datos.precioVenta)
@@ -136,7 +136,7 @@ export async function editarProducto(
 
   if (datos.categoriaId !== undefined) {
     const categoria = await deps.categorias.porId(datos.categoriaId)
-    if (!categoria) throw new ErrorDeDominio('CATEGORIA_INEXISTENTE', 'Elige una categoría')
+    if (!categoria) throw new ErrorDeDominio('CATEGORIA_INEXISTENTE', MENSAJE_ELIGE_CATEGORIA)
     producto.cambiarCategoria(datos.categoriaId, ahora)
   }
 
