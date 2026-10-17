@@ -23,3 +23,10 @@ export {
   RepositorioDeProductosDexie,
 } from './infrastructure/dexie/repositorios'
 export { ProcesadorDeFotosCanvas } from './infrastructure/navegador/procesador-de-fotos-canvas'
+
+// Ola 4, plan 11: pantallas de Productos, cargadas solo al abrirlas (src/router/rutas/productos.ts).
+export const VistaProductos = () => import('./ui/VistaProductos.vue')
+export const VistaDetalleProducto = () => import('./ui/VistaDetalleProducto.vue')
+export const VistaProductoNuevo = () => import('./ui/VistaProductoNuevo.vue')
+export const VistaEditarProducto = () => import('./ui/VistaEditarProducto.vue')
+export const VistaCategorias = () => import('./ui/VistaCategorias.vue')

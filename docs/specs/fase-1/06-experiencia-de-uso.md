@@ -71,7 +71,7 @@ Buscador grande → al tocar un producto, una respuesta clara en letras grandes:
 Un producto por pantalla, con foto grande, agrupados por categoría: "¿Cuántos hay?" → *Siguiente*. Barra de progreso ("Llevas 23 de 80"), botones *Saltar* y *Seguir después* (RN-OP-21).
 
 ### Productos
-Lista con buscador, filtros por categoría y por estado (Todos · Queda poco · Agotados · Archivados). Cada fila: foto, nombre, **stock con unidad**, estado (color + ícono + texto). El **detalle** muestra: stock, "se acaba en ~N días", precios y ganancia por unidad, tendencia de 8 semanas, últimos movimientos y botones *Editar*, *Contar stock*, *Registrar merma*, *Archivar*.
+Lista con buscador, filtros por categoría y por estado (Todos · Queda poco · Agotados · Archivados). Cada fila: foto, nombre, **stock con unidad**, estado (color + ícono + texto). El **detalle** muestra: stock, "se acaba en ~N días", precios y ganancia por unidad, tendencia de 8 semanas, últimos movimientos y botones *Editar*, *Contar stock*, *Registrar pérdida*, *Archivar*.
 
 ### Control (Torre de control)
 Tarjetas apiladas en el orden de [04](04-torre-de-control.md); desde 768 px en dos columnas.
