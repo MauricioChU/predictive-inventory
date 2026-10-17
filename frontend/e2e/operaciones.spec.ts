@@ -5,6 +5,7 @@ import {
   usarLetra,
 } from './utilidades/calidad'
 import { abrir } from './utilidades/navegacion'
+import { abrirTiendaLista } from './utilidades/tienda'
 import {
   CARBON,
   cambiarCantidadEnLista,
@@ -40,13 +41,16 @@ test.describe('Vender (HU-OP-01, HU-OP-02)', () => {
   test('criterio de éxito 1: una venta de un producto en menos de 15 s desde Inicio, con vuelto y Deshacer', async ({
     page,
   }) => {
-    await abrir(page, './')
+    // Plan 14: la tienda ya hizo la primera vez; Inicio es el de todos los días.
+    await abrirTiendaLista(page, './')
     const lejia = await crearProducto(page, LEJIA)
     await venderPorCasoDeUso(page, lejia, '1') // ya es uno de los más vendidos
     await abrir(page, './')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Hola, Bodega Rosita/)
 
     const inicio = Date.now()
-    await page.getByRole('link', { name: 'Vender' }).click()
+    // El botón "Vender" de Inicio (no el enlace de la navegación).
+    await page.getByRole('button', { name: 'Vender' }).click()
     await page.locator('.accesos-rapidos').getByRole('button', { name: 'Lejía 1 L' }).click()
     await expect(page.locator('.barra-de-total .total')).toHaveText('S/ 3.50')
     await page.getByRole('button', { name: 'Cobrar' }).click()
