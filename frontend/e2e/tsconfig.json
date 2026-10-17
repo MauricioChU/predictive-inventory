@@ -2,10 +2,15 @@
   "extends": "@tsconfig/node24/tsconfig.json",
   "include": ["./**/*"],
   "compilerOptions": {
+    // Playwright transpila las pruebas como un empaquetador: imports sin extensión.
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    // Las funciones de page.evaluate() corren en el navegador: también los tipos del DOM.
+    "lib": ["es2024", "ESNext.Array", "ESNext.Collection", "ESNext.Iterator", "DOM", "DOM.Iterable"],
+    "noEmit": true,
     // Para reutilizar ayudantes de tests/soporte (p. ej. el generador de datos de RN-SIS-09).
-    "baseUrl": "..",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["../src/*"]
     }
   }
 }
