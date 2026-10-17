@@ -32,7 +32,12 @@ export async function obtenerConfiguracion(
 
 /** Crea el estado del sistema la primera vez que se consulta, y lo deja guardado. */
 export async function estadoDelSistema(deps: DependenciasDeTienda): Promise<EstadoDelSistema> {
-  // Leer y crear va en una sola unidad de trabajo: dos primeras consultas simultáneas
+  // RN-SIS-09: casi siempre ya existe (cada venta lo consulta): basta una lectura, que no hace
+  // fila como una escritura.
+  const guardado = await deps.uow.leer(() => deps.repositorio.sistema())
+  if (guardado) return sinClave(guardado)
+
+  // Volver a leer y crear va en una sola unidad de trabajo: dos primeras consultas simultáneas
   // no pueden crear dos dispositivoId distintos.
   return deps.uow.ejecutar(async () => {
     const existente = await deps.repositorio.sistema()

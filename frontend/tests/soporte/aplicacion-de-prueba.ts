@@ -21,7 +21,12 @@ import {
   LectorDeExcelEnMemoria,
 } from '@/modules/respaldo'
 import { RepositorioDeConfiguracionEnMemoria } from '@/modules/tienda'
-import { crearAplicacion, type Aplicacion, type Infraestructura } from '@/app/composicion'
+import {
+  crearAplicacion,
+  type Aplicacion,
+  type Infraestructura,
+  type OpcionesDeAplicacion,
+} from '@/app/composicion'
 import { crearPersistenciaDexie, type PersistenciaDeLaApp } from '@/app/persistencia-dexie'
 import {
   BusEnMemoria,
@@ -95,7 +100,7 @@ class BusDePrueba implements BusDeEventos {
   }
 }
 
-export interface OpcionesDeAplicacionDePrueba {
+export interface OpcionesDeAplicacionDePrueba extends OpcionesDeAplicacion {
   /** "Hoy" del escenario (instante ISO; ver `instanteLocal`). */
   ahora: Instante
   /** Por defecto, memoria. Con 'dexie', una base fake-indexeddb nueva y aislada. */
@@ -122,7 +127,7 @@ export interface AplicacionDePrueba extends Aplicacion {
    * una copia. Antes y después espera las tareas pendientes.
    */
   sinEventos<T>(trabajo: () => Promise<T>): Promise<T>
-  /** Espera lo pendiente y, con Dexie, cierra la base. */
+  /** Espera lo pendiente, deja de escuchar (`detener`) y, con Dexie, cierra la base. */
   cerrar(): Promise<void>
 }
 
@@ -183,7 +188,9 @@ export function crearAplicacionDePrueba(
     lectorDeExcel,
     almacenamiento,
   }
-  const aplicacion = crearAplicacion(infraestructura)
+  const aplicacion = crearAplicacion(infraestructura, {
+    ventanaDeReevaluacionMs: opciones.ventanaDeReevaluacionMs,
+  })
 
   return {
     ...aplicacion,
@@ -207,6 +214,7 @@ export function crearAplicacionDePrueba(
     },
     async cerrar() {
       await aplicacion.esperarTareasPendientes()
+      aplicacion.detener()
       db?.close()
     },
   }

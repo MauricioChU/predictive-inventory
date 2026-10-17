@@ -43,6 +43,8 @@ jobs:
           ACEPTACION_ALMACEN: dexie
           GHERKIN_ESTRICTO: '1'
       - run: npm run build-only
+      # RN-SIS-09: lo que se descarga al abrir y lo que precachea el service worker (lee dist/).
+      - run: npm run test:build
 
   specs:
     name: Specs (cada regla tiene escenario)

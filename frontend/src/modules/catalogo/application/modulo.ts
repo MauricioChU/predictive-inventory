@@ -165,16 +165,20 @@ function crearImportacion(deps: DependenciasDeCatalogo): CatalogoParaImportacion
   }
 }
 
-/** Ensambla el módulo Catálogo a partir de sus dependencias (puertos y módulos lazy). */
+/**
+ * Ensambla el módulo Catálogo a partir de sus dependencias (puertos y módulos lazy). Los
+ * listados y el detalle leen en UNA transacción de solo lectura (`uow.leer`, RN-SIS-09).
+ */
 export function crearModuloCatalogo(deps: DependenciasDeCatalogo): ModuloCatalogo {
+  const leer = <T>(consulta: () => Promise<T>): Promise<T> => deps.uow.leer(consulta)
   return {
     crearProducto: (datos) => crearProducto(datos, deps),
     editarProducto: (datos) => editarProducto(datos, deps),
     archivarProducto: (datos) => archivarProducto(datos, deps),
     reactivarProducto: (productoId) => reactivarProducto(productoId, deps),
-    obtenerProducto: (productoId) => obtenerProducto(productoId, deps),
-    buscarProductos: (filtro) => buscarProductos(filtro, deps),
-    listarCategorias: () => listarCategorias(deps.categorias),
+    obtenerProducto: (productoId) => leer(() => obtenerProducto(productoId, deps)),
+    buscarProductos: (filtro) => leer(() => buscarProductos(filtro, deps)),
+    listarCategorias: () => leer(() => listarCategorias(deps.categorias)),
     crearCategoria: (nombre) => crearCategoria(deps.categorias, deps.ids, deps.uow, nombre),
     renombrarCategoria: (categoriaId, nombre) =>
       renombrarCategoria(deps.categorias, deps.uow, categoriaId, nombre),
