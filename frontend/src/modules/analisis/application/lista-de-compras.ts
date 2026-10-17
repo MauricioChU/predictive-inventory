@@ -10,6 +10,7 @@ import {
   cambiosDesdeRegistro,
   cantidadDeLista,
   registrarCambio,
+  restaurarCambio,
   textoParaCompartir as textoDeLaLista,
   type CambioEnLista,
   type ListaParaComprar,
@@ -52,11 +53,25 @@ export async function listaParaComprar(d: DependenciasDeAnalisis): Promise<Lista
   return aplicarCambiosALista(listaSugerida(evaluaciones), cambios)
 }
 
-async function guardarCambio(d: DependenciasDeAnalisis, cambio: CambioEnLista): Promise<void> {
-  await d.uow.ejecutar(async () => {
+/** Lo que hace falta para deshacer un "Quitar" (RN-OP-18): de qué día y cómo estaba la línea. */
+export interface QuitadoDeLista {
+  dia: Dia
+  productoId: string
+  /** El cambio que ese producto tenía en la lista del día, o null si seguía la sugerencia. */
+  anterior: CambioEnLista | null
+}
+
+/** Guarda el cambio en la lista de hoy y devuelve cómo estaba ese producto antes. */
+async function guardarCambio(
+  d: DependenciasDeAnalisis,
+  cambio: CambioEnLista,
+): Promise<QuitadoDeLista> {
+  return d.uow.ejecutar(async () => {
     const hoy = hoyDe(d)
-    const cambios = registrarCambio(await cambiosDelDia(d, hoy), cambio)
-    await d.listaDeCompras.guardar(cambiosARegistro(hoy, cambios))
+    const actuales = await cambiosDelDia(d, hoy)
+    await d.listaDeCompras.guardar(cambiosARegistro(hoy, registrarCambio(actuales, cambio)))
+    const anterior = actuales.find((c) => c.productoId === cambio.productoId) ?? null
+    return { dia: hoy, productoId: cambio.productoId, anterior }
   })
 }
 
@@ -70,10 +85,34 @@ export async function cambiarCantidadEnLista(
   await guardarCambio(d, { productoId, cantidad: cantidadDeLista(texto, producto.unidad) })
 }
 
-/** RN-AN-08: el usuario quita un producto de la lista del día. */
-export async function quitarDeLista(d: DependenciasDeAnalisis, productoId: string): Promise<void> {
+/** RN-AN-08: el usuario quita un producto de la lista del día; devuelve lo necesario para deshacerlo. */
+export async function quitarDeLista(
+  d: DependenciasDeAnalisis,
+  productoId: string,
+): Promise<QuitadoDeLista> {
   await productoActivo(d, productoId)
-  await guardarCambio(d, { productoId, cantidad: null })
+  return guardarCambio(d, { productoId, cantidad: null })
+}
+
+/**
+ * RN-AN-08 / RN-OP-18: Deshacer después de Quitar deja la lista del día exactamente como estaba:
+ * con la cantidad que el usuario había puesto, o sin ningún cambio (vuelve a seguir la
+ * sugerencia, no queda fijada). Si ya es otro día, esos cambios ya no valen: no hace nada.
+ */
+export async function deshacerQuitarDeLista(
+  d: DependenciasDeAnalisis,
+  quitado: QuitadoDeLista,
+): Promise<void> {
+  await d.uow.ejecutar(async () => {
+    const hoy = hoyDe(d)
+    if (quitado.dia !== hoy) return
+    const cambios = restaurarCambio(
+      await cambiosDelDia(d, hoy),
+      quitado.productoId,
+      quitado.anterior,
+    )
+    await d.listaDeCompras.guardar(cambiosARegistro(hoy, cambios))
+  })
 }
 
 /** RN-AN-08: la lista como texto para WhatsApp u otra app. */

@@ -32,6 +32,11 @@ describe('RN-AN-16: ¿Necesito comprar?', () => {
     expect(await respuesta('jabon')).toBe(
       'Tienes 10 unid. Todavía no sé cuánto vendes; vuelve a preguntar en unos días',
     )
+    // Plan 13: el caso viaja con la frase, para que la pantalla elija el tono.
+    const caso = async (id: string) => (await e.modulo.necesitoComprar(id)).caso
+    expect(await caso('lejia')).toBe('COMPRAR')
+    expect(await caso('detergente')).toBe('NO_HACE_FALTA')
+    expect(await caso('jabon')).toBe('SIN_PREDICCION')
   })
 
   it('RN-AN-16: con predicción y sin ventas en 4 semanas, no hace falta', async () => {
@@ -98,11 +103,16 @@ describe('RN-AN-16: ¿Necesito comprar?', () => {
     const r = await e.modulo.necesitoComprar('lejia')
     expect(formatearCantidad(r.stock, r.unidad)).toBe('16 unid.')
     expect(r.ultimoIngreso).toBe(instanteLocal('2026-10-10 09:30'))
+    // Plan 13: la pantalla dice "hace 5 días" con el "hoy" de la tienda, no el del celular.
+    expect(r.diasDesdeUltimoIngreso).toBe(5)
   })
 
   it('RN-AN-16: sin llegadas de mercadería, la última llegada es null', async () => {
     const e = entorno([LEJIA])
-    expect(await e.modulo.necesitoComprar('lejia')).toMatchObject({ ultimoIngreso: null })
+    expect(await e.modulo.necesitoComprar('lejia')).toMatchObject({
+      ultimoIngreso: null,
+      diasDesdeUltimoIngreso: null,
+    })
   })
 
   it('RN-AN-16: un producto archivado o que no existe no se puede consultar', async () => {

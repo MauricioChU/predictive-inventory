@@ -12,9 +12,11 @@ import {
   cambiosDesdeRegistro,
   cantidadDeLista,
   cantidadSugerida,
+  compararParaComprar,
   entraEnLista,
   ordenarLista,
   registrarCambio,
+  restaurarCambio,
   textoParaCompartir,
   type LineaParaComprar,
   type ListaParaComprar,
@@ -298,5 +300,50 @@ describe('RN-AN-08: cantidad escrita en la lista', () => {
     })
     expect(cambiosDesdeRegistro(registro)).toEqual(cambios)
     expect(cambiosDesdeRegistro(null)).toEqual([])
+  })
+})
+
+// Plan 13, ronda 1: Deshacer después de Quitar devuelve la lista del día tal como estaba.
+describe('RN-AN-08 / RN-OP-18: deshacer un cambio de la lista del día', () => {
+  it('si el producto no tenía cambio, lo saca de los cambios (vuelve a seguir la sugerencia)', () => {
+    const cambios = registrarCambio([{ productoId: 'carbon', cantidad: cant('2') }], {
+      productoId: 'lejia',
+      cantidad: null,
+    })
+    expect(restaurarCambio(cambios, 'lejia', null)).toEqual([
+      { productoId: 'carbon', cantidad: cant('2') },
+    ])
+  })
+
+  it('si tenía un cambio, lo deja como estaba', () => {
+    const anterior = { productoId: 'lejia', cantidad: cant('24') }
+    const cambios = registrarCambio([anterior], { productoId: 'lejia', cantidad: null })
+    expect(restaurarCambio(cambios, 'lejia', anterior)).toEqual([anterior])
+  })
+})
+
+describe('RN-AN-07: un solo orden para Para comprar y Atención', () => {
+  it('más grave primero; en el mismo estado, menos cobertura (sin predicción al final) y nombre', () => {
+    const fila = (nombre: string, estado: EstadoDeStock, diasDeCobertura: number | null) => ({
+      nombre,
+      estado,
+      diasDeCobertura,
+    })
+    const ordenadas = [
+      fila('Bolsas', 'AGOTADO', null),
+      fila('Carbón', 'NORMAL', 9),
+      fila('Escoba', 'AGOTADO', 0),
+      fila('Jabón', 'POR_ACABARSE', null),
+      fila('Lejía', 'POR_ACABARSE', 2),
+      fila('Ácido', 'POR_ACABARSE', null),
+    ].sort(compararParaComprar)
+    expect(ordenadas.map((f) => f.nombre)).toEqual([
+      'Escoba',
+      'Bolsas',
+      'Lejía',
+      'Ácido',
+      'Jabón',
+      'Carbón',
+    ])
   })
 })
