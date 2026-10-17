@@ -336,12 +336,17 @@ describe('retiradoAlArchivar (RN-CAT-11: lo que de verdad se retiró al archivar
     }
   }
 
-  it('la cantidad (sin signo) del ajuste "Producto retirado" más reciente', () => {
-    expect(retiradoAlArchivar([ajuste('Producto retirado', -4)], 'p-1')).toBe('4 unid.')
+  it('la cantidad (sin signo) del ajuste "Producto retirado" que registró ESTE archivado', () => {
+    expect(retiradoAlArchivar([ajuste('Producto retirado', -4)], 'p-1', new Set())).toBe('4 unid.')
   })
 
   it('null si no hubo retiro (se archivó sin stock)', () => {
-    expect(retiradoAlArchivar([ajuste('Conteo de stock', -1)], 'p-1')).toBeNull()
-    expect(retiradoAlArchivar([], 'p-1')).toBeNull()
+    expect(retiradoAlArchivar([ajuste('Conteo de stock', -1)], 'p-1', new Set())).toBeNull()
+    expect(retiradoAlArchivar([], 'p-1', new Set())).toBeNull()
+  })
+
+  it('un retiro de un archivado anterior no cuenta', () => {
+    const viejo = ajuste('Producto retirado', -3)
+    expect(retiradoAlArchivar([viejo], 'p-1', new Set([viejo.id]))).toBeNull()
   })
 })

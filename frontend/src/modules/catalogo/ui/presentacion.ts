@@ -241,15 +241,21 @@ export function movimientoDeProducto(
 
 /**
  * RN-CAT-11: cuánto retiró del stock el archivado que se acaba de confirmar ("4 unid."), leído
- * del ajuste "Producto retirado" más reciente del historial (del más nuevo al más viejo); null
- * si no hubo retiro.
+ * del ajuste "Producto retirado" que registró ESE archivado: el que no estaba entre las
+ * operaciones `anteriores` (las de antes de archivar). null si esta vez no hubo retiro (al
+ * confirmar ya no quedaba stock): un retiro de un archivado anterior no cuenta.
  */
 export function retiradoAlArchivar(
   operaciones: readonly OperacionVista[],
   productoId: string,
+  anteriores: ReadonlySet<string>,
 ): string | null {
   const retiro = operaciones.find(
-    (o) => o.tipo === 'AJUSTE' && o.motivo === MOTIVO_PRODUCTO_RETIRADO && !o.anulada,
+    (o) =>
+      o.tipo === 'AJUSTE' &&
+      o.motivo === MOTIVO_PRODUCTO_RETIRADO &&
+      !o.anulada &&
+      !anteriores.has(o.id),
   )
   const lineas = retiro?.lineas.filter((l) => l.productoId === productoId) ?? []
   if (lineas.length === 0) return null

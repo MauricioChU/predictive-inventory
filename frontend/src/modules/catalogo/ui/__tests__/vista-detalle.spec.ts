@@ -1,5 +1,6 @@
 import type { VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ErrorDeDominio } from '@/shared/domain/errores'
 import { instanteLocal } from '@/shared/domain/fecha'
 import type { AplicacionDePrueba } from '../../../../../tests/soporte/aplicacion-de-prueba'
 import {
@@ -269,6 +270,55 @@ describe('Detalle del producto', () => {
     await esperar()
     expect(leer(vista.wrapper.get('.resultado').text())).toContain('Retiramos 2 unid. del stock.')
     expect(vista.aviso.activo.value).toBeUndefined()
+  })
+
+  it('si reactivar falla después de archivar con stock, se ve el error (no el aviso viejo)', async () => {
+    const id = await crearProducto(app, { ...ESCOBA, stockInicial: '4' })
+    vista = await montarVista(app, `/productos/${id}`)
+    const w = vista.wrapper
+    await boton(w, 'Archivar producto').trigger('click')
+    await esperar()
+    await boton(w, 'Sí, retirar y archivar').trigger('click')
+    await esperar()
+    expect(leer(w.get('.resultado').text())).toContain('Producto archivado')
+
+    vi.spyOn(app.catalogo, 'reactivarProducto').mockRejectedValue(
+      new ErrorDeDominio('PRODUCTO_NO_ENCONTRADO', 'No encontramos ese producto'),
+    )
+    await boton(w, 'Reactivar producto').trigger('click')
+    await esperar()
+    const resultado = w.get('.resultado')
+    expect(resultado.get('[role="alert"]').text()).toContain('No encontramos ese producto')
+    expect(leer(resultado.text())).not.toContain('Producto archivado')
+    // role="alert" lo anuncia al aparecer; además recibe el foco, junto a las acciones.
+    expect(document.activeElement).toBe(resultado.element)
+  })
+
+  it('RN-CAT-11: si al confirmar ya no quedaba stock, no informa un retiro viejo', async () => {
+    // Un archivado anterior ya retiró 3; se reactiva y vuelve a tener 2.
+    const id = await crearProducto(app, { ...ESCOBA, stockInicial: '3' })
+    await app.catalogo.archivarProducto({ productoId: id, confirmado: true })
+    await app.catalogo.reactivarProducto(id)
+    await app.inventario.registrarIngreso({
+      lineas: [{ productoId: id, cantidad: '2', costo: '6.00' }],
+      confirmarSobrecompra: true,
+    })
+    await app.esperarTareasPendientes()
+    vista = await montarVista(app, `/productos/${id}`)
+    const w = vista.wrapper
+
+    await boton(w, 'Archivar producto').trigger('click')
+    await esperar()
+    expect(leer(w.get('dialog').text())).toContain('Aún quedan 2 unid.')
+    // Mientras el diálogo está abierto, se venden las 2 (otra pantalla): al confirmar no queda nada.
+    await app.inventario.registrarVenta({ lineas: [{ productoId: id, cantidad: '2' }] })
+    await app.esperarTareasPendientes()
+    await boton(w, 'Sí, retirar y archivar').trigger('click')
+    await esperar()
+    expect((await app.catalogo.obtenerProducto(id))?.activo).toBe(false)
+    const resultado = leer(w.get('.resultado').text())
+    expect(resultado).toContain('Producto archivado')
+    expect(resultado).not.toContain('Retiramos')
   })
 
   it('RN-UX-08: archivar sin stock no pregunta y ofrece Deshacer', async () => {

@@ -180,8 +180,13 @@ async function archivar(confirmado = false) {
   if (!p || ocupado.value) return
   ocupado.value = true
   error.value = null
+  hecho.value = null
   let enfocar: (() => Promise<void>) | null = null
   try {
+    // Lo que ya estaba en el historial: el retiro que informa es solo el de ESTE archivado.
+    const anteriores = confirmado
+      ? new Set((await app.inventario.historial({ productoId: p.id })).map((o) => o.id))
+      : new Set<string>()
     const respuesta = await app.catalogo.archivarProducto({ productoId: p.id, confirmado })
     if (respuesta.tipo === 'confirmar') {
       confirmacion.value = respuesta.mensaje
@@ -192,7 +197,7 @@ async function archivar(confirmado = false) {
     if (confirmado) {
       // Confirmado a propósito (RN-UX-08): no se ofrece Deshacer; esta es la única
       // confirmación, así que va junto a las acciones, con el foco y anunciada.
-      const retirado = retiradoAlArchivar(operaciones.value, p.id)
+      const retirado = retiradoAlArchivar(operaciones.value, p.id, anteriores)
       hecho.value = {
         titulo: 'Producto archivado',
         ...(retirado ? { texto: `Retiramos ${retirado} del stock.` } : {}),
@@ -223,10 +228,11 @@ async function reactivar() {
   if (!p || ocupado.value) return
   ocupado.value = true
   error.value = null
+  // Un aviso anterior (p. ej. "Producto archivado") ya no vale: si esto falla, se ve el error.
+  hecho.value = null
   let enfocar: (() => Promise<void>) | null = null
   try {
     await app.catalogo.reactivarProducto(p.id)
-    hecho.value = null
     await cargar()
     aviso.mostrar({
       mensaje: `Reactivaste ${p.nombre}`,
