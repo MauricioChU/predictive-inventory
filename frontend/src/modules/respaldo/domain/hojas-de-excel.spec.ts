@@ -232,10 +232,10 @@ describe('etiquetas de la columna "tipo" (como se ven en pantalla)', () => {
     ['AJUSTE', 'Conteo de stock', 'Conteo de stock'],
     ['AJUSTE', 'Producto retirado', 'Producto retirado'],
     ['ANULACION', null, 'Anulado'],
-    ['MERMA', null, 'Merma'],
+    ['MERMA', null, 'Pérdida'],
     ['AJUSTE', null, 'Conteo de stock'],
     ['AJUSTE', '', 'Conteo de stock'],
-    ['MERMA', '', 'Merma'],
+    ['MERMA', '', 'Pérdida'],
   ] as const)('%s con motivo %s → %s', (tipo, motivo, etiqueta) => {
     const hoja = hojaDeMovimientos([{ ...base, tipo, motivo }])
     expect(hoja.filas[0]?.[1]).toEqual({ valor: etiqueta })

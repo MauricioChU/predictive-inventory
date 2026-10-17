@@ -93,6 +93,16 @@ const grupo = usarGrupoDeRadio(
   overflow-wrap: break-word;
   cursor: pointer;
 }
+/* Plan 16 (barrido de calidad): la elegida va en negrita y es más ancha. A 320 px con letra Muy
+   grande, "desinfectantes" o "Ambientadores" en negrita (~194 px) no entraban en los ~186 px
+   del texto y se partían ("desinfectante|s"). En celulares angostos el relleno y la separación
+   del ícono se achican un poco: al texto le quedan ~204 px. */
+@media (max-width: 359.98px) {
+  .opcion {
+    gap: var(--espacio-1);
+    padding-inline: var(--espacio-2);
+  }
+}
 @media (hover: hover) {
   .opcion:hover {
     background: var(--color-superficie);

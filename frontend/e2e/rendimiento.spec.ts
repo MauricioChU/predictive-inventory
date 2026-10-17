@@ -1,7 +1,7 @@
 import process from 'node:process'
-import { expect, test, type Page } from '@playwright/test'
-import { generarDatosMasivos } from '../tests/soporte/datos-masivos'
+import { expect, test } from '@playwright/test'
 import { abrir } from './utilidades/navegacion'
+import { copiaConHistoria, frenarCpu, mediana } from './utilidades/rendimiento'
 
 /** Lo que la medición usa de la aplicación real (window.__aplicacion). */
 interface AplicacionEnLaPagina {
@@ -28,53 +28,6 @@ const VENTAS_EN_RAFAGA = 10
  */
 const PAUSA_DE_CAJERO_MS = 350
 
-function mediana(valores: readonly number[]): number {
-  const orden = [...valores].sort((a, b) => a - b)
-  return orden[Math.floor(orden.length / 2)]!
-}
-
-/** El "hoy" de la tienda (America/Lima, UTC−5) para que la historia termine ayer. */
-function hoyEnLima(): string {
-  return new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString().slice(0, 10)
-}
-
-/** Una copia v1 con la historia generada (se carga por la restauración real, RN-RE-03/04). */
-function copiaConHistoria(): { texto: string; productos: string[] } {
-  const datos = generarDatosMasivos({ hoy: hoyEnLima() })
-  const stockPorProducto: Record<string, number> = {}
-  for (const p of datos.productos) stockPorProducto[p.id] = 0
-  for (const o of datos.operaciones) {
-    for (const m of o.movimientos) stockPorProducto[m.productoId]! += m.cantidad
-  }
-  const texto = JSON.stringify({
-    versionDeFormato: 1,
-    app: 'predictive-inventory',
-    creadoEn: new Date().toISOString(),
-    control: {
-      productos: datos.productos.length,
-      operaciones: datos.operaciones.length,
-      stockPorProducto,
-    },
-    datos: {
-      configuracion: null,
-      categorias: datos.categorias,
-      productos: datos.productos,
-      operaciones: datos.operaciones,
-      avisos: [],
-      fotos: [],
-    },
-  })
-  const productos = datos.productos.filter((p) => p.unidad === 'UNIDAD').map((p) => p.id)
-  return { texto, productos: productos.slice(0, 3 * VENTAS_EN_RAFAGA) }
-}
-
-/** Emula una CPU `veces` más lenta (Chromium, por el protocolo de DevTools). */
-async function frenarCpu(page: Page, veces: number): Promise<void> {
-  if (veces === 1) return
-  const cdp = await page.context().newCDPSession(page)
-  await cdp.send('Emulation.setCPUThrottlingRate', { rate: veces })
-}
-
 /**
  * RN-SIS-09 en el navegador real (IndexedDB de Chromium, durabilidad 'strict', lecturas de
  * Análisis en transacciones 'rw'), sin y con la CPU 4 veces más lenta (aproxima un celular de
@@ -88,7 +41,7 @@ test.describe('RN-SIS-09: rendimiento en el navegador real (medición opcional)'
     test(`300 productos y 50 000 movimientos, CPU x${lentitud}`, async ({ page }, testInfo) => {
       test.skip(testInfo.project.name !== 'celular', 'Se mide una vez, en el perfil de celular')
       test.setTimeout(600_000)
-      const { texto, productos } = copiaConHistoria()
+      const { texto, productos } = copiaConHistoria(3 * VENTAS_EN_RAFAGA)
       await abrir(page, './')
       await frenarCpu(page, lentitud)
 

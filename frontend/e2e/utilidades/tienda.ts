@@ -125,16 +125,43 @@ export async function sinMenuDeCompartir(page: Page): Promise<void> {
   })
 }
 
+/** Una notificación que la app mostró (ver `notificacionesQueSeAceptan`). */
+export interface NotificacionMostrada {
+  titulo: string
+  texto: string
+  url: string
+}
+
 /**
  * Un navegador cuyas notificaciones la persona acepta al primer pedido (el diálogo real del
  * navegador no se puede tocar desde la prueba, y el Chromium sin ventana las tiene bloqueadas).
  * `data-pedidos-de-permiso` en <html> cuenta cuántas veces se pidió el permiso (RN-AL-08).
+ * Plan 16: lo que la app muestra (con `new Notification` o con el Service Worker) queda anotado
+ * para `notificacionesMostradas`, en vez de salir a la bandeja del sistema.
  */
 export async function notificacionesQueSeAceptan(page: Page): Promise<void> {
   await page.addInitScript(() => {
     let permiso: NotificationPermission = 'default'
     let pedidos = 0
+    const mostradas: { titulo: string; texto: string; url: string }[] = []
+    const anotar = (titulo: string, opciones?: NotificationOptions) => {
+      const datos = opciones?.data as { url?: unknown } | undefined
+      mostradas.push({
+        titulo,
+        texto: opciones?.body ?? '',
+        url: typeof datos?.url === 'string' ? datos.url : '',
+      })
+    }
+    Object.defineProperty(window, '__notificacionesMostradas', { value: mostradas })
+    if ('ServiceWorkerRegistration' in window) {
+      ServiceWorkerRegistration.prototype.showNotification = async function (titulo, opciones) {
+        anotar(titulo, opciones)
+      }
+    }
     class NotificacionDePrueba {
+      constructor(titulo: string, opciones?: NotificationOptions) {
+        anotar(titulo, opciones)
+      }
       static get permission(): NotificationPermission {
         return permiso
       }
@@ -147,6 +174,14 @@ export async function notificacionesQueSeAceptan(page: Page): Promise<void> {
     }
     Object.defineProperty(window, 'Notification', { configurable: true, value: NotificacionDePrueba })
   })
+}
+
+/** Lo que la app notificó hasta ahora (requiere `notificacionesQueSeAceptan`). */
+export async function notificacionesMostradas(page: Page): Promise<NotificacionMostrada[]> {
+  return page.evaluate(() => [
+    ...((window as Window & { __notificacionesMostradas?: NotificacionMostrada[] })
+      .__notificacionesMostradas ?? []),
+  ])
 }
 
 /** RN-UX-02: lo tocable de la pantalla mide al menos 48 × 48 px y los botones principales 56 px de alto. */

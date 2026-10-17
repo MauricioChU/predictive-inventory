@@ -15,7 +15,8 @@ const ETIQUETAS: Record<Exclude<TipoDeOperacion, 'MERMA' | 'AJUSTE'>, string> = 
 export function etiquetaDeOperacion(tipo: TipoDeOperacion, motivo: string | null): string {
   switch (tipo) {
     case 'MERMA':
-      return motivo ?? 'Merma'
+      // Guía de palabras (06): "Merma" no se dice en pantalla.
+      return motivo ?? 'Pérdida'
     case 'AJUSTE':
       return motivo === MOTIVO_PRODUCTO_RETIRADO ? MOTIVO_PRODUCTO_RETIRADO : MOTIVO_CONTEO
     default:
