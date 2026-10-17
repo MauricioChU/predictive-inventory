@@ -39,6 +39,8 @@ describe('plan 17: flujo de CI', () => {
     const subida = frontend.indexOf('uses: actions/upload-artifact@')
     expect(subida).toBeGreaterThan(frontend.indexOf('run: npm run test:build'))
     expect(frontend.slice(subida)).toMatch(/name: dist\n\s+path: frontend\/dist/)
+    // Un reintento del job vuelve a subirlo sin chocar con el de la corrida anterior.
+    expect(frontend.slice(subida)).toMatch(/\n\s+overwrite: true\n/)
   })
 
   it('el job E2E usa ese build (no lo rehace) y no repite CI=true', () => {
