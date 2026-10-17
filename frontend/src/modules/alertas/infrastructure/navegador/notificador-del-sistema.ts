@@ -20,7 +20,7 @@ export function soportaNotificaciones(): boolean {
 /**
  * Notificador del sistema (RN-AL-06c). Usa el registro de Service Worker SI YA HAY UNO listo
  * (`ServiceWorkerContainer.getRegistration()`, que resuelve de inmediato con `undefined` si
- * ninguno está activo) y, si no, la API básica `new Notification(...)`.
+ * ninguno está activo) y, si no (o si ese camino falla), la API básica `new Notification(...)`.
  *
  * Fix round 1, hallazgo importante 1: ANTES se usaba `navigator.serviceWorker.ready`, que
  * nunca se resuelve si ningún Service Worker llega a activarse (en desarrollo, si el registro
@@ -51,12 +51,18 @@ export class NotificadorDelSistema implements Notificador {
       tag: notificacion.url,
       renotify: true,
     }
+    // Plan 17: si el Service Worker no puede mostrarla (getRegistration o showNotification
+    // rechazan, p. ej. un registro que todavía no está activo), se intenta con la API básica.
     try {
       const registro = await navigator.serviceWorker?.getRegistration?.()
       if (registro) {
         await registro.showNotification('Inventario', opciones)
         return
       }
+    } catch (error) {
+      console.error('No se pudo mostrar la notificación con el Service Worker:', error)
+    }
+    try {
       new Notification('Inventario', opciones)
     } catch (error) {
       console.error('No se pudo mostrar la notificación del sistema:', error)

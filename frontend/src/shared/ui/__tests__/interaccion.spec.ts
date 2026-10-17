@@ -14,7 +14,7 @@ describe('RN-OP-18: aviso Deshacer', () => {
     expect(w.emitted('deshacer')).toHaveLength(1)
   })
   it('emite cerrar al terminar el tiempo', async () => {
-    const w = mount(AvisoDeshacer, { props: { mensaje: 'Venta registrada', segundos: 10 } })
+    const w = mount(AvisoDeshacer, { props: { mensaje: 'Venta registrada' } })
     await vi.advanceTimersByTimeAsync(10_000)
     expect(w.emitted('cerrar')).toHaveLength(1)
   })

@@ -1,5 +1,6 @@
 import { computed, inject, ref, type ComputedRef, type InjectionKey } from 'vue'
 import { SEGUNDOS_PARA_DESHACER } from '@/modules/inventario'
+import { esErrorDeDominio } from '@/shared/domain/errores'
 import type { Anunciador } from '@/shared/ui/anunciador'
 
 /**
@@ -34,6 +35,25 @@ export interface ResultadoDeDeshacer {
   titulo: string
   /** Qué hacer, si no se pudo. */
   texto?: string
+}
+
+/**
+ * Plan 17: lo que se muestra (con `mostrarResultado`) cuando un Deshacer que no es de inventario
+ * (quitar de Para comprar, eliminar una categoría, archivar o reactivar) no se pudo hacer. Un
+ * error del dominio dice por qué; cualquier otro se registra y se dice en palabras simples.
+ */
+export function resultadoDeDeshacerFallido(error: unknown): ResultadoDeDeshacer {
+  const titulo = 'No pudimos deshacer'
+  if (esErrorDeDominio(error)) {
+    const texto = error.message.endsWith('.') ? error.message : `${error.message}.`
+    return { tono: 'atencion', titulo, texto }
+  }
+  console.error('No se pudo deshacer:', error)
+  return {
+    tono: 'atencion',
+    titulo,
+    texto: 'Vuelve a intentarlo. Si sigue pasando, cierra la app y ábrela otra vez.',
+  }
 }
 
 export interface ResultadoDeDeshacerActivo extends ResultadoDeDeshacer {

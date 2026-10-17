@@ -473,4 +473,37 @@ describe('Integración (f): conteo guiado', () => {
     expect(resultado.venta?.anulada).toBe(true)
     expect(resultado.inexistente).toBeNull()
   })
+
+  it('HU-OP-08 (plan 17): el Historial de a páginas da lo mismo que el completo, igual en memoria y en Dexie', async () => {
+    const resultado = await enAmbosAlmacenes(async (app) => {
+      const lejia = await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '50' })
+      for (let i = 0; i < 7; i += 1) {
+        app.reloj.avanzarSegundos(60)
+        await app.inventario.registrarVenta({ lineas: [{ productoId: lejia, cantidad: '1' }] })
+      }
+      // Dos ventas anotadas "ayer a las 18:30": el mismo momento, no se cortan entre páginas.
+      for (let i = 0; i < 2; i += 1) {
+        app.reloj.avanzarSegundos(60)
+        await app.inventario.registrarVenta({
+          lineas: [{ productoId: lejia, cantidad: '1' }],
+          ocurridaEn: instanteLocal('2026-10-14 18:30'),
+        })
+      }
+      const [ultima] = await app.inventario.historial({ tipo: 'VENTA' })
+      await app.inventario.anularOperacion({ operacionId: ultima!.id })
+      const paginas: string[][] = []
+      let desde: string | undefined
+      do {
+        const pagina = await app.inventario.paginaDelHistorial({
+          cuantas: 3,
+          ...(desde ? { desde } : {}),
+        })
+        paginas.push(enTexto(pagina.operaciones))
+        desde = pagina.siguiente ?? undefined
+      } while (desde !== undefined)
+      return { paginas, completo: enTexto(await app.inventario.historial()) }
+    })
+    expect(resultado.paginas.flat()).toEqual(resultado.completo)
+    expect(resultado.paginas.length).toBeGreaterThan(2)
+  })
 })

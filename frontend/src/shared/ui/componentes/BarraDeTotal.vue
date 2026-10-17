@@ -35,17 +35,21 @@ usarAltoObservado(refBarra, { variable: '--alto-barra-de-total' })
     (--alto-aviso).
   -->
   <div ref="refBarra" class="barra-de-total">
-    <p class="resumen">
-      <span class="etiqueta">{{ etiqueta }}</span>
-      <span class="total">{{ textoTotal }}</span>
-    </p>
-    <BotonPrincipal
-      class="accion"
-      :texto="textoAccion"
-      :icono="icono"
-      :deshabilitado="deshabilitado"
-      @click="emit('accion')"
-    />
+    <!-- Envoltura: la barra es el contenedor (container-type) y lo de adentro se acomoda según
+         su ancho real (plan 17: forma compacta en celular con letra grande). -->
+    <div class="contenido">
+      <p class="resumen">
+        <span class="etiqueta">{{ etiqueta }}</span>
+        <span class="total">{{ textoTotal }}</span>
+      </p>
+      <BotonPrincipal
+        class="accion"
+        :texto="textoAccion"
+        :icono="icono"
+        :deshabilitado="deshabilitado"
+        @click="emit('accion')"
+      />
+    </div>
   </div>
 </template>
 
@@ -55,11 +59,6 @@ usarAltoObservado(refBarra, { variable: '--alto-barra-de-total' })
   position: sticky;
   bottom: var(--alto-pie, 0px);
   z-index: 5;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--espacio-3) var(--espacio-4);
-  padding: var(--espacio-3) var(--espacio-4);
   border: 2px solid var(--color-primario);
   border-radius: var(--radio);
   background: var(--color-fondo);
@@ -98,7 +97,56 @@ usarAltoObservado(refBarra, { variable: '--alto-barra-de-total' })
   line-height: 1.15;
   white-space: nowrap;
 }
+.contenido {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3) var(--espacio-4);
+  padding: var(--espacio-3) var(--espacio-4);
+}
 .accion {
   flex: 1 1 12rem;
+}
+
+/*
+ * Plan 17 — forma compacta, SOLO con letra Muy grande en un celular angosto (320–360 px: la
+ * barra mide 320 px o menos). Ahí, en dos filas, la barra ocupaba ~200 de 740 px; ahora la
+ * etiqueta va en su propia línea y el total comparte fila con el botón (sin ícono: RN-UX-04 pide
+ * texto junto al ícono, no al revés). Si el texto del botón no entra al lado del total
+ * ("Confirmar venta", "Registrar llegada" o un total largo), el botón baja entero a su propia
+ * fila, a todo el ancho: nunca se parte una palabra ni se sale de la barra.
+ *
+ * EXCEPCIÓN DELIBERADA a RN-UX-02 (anotada en 06-experiencia-de-uso.md): en ese caso el botón
+ * principal no ocupa todo el ancho cuando va al lado del total. Con cualquier otra letra, otro
+ * ancho de celular o la columna del carrito en PC, el total sigue a 1.6rem y el botón va en su
+ * fila a todo el ancho (E2E en operaciones.spec.ts). El ancho va en px (no en rem): un rem en
+ * una consulta de contenedor es el de la raíz, que cambia con la letra elegida.
+ */
+@container (max-width: 320px) {
+  :root[data-letra='MUY_GRANDE'] .contenido {
+    gap: var(--espacio-1) var(--separacion-toque);
+    padding: var(--espacio-1) var(--espacio-2) var(--espacio-2);
+  }
+  :root[data-letra='MUY_GRANDE'] .resumen {
+    display: contents;
+  }
+  :root[data-letra='MUY_GRANDE'] .etiqueta {
+    flex: 1 0 100%;
+    line-height: 1.2;
+  }
+  :root[data-letra='MUY_GRANDE'] .total {
+    flex: none;
+    font-size: clamp(1rem, 9cqi, 1.1rem);
+  }
+  :root[data-letra='MUY_GRANDE'] .contenido .accion {
+    flex: 1 1 auto;
+    inline-size: auto;
+    padding-inline: var(--espacio-1);
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+  :root[data-letra='MUY_GRANDE'] .contenido .accion :deep(.icono) {
+    display: none;
+  }
 }
 </style>

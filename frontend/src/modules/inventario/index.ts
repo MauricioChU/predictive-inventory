@@ -1,6 +1,7 @@
 // API pública del módulo Inventario (RN-OP). Otros módulos y la composición solo entran por aquí.
 export { crearModuloInventario } from './application/modulo'
 export type {
+  ConsultaDelHistorial,
   DatosDeAnulacion,
   DatosDeConteo,
   DatosDeIngreso,
@@ -13,6 +14,7 @@ export type {
   LineaPedida,
   ModuloInventario,
   OperacionVista,
+  PaginaDelHistorial,
   RespuestaDeConteo,
   RespuestaDeIngreso,
   RespuestaDelConteoGuiado,

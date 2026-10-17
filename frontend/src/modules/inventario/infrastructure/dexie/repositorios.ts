@@ -3,6 +3,8 @@ import type { ConteoGuiadoRegistro, OperacionRegistro } from '@/shared/contratos
 import type { BaseDeDatos } from '@/shared/infrastructure/dexie/base-de-datos'
 import { enTransaccion } from '@/shared/infrastructure/dexie/unidad-de-trabajo-dexie'
 import type {
+  ConsultaDeRecientes,
+  PaginaDeOperaciones,
   RepositorioDeConteo,
   RepositorioDeExistencias,
   RepositorioDeOperaciones,
@@ -51,6 +53,39 @@ export class RepositorioDeOperacionesDexie implements RepositorioDeOperaciones {
 
   async todas(): Promise<OperacionRegistro[]> {
     return enOrdenDeRegistro(await this.db.operaciones.orderBy('registradaEn').toArray())
+  }
+
+  /**
+   * Plan 17: por el índice `ocurridaEn`, de atrás para adelante, sin leer todo el libro: las
+   * `cuantas` primeras, más el resto del grupo de su último instante, y una más para saber si
+   * hay otra página.
+   */
+  async recientes({ tipo, antesDe, cuantas }: ConsultaDeRecientes): Promise<PaginaDeOperaciones> {
+    const delTipo = (r: OperacionRegistro) => tipo === undefined || r.tipo === tipo
+    const tabla = this.db.operaciones
+    const desde =
+      antesDe === undefined ? tabla.orderBy('ocurridaEn') : tabla.where('ocurridaEn').below(antesDe)
+    const primeras = await desde.reverse().filter(delTipo).limit(cuantas).toArray()
+    if (primeras.length < cuantas) return { registros: primeras, siguiente: null }
+    const limite = primeras.at(-1)!.ocurridaEn
+    const vistas = new Set(primeras.map((r) => r.id))
+    const delGrupo = await tabla
+      .where('ocurridaEn')
+      .equals(limite)
+      .filter((r) => delTipo(r) && !vistas.has(r.id))
+      .toArray()
+    const otra = await tabla.where('ocurridaEn').below(limite).reverse().filter(delTipo).first()
+    return { registros: [...primeras, ...delGrupo], siguiente: otra ? limite : null }
+  }
+
+  async conAnulacion(operacionIds: readonly string[]): Promise<Set<string>> {
+    if (operacionIds.length === 0) return new Set()
+    const anulaciones = await this.db.operaciones
+      .where('anulaA')
+      .anyOf([...operacionIds])
+      .filter((r) => r.tipo === 'ANULACION')
+      .toArray()
+    return new Set(anulaciones.flatMap((r) => (r.anulaA === null ? [] : [r.anulaA])))
   }
 }
 

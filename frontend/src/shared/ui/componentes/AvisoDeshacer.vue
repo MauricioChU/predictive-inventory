@@ -4,12 +4,12 @@ import { Undo2 } from 'lucide-vue-next'
 import { SEGUNDOS_PARA_DESHACER } from '@/shared/contratos/operaciones'
 import { pegarCifras } from '../texto-sin-cortes'
 
-const props = withDefaults(defineProps<{ mensaje: string; segundos?: number }>(), {
-  segundos: SEGUNDOS_PARA_DESHACER,
-})
+defineProps<{ mensaje: string }>()
 const emit = defineEmits<{ deshacer: []; cerrar: [] }>()
 
-const restante = ref(props.segundos)
+// RN-OP-18 / plan 17: siempre SEGUNDOS_PARA_DESHACER. No hay prop para cambiarlo: el aviso que
+// se ve y la regla (`deshacer.disponible()`) nunca se desfasan.
+const restante = ref(SEGUNDOS_PARA_DESHACER)
 let temporizador: ReturnType<typeof setInterval> | undefined
 
 function detener() {

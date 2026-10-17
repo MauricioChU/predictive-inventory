@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Archive, ArchiveRestore, ClipboardList, PackageMinus, Pencil } from 'lucide-vue-next'
-import { useAvisoDeshacer } from '@/app/aviso-deshacer'
+import { resultadoDeDeshacerFallido, useAvisoDeshacer } from '@/app/aviso-deshacer'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import type { DetalleDeProducto } from '@/modules/analisis'
 import type { OperacionVista } from '@/modules/inventario'
@@ -204,7 +204,7 @@ async function archivar(confirmado = false) {
       hecho.value = null
       aviso.mostrar({
         mensaje: `Archivaste ${p.nombre}`,
-        alDeshacer: () => void cambiarSinPreguntar(p.id, 'reactivar'),
+        alDeshacer: () => void cambiarSinPreguntar(p.id, p.nombre, 'reactivar'),
       })
       enfocar = enfocarAccion
     }
@@ -232,7 +232,7 @@ async function reactivar() {
     await cargar()
     aviso.mostrar({
       mensaje: `Reactivaste ${p.nombre}`,
-      alDeshacer: () => void cambiarSinPreguntar(p.id, 'archivar'),
+      alDeshacer: () => void cambiarSinPreguntar(p.id, p.nombre, 'archivar'),
     })
     enfocar = enfocarAccion
   } catch (e) {
@@ -248,27 +248,42 @@ async function reactivar() {
  * Deshacer: vuelve al estado anterior. Archivar otra vez puede pedir confirmar (llegó stock
  * mientras tanto): eso no se hace en silencio ni sin preguntar, se dice qué hacer.
  */
-async function cambiarSinPreguntar(id: string, accion: 'archivar' | 'reactivar') {
+async function cambiarSinPreguntar(id: string, nombre: string, accion: 'archivar' | 'reactivar') {
+  let noSePudo = false
   try {
-    let noSePudo = false
     if (accion === 'reactivar') {
       await app.catalogo.reactivarProducto(id)
     } else {
       const respuesta = await app.catalogo.archivarProducto({ productoId: id })
       noSePudo = respuesta.tipo !== 'hecho'
     }
-    const mensaje = noSePudo ? 'No pudimos deshacer: el producto ya tiene stock.' : null
-    if (montada && props.id === id) {
-      hecho.value = null
-      await cargar()
-      if (mensaje) {
-        error.value = { mensaje, ayuda: 'Si quieres archivarlo, toca «Archivar producto».' }
-      }
-    } else if (mensaje) {
-      anunciador.anunciar(mensaje)
-    }
   } catch (e) {
-    console.error('No se pudo deshacer:', e)
+    aviso.mostrarResultado(resultadoDeDeshacerFallido(e))
+    return
+  }
+  // Plan 17 (RN-UX-11): lo que se deshizo (o por qué no se pudo) se ve y se anuncia donde se
+  // ven todos los Deshacer, esté donde esté la persona, como en Vender y Recibir.
+  if (noSePudo) {
+    aviso.mostrarResultado({
+      tono: 'atencion',
+      titulo: 'No pudimos deshacer: el producto ya tiene stock.',
+      texto: 'Si quieres archivarlo, toca «Archivar producto».',
+    })
+  } else {
+    aviso.mostrarResultado({
+      tono: 'exito',
+      titulo:
+        accion === 'reactivar'
+          ? `Deshiciste archivar ${nombre}. Está activo otra vez.`
+          : `Deshiciste reactivar ${nombre}. Quedó archivado otra vez.`,
+    })
+  }
+  if (!montada || props.id !== id) return
+  hecho.value = null
+  try {
+    await cargar()
+  } catch (e) {
+    console.error('No se pudo volver a leer el producto:', e)
   }
 }
 </script>

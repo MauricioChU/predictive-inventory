@@ -252,3 +252,79 @@ describe('operación por id (plan 12, detalle del Historial)', () => {
     expect(espia.transacciones()).toEqual({ lecturas: 1, escrituras: 0 })
   })
 })
+
+describe('plan 17: el Historial de a páginas (sin leer todo el libro)', () => {
+  /** Ventas, una merma, una anulación y una venta "de ayer", con el reloj avanzando. */
+  async function conMovimientos() {
+    const esc = await escenario()
+    const { modulo, reloj } = esc
+    for (let i = 0; i < 4; i += 1) {
+      reloj.avanzarSegundos(60)
+      await modulo.registrarVenta({ lineas: [{ productoId: 'lejia', cantidad: '1' }] })
+    }
+    reloj.avanzarSegundos(60)
+    await modulo.registrarMerma({ productoId: 'lejia', cantidad: '1', motivo: 'Se venció' })
+    reloj.avanzarSegundos(60)
+    const { operacionId } = await modulo.registrarVenta({
+      lineas: [{ productoId: 'lejia', cantidad: '2' }],
+    })
+    reloj.avanzarSegundos(60)
+    await modulo.anularOperacion({ operacionId, motivo: 'Me equivoqué' })
+    reloj.avanzarSegundos(60)
+    await modulo.registrarVenta({
+      lineas: [{ productoId: 'lejia', cantidad: '1' }],
+      ocurridaEn: instanteLocal('2026-10-14 18:30'),
+    })
+    return esc
+  }
+
+  async function todasLasPaginas(
+    modulo: Awaited<ReturnType<typeof escenario>>['modulo'],
+    consulta: { tipo?: 'VENTA' | 'MERMA'; cuantas: number },
+  ) {
+    const vistas = []
+    let paginas = 0
+    let desde: string | undefined
+    do {
+      const pagina = await modulo.paginaDelHistorial({ ...consulta, ...(desde ? { desde } : {}) })
+      vistas.push(...pagina.operaciones)
+      paginas += 1
+      desde = pagina.siguiente ?? undefined
+    } while (desde !== undefined)
+    return { vistas, paginas }
+  }
+
+  it('HU-OP-08: página tras página da lo mismo que el historial completo, en el mismo orden', async () => {
+    const { modulo } = await conMovimientos()
+    const completo = await modulo.historial()
+    const { vistas, paginas } = await todasLasPaginas(modulo, { cuantas: 3 })
+    expect(vistas).toEqual(completo)
+    expect(paginas).toBeGreaterThan(2)
+    // La anulada viene marcada aunque su anulación esté en otra página (RN-OP-17).
+    expect(vistas.filter((o) => o.anulada)).toHaveLength(1)
+  })
+
+  it('con filtro por tipo, igual que el historial filtrado', async () => {
+    const { modulo } = await conMovimientos()
+    const { vistas } = await todasLasPaginas(modulo, { tipo: 'VENTA', cuantas: 2 })
+    expect(vistas).toEqual(await modulo.historial({ tipo: 'VENTA' }))
+  })
+
+  it('la primera página trae solo las más recientes y dice desde dónde seguir', async () => {
+    const { modulo } = await conMovimientos()
+    const pagina = await modulo.paginaDelHistorial({ cuantas: 2 })
+    expect(pagina.operaciones.map((o) => o.tipo)).toEqual(['ANULACION', 'VENTA'])
+    expect(pagina.siguiente).toBe(pagina.operaciones.at(-1)?.ocurridaEn)
+  })
+
+  it('RN-SIS-09: cada página se lee dentro de UN leer y no abre escrituras', async () => {
+    let espia!: UnidadDeTrabajoEspia
+    const { modulo } = await crearEscenario(
+      (almacen) => (espia = new UnidadDeTrabajoEspia(new UnidadDeTrabajoEnMemoria(almacen))),
+    )
+    await modulo.registrarVenta({ lineas: [{ productoId: 'lejia', cantidad: '1' }] })
+    espia.reiniciar()
+    expect((await modulo.paginaDelHistorial({ cuantas: 60 })).operaciones.length).toBeGreaterThan(0)
+    expect(espia.transacciones()).toEqual({ lecturas: 1, escrituras: 0 })
+  })
+})

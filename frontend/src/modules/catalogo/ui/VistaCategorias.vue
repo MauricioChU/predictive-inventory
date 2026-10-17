@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref } from 'vue'
 import { Plus } from 'lucide-vue-next'
-import { useAvisoDeshacer } from '@/app/aviso-deshacer'
+import { resultadoDeDeshacerFallido, useAvisoDeshacer } from '@/app/aviso-deshacer'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import { esErrorDeDominio } from '@/shared/domain/errores'
 import { formatearEntero, plural } from '@/shared/domain/formato'
@@ -136,12 +136,23 @@ async function eliminar(categoria: CategoriaVista) {
   refTituloLista.value?.focus()
 }
 
+/** Plan 17 (RN-UX-11): lo que se deshizo (o por qué no se pudo) se ve y se anuncia. */
 async function volverACrear(nombre: string) {
   try {
     await app.catalogo.crearCategoria(nombre)
-    if (montada) await cargar()
   } catch (error) {
-    console.error('No se pudo deshacer:', error)
+    aviso.mostrarResultado(resultadoDeDeshacerFallido(error))
+    return
+  }
+  aviso.mostrarResultado({
+    tono: 'exito',
+    titulo: `Deshiciste eliminar la categoría ${nombre}. Volvió a tu lista.`,
+  })
+  if (!montada) return
+  try {
+    await cargar()
+  } catch (error) {
+    console.error('No se pudieron leer las categorías:', error)
   }
 }
 </script>

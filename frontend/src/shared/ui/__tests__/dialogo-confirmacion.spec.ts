@@ -36,6 +36,66 @@ describe('DialogoConfirmacion', () => {
     expect(w.emitted('cancelar')).toHaveLength(1)
   })
 
+  it('plan 17: el mensaje es la descripción accesible del diálogo (aria-describedby)', async () => {
+    const w = mount(DialogoConfirmacion, { props: PROPS, attachTo: document.body })
+    await flushPromises()
+    const dialogo = w.get('dialog')
+    const idMensaje = dialogo.attributes('aria-describedby')
+    expect(idMensaje).toBeTruthy()
+    const mensaje = document.getElementById(idMensaje!)
+    expect(mensaje).toBe(w.get('p').element)
+    // Y el título sigue siendo su nombre.
+    expect(document.getElementById(dialogo.attributes('aria-labelledby')!)).toBe(
+      w.get('h2').element,
+    )
+  })
+
+  it('plan 17: el foco queda dentro del diálogo al abrirse, Escape responde Cancelar y al cerrarse el foco vuelve a quien lo abrió', async () => {
+    const abridor = document.createElement('button')
+    abridor.textContent = 'Archivar producto'
+    document.body.append(abridor)
+    abridor.focus()
+    const w = mount(DialogoConfirmacion, {
+      props: { ...PROPS, abierto: false },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    expect(w.get('dialog').attributes('open')).toBeUndefined()
+    await w.setProps({ abierto: true })
+    await flushPromises()
+    expect(w.get('dialog').element.contains(document.activeElement)).toBe(true)
+    expect(document.activeElement).toBe(w.get('.cancelar').element)
+    // Escape: el navegador avisa "cancel" en el <dialog> (aquí se simula ese evento).
+    const evento = new Event('cancel', { cancelable: true })
+    w.get('dialog').element.dispatchEvent(evento)
+    expect(evento.defaultPrevented).toBe(true) // quien lo usa decide si se cierra
+    expect(w.emitted('cancelar')).toHaveLength(1)
+    await w.setProps({ abierto: false })
+    await flushPromises()
+    expect(w.get('dialog').attributes('open')).toBeUndefined()
+    expect(document.activeElement).toBe(abridor)
+  })
+
+  it('plan 17: si quien lo abrió ya no está (o el foco se fue a otro lado), no lo toca', async () => {
+    const abridor = document.createElement('button')
+    document.body.append(abridor)
+    abridor.focus()
+    const w = mount(DialogoConfirmacion, {
+      props: { ...PROPS, abierto: false },
+      attachTo: document.body,
+    })
+    await w.setProps({ abierto: true })
+    await flushPromises()
+    abridor.remove()
+    const otro = document.createElement('h1')
+    otro.tabIndex = -1
+    document.body.append(otro)
+    otro.focus() // la pantalla movió el foco a su título al responder
+    await w.setProps({ abierto: false })
+    await flushPromises()
+    expect(document.activeElement).toBe(otro)
+  })
+
   it('por defecto el foco va a Cancelar (lo seguro ante un riesgo)', async () => {
     const w = mount(DialogoConfirmacion, { props: PROPS, attachTo: document.body })
     await flushPromises()

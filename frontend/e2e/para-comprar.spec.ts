@@ -148,6 +148,35 @@ test.describe('Para comprar', () => {
     expect(copiado.replace(/\r\n/g, '\n')).toBe(textoEsperado())
   })
 
+  // Plan 17: a 320 px con letra Muy grande la barra no se come la pantalla: el total y
+  // "Compartir" van en una sola fila (antes eran dos y la barra ocupaba ~200 de 740 px).
+  for (const ancho of [320, 360]) {
+    test(`${ancho} px con letra Muy grande: la barra del total es compacta (total y botón en una fila)`, async ({
+      page,
+    }) => {
+      await usarLetra(page, 'MUY_GRANDE')
+      await page.setViewportSize({ width: ancho, height: 740 })
+      await abrirParaComprar(page)
+      const medidas = await page.evaluate(() => {
+        const caja = (selector: string) =>
+          document.querySelector(`.barra-de-total ${selector}`)!.getBoundingClientRect()
+        const barra = document.querySelector('.barra-de-total')!.getBoundingClientRect()
+        const total = caja('.total')
+        const boton = caja('.accion')
+        return {
+          altoBarra: barra.height,
+          mismaFila: total.top < boton.bottom && boton.top < total.bottom,
+          botonAlto: boton.height,
+        }
+      })
+      expect(medidas.mismaFila).toBe(true)
+      expect(medidas.botonAlto).toBeGreaterThanOrEqual(56)
+      expect(medidas.altoBarra).toBeLessThan(130)
+      expect(await palabrasPartidas(page.locator('.barra-de-total'))).toEqual([])
+      await esperarSinDesplazamientoHorizontal(page)
+    })
+  }
+
   for (const ancho of [320, 360, 768, 1280]) {
     test(`RN-UX-09 / RN-SIS-07, ${ancho} px con letra Muy grande: nada se sale, ninguna palabra se parte y axe no encuentra violaciones graves`, async ({
       page,
