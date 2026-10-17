@@ -95,6 +95,14 @@ describe('Importar productos', () => {
     expect(pantalla!.router.currentRoute.value.name).toBe('ajustes')
   })
 
+  it('RN-UX-15: la vista previa se anuncia con sus cuentas', async () => {
+    await cargarExcel(FILAS_DEL_ESCENARIO)
+
+    expect(await pantalla!.anunciado()).toContain(
+      '2 productos listos para cargar, 2 filas con problema',
+    )
+  })
+
   it('primera vez: después de cargar sigue con "Ahora contemos lo que tienes"', async () => {
     await cargarExcel(FILAS_DEL_ESCENARIO, '/ajustes/importar?desde=primera-vez')
 

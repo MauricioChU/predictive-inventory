@@ -84,6 +84,14 @@ describe('Restaurar copia', () => {
     expect(pantalla!.wrapper.get('h1').text()).toBe('Copia restaurada')
   })
 
+  it('RN-UX-15: lo que contiene la copia se anuncia al elegirla', async () => {
+    await elegir(copia)
+
+    expect(await pantalla!.anunciado()).toContain(
+      'La copia tiene 1 producto, 1 movimiento, del 15/10/2026 al 15/10/2026',
+    )
+  })
+
   it('RN-RE-03: cancelar en la segunda confirmación no cambia nada', async () => {
     await elegir(copia)
 
@@ -101,7 +109,10 @@ describe('Restaurar copia', () => {
 
     const texto = pantalla!.wrapper.text()
     expect(texto).toContain('Este archivo no es una copia válida de la app')
-    expect(texto).toContain('Elige el archivo que guardaste con «Guardar copia»')
+    expect(texto).toContain(
+      'Elige el archivo que guardaste con «Guardar copia»: su nombre empieza con «respaldo-».',
+    )
+    expect(texto).not.toContain('.json')
     expect(
       pantalla!.wrapper.findAll('button').some((b) => b.text() === 'Restaurar esta copia'),
     ).toBe(false)

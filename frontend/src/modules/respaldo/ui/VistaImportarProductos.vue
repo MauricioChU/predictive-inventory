@@ -5,6 +5,7 @@ import { Download, FileSpreadsheet, Upload } from 'lucide-vue-next'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import { esErrorDeDominio } from '@/shared/domain/errores'
 import { plural } from '@/shared/domain/formato'
+import { useAnunciador } from '@/shared/ui/anunciador'
 import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import Boton from '@/shared/ui/componentes/Boton.vue'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
@@ -23,6 +24,7 @@ import type { Previsualizacion } from '../application/importar'
 const aplicacion = useAplicacion()
 const route = useRoute()
 const router = useRouter()
+const anunciador = useAnunciador()
 const idListos = useId()
 const idProblemas = useId()
 
@@ -38,6 +40,17 @@ const problemas = computed(() => vista.value?.conProblemas.length ?? 0)
 
 function cuantos(n: number, singular: string, enPlural: string): string {
   return `${n} ${plural(n, singular, enPlural)}`
+}
+
+/** RN-UX-15: "2 productos listos para cargar, 2 filas con problema". */
+function resumenDeLaVistaPrevia(previa: Previsualizacion): string {
+  const { validas, conProblemas } = previa
+  const listas =
+    validas.length > 0
+      ? cuantos(validas.length, 'producto listo para cargar', 'productos listos para cargar')
+      : 'Ninguna fila se puede cargar'
+  if (conProblemas.length === 0) return listas
+  return `${listas}, ${cuantos(conProblemas.length, 'fila con problema', 'filas con problema')}`
 }
 
 function mensajeDe(causa: unknown, siNoEsDeDominio: string): string {
@@ -64,6 +77,7 @@ async function alElegir(evento: Event): Promise<void> {
   trabajando.value = true
   try {
     vista.value = await aplicacion.respaldo.previsualizarImportacion(archivo)
+    anunciador.anunciar(resumenDeLaVistaPrevia(vista.value))
   } catch (causa) {
     error.value = mensajeDe(causa, 'No se pudo leer el Excel')
   } finally {

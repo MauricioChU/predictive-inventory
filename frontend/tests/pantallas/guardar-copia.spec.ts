@@ -87,6 +87,65 @@ describe('Guardar copia', () => {
     expect(pantalla.wrapper.get('h1').text()).toBe('Copia guardada')
   })
 
+  it('la copia se prepara al abrir la pantalla: el toque solo la entrega (el menú de compartir lo pide en el acto)', async () => {
+    const preparar = vi.spyOn(app.respaldo, 'guardarCopia')
+    pantalla = await montarPantalla(app, '/ajustes/copia')
+    expect(preparar).toHaveBeenCalledTimes(1)
+    expect(descargas).toEqual([])
+
+    await tocar('Guardar copia ahora')
+
+    expect(preparar).toHaveBeenCalledTimes(1)
+    expect(descargas).toHaveLength(1)
+  })
+
+  it('mientras se prepara, el botón lo dice y no se puede tocar', async () => {
+    vi.spyOn(app.respaldo, 'guardarCopia').mockReturnValue(new Promise(() => undefined))
+    pantalla = await montarPantalla(app, '/ajustes/copia')
+
+    const boton = pantalla.wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Preparando tu copia…')
+    expect(boton?.attributes('disabled')).toBeDefined()
+  })
+
+  it('compartida (WhatsApp, Drive): dice a dónde fue y la marca como guardada', async () => {
+    simularMenuDeCompartir(async () => undefined)
+    pantalla = await montarPantalla(app, '/ajustes/copia')
+
+    await tocar('Guardar copia ahora')
+
+    expect(pantalla.wrapper.get('h1').text()).toBe('Copia guardada')
+    expect(pantalla.wrapper.text()).toContain(
+      'Mandaste respaldo-bodega-rosita-2026-10-15-2030.json',
+    )
+    expect(descargas).toEqual([])
+    expect((await app.tienda.consultable.estadoDelSistema()).ultimoRespaldoEn).not.toBeNull()
+  })
+
+  it('si la copia salió pero no se pudo anotar, igual muestra el éxito (y lo registra)', async () => {
+    vi.spyOn(app.respaldo, 'marcarCopiaGuardada').mockRejectedValue(new Error('base cerrada'))
+    const registro = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    pantalla = await montarPantalla(app, '/ajustes/copia')
+
+    await tocar('Guardar copia ahora')
+
+    expect(descargas).toHaveLength(1)
+    expect(pantalla.wrapper.get('h1').text()).toBe('Copia guardada')
+    expect(registro).toHaveBeenCalled()
+  })
+
+  it('RN-UX-15: "No se guardó la copia" se anuncia', async () => {
+    simularMenuDeCompartir(async () => {
+      throw new DOMException('Cancelado', 'AbortError')
+    })
+    pantalla = await montarPantalla(app, '/ajustes/copia')
+
+    await tocar('Guardar copia ahora')
+
+    expect(await pantalla.anunciado()).toContain('No se guardó la copia')
+  })
+
   it('dice cuándo fue la última copia', async () => {
     await app.respaldo.marcarCopiaGuardada()
     pantalla = await montarPantalla(app, '/ajustes/copia')

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ArchiveRestore, FolderOpen } from 'lucide-vue-next'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import { esErrorDeDominio } from '@/shared/domain/errores'
+import { useAnunciador } from '@/shared/ui/anunciador'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import DialogoConfirmacion from '@/shared/ui/componentes/DialogoConfirmacion.vue'
 import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
@@ -20,6 +21,7 @@ import { leerComoTexto } from './leer-como-texto'
  */
 const aplicacion = useAplicacion()
 const router = useRouter()
+const anunciador = useAnunciador()
 
 const selector = ref<HTMLInputElement>()
 const elegida = shallowRef<{
@@ -33,7 +35,9 @@ const restaurando = ref(false)
 const restaurada = ref<string | null>(null)
 const error = ref<{ mensaje: string; ayuda: string } | null>(null)
 
-const AYUDA_ARCHIVO = 'Elige el archivo que guardaste con «Guardar copia» (termina en .json).'
+/** El nombre que le da el módulo Respaldo a cada copia: `respaldo-<tienda>-<fecha>-<hora>.json`. */
+const AYUDA_ARCHIVO =
+  'Elige el archivo que guardaste con «Guardar copia»: su nombre empieza con «respaldo-».'
 
 function mensajeDe(causa: unknown, siNoEsDeDominio: string): string {
   if (esErrorDeDominio(causa)) return causa.message
@@ -51,6 +55,7 @@ async function alElegir(evento: Event): Promise<void> {
     const texto = await leerComoTexto(archivo)
     const { resumen, confirmaciones } = await aplicacion.respaldo.prepararRestauracion(texto)
     elegida.value = { nombre: archivo.name, texto, resumen: resumen.texto, confirmaciones }
+    anunciador.anunciar(`La copia tiene ${resumen.texto}`)
   } catch (causa) {
     error.value = { mensaje: mensajeDe(causa, 'No se pudo leer el archivo'), ayuda: AYUDA_ARCHIVO }
   } finally {
