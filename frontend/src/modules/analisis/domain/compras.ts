@@ -76,14 +76,25 @@ function compararCobertura(a: number | null, b: number | null): number {
   return a - b
 }
 
-/** RN-AN-07: agotados, por acabarse y el resto; menos cobertura primero (null al final); nombre. */
-export function ordenarLista(lineas: readonly LineaParaComprar[]): LineaParaComprar[] {
-  return [...lineas].sort(
-    (a, b) =>
-      GRAVEDAD_DE_ESTADO[b.estado] - GRAVEDAD_DE_ESTADO[a.estado] ||
-      compararCobertura(a.diasDeCobertura, b.diasDeCobertura) ||
-      a.nombre.localeCompare(b.nombre, 'es'),
+/** Lo que mira el orden de RN-AN-07 (una línea de la lista o la situación de un producto). */
+export type OrdenableParaComprar = Pick<LineaParaComprar, 'estado' | 'diasDeCobertura' | 'nombre'>
+
+/**
+ * RN-AN-07: agotados, por acabarse y el resto; dentro de cada grupo, menos días de cobertura
+ * primero (sin predicción al final) y luego por nombre. El único orden de la lista para comprar
+ * y de las listas de Atención en Control.
+ */
+export function compararParaComprar(a: OrdenableParaComprar, b: OrdenableParaComprar): number {
+  return (
+    GRAVEDAD_DE_ESTADO[b.estado] - GRAVEDAD_DE_ESTADO[a.estado] ||
+    compararCobertura(a.diasDeCobertura, b.diasDeCobertura) ||
+    a.nombre.localeCompare(b.nombre, 'es')
   )
+}
+
+/** RN-AN-07. */
+export function ordenarLista(lineas: readonly LineaParaComprar[]): LineaParaComprar[] {
+  return [...lineas].sort(compararParaComprar)
 }
 
 function conCantidad(linea: LineaParaComprar, cantidad: Cantidad): LineaParaComprar {

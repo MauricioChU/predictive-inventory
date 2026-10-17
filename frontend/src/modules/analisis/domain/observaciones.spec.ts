@@ -460,7 +460,7 @@ describe('Atención: agotados y por acabarse (Control)', () => {
     })
   }
 
-  it('separa por estado, con menos días de cobertura primero, sin predicción al final y luego por nombre', () => {
+  it('separa por estado y ordena como Para comprar (RN-AN-07): menos cobertura, sin predicción al final, nombre', () => {
     const { agotados, porAcabarse } = productosEnAtencion([
       situacion(JABON, '2', null),
       situacion(DETERGENTE, '20', '0.5'),
@@ -470,9 +470,11 @@ describe('Atención: agotados y por acabarse (Control)', () => {
       situacion(CERA_ROJA, '1', null),
       situacion(ESCOBA, '0', '1'),
     ])
+    // Ronda 1: el mismo orden que Para comprar (RN-AN-07): Escoba (con predicción, 0 días)
+    // antes que Bolsas (sin predicción).
     expect(agotados.map((p) => [p.nombre, p.cobertura])).toEqual([
-      ['Bolsas', null],
       ['Escoba', null],
+      ['Bolsas', null],
     ])
     expect(
       porAcabarse.map((p) => [p.nombre, formatearCantidad(p.stock, p.unidad), p.cobertura]),

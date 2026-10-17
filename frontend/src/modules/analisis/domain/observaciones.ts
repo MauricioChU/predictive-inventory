@@ -3,6 +3,7 @@ import { Cantidad, type Unidad } from '@/shared/domain/cantidad'
 import { Dinero, redondearMitadLejosDeCero } from '@/shared/domain/dinero'
 import { diaDeLaSemana, diasEntre, sumarDias, type Dia } from '@/shared/domain/fecha'
 import { estaEnRango, resumenDePeriodo, type RangoDeDias } from './periodos'
+import { compararParaComprar } from './compras'
 import { textoCobertura } from './prediccion'
 import type { ResumenDiario } from './resumen-diario'
 
@@ -27,13 +28,6 @@ export interface ProductosEnAtencion {
   porAcabarse: ProductoEnAtencion[]
 }
 
-function compararCobertura(a: SituacionDeProducto, b: SituacionDeProducto): number {
-  if (a.diasDeCobertura === b.diasDeCobertura) return 0
-  if (a.diasDeCobertura === null) return 1
-  if (b.diasDeCobertura === null) return -1
-  return a.diasDeCobertura - b.diasDeCobertura
-}
-
 function enAtencion(s: SituacionDeProducto): ProductoEnAtencion {
   return {
     productoId: s.productoId,
@@ -44,21 +38,16 @@ function enAtencion(s: SituacionDeProducto): ProductoEnAtencion {
   }
 }
 
-/**
- * Agotados (por nombre: con stock 0 la cobertura no dice nada) y por acabarse (RN-AL-01), estos
- * con menos días de cobertura primero, los sin predicción al final y luego por nombre.
- */
+/** Agotados y por acabarse (RN-AL-01), en el mismo orden que Para comprar (RN-AN-07). */
 export function productosEnAtencion(
   situaciones: readonly SituacionDeProducto[],
 ): ProductosEnAtencion {
   const delEstado = (estado: SituacionDeProducto['estado']) =>
-    situaciones.filter((s) => s.estado === estado)
-  return {
-    agotados: delEstado('AGOTADO').sort(porNombre).map(enAtencion),
-    porAcabarse: delEstado('POR_ACABARSE')
-      .sort((a, b) => compararCobertura(a, b) || porNombre(a, b))
-      .map(enAtencion),
-  }
+    situaciones
+      .filter((s) => s.estado === estado)
+      .sort(compararParaComprar)
+      .map(enAtencion)
+  return { agotados: delEstado('AGOTADO'), porAcabarse: delEstado('POR_ACABARSE') }
 }
 
 // ───────────── Más vendidos (RN-AN-09) ─────────────
