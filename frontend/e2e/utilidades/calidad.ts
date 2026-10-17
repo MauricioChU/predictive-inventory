@@ -59,8 +59,13 @@ export async function esperarSinViolacionesGraves(page: Page): Promise<void> {
 interface Enfocado {
   que: string
   zona: 'salto' | 'contenido' | 'dialogo' | 'navegacion' | 'pie' | 'otro'
-  /** Posición en el documento (orden del código). */
+  /** Posición en el documento (para saber cuándo dio la vuelta). */
   orden: number
+  /**
+   * Si va después, en el código, del enfocado anterior (null si no hay anterior o ya no está en
+   * la página). Se compara al momento: no le afecta que la pantalla agregue cosas mientras tanto.
+   */
+  despuesDelAnterior: boolean | null
   arriba: number
   abajo: number
   izquierda: number
@@ -94,12 +99,22 @@ export async function esperarOrdenDeFocoLogico(page: Page, pasos = 80): Promise<
       window.scrollTo({ top: 0, behavior: 'instant' })
     })
   }
+  await page.evaluate(() => {
+    delete (window as Window & { __focoAnterior?: Element }).__focoAnterior
+  })
   const enfocados: Enfocado[] = []
   for (let i = 0; i < pasos; i += 1) {
     await page.keyboard.press('Tab')
     const actual = await page.evaluate((): Enfocado | null => {
       const el = document.activeElement as HTMLElement | null
       if (!el || el === document.body) return null
+      const memoria = window as Window & { __focoAnterior?: Element }
+      const anterior = memoria.__focoAnterior
+      const despuesDelAnterior =
+        anterior && anterior.isConnected && anterior !== el
+          ? Boolean(anterior.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)
+          : null
+      memoria.__focoAnterior = el
       // WCAG 2.4.11: qué parte del elemento se ve de verdad (dentro de la ventana y sin nada
       // pegado encima, como la barra del total o la navegación). Se miran 11 puntos a lo alto.
       const fraccionALaVista = (elemento: Element, r: DOMRect) => {
@@ -130,6 +145,7 @@ export async function esperarOrdenDeFocoLogico(page: Page, pasos = 80): Promise<
         que: `${el.tagName.toLowerCase()} "${(el.getAttribute('aria-label') ?? el.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 40)}"`,
         zona,
         orden: todos.indexOf(el),
+        despuesDelAnterior,
         arriba: caja.top + window.scrollY,
         abajo: caja.bottom + window.scrollY,
         izquierda: caja.left,
@@ -154,8 +170,8 @@ export async function esperarOrdenDeFocoLogico(page: Page, pasos = 80): Promise<
   }
 
   expect(enfocados[0]!.zona, 'lo primero es "Saltar al contenido"').toBe('salto')
-  const ordenes = enfocados.map((e) => e.orden)
-  expect(ordenes, 'el foco sigue el orden del código').toEqual([...ordenes].sort((a, b) => a - b))
+  const haciaAtras = enfocados.filter((e) => e.despuesDelAnterior === false).map((e) => e.que)
+  expect(haciaAtras, 'el foco sigue el orden del código').toEqual([])
 
   const navegacion = enfocados.filter((e) => e.zona === 'navegacion')
   expect(
