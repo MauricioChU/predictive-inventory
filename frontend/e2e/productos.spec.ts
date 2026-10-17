@@ -1,3 +1,4 @@
+import process from 'node:process'
 import { expect, test, type Page } from '@playwright/test'
 import {
   esperarSinDesplazamientoHorizontal,
@@ -353,5 +354,71 @@ test('celular: "Guardar producto" va fijo abajo y nunca tapa el campo con el foc
     const fijo = await caja(page, '.formulario-de-producto .accion-principal')
     expect(campo!.y + campo!.height, etiqueta).toBeLessThanOrEqual(fijo.top + 1)
   }
+})
+
+/**
+ * Hallazgo 2 de la revisión r0 (medición informativa, opcional como e2e/rendimiento.spec.ts):
+ * abrir Productos con 300 productos con foto, con la CPU 4 veces más lenta (celular de gama
+ * media). `MEDIR_RENDIMIENTO=1 npx playwright test e2e/productos.spec.ts -g "300 productos"
+ * --project=celular`. Informa cuánto tarda en verse la lista y en verse todas las fotos.
+ */
+test('Productos con 300 productos con foto, CPU x4 (medición opcional)', async ({ page }, info) => {
+  test.skip(!process.env.MEDIR_RENDIMIENTO, 'Solo con MEDIR_RENDIMIENTO=1')
+  test.skip(info.project.name !== 'celular', 'Se mide una vez, en el perfil de celular')
+  test.setTimeout(600_000)
+  await abrir(page, './')
+  await page.evaluate(async (png) => {
+    type App = {
+      catalogo: {
+        importacion: { categoriaPorNombre(n: string): Promise<string | null> }
+        crearProducto(d: Record<string, unknown>): Promise<{ valor?: { productoId: string } }>
+        guardarFoto(id: string, foto: Blob): Promise<void>
+      }
+      esperarTareasPendientes(): Promise<void>
+    }
+    const app = (window as unknown as { __aplicacion: App }).__aplicacion
+    const categoriaId = (await app.catalogo.importacion.categoriaPorNombre('Otros'))!
+    const bytes = Uint8Array.from(atob(png), (c) => c.charCodeAt(0))
+    for (let i = 1; i <= 300; i += 1) {
+      const r = await app.catalogo.crearProducto({
+        nombre: `Producto de prueba ${String(i).padStart(3, '0')}`,
+        categoriaId,
+        unidad: 'UNIDAD',
+        precioCompra: '1.00',
+        precioVenta: '1.50',
+        stockMinimo: '2',
+        stockInicial: String(i % 7),
+        confirmado: true,
+      })
+      await app.catalogo.guardarFoto(r.valor!.productoId, new Blob([bytes], { type: 'image/png' }))
+    }
+    await app.esperarTareasPendientes()
+  }, FOTO_PNG.toString('base64'))
+
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
+  const medicion = await page.evaluate(
+    () =>
+      new Promise<{ lista: number; fotos: number }>((resolver) => {
+        const inicio = performance.now()
+        let lista = 0
+        const mirar = () => {
+          const tarjetas = document.querySelectorAll('.tarjeta-de-producto').length
+          const fotos = document.querySelectorAll('.tarjeta-de-producto img[src^="blob:"]').length
+          if (!lista && tarjetas === 300) lista = Math.round(performance.now() - inicio)
+          if (lista && fotos === 300) {
+            resolver({ lista, fotos: Math.round(performance.now() - inicio) })
+            return
+          }
+          requestAnimationFrame(mirar)
+        }
+        document.querySelector<HTMLAnchorElement>('nav a[href$="/productos"]')!.click()
+        requestAnimationFrame(mirar)
+      }),
+  )
+  const resumen = `Abrir Productos con 300 productos con foto (CPU x4, ms): ${JSON.stringify(medicion)}`
+  console.log(resumen)
+  await info.attach('productos-300-cpu-x4', { body: resumen, contentType: 'text/plain' })
+  expect(medicion.fotos).toBeGreaterThanOrEqual(medicion.lista)
 })
 
