@@ -192,13 +192,17 @@ describe('Control (Torre de control)', () => {
       ])
       expect(texto(paraComprar.get('.cuantos'))).toBe('2 productos')
 
+      // Se busca de nuevo cada vez: al volver a Control la pantalla se monta otra vez.
       const boton = (nombre: string) =>
-        paraComprar.findAll('button').find((b) => texto(b) === nombre)!
+        seccion(envoltura, 'Para comprar')
+          .findAll('button')
+          .find((b) => texto(b) === nombre)!
       await boton('Ver la lista para comprar').trigger('click')
       await esperarCarga()
       expect(router.currentRoute.value.name).toBe('para-comprar')
 
       await router.push('/control')
+      await esperarCarga()
       await boton('¿Necesito comprar?').trigger('click')
       await esperarCarga()
       expect(router.currentRoute.value.name).toBe('necesito-comprar')

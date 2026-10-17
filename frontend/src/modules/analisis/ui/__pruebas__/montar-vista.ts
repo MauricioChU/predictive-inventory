@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, h, type Component } from 'vue'
-import { createMemoryHistory, createRouter, type RouteRecordRaw } from 'vue-router'
+import { createMemoryHistory, createRouter, RouterView, type RouteRecordRaw } from 'vue-router'
 import { CLAVE_AVISO_DESHACER, crearContextoAvisoDeshacer } from '@/app/aviso-deshacer'
 import type { Aplicacion } from '@/app/composicion'
 import { proveerAplicacion } from '@/app/proveer-aplicacion'
@@ -35,21 +35,27 @@ export interface OpcionesDeMontaje {
   conDetalleDeProducto?: boolean
 }
 
+/** Como LayoutApp: la pantalla se muestra en un RouterView (así funcionan sus guardas de ruta). */
+const RaizDePrueba = defineComponent({
+  setup: () => () => h(RouterView),
+})
+
 /**
- * Monta una vista de Control como la monta la app: con `useAplicacion()` (la aplicación de
- * prueba), un router en memoria con las rutas del contrato, el anunciador global y el aviso
- * Deshacer. Espera a que termine de cargar sus datos.
+ * Monta una vista de Control como la monta la app: en la ruta `ruta` de un router en memoria
+ * con las rutas del contrato (dentro de un RouterView), con `useAplicacion()` (la aplicación
+ * de prueba), el anunciador global y el aviso Deshacer. Espera a que termine de cargar.
  */
 export async function montarVista(vista: Component, opciones: OpcionesDeMontaje) {
-  const router = createRouter({
-    history: createMemoryHistory(),
-    routes: rutasDePrueba(opciones.conDetalleDeProducto ?? true),
-  })
-  await router.push(opciones.ruta ?? '/control')
+  const ruta = opciones.ruta ?? '/control'
+  const routes = rutasDePrueba(opciones.conDetalleDeProducto ?? true).map((r) =>
+    r.path === ruta ? { ...r, component: vista } : r,
+  ) as RouteRecordRaw[]
+  const router = createRouter({ history: createMemoryHistory(), routes })
+  await router.push(ruta)
   await router.isReady()
   const anunciador = crearAnunciador()
   const aviso = crearContextoAvisoDeshacer(anunciador)
-  const envoltura = mount(vista, {
+  const envoltura = mount(RaizDePrueba, {
     attachTo: document.body,
     global: {
       plugins: [proveerAplicacion(opciones.aplicacion), router],

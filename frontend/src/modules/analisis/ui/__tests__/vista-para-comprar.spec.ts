@@ -36,6 +36,7 @@ afterEach(() => {
   montada = undefined
   vi.useRealTimers()
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 async function abrir(tienda: TiendaDePrueba) {
@@ -65,6 +66,22 @@ function boton(w: Pick<VueWrapper, 'findAll'>, nombre: string): DOMWrapper<Eleme
 
 async function escribirCantidad(w: VueWrapper, nombre: string, cantidad: string) {
   await linea(w, nombre).get('input').setValue(cantidad)
+}
+
+/** Los guardados de cantidades quedan esperando hasta `soltar()` (un guardado "en vuelo"). */
+function demorarGuardados(tienda: TiendaDePrueba): { soltar: () => void } {
+  const original = tienda.app.analisis.cambiarCantidadEnLista
+  let soltar = (): void => undefined
+  const espera = new Promise<void>((resolver) => {
+    soltar = resolver
+  })
+  vi.spyOn(tienda.app.analisis, 'cambiarCantidadEnLista').mockImplementation(
+    async (productoId, texto) => {
+      await espera
+      return original(productoId, texto)
+    },
+  )
+  return { soltar: () => soltar() }
 }
 
 /** Lo que quedó guardado en la lista de hoy (la cantidad de cada línea). */
@@ -161,9 +178,8 @@ describe('Para comprar', () => {
   it('RN-AN-08 / RN-OP-18: quitar saca la línea y ofrece Deshacer, que la devuelve con su cantidad', async () => {
     const tienda = await tiendaConLista()
     const { envoltura, aviso } = await abrir(tienda)
+    // Recién escrita (todavía sin guardar): Quitar la guarda antes, y Deshacer la devuelve.
     await escribirCantidad(envoltura, 'Jabón', '7')
-    await vi.advanceTimersByTimeAsync(500)
-    await esperarCarga()
 
     await boton(linea(envoltura, 'Jabón'), 'Quitar').trigger('click')
     await esperarCarga()
@@ -179,6 +195,21 @@ describe('Para comprar', () => {
       'Carbón',
       'Jabón',
     ])
+  })
+
+  // Ronda 1: Deshacer no deja la línea "fijada" con la cantidad sugerida como si la hubiera
+  // escrito el usuario: vuelve a seguir la sugerencia.
+  it('RN-OP-18: deshacer quitar una línea sin cambios la deja siguiendo la sugerencia', async () => {
+    const tienda = await tiendaConLista()
+    const { envoltura, aviso } = await abrir(tienda)
+    await boton(linea(envoltura, 'Jabón'), 'Quitar').trigger('click')
+    await esperarCarga()
+    aviso.activo.value?.alDeshacer()
+    await esperarCarga()
+    expect(await listaGuardada(tienda)).toContainEqual(['Jabón', '4'])
+    // Llega 1 Jabón (quedan 3 de 3): la sugerencia baja a 3 y la línea la sigue.
+    await tienda.recibir('Jabón', '1', '1.20')
+    expect(await listaGuardada(tienda)).toContainEqual(['Jabón', '3'])
   })
 
   describe('Compartir', () => {
@@ -242,6 +273,83 @@ describe('Para comprar', () => {
     // Recibir lee la lista de hoy de Análisis: ya tiene el cambio.
     const llegada = await tienda.app.analisis.lineasParaRegistrarLlegada()
     expect(llegada.map((l) => formatearNumero(l.cantidad))).toEqual(['1', '3', '9'])
+  })
+
+  describe('ronda 1', () => {
+    it('RN-UX-07: con una cantidad que no vale no se comparte ni se registra la llegada: lleva a corregirla', async () => {
+      const share = vi.fn(() => Promise.resolve())
+      vi.stubGlobal('navigator', { share })
+      const { envoltura, router } = await abrir(await tiendaConLista())
+      await escribirCantidad(envoltura, 'Carbón', '0')
+      const campo = linea(envoltura, 'Carbón').get('input').element
+
+      await boton(envoltura, 'Compartir').trigger('click')
+      await esperarCarga()
+      expect(share).not.toHaveBeenCalled()
+      expect(texto(envoltura.get('.bloqueo'))).toBe(
+        'Revisa la cantidad de Carbón Corrígela o toca Quitar antes de compartir la lista.',
+      )
+      // role="alert": se anuncia al aparecer.
+      expect(envoltura.get('.bloqueo').attributes('role')).toBe('alert')
+      expect(document.activeElement).toBe(campo)
+
+      await boton(envoltura, 'Registrar llegada').trigger('click')
+      await esperarCarga()
+      expect(router.currentRoute.value.name).toBe('para-comprar')
+      expect(texto(envoltura.get('.bloqueo'))).toBe(
+        'Revisa la cantidad de Carbón Corrígela o toca Quitar antes de registrar la llegada.',
+      )
+
+      await escribirCantidad(envoltura, 'Carbón', '2')
+      expect(envoltura.find('.bloqueo').exists()).toBe(false)
+      await boton(envoltura, 'Compartir').trigger('click')
+      await esperarCarga()
+      expect(share).toHaveBeenCalledTimes(1)
+    })
+
+    it('RN-AN-08: Compartir espera al guardado que ya estaba en camino', async () => {
+      const share = vi.fn(() => Promise.resolve())
+      vi.stubGlobal('navigator', { share })
+      const tienda = await tiendaConLista()
+      const { envoltura } = await abrir(tienda)
+      const { soltar } = demorarGuardados(tienda)
+      await escribirCantidad(envoltura, 'Jabón', '9')
+      await vi.advanceTimersByTimeAsync(500) // el guardado arrancó y quedó esperando
+      await boton(envoltura, 'Compartir').trigger('click')
+      await esperarCarga()
+      expect(share).not.toHaveBeenCalled()
+      soltar()
+      await esperarCarga()
+      expect(share).toHaveBeenCalledTimes(1)
+      expect(share.mock.calls[0]).toEqual([
+        expect.objectContaining({ text: expect.stringContaining('• Jabón: 9 unid.') }),
+      ])
+    })
+
+    it('RN-AN-08: al salir de la pantalla, la salida espera a que se guarde lo escrito', async () => {
+      const tienda = await tiendaConLista()
+      const { envoltura, router } = await abrir(tienda)
+      const { soltar } = demorarGuardados(tienda)
+      await escribirCantidad(envoltura, 'Jabón', '9')
+      const salida = router.push('/control')
+      await esperarCarga()
+      expect(router.currentRoute.value.name).toBe('para-comprar')
+      soltar()
+      await salida
+      await esperarCarga()
+      expect(router.currentRoute.value.name).toBe('control')
+      expect(await listaGuardada(tienda)).toContainEqual(['Jabón', '9'])
+    })
+
+    it('RN-UX-15: al quitar la última línea, el foco va al título de la pantalla', async () => {
+      const tienda = new TiendaDePrueba()
+      await tienda.producto(BOLSAS)
+      const { envoltura } = await abrir(tienda)
+      await boton(linea(envoltura, 'Bolsas'), 'Quitar').trigger('click')
+      await esperarCarga()
+      expect(envoltura.find('.estado-vacio').exists()).toBe(true)
+      expect(document.activeElement).toBe(envoltura.get('h1').element)
+    })
   })
 
   it('RN-UX-10: sin nada que comprar lo dice y ofrece "¿Necesito comprar?"', async () => {

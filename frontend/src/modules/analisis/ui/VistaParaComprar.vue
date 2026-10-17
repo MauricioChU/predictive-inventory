@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, shallowRef, useId } from 'vue'
-import { useRouter } from 'vue-router'
+import { nextTick, onMounted, ref, shallowRef, useId } from 'vue'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { PackagePlus, Share2 } from 'lucide-vue-next'
 import { useAvisoDeshacer } from '@/app/aviso-deshacer'
 import { useAplicacion } from '@/app/proveer-aplicacion'
@@ -14,6 +14,7 @@ import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
 import EstadoVacio from '@/shared/ui/componentes/EstadoVacio.vue'
 import FilaDeCarrito from '@/shared/ui/componentes/FilaDeCarrito.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
+import type { QuitadoDeLista } from '../application/lista-de-compras'
 import { cantidadDeLista, type LineaParaComprar, type ListaParaComprar } from '../domain/compras'
 import { compartirTexto } from './compartir'
 import { textoCostoUnitario } from './textos'
@@ -23,6 +24,8 @@ const ESPERA_PARA_GUARDAR_MS = 400
 const AYUDA_CANTIDAD = 'Escribe cuánto vas a comprar o toca Quitar.'
 const AYUDA_SIN_PRODUCTO = 'Vuelve a abrir la lista: ya no está en tus productos.'
 const COPIADA = { titulo: 'Copiamos la lista', texto: 'Pégala en WhatsApp o en otra app.' }
+
+type Accion = 'compartir la lista' | 'registrar la llegada'
 
 const aplicacion = useAplicacion()
 const router = useRouter()
@@ -35,14 +38,19 @@ const lista = shallowRef<ListaParaComprar | null>(null)
 const escritas = ref<Record<string, string>>({})
 const errores = ref<Record<string, string>>({})
 const errorGeneral = ref<{ mensaje: string; ayuda: string } | null>(null)
+/** Por qué no se compartió ni se registró la llegada (una cantidad que no vale). */
+const bloqueo = ref<{ mensaje: string; ayuda: string } | null>(null)
 const copiada = ref(false)
 /** Si no se pudo compartir ni copiar: el texto, para copiarlo a mano. */
 const textoParaCopiar = ref<string | null>(null)
+const refRaiz = ref<HTMLElement>()
 const refLista = ref<HTMLElement>()
 
 /** Cantidades válidas escritas que todavía no se guardaron, por producto. */
 const pendientes = new Map<string, string>()
 let temporizador: ReturnType<typeof setTimeout> | undefined
+/** El guardado que está en camino, si lo hay: quien necesita lo guardado lo espera. */
+let guardando: Promise<void> | null = null
 
 async function cargar(): Promise<void> {
   const nueva = await aplicacion.analisis.listaParaComprar()
@@ -78,15 +86,11 @@ function quitarError(productoId: string): void {
   const resto = { ...errores.value }
   delete resto[productoId]
   errores.value = resto
+  // Ya no queda nada que corregir: se va el aviso de por qué no se compartió.
+  if (Object.keys(resto).length === 0) bloqueo.value = null
 }
 
-/** RN-AN-08: guarda ya lo que esté esperando (antes de compartir, registrar la llegada o salir). */
-async function guardarPendientes(): Promise<void> {
-  if (temporizador !== undefined) clearTimeout(temporizador)
-  temporizador = undefined
-  if (pendientes.size === 0) return
-  const cambios = [...pendientes]
-  pendientes.clear()
+async function guardar(cambios: [string, string][]): Promise<void> {
   for (const [productoId, texto] of cambios) {
     try {
       await aplicacion.analisis.cambiarCantidadEnLista(productoId, texto)
@@ -95,6 +99,23 @@ async function guardarPendientes(): Promise<void> {
     }
   }
   await cargar()
+}
+
+/**
+ * RN-AN-08: guarda ya lo que esté esperando, después del guardado que ya estuviera en camino
+ * (antes de compartir, registrar la llegada, quitar o salir de la pantalla).
+ */
+async function guardarPendientes(): Promise<void> {
+  if (temporizador !== undefined) clearTimeout(temporizador)
+  temporizador = undefined
+  while (guardando) await guardando
+  if (pendientes.size === 0) return
+  const cambios = [...pendientes]
+  pendientes.clear()
+  guardando = guardar(cambios).finally(() => {
+    guardando = null
+  })
+  await guardando
 }
 
 /** RN-UX-07: la cantidad se valida al escribirla (el mismo dominio que el caso de uso). */
@@ -121,35 +142,67 @@ function alCambiarCantidad(linea: LineaParaComprar, texto: string): void {
   temporizador = setTimeout(() => void guardarPendientes(), ESPERA_PARA_GUARDAR_MS)
 }
 
-async function restaurar(productoId: string, texto: string): Promise<void> {
+function enfocarCampo(productoId: string): void {
+  const filas = refRaiz.value?.querySelectorAll<HTMLElement>('li[data-producto]') ?? []
+  const fila = [...filas].find((li) => li.dataset.producto === productoId)
+  fila?.querySelector('input')?.focus()
+}
+
+function enfocarTitulo(): void {
+  const titulo = refRaiz.value?.querySelector<HTMLElement>('h1')
+  if (!titulo) return
+  if (!titulo.hasAttribute('tabindex')) titulo.setAttribute('tabindex', '-1')
+  titulo.focus()
+}
+
+/**
+ * Con una cantidad que no vale, lo que se compartiría o registraría no es lo que se ve: no se
+ * sigue. Se dice por qué (MensajeDeError, role="alert") y el foco va a ese campo.
+ */
+function hayQueCorregir(accion: Accion): boolean {
+  const conError = lista.value?.lineas.find((l) => errores.value[l.productoId] !== undefined)
+  if (!conError) {
+    bloqueo.value = null
+    return false
+  }
+  bloqueo.value = {
+    mensaje: `Revisa la cantidad de ${conError.nombre}`,
+    ayuda: `Corrígela o toca Quitar antes de ${accion}.`,
+  }
+  enfocarCampo(conError.productoId)
+  return true
+}
+
+async function deshacerQuitar(quitado: QuitadoDeLista): Promise<void> {
   try {
-    await aplicacion.analisis.cambiarCantidadEnLista(productoId, texto)
+    await aplicacion.analisis.deshacerQuitarDeLista(quitado)
   } catch (error) {
     mostrarError(error)
   }
   await cargar()
 }
 
-/** RN-AN-08 + RN-OP-18: quitar solo vale por hoy y se puede deshacer. */
+/** RN-AN-08 + RN-OP-18: quitar solo vale por hoy, y Deshacer deja la lista como estaba. */
 async function quitar(linea: LineaParaComprar): Promise<void> {
   const id = linea.productoId
-  // Deshacer la devuelve con la cantidad que tenía (la escrita, si era válida).
-  const cantidad = pendientes.get(id) ?? formatearNumero(linea.cantidad)
-  pendientes.delete(id)
+  // Lo recién escrito se guarda antes: Deshacer devuelve la línea con esa cantidad.
+  await guardarPendientes()
   quitarError(id)
+  let quitado: QuitadoDeLista
   try {
-    await aplicacion.analisis.quitarDeLista(id)
+    quitado = await aplicacion.analisis.quitarDeLista(id)
   } catch (error) {
     mostrarError(error)
     return
   }
   await cargar()
-  // La fila (y su botón) ya no está: el foco pasa a la lista para no perderse.
+  // La fila (y su botón) ya no está: el foco no debe perderse.
   await nextTick()
-  refLista.value?.focus()
+  if (lista.value?.lineas.length) refLista.value?.focus()
+  else enfocarTitulo()
   aviso.mostrar({
     mensaje: `Quitaste ${linea.nombre} de la lista`,
-    alDeshacer: () => void restaurar(id, cantidad),
+    alDeshacer: () => void deshacerQuitar(quitado),
   })
 }
 
@@ -157,6 +210,7 @@ async function compartir(): Promise<void> {
   copiada.value = false
   textoParaCopiar.value = null
   await guardarPendientes()
+  if (hayQueCorregir('compartir la lista')) return
   const texto = await aplicacion.analisis.textoParaCompartir()
   const resultado = await compartirTexto(texto)
   if (resultado === 'copiado') {
@@ -170,18 +224,19 @@ async function compartir(): Promise<void> {
 /** RN-AN-08: Recibir lee la lista de hoy de Análisis (contrato de rutas): no se pasan datos. */
 async function registrarLlegada(): Promise<void> {
   await guardarPendientes()
+  if (hayQueCorregir('registrar la llegada')) return
   await router.push({ name: 'recibir', query: { desde: 'para-comprar' } })
 }
 
 onMounted(cargar)
-onBeforeUnmount(() => {
-  // Lo escrito y todavía sin guardar no se pierde al salir.
-  if (pendientes.size > 0) void guardarPendientes()
+// Lo escrito y todavía sin guardar no se pierde al salir: la salida espera a que se guarde.
+onBeforeRouteLeave(async () => {
+  await guardarPendientes()
 })
 </script>
 
 <template>
-  <div class="vista-para-comprar">
+  <div ref="refRaiz" class="vista-para-comprar">
     <EncabezadoPagina titulo="Para comprar" volver />
 
     <MensajeDeError
@@ -212,7 +267,7 @@ onBeforeUnmount(() => {
         aria-label="Productos para comprar"
         tabindex="-1"
       >
-        <li v-for="linea in lista.lineas" :key="linea.productoId">
+        <li v-for="linea in lista.lineas" :key="linea.productoId" :data-producto="linea.productoId">
           <FilaDeCarrito
             :nombre="linea.nombre"
             :unidad="linea.unidad"
@@ -250,6 +305,13 @@ onBeforeUnmount(() => {
         />
       </div>
 
+      <!-- Junto a las acciones: dice por qué no se compartió ni se registró la llegada. -->
+      <MensajeDeError
+        v-if="bloqueo"
+        class="bloqueo"
+        :mensaje="bloqueo.mensaje"
+        :ayuda="bloqueo.ayuda"
+      />
       <BotonPrincipal
         texto="Registrar llegada"
         variante="secundario"
