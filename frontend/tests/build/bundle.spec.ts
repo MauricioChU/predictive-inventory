@@ -18,6 +18,12 @@ const HUELLAS_DE_EXCEL = ['[Content_Types].xml', 'xl/workbook.xml']
 /** `import … from "./x.js"` o `import "./x.js"` (estático); `import("./x.js")` no cuenta. */
 const IMPORTACION_ESTATICA = /\bimport\s*(?:[\w$*{}\s,]*\bfrom\s*)?["'](\.\/[^"']+\.js)["']/g
 
+/** Las páginas de catálogo de los kits (src/shared/ui/__catalogo__): solo las E2E las usan, y
+ * vite.config.ts (PRECACHE.globIgnores) las deja fuera del precache. */
+function esPaginaDePrueba(archivo: string): boolean {
+  return posix.basename(archivo).startsWith('CatalogoKit')
+}
+
 function leer(archivo: string): string {
   return readFileSync(join(DIST, archivo), 'utf8')
 }
@@ -74,7 +80,15 @@ describe('build de producción (dist/)', () => {
 
   it('RN-SIS-08: el service worker precachea lo que se carga después (Excel y GraficoBarras)', () => {
     const sw = leer('sw.js')
-    expect(despues.some((archivo) => archivo.includes('GraficoBarras'))).toBe(true)
-    expect(despues.filter((archivo) => !sw.includes(archivo))).toEqual([])
+    const deLaApp = despues.filter((archivo) => !esPaginaDePrueba(archivo))
+    expect(deLaApp.some((archivo) => archivo.includes('GraficoBarras'))).toBe(true)
+    expect(deLaApp.filter((archivo) => !sw.includes(archivo))).toEqual([])
+  })
+
+  it('las páginas de catálogo de los kits (solo pruebas) no se precachean en el celular', () => {
+    const sw = leer('sw.js')
+    const dePrueba = despues.filter(esPaginaDePrueba)
+    expect(dePrueba.length).toBeGreaterThan(0)
+    expect(dePrueba.filter((archivo) => sw.includes(archivo))).toEqual([])
   })
 })
