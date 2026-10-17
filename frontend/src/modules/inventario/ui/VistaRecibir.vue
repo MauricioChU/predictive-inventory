@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { PackageCheck, PackagePlus } from 'lucide-vue-next'
 import type { ProductoVista } from '@/modules/catalogo'
@@ -18,12 +18,11 @@ import BuscadorDeProductos from './BuscadorDeProductos.vue'
 import CuandoFue from './CuandoFue.vue'
 import DisposicionDeCarrito from './DisposicionDeCarrito.vue'
 import ListaDelCarrito from './ListaDelCarrito.vue'
-import { usarCarrito } from './carrito-de-pantalla'
-import { cuandoInicial, ERRORES_DE_FECHA, instanteDe } from './cuando'
+import { useCarritos } from './carritos'
+import { errorDeFechaDelDominio, instanteDe, type ErrorDeFecha } from './cuando'
 import { enfocarPrimerError, enfocarTitulo, vibrar } from './foco-y-respuesta'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
 import { usarDeshacer } from './usar-deshacer'
-import { hoyEnLaTienda } from './hoy-en-la-tienda'
 
 /**
  * Llegó mercadería (HU-OP-03, HU-OP-09; en la navegación "Recibir"): igual que Vender, pero cada
@@ -40,7 +39,9 @@ const aplicacion = useAplicacion()
 const anunciador = useAnunciador()
 const route = useRoute()
 const router = useRouter()
-const carrito = usarCarrito('ingreso')
+// r1 M9: lo cargado (con su fecha) vive en un store: tocar otra pantalla no lo borra.
+const carrito = useCarritos().ingreso
+const cuando = carrito.cuando
 const deshacer = usarDeshacer()
 
 const paso = ref<Paso>('carrito')
@@ -53,10 +54,7 @@ let respuestas: Respuestas = {}
 const avisoParaCorregir = ref<string | null>(null)
 const prellenada = ref<'con-lineas' | 'vacia' | null>(null)
 const detalleDeExito = ref('')
-const deshecha = ref(false)
-/** RN-OP-09: la mercadería llegó ahora o otro día (hasta 7 días atrás). */
-const cuando = ref(cuandoInicial(hoyEnLaTienda()))
-const errorFecha = ref<string>()
+const errorFecha = ref<ErrorDeFecha>()
 
 const textoTotal = computed(() => formatearDinero(carrito.total.value))
 
@@ -81,7 +79,6 @@ const tituloDePrecios = computed(() => {
 })
 
 function agregar(producto: ProductoVista): void {
-  deshecha.value = false
   carrito.agregar(producto)
   anunciador.anunciar(`Agregaste ${producto.nombre}. Costo total ${textoTotal.value}`)
 }
@@ -120,9 +117,8 @@ async function intentar(): Promise<void> {
     }
   } catch (causa) {
     const mostrado = errorParaMostrar(causa, 'ingreso')
-    if (mostrado.codigo && ERRORES_DE_FECHA.has(mostrado.codigo))
-      errorFecha.value = mostrado.mensaje
-    else error.value = mostrado
+    errorFecha.value = errorDeFechaDelDominio(mostrado.codigo, mostrado.mensaje)
+    if (!errorFecha.value) error.value = mostrado
   } finally {
     registrando.value = false
   }
@@ -151,6 +147,15 @@ async function cambiarCantidad(): Promise<void> {
     ?.focus()
 }
 
+/**
+ * r1 M1: cerrar la pregunta del precio con Escape o "atrás" del celular no la responde: no se
+ * registra nada y se puede corregir un costo mal escrito.
+ */
+function cerrarPreguntaDePrecio(): void {
+  dialogo.value = null
+  respuestas = {}
+}
+
 /** RN-OP-14: la respuesta a "¿Actualizar el precio de compra…?" (las dos registran). */
 function responderPrecio(actualizar: boolean): void {
   dialogo.value = null
@@ -160,10 +165,10 @@ function responderPrecio(actualizar: boolean): void {
 
 function registrada(): void {
   const copia = carrito.copia()
-  const n = copia.length
-  detalleDeExito.value = `${formatearEntero(n)} ${plural(n, 'producto', 'productos')} · Costo total ${textoTotal.value}`
+  const n = copia.lineas.length
+  const costoTotal = textoTotal.value
+  detalleDeExito.value = `${formatearEntero(n)} ${plural(n, 'producto', 'productos')} · Costo total ${costoTotal}`
   carrito.vaciar()
-  cuando.value = cuandoInicial(hoyEnLaTienda())
   respuestas = {}
   prellenada.value = null
   paso.value = 'exito'
@@ -172,19 +177,22 @@ function registrada(): void {
   if (route.query.desde) void router.replace({ name: 'recibir' })
   deshacer.ofrecer({
     mensaje: 'Mercadería registrada',
-    deshecho: 'Deshiciste la llegada de mercadería',
-    alDeshacer: () => {
-      if (!carrito.vacio.value) return
+    alDeshacer: ({ pantallaAbierta }) => {
+      const deshecha = `Deshiciste la llegada de mercadería (costo total ${costoTotal})`
+      // r1 #2: si ya se está cargando otra llegada, no se toca; lo dice el resultado.
+      if (!carrito.vacio.value) {
+        return pantallaAbierta
+          ? `${deshecha}. Lo que estás cargando sigue aquí.`
+          : `${deshecha}. Lo que estabas cargando sigue en Llegó mercadería.`
+      }
       carrito.restaurar(copia)
-      deshecha.value = true
-      paso.value = 'carrito'
-      void enfocarTitulo()
+      if (pantallaAbierta) paso.value = 'carrito'
+      return `${deshecha}. Los productos volvieron a la lista.`
     },
   })
 }
 
 async function otraLlegada(): Promise<void> {
-  deshecha.value = false
   paso.value = 'carrito'
   await enfocarTitulo()
 }
@@ -196,21 +204,27 @@ async function prellenarDesdeParaComprar(): Promise<void> {
     const productos = await Promise.all(
       lineas.map((l) => aplicacion.catalogo.obtenerProducto(l.productoId)),
     )
-    carrito.cargar(
+    // r1 M9: lo que ya estaba cargado se queda; se agregan los productos de la lista.
+    carrito.agregarFaltantes(
       lineas.flatMap((l, i) => {
         const producto = productos[i]
         return producto ? [{ producto, cantidad: l.cantidad, precio: l.costo }] : []
       }),
     )
-    prellenada.value = carrito.vacio.value ? 'vacia' : 'con-lineas'
+    prellenada.value = lineas.length === 0 ? 'vacia' : 'con-lineas'
   } catch (causa) {
     error.value = errorParaMostrar(causa, 'ingreso')
   }
 }
 
-onMounted(() => {
-  if (route.query.desde === 'para-comprar') void prellenarDesdeParaComprar()
-})
+// Al abrirla desde Para comprar (también si ya estaba abierta: misma pantalla, otra consulta).
+watch(
+  () => route.query.desde,
+  (desde) => {
+    if (desde === 'para-comprar') void prellenarDesdeParaComprar()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -240,25 +254,12 @@ onMounted(() => {
           texto="Busca los productos que llegaron."
         />
         <AvisoEnPagina
-          v-if="deshecha"
-          tono="info"
-          titulo="Deshiciste la llegada de mercadería"
-          texto="Los productos siguen aquí por si quieres corregir algo."
-          texto-cerrar="Cerrar"
-          @cerrar="deshecha = false"
-        />
-        <AvisoEnPagina
           v-if="avisoParaCorregir"
           tono="atencion"
           titulo="Revisa la cantidad"
           :texto="avisoParaCorregir"
           texto-cerrar="Cerrar"
           @cerrar="avisoParaCorregir = null"
-        />
-        <MensajeDeError
-          v-if="deshacer.error.value"
-          :mensaje="deshacer.error.value.mensaje"
-          :ayuda="deshacer.error.value.ayuda"
         />
         <MensajeDeError v-if="error" :mensaje="error.mensaje" :ayuda="error.ayuda" />
       </div>
@@ -308,8 +309,10 @@ onMounted(() => {
         texto-confirmar="Sí, actualizar"
         texto-cancelar="No, solo esta vez"
         enfocar="confirmar"
+        cierre-nativo="cerrar"
         @confirmar="responderPrecio(true)"
         @cancelar="responderPrecio(false)"
+        @cerrar="cerrarPreguntaDePrecio"
       />
     </template>
   </div>

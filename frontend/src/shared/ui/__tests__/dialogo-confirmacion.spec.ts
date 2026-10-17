@@ -50,4 +50,23 @@ describe('DialogoConfirmacion', () => {
     await flushPromises()
     expect(document.activeElement).toBe(w.get('.confirmar').element)
   })
+
+  it('por defecto, Escape o "atrás" del celular (cancel nativo) es lo mismo que Cancelar', async () => {
+    const w = mount(DialogoConfirmacion, { props: PROPS, attachTo: document.body })
+    await flushPromises()
+    await w.get('dialog').trigger('cancel')
+    expect(w.emitted('cancelar')).toHaveLength(1)
+    expect(w.emitted('cerrar')).toBeUndefined()
+  })
+
+  it('r1 M1: con cierre-nativo="cerrar", Escape cierra SIN responder (emite cerrar, no cancelar)', async () => {
+    const w = mount(DialogoConfirmacion, {
+      props: { ...PROPS, cierreNativo: 'cerrar' as const },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    await w.get('dialog').trigger('cancel')
+    expect(w.emitted('cerrar')).toHaveLength(1)
+    expect(w.emitted('cancelar')).toBeUndefined()
+  })
 })

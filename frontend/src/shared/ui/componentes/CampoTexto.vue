@@ -9,12 +9,17 @@ withDefaults(
     ayuda?: string
     tipo?: string
     autocompletar?: string
+    /** Plan 12 (r1 M6): límites de un campo de fecha u hora ("2026-10-08"). */
+    min?: string
+    max?: string
   }>(),
   {
     error: undefined,
     ayuda: undefined,
     tipo: 'text',
     autocompletar: undefined,
+    min: undefined,
+    max: undefined,
   },
 )
 defineEmits<{ 'update:modelValue': [valor: string] }>()
@@ -31,6 +36,8 @@ const idAyuda = `${id}-ayuda`
       :type="tipo"
       :value="modelValue"
       :autocomplete="autocompletar"
+      :min="min"
+      :max="max"
       :aria-invalid="error ? 'true' : undefined"
       :aria-describedby="error ? idError : ayuda ? idAyuda : undefined"
       @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"

@@ -131,8 +131,12 @@ function elegir(id: string): void {
   const producto = resultados.value.find((p) => p.id === id) ?? todos.value.find((p) => p.id === id)
   if (!producto) return
   emit('elegir', producto)
-  // Listo para buscar el siguiente: el buscador vuelve a mostrar los más vendidos.
-  if (buscando.value) refBuscador.value?.vaciar()
+  // Listo para buscar el siguiente: el buscador vuelve a mostrar los más vendidos y el foco
+  // vuelve al campo (r1 M2: la tarjeta tocada desaparece y el foco no debe perderse).
+  if (buscando.value) {
+    refBuscador.value?.vaciar()
+    refBuscador.value?.enfocar()
+  }
 }
 
 function borrarBusqueda(): void {

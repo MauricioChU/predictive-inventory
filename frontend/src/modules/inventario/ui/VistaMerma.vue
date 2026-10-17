@@ -6,7 +6,6 @@ import { useAplicacion } from '@/app/proveer-aplicacion'
 import { MOTIVOS_DE_MERMA, type MotivoDeMerma } from '@/shared/contratos/operaciones'
 import { Cantidad } from '@/shared/domain/cantidad'
 import { formatearCantidad, SIMBOLO_DE_UNIDAD } from '@/shared/domain/formato'
-import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import BotonesDeOpcion from '@/shared/ui/componentes/BotonesDeOpcion.vue'
 import CampoNumero from '@/shared/ui/componentes/CampoNumero.vue'
@@ -16,7 +15,7 @@ import EstadoVacio from '@/shared/ui/componentes/EstadoVacio.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import PantallaExito from '@/shared/ui/componentes/PantallaExito.vue'
 import ResumenDelProducto from './ResumenDelProducto.vue'
-import { enfocarTitulo, vibrar } from './foco-y-respuesta'
+import { vibrar } from './foco-y-respuesta'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
 import { usarDeshacer } from './usar-deshacer'
 import { usarDestinos } from './usar-destinos'
@@ -51,7 +50,6 @@ const errorNota = ref<string>()
 const errorGeneral = ref<ErrorParaMostrar | null>(null)
 const registrando = ref(false)
 const exito = ref<string | null>(null)
-const deshecha = ref(false)
 
 const porUnidades = computed(() => producto.value?.unidad === 'UNIDAD')
 const etiquetaCantidad = computed(() =>
@@ -112,17 +110,17 @@ async function guardar(): Promise<void> {
   const ahora = producto.value ? formatearCantidad(producto.value.stock, actual.unidad) : ''
   // "8 unid." ya termina en punto: no se le agrega otro.
   exito.value = `${queFue}. Ahora hay ${ahora}${ahora.endsWith('.') ? '' : '.'}`
-  deshecha.value = false
   vibrar()
   deshacer.ofrecer({
     mensaje: queFue,
-    deshecho: 'Deshiciste lo que anotaste',
-    alDeshacer: () => {
-      void recargar()
-      if (exito.value === null) return
-      exito.value = null
-      deshecha.value = true
-      void enfocarTitulo()
+    alDeshacer: ({ pantallaAbierta }) => {
+      // r1 #2: el resultado (en el pie de la app) dice qué se deshizo; la pantalla, si sigue
+      // abierta, vuelve al formulario con el stock al día por si hay que corregir algo.
+      if (pantallaAbierta) {
+        void recargar()
+        exito.value = null
+      }
+      return `Deshiciste la pérdida de ${perdido} de ${actual.nombre}`
     },
   })
 }
@@ -164,14 +162,6 @@ function volverAlProducto(): void {
         @accion="router.push(destino('productos'))"
       />
       <form v-else-if="producto" class="formulario" novalidate @submit.prevent="guardar">
-        <AvisoEnPagina
-          v-if="deshecha"
-          tono="info"
-          titulo="Deshiciste lo que anotaste"
-          texto="El stock volvió a como estaba."
-          texto-cerrar="Cerrar"
-          @cerrar="deshecha = false"
-        />
         <ResumenDelProducto :producto="producto" :foto="foto" prefijo-stock="Hay" />
         <BotonesDeOpcion
           v-model="motivo"
@@ -197,11 +187,6 @@ function volverAlProducto(): void {
           v-if="errorGeneral"
           :mensaje="errorGeneral.mensaje"
           :ayuda="errorGeneral.ayuda"
-        />
-        <MensajeDeError
-          v-if="deshacer.error.value"
-          :mensaje="deshacer.error.value.mensaje"
-          :ayuda="deshacer.error.value.ayuda"
         />
         <BotonPrincipal texto="Guardar" tipo="submit" :icono="Check" :deshabilitado="registrando" />
       </form>

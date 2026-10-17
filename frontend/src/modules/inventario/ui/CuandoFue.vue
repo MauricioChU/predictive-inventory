@@ -1,19 +1,21 @@
 <script setup lang="ts">
-import { computed, useId } from 'vue'
+import { computed } from 'vue'
 import CampoTexto from '@/shared/ui/componentes/CampoTexto.vue'
 import SelectorSegmentado from '@/shared/ui/componentes/SelectorSegmentado.vue'
-import type { Cuando } from './cuando'
+import { diasPermitidos, type Cuando, type ErrorDeFecha } from './cuando'
+import { hoyEnLaTienda } from './hoy-en-la-tienda'
 
 /**
- * RN-OP-09 / HU-OP-07: "¿Cuándo fue?" — por defecto ahora; con "Otro día" se eligen el día y la
- * hora (hasta 7 días atrás, nunca futura: lo valida el dominio y su mensaje va junto al día).
+ * RN-OP-09 / HU-OP-07: "¿Cuándo fue?" — por defecto ahora; con "Otro día" se eligen el día (de
+ * hace 7 días a hoy) y la hora. Cada error va junto a su campo: sin hora, debajo de la hora;
+ * los límites del dominio (7 días, nunca futura), debajo del día.
  */
 const props = withDefaults(
   defineProps<{
     modelValue: Cuando
     /** "¿Cuándo fue la venta?" */
     pregunta: string
-    error?: string
+    error?: ErrorDeFecha
   }>(),
   { error: undefined },
 )
@@ -24,8 +26,10 @@ const OPCIONES = [
   { valor: 'otro', etiqueta: 'Otro día' },
 ] as const
 
-const id = useId()
 const otroDia = computed(() => props.modelValue.modo === 'otro')
+const limites = computed(() => diasPermitidos(hoyEnLaTienda()))
+const errorDia = computed(() => (props.error?.campo === 'dia' ? props.error.mensaje : undefined))
+const errorHora = computed(() => (props.error?.campo === 'hora' ? props.error.mensaje : undefined))
 
 function cambiar(cambios: Partial<Cuando>): void {
   emit('update:modelValue', { ...props.modelValue, ...cambios })
@@ -40,18 +44,21 @@ function cambiar(cambios: Partial<Cuando>): void {
       :etiqueta="pregunta"
       @update:model-value="cambiar({ modo: $event })"
     />
-    <div v-if="otroDia" :id="id" class="fecha-y-hora">
+    <div v-if="otroDia" class="fecha-y-hora">
       <CampoTexto
         tipo="date"
         etiqueta="Día"
         :model-value="modelValue.dia"
-        :error="error"
+        :min="limites.min"
+        :max="limites.max"
+        :error="errorDia"
         @update:model-value="cambiar({ dia: $event })"
       />
       <CampoTexto
         tipo="time"
         etiqueta="Hora"
         :model-value="modelValue.hora"
+        :error="errorHora"
         @update:model-value="cambiar({ hora: $event })"
       />
     </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onBeforeUnmount, provide, ref } from 'vue'
+import { nextTick, onBeforeUnmount, provide, ref, watch } from 'vue'
 import AvisoDeshacer from '@/shared/ui/componentes/AvisoDeshacer.vue'
+import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import BarraNavegacion from '@/shared/ui/componentes/BarraNavegacion.vue'
 import { usarAltoComoVariable } from '@/shared/ui/alto-como-variable'
 import { CLAVE_ANUNCIADOR, crearAnunciador } from '@/shared/ui/anunciador'
@@ -25,6 +26,14 @@ function alDeshacer() {
   contextoAvisoDeshacer.activo.value?.alDeshacer()
   contextoAvisoDeshacer.cerrar()
 }
+
+// Plan 12, r1 #2 (RN-UX-11): el botón Deshacer desaparece al tocarlo y el foco quedaría en
+// <body>; cuando llega el resultado, el foco pasa a su "Cerrar" (no si la persona ya siguió).
+watch(contextoAvisoDeshacer.resultado, async (resultado) => {
+  if (!resultado || (document.activeElement && document.activeElement !== document.body)) return
+  await nextTick()
+  document.querySelector<HTMLElement>('.resultado-de-deshacer .cerrar')?.focus()
+})
 
 // m5: alto real de lo que queda pegado abajo, para scroll-padding-bottom (ver estilos).
 const refPie = ref<HTMLElement>()
@@ -71,13 +80,30 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
       <RouterView />
     </main>
     <div ref="refPie" class="pie">
-      <div v-if="contextoAvisoDeshacer.activo.value" ref="refZonaAviso" class="zona-aviso-deshacer">
+      <div
+        v-if="contextoAvisoDeshacer.activo.value || contextoAvisoDeshacer.resultado.value"
+        ref="refZonaAviso"
+        class="zona-aviso-deshacer"
+      >
         <AvisoDeshacer
+          v-if="contextoAvisoDeshacer.activo.value"
           :key="contextoAvisoDeshacer.activo.value.id"
           :mensaje="contextoAvisoDeshacer.activo.value.mensaje"
           :segundos="SEGUNDOS_PARA_DESHACER"
           @deshacer="alDeshacer"
           @cerrar="contextoAvisoDeshacer.cerrar"
+        />
+        <!-- Plan 12, r1 #2 (RN-UX-11): en el mismo lugar, qué se deshizo (o por qué no se
+             pudo), esté donde esté la persona; una sola vez para toda la app. -->
+        <AvisoEnPagina
+          v-else-if="contextoAvisoDeshacer.resultado.value"
+          :key="contextoAvisoDeshacer.resultado.value.id"
+          class="resultado-de-deshacer"
+          :tono="contextoAvisoDeshacer.resultado.value.tono"
+          :titulo="contextoAvisoDeshacer.resultado.value.titulo"
+          :texto="contextoAvisoDeshacer.resultado.value.texto"
+          texto-cerrar="Cerrar"
+          @cerrar="contextoAvisoDeshacer.cerrarResultado"
         />
       </div>
       <BarraNavegacion class="navegacion" :contador-control="estadoGlobal.contadorDeAtencion" />

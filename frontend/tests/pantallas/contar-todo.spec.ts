@@ -110,6 +110,24 @@ describe('Contar todo (HU-OP-10, RN-OP-21)', () => {
     expect(leer(p.w.get('.aviso-deshacer'))).toContain('Detergente a granel: ahora hay 4 kg')
   })
 
+  it('r1 #1: deshacer una respuesta la quita del resumen y el producto queda en "Te faltó contar"', async () => {
+    const { app } = await tienda()
+    const p = await abrir(app)
+    await tocar(p, 'Empezar a contar')
+    await responder(p, '9')
+    await p.w.get('.aviso-deshacer .deshacer').trigger('click')
+    await esperarDatos(app)
+    expect(leer(p.w.get('.resultado-de-deshacer'))).toContain(
+      'Deshiciste el conteo de Carbón. Te faltó contarlo.',
+    )
+    expect(productoActual(p)).toBe('Detergente a granel')
+    await responder(p, '5')
+    await responder(p, '8')
+    const resumen = leer(p.w.get('.pantalla-exito'))
+    expect(resumen).toContain('Contaste 2 productos. 1 con diferencia: -S/ 4.80')
+    expect(resumen).toContain('Te faltó contar 1: Carbón')
+  })
+
   it('RN-OP-21: "No contaste ningún producto." si se saltaron todos', async () => {
     const { app } = await tienda()
     const p = await abrir(app)

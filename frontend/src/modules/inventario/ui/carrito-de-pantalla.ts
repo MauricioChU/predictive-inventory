@@ -8,6 +8,8 @@ import type { DatosDeVenta } from '../domain/carrito'
 import { mensajeStockInsuficiente } from '../domain/mensajes'
 import { leerCantidad, leerCosto, leerPrecioDeVenta } from '../domain/reglas'
 import type { DatosDeIngreso } from '../application/ingresos'
+import { cuandoInicial, type Cuando } from './cuando'
+import { hoyEnLaTienda } from './hoy-en-la-tienda'
 import { AYUDA_STOCK_INSUFICIENTE } from './mensajes-de-error'
 
 /** Vender usa el precio de venta; Llegó mercadería, el costo (precio de compra). */
@@ -21,6 +23,12 @@ export interface LineaDePantalla {
   precio: Dinero
   /** Error del último precio escrito en la edición en línea (FilaDeCarrito.errorPrecio). */
   errorPrecio?: string
+}
+
+/** Lo que había en el carrito al registrar: Deshacer lo devuelve tal cual (fecha incluida). */
+export interface CopiaDelCarrito {
+  lineas: LineaDePantalla[]
+  cuando: Cuando
 }
 
 export interface LineaCalculada extends LineaDePantalla {
@@ -56,6 +64,8 @@ export function usarCarrito(concepto: Concepto) {
   const lineas = ref<LineaDePantalla[]>([])
   /** Una línea con la cantidad vacía no se marca mientras se escribe; sí al intentar seguir. */
   const marcarVacias = ref(false)
+  /** RN-OP-09 / HU-OP-07: ahora u otro día (hasta 7 días atrás). Va con el carrito (r1 M3). */
+  const cuando = ref<Cuando>(cuandoInicial(hoyEnLaTienda()))
 
   const precioBase = (producto: ProductoVista): Dinero =>
     concepto === 'venta' ? producto.precioVenta : producto.precioCompra
@@ -105,6 +115,7 @@ export function usarCarrito(concepto: Concepto) {
 
   return {
     lineas: calculadas,
+    cuando,
     total,
     hayErrores,
     vacio: computed(() => lineas.value.length === 0),
@@ -162,18 +173,24 @@ export function usarCarrito(concepto: Concepto) {
       marcarVacias.value = true
     },
 
+    /** Después de registrar: vacío y "ahora" otra vez. */
     vaciar(): void {
       lineas.value = []
       marcarVacias.value = false
+      cuando.value = cuandoInicial(hoyEnLaTienda())
     },
 
     /** Lo que había antes (Deshacer deja el carrito como estaba para corregirlo). */
-    copia(): LineaDePantalla[] {
-      return lineas.value.map((l) => ({ ...l, errorPrecio: undefined }))
+    copia(): CopiaDelCarrito {
+      return {
+        lineas: lineas.value.map((l) => ({ ...l, errorPrecio: undefined })),
+        cuando: { ...cuando.value },
+      }
     },
 
-    restaurar(copia: readonly LineaDePantalla[]): void {
-      lineas.value = copia.map((l) => ({ ...l }))
+    restaurar(copia: CopiaDelCarrito): void {
+      lineas.value = copia.lineas.map((l) => ({ ...l }))
+      cuando.value = { ...copia.cuando }
     },
 
     /** RN-OP-11: el precio va solo si se cambió para esta venta. */
@@ -198,13 +215,18 @@ export function usarCarrito(concepto: Concepto) {
       }
     },
 
-    /** Para prellenar (Llegó mercadería desde Para comprar). */
-    cargar(productos: readonly { producto: ProductoVista; cantidad: Cantidad; precio: Dinero }[]) {
-      lineas.value = productos.map(({ producto, cantidad, precio }) => ({
-        producto,
-        cantidad: formatearNumero(cantidad),
-        precio,
-      }))
+    /**
+     * Para prellenar (Llegó mercadería desde Para comprar): agrega los productos que todavía no
+     * están, sin tocar lo que ya se había cargado (r1 M9). Devuelve cuántos agregó.
+     */
+    agregarFaltantes(
+      productos: readonly { producto: ProductoVista; cantidad: Cantidad; precio: Dinero }[],
+    ): number {
+      const nuevos = productos.filter(({ producto }) => !buscar(producto.id))
+      for (const { producto, cantidad, precio } of nuevos) {
+        lineas.value.push({ producto, cantidad: formatearNumero(cantidad), precio })
+      }
+      return nuevos.length
     },
   }
 }

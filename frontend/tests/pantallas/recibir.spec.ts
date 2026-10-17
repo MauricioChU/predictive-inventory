@@ -138,6 +138,45 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     expect((await app.catalogo.obtenerProducto(lejia))?.precioCompra.centimos).toBe(240)
   })
 
+  it('r1 M1: cerrar la pregunta del precio (Escape o "atrás" del celular) no registra nada', async () => {
+    const { app, lejia } = await conLejia()
+    const p = await abrir(app)
+    await agregar(p, 'lejia', 'Lejía 1 L')
+    await boton(lineas(p)[0]!, 'Cambiar costo').trigger('click')
+    await lineas(p)[0]!.get('.edicion-precio input').setValue('2.60')
+    await boton(lineas(p)[0]!, 'Guardar costo').trigger('click')
+    await esperarDatos(app)
+    await registrar(p)
+    await dialogoAbierto(p).trigger('cancel')
+    await esperarDatos(app)
+    expect(dialogoAbierto(p).exists()).toBe(false)
+    expect(await stock(app, lejia)).toBe('10')
+    expect(lineas(p)[0]!.text()).toContain('Costo nuevo')
+  })
+
+  it('r1 M9: lo cargado no se pierde al irse a otra pantalla y volver', async () => {
+    const { app } = await conLejia()
+    const p = await abrir(app)
+    await agregar(p, 'lejia', 'Lejía 1 L')
+    await cantidad(p, 0, '6')
+    await p.ir('/vender')
+    await p.ir('/recibir')
+    expect((lineas(p)[0]!.get('.cantidad input').element as HTMLInputElement).value).toBe('6')
+  })
+
+  it('r1 #2: Deshacer la llegada muestra qué se deshizo', async () => {
+    const { app } = await conLejia()
+    const p = await abrir(app)
+    await agregar(p, 'lejia', 'Lejía 1 L')
+    await cantidad(p, 0, '6')
+    await registrar(p)
+    await p.w.get('.aviso-deshacer .deshacer').trigger('click')
+    await esperarDatos(app)
+    expect(leer(p.w.get('.resultado-de-deshacer'))).toContain(
+      'Deshiciste la llegada de mercadería (costo total S/ 14.40). Los productos volvieron a la lista.',
+    )
+  })
+
   it('RN-OP-14: un costo negativo se rechaza junto al campo, con el mensaje del dominio', async () => {
     const { app } = await conLejia()
     const p = await abrir(app)
@@ -259,6 +298,30 @@ describe('Llegó mercadería (HU-OP-03)', () => {
       await cantidad(p, 0, '6')
       await registrar(p)
       expect(await stock(app, lejia)).toBe('8')
+    })
+
+    it('r1 M9: si ya había algo cargado, se agrega lo de la lista sin borrar lo que había', async () => {
+      const app = crearAplicacionDePrueba({ ahora: HOY })
+      const lejia = await crearProductoDePrueba(app, {
+        nombre: 'Lejía 1 L',
+        compra: '2.40',
+        venta: '3.50',
+        minimo: '3',
+        stockInicial: '2',
+      })
+      await crearProductoDePrueba(app, {
+        nombre: 'Carbón',
+        unidad: 'KILO',
+        compra: '2.75',
+        venta: '4.00',
+        minimo: '1',
+        stockInicial: '10',
+      })
+      void lejia
+      const p = await abrir(app)
+      await agregar(p, 'carbon', 'Carbón')
+      await p.ir('/recibir?desde=para-comprar')
+      expect(lineas(p).map((l) => l.get('.nombre').text())).toEqual(['Carbón', 'Lejía 1 L'])
     })
 
     it('si la lista de hoy está vacía, lo dice y deja buscar', async () => {

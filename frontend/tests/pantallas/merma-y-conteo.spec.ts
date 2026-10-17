@@ -84,6 +84,9 @@ describe('Registrar pérdida (merma: HU-OP-04, RN-OP-15)', () => {
     await p.w.get('.aviso-deshacer .deshacer').trigger('click')
     await esperarDatos(app)
     expect(await stock(app, lejia)).toBe('10')
+    expect(leer(p.w.get('.resultado-de-deshacer'))).toContain(
+      'Deshiciste la pérdida de 2 unid. de Lejía 1 L',
+    )
   })
 
   it('RN-OP-15: sin motivo pide "Elige qué pasó con el producto" junto a los motivos', async () => {
@@ -151,6 +154,13 @@ describe('Contar stock (HU-OP-05, RN-OP-16)', () => {
       'Lejía 1 L: ahora hay 8 unid. (2 unid. menos)',
     )
     expect(p.w.find('.aviso-deshacer').exists()).toBe(true)
+
+    await p.w.get('.aviso-deshacer .deshacer').trigger('click')
+    await esperarDatos(app)
+    expect(await stock(app, lejia)).toBe('10')
+    expect(leer(p.w.get('.resultado-de-deshacer'))).toContain(
+      'Deshiciste el conteo de Lejía 1 L. El stock volvió a 10 unid.',
+    )
   })
 
   it('RN-OP-16: si coincide no registra nada y dice "El stock ya estaba correcto" (sin Deshacer)', async () => {

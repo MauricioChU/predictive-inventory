@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import { Check, Package } from 'lucide-vue-next'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import { formatearCantidad, SIMBOLO_DE_UNIDAD } from '@/shared/domain/formato'
-import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import CampoNumero from '@/shared/ui/componentes/CampoNumero.vue'
 import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
@@ -12,7 +11,7 @@ import EstadoVacio from '@/shared/ui/componentes/EstadoVacio.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import PantallaExito from '@/shared/ui/componentes/PantallaExito.vue'
 import ResumenDelProducto from './ResumenDelProducto.vue'
-import { enfocarTitulo, vibrar } from './foco-y-respuesta'
+import { vibrar } from './foco-y-respuesta'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
 import { usarDeshacer } from './usar-deshacer'
 import { usarDestinos } from './usar-destinos'
@@ -35,7 +34,6 @@ const errorCantidad = ref<string>()
 const errorGeneral = ref<ErrorParaMostrar | null>(null)
 const registrando = ref(false)
 const exito = ref<{ titulo: string; detalle: string } | null>(null)
-const deshecho = ref(false)
 
 const porUnidades = computed(() => producto.value?.unidad === 'UNIDAD')
 const etiqueta = computed(() =>
@@ -67,15 +65,15 @@ async function guardar(): Promise<void> {
         detalle: `${actual.nombre}: ahora hay ${ahora} (${cuanto})`,
       }
       vibrar()
+      const antes = formatearCantidad(actual.stock, actual.unidad)
       deshacer.ofrecer({
         mensaje: 'Stock corregido',
-        deshecho: 'Deshiciste el conteo',
-        alDeshacer: () => {
-          void recargar()
-          if (exito.value === null) return
-          exito.value = null
-          deshecho.value = true
-          void enfocarTitulo()
+        alDeshacer: ({ pantallaAbierta }) => {
+          if (pantallaAbierta) {
+            void recargar()
+            exito.value = null
+          }
+          return `Deshiciste el conteo de ${actual.nombre}. El stock volvió a ${antes}`
         },
       })
     }
@@ -129,14 +127,6 @@ function volverAlProducto(): void {
         @accion="router.push(destino('productos'))"
       />
       <form v-else-if="producto" class="formulario" novalidate @submit.prevent="guardar">
-        <AvisoEnPagina
-          v-if="deshecho"
-          tono="info"
-          titulo="Deshiciste el conteo"
-          texto="El stock volvió a como estaba."
-          texto-cerrar="Cerrar"
-          @cerrar="deshecho = false"
-        />
         <ResumenDelProducto :producto="producto" :foto="foto" tamano="grande" />
         <CampoNumero
           v-model="contado"
@@ -149,11 +139,6 @@ function volverAlProducto(): void {
           v-if="errorGeneral"
           :mensaje="errorGeneral.mensaje"
           :ayuda="errorGeneral.ayuda"
-        />
-        <MensajeDeError
-          v-if="deshacer.error.value"
-          :mensaje="deshacer.error.value.mensaje"
-          :ayuda="deshacer.error.value.ayuda"
         />
         <BotonPrincipal
           texto="Guardar conteo"

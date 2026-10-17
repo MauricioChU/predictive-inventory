@@ -287,9 +287,73 @@ describe('Vender (HU-OP-01, HU-OP-02)', () => {
     const [venta] = await app.inventario.historial({ tipo: 'VENTA' })
     expect(venta?.anulada).toBe(true)
     expect(p.w.get('h1').text()).toBe('Vender')
-    expect(p.w.text()).toContain('Deshiciste la venta')
+    expect(leer(p.w.get('.resultado-de-deshacer'))).toContain(
+      'Deshiciste la venta de S/ 7.00. Tus productos volvieron al carrito.',
+    )
     expect(lineas(p)).toHaveLength(1)
     expect((lineas(p)[0]!.get('.cantidad input').element as HTMLInputElement).value).toBe('2')
+  })
+
+  it('r1 #2 (RN-UX-11): Deshacer con otra venta en curso no la toca y dice qué se deshizo', async () => {
+    const { app, ids } = await tiendaDePrueba()
+    const p = await abrirVender(app)
+    await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+    await cambiarCantidad(p, 0, '2')
+    await boton(p.w, 'Cobrar').trigger('click')
+    await esperarDatos(app)
+    await boton(p.w, 'Confirmar venta').trigger('click')
+    await esperarDatos(app)
+    await boton(p.w, 'Nueva venta').trigger('click')
+    await esperarDatos(app)
+    await agregarBuscando(p, 'carbon', 'Carbón')
+
+    await p.w.get('.aviso-deshacer .deshacer').trigger('click')
+    await esperarDatos(app)
+    expect(await stock(app, ids.lejia)).toBe('10')
+    expect(lineas(p).map((l) => l.get('.nombre').text())).toEqual(['Carbón'])
+    expect(leer(p.w.get('.resultado-de-deshacer'))).toContain(
+      'Deshiciste la venta de S/ 7.00. Lo que estás cargando sigue aquí.',
+    )
+  })
+
+  it('r1 #2 (RN-UX-11): Deshacer después de irse a otra pantalla también se ve, y el carrito espera en Vender', async () => {
+    const { app, ids } = await tiendaDePrueba()
+    const p = await abrirVender(app)
+    await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+    await cambiarCantidad(p, 0, '2')
+    await boton(p.w, 'Cobrar').trigger('click')
+    await esperarDatos(app)
+    await boton(p.w, 'Confirmar venta').trigger('click')
+    await esperarDatos(app)
+    await p.ir('/historial')
+
+    await p.w.get('.aviso-deshacer .deshacer').trigger('click')
+    await esperarDatos(app)
+    expect(await stock(app, ids.lejia)).toBe('10')
+    expect(leer(p.w.get('.resultado-de-deshacer'))).toContain(
+      'Deshiciste la venta de S/ 7.00. Tus productos volvieron al carrito.',
+    )
+    await p.ir('/vender')
+    expect(lineas(p)).toHaveLength(1)
+    expect((lineas(p)[0]!.get('.cantidad input').element as HTMLInputElement).value).toBe('2')
+  })
+
+  it('r1 M9 (principio 2): el carrito no se pierde al tocar otra pantalla de la navegación', async () => {
+    const { app } = await tiendaDePrueba()
+    const p = await abrirVender(app)
+    await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+    await cambiarCantidad(p, 0, '3')
+    await p.ir('/recibir')
+    await p.ir('/vender')
+    expect(lineas(p)).toHaveLength(1)
+    expect((lineas(p)[0]!.get('.cantidad input').element as HTMLInputElement).value).toBe('3')
+  })
+
+  it('r1 M2: al elegir un resultado, el foco vuelve al buscador para buscar el siguiente', async () => {
+    const { app } = await tiendaDePrueba()
+    const p = await abrirVender(app)
+    await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+    expect(document.activeElement).toBe(p.w.get('.buscador-grande input').element)
   })
 
   it('RN-OP-05 / RN-UX-07: si al confirmar ya no alcanza el stock, el error del dominio se ve tal cual con su ayuda', async () => {
@@ -338,14 +402,41 @@ describe('Vender (HU-OP-01, HU-OP-02)', () => {
       expect(p.w.get('.pantalla-exito h1').text()).toBe('Venta registrada')
     })
 
-    it('sin hora pide "Elige la fecha y la hora" y no registra', async () => {
+    it('sin hora pide "Elige la fecha y la hora" debajo de la hora y no registra', async () => {
       const { app, p } = await cobrarLejia()
       await boton(p.w, 'Otro día').trigger('click')
       await p.w.get('input[type="date"]').setValue('2026-10-14')
       await boton(p.w, 'Confirmar venta').trigger('click')
       await esperarDatos(app)
-      expect(p.w.text()).toContain('Elige la fecha y la hora')
+      const campoHora = p.w
+        .findAll('.campo-texto')
+        .find((c) => c.find('input[type="time"]').exists())
+      expect(campoHora?.get('.error').text()).toBe('Elige la fecha y la hora')
       expect(await app.inventario.historial({ tipo: 'VENTA' })).toEqual([])
+    })
+
+    it('r1 M6: el día solo deja elegir de hace 7 días a hoy (hora de la tienda)', async () => {
+      const { p } = await cobrarLejia()
+      await boton(p.w, 'Otro día').trigger('click')
+      const dia = p.w.get('input[type="date"]')
+      expect(dia.attributes('min')).toBe('2026-10-08')
+      expect(dia.attributes('max')).toBe('2026-10-15')
+    })
+
+    it('r1 M3: Deshacer una venta de otro día devuelve el carrito con su fecha y su hora', async () => {
+      const { app, p } = await cobrarLejia()
+      await boton(p.w, 'Otro día').trigger('click')
+      await p.w.get('input[type="date"]').setValue('2026-10-14')
+      await p.w.get('input[type="time"]').setValue('18:30')
+      await boton(p.w, 'Confirmar venta').trigger('click')
+      await esperarDatos(app)
+      await p.w.get('.aviso-deshacer .deshacer').trigger('click')
+      await esperarDatos(app)
+      await boton(p.w, 'Cobrar').trigger('click')
+      await esperarDatos(app)
+      expect(p.w.get('[role="radio"][aria-checked="true"]').text()).toBe('Otro día')
+      expect((p.w.get('input[type="date"]').element as HTMLInputElement).value).toBe('2026-10-14')
+      expect((p.w.get('input[type="time"]').element as HTMLInputElement).value).toBe('18:30')
     })
 
     it('más de 7 días atrás se rechaza con el mensaje del dominio', async () => {

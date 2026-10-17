@@ -5,7 +5,6 @@ import type { ProductoVista } from '@/modules/catalogo'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import { formatearCantidad, formatearDinero } from '@/shared/domain/formato'
 import { useAnunciador } from '@/shared/ui/anunciador'
-import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import BarraDeTotal from '@/shared/ui/componentes/BarraDeTotal.vue'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
@@ -20,12 +19,12 @@ import BuscadorDeProductos from './BuscadorDeProductos.vue'
 import CuandoFue from './CuandoFue.vue'
 import DisposicionDeCarrito from './DisposicionDeCarrito.vue'
 import ListaDelCarrito from './ListaDelCarrito.vue'
-import { textoDePrecio, usarCarrito } from './carrito-de-pantalla'
-import { cuandoInicial, ERRORES_DE_FECHA, instanteDe } from './cuando'
+import { textoDePrecio } from './carrito-de-pantalla'
+import { useCarritos } from './carritos'
+import { errorDeFechaDelDominio, instanteDe, type ErrorDeFecha } from './cuando'
 import { enfocarPrimerError, enfocarTitulo, vibrar } from './foco-y-respuesta'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
 import { usarDeshacer } from './usar-deshacer'
-import { hoyEnLaTienda } from './hoy-en-la-tienda'
 
 /**
  * Vender (HU-OP-01, HU-OP-02; 06-experiencia-de-uso): buscar o tocar un más vendido → carrito
@@ -36,7 +35,9 @@ type Paso = 'carrito' | 'cobro' | 'exito'
 
 const aplicacion = useAplicacion()
 const anunciador = useAnunciador()
-const carrito = usarCarrito('venta')
+// r1 M9: el carrito (con su fecha) vive en un store: tocar otra pantalla no lo borra.
+const carrito = useCarritos().venta
+const cuando = carrito.cuando
 const deshacer = usarDeshacer()
 
 const idResumen = useId()
@@ -45,10 +46,7 @@ const pagado = ref('')
 const registrando = ref(false)
 const error = ref<ErrorParaMostrar | null>(null)
 const detalleDeExito = ref('')
-const deshecha = ref(false)
-/** RN-OP-09 / HU-OP-07: la venta es de ahora o de otro día (hasta 7 días atrás). */
-const cuando = ref(cuandoInicial(hoyEnLaTienda()))
-const errorFecha = ref<string>()
+const errorFecha = ref<ErrorDeFecha>()
 
 const textoTotal = computed(() => formatearDinero(carrito.total.value))
 /** RN-OP-13: "Vuelto S/ 5.37" / "Faltan S/ 4.63"; sin monto escrito se puede confirmar igual. */
@@ -59,7 +57,6 @@ const tonoDelVuelto = computed(() => {
 })
 
 function agregar(producto: ProductoVista): void {
-  deshecha.value = false
   carrito.agregar(producto)
   anunciador.anunciar(`Agregaste ${producto.nombre}. Total ${textoTotal.value}`)
 }
@@ -106,10 +103,8 @@ async function confirmar(): Promise<void> {
   } catch (causa) {
     const mostrado = errorParaMostrar(causa, 'venta')
     registrando.value = false
-    if (mostrado.codigo && ERRORES_DE_FECHA.has(mostrado.codigo)) {
-      errorFecha.value = mostrado.mensaje
-      return
-    }
+    errorFecha.value = errorDeFechaDelDominio(mostrado.codigo, mostrado.mensaje)
+    if (errorFecha.value) return
     error.value = mostrado
     if (error.value.codigo === 'STOCK_INSUFICIENTE') {
       await actualizarStock()
@@ -119,32 +114,35 @@ async function confirmar(): Promise<void> {
   }
   registrando.value = false
   const copia = carrito.copia()
+  const totalVendido = textoTotal.value
   const cambio = vuelto.value.vuelto
   detalleDeExito.value = cambio
-    ? `Total ${textoTotal.value} · Vuelto ${formatearDinero(cambio)}`
-    : `Total ${textoTotal.value}`
+    ? `Total ${totalVendido} · Vuelto ${formatearDinero(cambio)}`
+    : `Total ${totalVendido}`
   carrito.vaciar()
   pagado.value = ''
-  cuando.value = cuandoInicial(hoyEnLaTienda())
   paso.value = 'exito'
   vibrar()
   deshacer.ofrecer({
     mensaje: 'Venta registrada',
-    deshecho: 'Deshiciste la venta',
-    alDeshacer: () => {
-      // Lo más común es haberse equivocado en algo: el carrito vuelve para corregirlo. Si ya
-      // se empezó otra venta, no se pisa lo que se está cargando.
-      if (!carrito.vacio.value) return
+    alDeshacer: ({ pantallaAbierta }) => {
+      const deshecha = `Deshiciste la venta de ${totalVendido}`
+      // r1 #2: si ya se está cargando otra venta, no se toca; lo dice el resultado.
+      if (!carrito.vacio.value) {
+        return pantallaAbierta
+          ? `${deshecha}. Lo que estás cargando sigue aquí.`
+          : `${deshecha}. Lo que estabas cargando sigue en Vender.`
+      }
+      // Lo más común es haberse equivocado en algo: el carrito vuelve (con su fecha, r1 M3)
+      // para corregirlo, aunque la persona ya esté en otra pantalla.
       carrito.restaurar(copia)
-      deshecha.value = true
-      paso.value = 'carrito'
-      void enfocarTitulo()
+      if (pantallaAbierta) paso.value = 'carrito'
+      return `${deshecha}. Tus productos volvieron al carrito.`
     },
   })
 }
 
 async function nuevaVenta(): Promise<void> {
-  deshecha.value = false
   paso.value = 'carrito'
   await enfocarTitulo()
 }
@@ -212,19 +210,6 @@ const resumenDelCobro = computed(() =>
     <template v-else>
       <EncabezadoPagina titulo="Vender" />
       <div class="avisos">
-        <AvisoEnPagina
-          v-if="deshecha"
-          tono="info"
-          titulo="Deshiciste la venta"
-          texto="Tus productos siguen aquí por si quieres corregir algo."
-          texto-cerrar="Cerrar"
-          @cerrar="deshecha = false"
-        />
-        <MensajeDeError
-          v-if="deshacer.error.value"
-          :mensaje="deshacer.error.value.mensaje"
-          :ayuda="deshacer.error.value.ayuda"
-        />
         <MensajeDeError v-if="error" :mensaje="error.mensaje" :ayuda="error.ayuda" />
       </div>
       <DisposicionDeCarrito titulo-carrito="En esta venta">

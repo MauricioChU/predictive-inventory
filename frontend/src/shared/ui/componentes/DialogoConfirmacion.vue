@@ -16,10 +16,16 @@ const props = withDefaults(
      * defecto (RN-OP-14: "¿Actualizar el precio de compra…?", por defecto sí).
      */
     enfocar?: 'cancelar' | 'confirmar'
+    /**
+     * Qué hace el cierre nativo (Escape, o "atrás" en Android). Por defecto es Cancelar. Con
+     * "cerrar" (plan 12, r1 M1) emite `cerrar`: se cierra SIN responder, para cuando las dos
+     * opciones hacen algo (p. ej. las dos respuestas de RN-OP-14 registran la llegada).
+     */
+    cierreNativo?: 'cancelar' | 'cerrar'
   }>(),
-  { textoCancelar: 'Cancelar', peligro: false, enfocar: 'cancelar' },
+  { textoCancelar: 'Cancelar', peligro: false, enfocar: 'cancelar', cierreNativo: 'cancelar' },
 )
-const emit = defineEmits<{ confirmar: []; cancelar: [] }>()
+const emit = defineEmits<{ confirmar: []; cancelar: []; cerrar: [] }>()
 
 const idTitulo = useId()
 const dialogo = ref<HTMLDialogElement>()
@@ -42,7 +48,8 @@ watch(
 
 function alCancelarNativo(evento: Event) {
   evento.preventDefault()
-  emit('cancelar')
+  if (props.cierreNativo === 'cerrar') emit('cerrar')
+  else emit('cancelar')
 }
 </script>
 

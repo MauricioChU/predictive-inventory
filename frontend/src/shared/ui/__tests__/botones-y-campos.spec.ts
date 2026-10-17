@@ -104,3 +104,25 @@ describe('CampoNumero (RN-UX-06)', () => {
     expect(w.get('[aria-label="Quitar uno"]').attributes('disabled')).toBeDefined()
   })
 })
+
+describe('CampoTexto: límites de fecha (plan 12, r1 M6)', () => {
+  it('pasa min y max al campo (p. ej. de hace 7 días a hoy en un día)', () => {
+    const w = mount(CampoTexto, {
+      props: {
+        etiqueta: 'Día',
+        modelValue: '',
+        tipo: 'date',
+        min: '2026-10-08',
+        max: '2026-10-15',
+      },
+    })
+    expect(w.get('input').attributes('min')).toBe('2026-10-08')
+    expect(w.get('input').attributes('max')).toBe('2026-10-15')
+  })
+
+  it('sin límites no agrega min ni max', () => {
+    const w = mount(CampoTexto, { props: { etiqueta: 'Nombre', modelValue: '' } })
+    expect(w.get('input').attributes('min')).toBeUndefined()
+    expect(w.get('input').attributes('max')).toBeUndefined()
+  })
+})

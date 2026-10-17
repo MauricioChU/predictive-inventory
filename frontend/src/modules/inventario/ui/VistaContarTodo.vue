@@ -106,14 +106,22 @@ function siguiente(): Promise<void> {
     const actual = producto.value
     if (!actual) return
     const texto = contado.value
-    const nuevo = await aplicacion.inventario.responderConteo(texto)
-    // RN-OP-16 / RN-OP-18: si cambió el stock se registró un AJUSTE, que se puede deshacer.
-    const contada = leerContado(texto, actual.unidad)
-    const ahora = formatearCantidad(contada, actual.unidad)
-    if (!contada.igualA(actual.stock)) {
+    const { operacionId, ...nuevo } = await aplicacion.inventario.responderConteo(texto)
+    // RN-OP-16 / RN-OP-18 (r1 #1, M4): solo si el caso de uso registró un AJUSTE se ofrece
+    // Deshacer; deshacerlo lo anula y el producto vuelve a "Te faltó contar".
+    if (operacionId) {
+      const ahora = formatearCantidad(leerContado(texto, actual.unidad), actual.unidad)
+      let trasDeshacer: EstadoDelConteo | null = null
       deshacer.ofrecer({
         mensaje: `${actual.nombre}: ahora hay ${ahora}`,
-        deshecho: `Deshiciste el conteo de ${actual.nombre}`,
+        ejecutar: async () => {
+          trasDeshacer = await aplicacion.inventario.deshacerRespuestaDeConteo(operacionId)
+        },
+        alDeshacer: ({ pantallaAbierta }) => {
+          // El resumen y "Te faltó contar" cambian; el producto actual y lo escrito, no.
+          if (pantallaAbierta && trasDeshacer) estado.value = trasDeshacer
+          return `Deshiciste el conteo de ${actual.nombre}. Te faltó contarlo.`
+        },
       })
     } else {
       anunciador.anunciar(`${actual.nombre}: estaba correcto`)
@@ -231,11 +239,6 @@ onMounted(async () => {
           :etiqueta="etiqueta"
           :decimales="producto.unidad !== 'UNIDAD'"
           :error="errorCantidad"
-        />
-        <MensajeDeError
-          v-if="deshacer.error.value"
-          :mensaje="deshacer.error.value.mensaje"
-          :ayuda="deshacer.error.value.ayuda"
         />
         <BotonPrincipal
           texto="Siguiente"
