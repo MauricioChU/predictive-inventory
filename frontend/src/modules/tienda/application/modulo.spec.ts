@@ -4,6 +4,7 @@ import { UnidadDeTrabajoEnMemoria } from '../../../shared/infrastructure/memoria
 import { BusEnMemoria } from '../../../shared/domain/eventos'
 import { IdsSecuenciales } from '../../../shared/domain/ids'
 import { CONFIGURACION_INICIAL } from '../../../shared/contratos/configuracion'
+import { UnidadDeTrabajoEspia } from '../../../shared/application/__pruebas__/unidad-de-trabajo-espia'
 import { RepositorioDeConfiguracionEnMemoria } from '../infrastructure/memoria/repositorio'
 import { crearModuloTienda, type ModuloTienda } from './modulo'
 import type { DependenciasDeTienda } from './puertos'
@@ -121,6 +122,39 @@ describe('ModuloTienda', () => {
     ])
     expect(a.dispositivoId).toBe(b.dispositivoId)
     expect((await modulo.consultable.estadoDelSistema()).dispositivoId).toBe(a.dispositivoId)
+  })
+
+  it('RN-SIS-09: estadoDelSistema ya creado se lee en una lectura, sin abrir una escritura', async () => {
+    const { deps } = crearModulo()
+    await crearModuloTienda(deps).consultable.estadoDelSistema()
+    const espia = new UnidadDeTrabajoEspia(deps.uow)
+    const repositorio = espia.vigilar('repositorio', deps.repositorio)
+    const estado = await crearModuloTienda({
+      ...deps,
+      uow: espia,
+      repositorio,
+    }).consultable.estadoDelSistema()
+    expect(estado.dispositivoId).toBe('dispositivo-1')
+    expect(espia.transacciones()).toEqual({ lecturas: 1, escrituras: 0 })
+    expect(espia.llamadasSueltas).toEqual([])
+  })
+
+  it('RN-SIS-09: la primera vez, estadoDelSistema lee y, como falta, lo crea en una escritura aparte', async () => {
+    const { deps } = crearModulo()
+    const espia = new UnidadDeTrabajoEspia(deps.uow)
+    const repositorio = espia.vigilar('repositorio', deps.repositorio)
+    const m = crearModuloTienda({ ...deps, uow: espia, repositorio })
+    expect((await m.consultable.estadoDelSistema()).dispositivoId).toBe('dispositivo-1')
+    expect(espia.transacciones()).toEqual({ lecturas: 1, escrituras: 1 })
+    expect(espia.llamadasSueltas).toEqual([])
+    expect((await m.consultable.estadoDelSistema()).dispositivoId).toBe('dispositivo-1')
+  })
+
+  it('RN-SIS-09: dentro de una lectura que ya encuentra el estado, estadoDelSistema no escribe', async () => {
+    const { modulo: m, deps } = crearModulo()
+    await m.consultable.estadoDelSistema()
+    const estado = await deps.uow.leer(() => m.consultable.estadoDelSistema())
+    expect(estado.dispositivoId).toBe('dispositivo-1')
   })
 
   it('estadoDelSistema concurrente con una actualización termina en CONCEDIDO', async () => {

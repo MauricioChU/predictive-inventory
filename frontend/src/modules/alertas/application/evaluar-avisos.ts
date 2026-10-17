@@ -14,11 +14,16 @@ import type { Notificacion } from './puertos'
  * unidad de trabajo MÁS EXTERNA; si esa falla, no se muestra nada (y el registro tampoco quedó).
  * Devuelve lo que de verdad se notificó; dentro de otra unidad de trabajo todavía no salió nada
  * al volver, así que devuelve `[]` y las notificaciones salen al confirmar la externa.
+ *
+ * RN-SIS-09: `alLeer` recibe las situaciones apenas se leyeron, para que otros (el resumen de
+ * atención del botón Control) usen el MISMO cálculo en vez de volver a leerlas.
  */
 export async function evaluarAvisos(
   d: Pick<DependenciasDeAlertas, 'avisos' | 'notificador' | 'uow' | 'analisis' | 'tienda'>,
+  alLeer?: (situaciones: readonly SituacionDeProducto[]) => void,
 ): Promise<Notificacion[]> {
   const situaciones = await d.analisis().situaciones()
+  alLeer?.(situaciones)
   const idsActivos = new Set(situaciones.map((s) => s.productoId))
   const mostradas: Notificacion[] = []
 

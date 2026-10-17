@@ -20,6 +20,11 @@ export interface RepositorioDeResumenes {
   deProductoEntre(productoId: string, desde: Dia, hasta: Dia): Promise<ResumenDiarioRegistro[]>
   /** Día del primer movimiento del producto; ignora las filas sin movimiento (`esFilaSinMovimiento`). */
   primerDiaDe(productoId: string): Promise<Dia | null>
+  /**
+   * RN-SIS-09: `primerDiaDe` de TODOS los productos, en una sola consulta (misma regla). Los
+   * productos sin primer día (sin filas, o solo con filas sin movimiento) no aparecen.
+   */
+  primerosDias(): Promise<Map<string, Dia>>
   /** Día de la primera operación de la tienda. */
   primerDiaDeLaTienda(): Promise<Dia | null>
   /** Último día con alguna línea vendida del producto (RN-AN-11, cuando cae fuera de la ventana). */
