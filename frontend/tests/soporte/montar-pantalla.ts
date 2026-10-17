@@ -71,6 +71,9 @@ export async function montarPantalla(
   app: AplicacionDePrueba,
   ruta: string,
 ): Promise<PantallaMontada> {
+  // Cualquier pantalla puede llevar a otra con DialogoConfirmacion (p. ej. Primera vez → el
+  // formulario de Productos): <dialog> simulado siempre, no solo en las specs que lo piden.
+  simularDialogos()
   const pinia = createPinia()
   setActivePinia(pinia)
   const inicio = await abrirApp(app, { aplicarTamanoDeLetra: () => undefined })
