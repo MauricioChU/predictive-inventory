@@ -1,7 +1,8 @@
 // Plan 16 (`feat/e2e-calidad`): lo que la persona hace con los dedos, paso a paso, para los
 // recorridos completos de e2e/recorridos/. Nada pasa por `window.__aplicacion`: cada acción es
 // un toque o un texto escrito en la pantalla real.
-import { expect, type Page } from '@playwright/test'
+import process from 'node:process'
+import { expect, type Locator, type Page, type Worker } from '@playwright/test'
 import { FOTO_PNG } from './productos'
 import { enLima } from './historia-de-demostracion'
 import { abrir } from './navegacion'
@@ -11,6 +12,20 @@ export const h1 = (page: Page) => page.getByRole('heading', { level: 1 })
 /** U+00A0: las cifras van con espacios que no cortan ("12 unid."). Se comparan como se leen. */
 export function comoSeLee(texto: string): RegExp {
   return new RegExp(texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '[\\s\\u00a0]'))
+}
+
+/** El texto entero, tal como se lee (espacios normales o duros, saltos de línea). */
+export function exactoComoSeLee(texto: string): RegExp {
+  const partes = texto
+    .trim()
+    .split(/\s+/)
+    .map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  return new RegExp(`^\\s*${partes.join('\\s+')}\\s*$`)
+}
+
+/** Espera (web-first) que el elemento diga exactamente `texto`, como se lee en pantalla. */
+export async function esperarTexto(locator: Locator, texto: string): Promise<void> {
+  await expect(locator).toHaveText(exactoComoSeLee(texto), { useInnerText: true })
 }
 
 /** El día de hoy en la tienda (America/Lima, UTC−5), "2026-10-16". */
@@ -127,14 +142,16 @@ export interface LineaDeVenta {
 
 /**
  * Una venta entera desde Vender: agrega las líneas, cambia la cantidad con "+", Cobrar, paga con
- * un billete (o "Exacto") y confirma. Termina en "Venta registrada" y devuelve el texto del vuelto.
+ * un billete (o "Exacto") y confirma. Con `vueltoEsperado`, antes de confirmar verifica el
+ * mensaje del vuelto ("Vuelto S/ 3.00"). Termina en "Venta registrada".
  */
 export async function venderPorPantalla(
   page: Page,
   lineas: readonly LineaDeVenta[],
   billete: 'S/ 10' | 'S/ 20' | 'S/ 50' | 'S/ 100' | 'Exacto',
   totalEsperado: string,
-): Promise<string> {
+  vueltoEsperado?: string,
+): Promise<void> {
   await expect(h1(page)).toHaveText('Vender')
   for (const linea of lineas) {
     await agregarAlCarrito(page, linea.buscado, linea.nombre)
@@ -150,13 +167,11 @@ export async function venderPorPantalla(
   await expect(page.locator('.barra-de-total .total')).toHaveText(comoSeLee(totalEsperado))
   await page.getByRole('button', { name: 'Cobrar' }).click()
   await page.getByRole('button', { name: billete, exact: true }).click()
-  const mensaje = (await page.locator('.selector-de-billetes .mensaje').innerText()).replace(
-    /\s+/g,
-    ' ',
-  )
+  if (vueltoEsperado !== undefined) {
+    await esperarTexto(page.locator('.selector-de-billetes .mensaje'), vueltoEsperado)
+  }
   await page.getByRole('button', { name: 'Confirmar venta' }).click()
   await expect(h1(page)).toHaveText('Venta registrada')
-  return mensaje
 }
 
 /** El ✓ de una venta: "Nueva venta" vuelve a Vender vacío. */
@@ -174,20 +189,40 @@ export async function abrirProducto(page: Page, buscado: string, nombre: string)
   await expect(h1(page)).toHaveText(nombre)
 }
 
-/** El texto de un elemento como se lee: espacios que no cortan como espacios, sin dobles. */
-export async function textoVisible(page: Page, selector: string): Promise<string> {
-  const texto = await page.locator(selector).innerText()
-  return texto.replaceAll('\u00a0', ' ').replace(/\s+/g, ' ').trim()
+/**
+ * El Service Worker de la app (build de producción). Si Playwright todavía no lo vio, se espera a
+ * que la página tenga uno listo y a que aparezca; si no hay, devuelve undefined.
+ */
+async function trabajadorDeLaApp(page: Page): Promise<Worker | undefined> {
+  const contexto = page.context()
+  const [visto] = contexto.serviceWorkers()
+  if (visto) return visto
+  const aparece = contexto.waitForEvent('serviceworker', { timeout: 10_000 }).catch(() => undefined)
+  const hayUno = await page.evaluate(async () => {
+    if (!navigator.serviceWorker) return false
+    const registro = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<undefined>((listo) => setTimeout(() => listo(undefined), 5_000)),
+    ])
+    return registro !== undefined
+  })
+  const [yaEsta] = contexto.serviceWorkers()
+  return yaEsta ?? (hayUno ? await aparece : undefined)
 }
 
 /**
- * Toca una notificación con la app abierta (spec 03 · RN-AL-07). Con el Service Worker del build
- * (preview), corre su manejador real de `notificationclick` (`abrirPantalla` de
- * public/sw-notificaciones.js: enfoca la ventana y le manda la pantalla). En desarrollo no hay
- * Service Worker: se le manda a la ventana el mismo mensaje que mandaría él.
+ * Toca una notificación con la app abierta (spec 03 · RN-AL-07).
+ * - Build de producción (CI, preview): corre `abrirPantalla` de public/sw-notificaciones.js
+ *   dentro del Service Worker de verdad (lo que hace su manejador de `notificationclick`, sin el
+ *   evento en sí): busca la ventana de la app, la "enfoca" (eso se simula) y le manda la
+ *   pantalla. Si no hay Service Worker, la prueba FALLA (nunca cae al mensaje simulado).
+ * - Desarrollo (sin Service Worker): se le manda a la ventana el mismo mensaje que mandaría él.
  */
 export async function tocarNotificacion(page: Page, url: string): Promise<void> {
-  const [trabajador] = page.context().serviceWorkers()
+  const trabajador = process.env.CI ? await trabajadorDeLaApp(page) : page.context().serviceWorkers()[0]
+  if (process.env.CI && !trabajador) {
+    throw new Error('Build de producción sin Service Worker: no se puede tocar la notificación')
+  }
   if (trabajador) {
     await trabajador.evaluate(async (datos) => {
       const alcance = globalThis as unknown as {
@@ -221,4 +256,14 @@ export async function tocarNotificacion(page: Page, url: string): Promise<void> 
 /** La dirección que abre una notificación con la app cerrada (`clients.openWindow`). */
 export function direccionDeLaNotificacion(url: string): string {
   return `./${url.replace(/^\/+/, '')}`
+}
+
+/**
+ * El texto de un elemento como se lee (espacios duros como espacios, sin dobles). Solo para
+ * guardar lo que se ve y compararlo después (p. ej. antes y después de restaurar una copia);
+ * para verificar un texto, `esperarTexto` (web-first).
+ */
+export async function textoVisible(page: Page, selector: string): Promise<string> {
+  const texto = await page.locator(selector).innerText()
+  return texto.replace(/\s+/g, ' ').trim()
 }

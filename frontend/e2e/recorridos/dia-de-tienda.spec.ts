@@ -14,12 +14,13 @@ import {
   comoSeLee,
   crearProductoPorPantalla,
   empezarElDia,
+  esperarTexto,
+  exactoComoSeLee,
   h1,
   hacerPrimeraVez,
   irA,
   lineaDelCarrito,
   nuevaVenta,
-  textoVisible,
   venderPorPantalla,
 } from '../utilidades/recorridos'
 import { anotarTextosVistos, esperarSinPalabrasQueEvitar } from '../utilidades/textos'
@@ -27,14 +28,27 @@ import { anotarTextosVistos, esperarSinPalabrasQueEvitar } from '../utilidades/t
 const LEJIA = 'Lejía Tradicional 1 L'
 const JABON = 'Jabón Bolívar'
 
-async function cifrasDeInicio(page: Page): Promise<string> {
+/** Inicio dice exactamente estas cifras de hoy (RN-AN-03). */
+async function esperarCifrasDeInicio(page: Page, cifras: string): Promise<void> {
   await irA(page, 'Inicio')
-  return textoVisible(page, '#contenido .tarjeta-de-cifra')
+  await esperarTexto(page.locator('#contenido .tarjeta-de-cifra'), cifras)
 }
 
-async function stockEnElDetalle(page: Page, buscado: string, nombre: string): Promise<string> {
+/** El resumen de Control (Hoy) dice exactamente estas cifras. */
+async function esperarCifrasDeControl(page: Page, cifras: string): Promise<void> {
+  await irA(page, 'Control')
+  await esperarTexto(page.locator('#contenido section .tarjeta-de-cifra'), cifras)
+}
+
+/** El detalle del producto dice cuánto hay ("Tienes 7 unid."). */
+async function esperarStockEnElDetalle(
+  page: Page,
+  buscado: string,
+  nombre: string,
+  stock: string,
+): Promise<void> {
   await abrirProducto(page, buscado, nombre)
-  return textoVisible(page, '#contenido')
+  await expect(page.locator('#contenido')).toContainText(comoSeLee(stock))
 }
 
 test.describe('Recorrido: un día de tienda', () => {
@@ -65,21 +79,24 @@ test.describe('Recorrido: un día de tienda', () => {
     await test.step('1–2. Dos ventas con vuelto', async () => {
       await irA(page, 'Inicio')
       await page.getByRole('button', { name: 'Vender' }).click()
-      expect(
-        await venderPorPantalla(page, [{ buscado: 'lejia', nombre: LEJIA, cantidad: 2 }], 'S/ 10', 'S/ 7.00'),
-      ).toBe('Vuelto S/ 3.00')
+      await venderPorPantalla(
+        page,
+        [{ buscado: 'lejia', nombre: LEJIA, cantidad: 2 }],
+        'S/ 10',
+        'S/ 7.00',
+        'Vuelto S/ 3.00',
+      )
       await nuevaVenta(page)
-      expect(
-        await venderPorPantalla(
-          page,
-          [
-            { buscado: 'jabon', nombre: JABON, cantidad: 3 },
-            { buscado: 'lejia', nombre: LEJIA, cantidad: 1 },
-          ],
-          'S/ 20',
-          'S/ 9.50',
-        ),
-      ).toBe('Vuelto S/ 10.50')
+      await venderPorPantalla(
+        page,
+        [
+          { buscado: 'jabon', nombre: JABON, cantidad: 3 },
+          { buscado: 'lejia', nombre: LEJIA, cantidad: 1 },
+        ],
+        'S/ 20',
+        'S/ 9.50',
+        'Vuelto S/ 10.50',
+      )
       await nuevaVenta(page)
     })
 
@@ -92,7 +109,7 @@ test.describe('Recorrido: un día de tienda', () => {
       // Vuelve al carrito para corregirla; aquí no se vende.
       await page.getByRole('button', { name: `Quitar ${LEJIA}` }).click()
       await expect(lineaDelCarrito(page, LEJIA)).toHaveCount(0)
-      expect(await cifrasDeInicio(page)).toBe('Hoy ganaste S/ 5.70 Vendiste S/ 16.50')
+      await esperarCifrasDeInicio(page, 'Hoy ganaste S/ 5.70 Vendiste S/ 16.50')
     })
 
     await test.step('4. Para comprar → Registrar llegada, con un precio nuevo (RN-AN-08, RN-OP-14)', async () => {
@@ -101,7 +118,7 @@ test.describe('Recorrido: un día de tienda', () => {
       await expect(h1(page)).toHaveText('Para comprar')
       const linea = page.locator('#contenido').getByRole('group', { name: JABON })
       await expect(linea.getByLabel(/^Cantidad/)).toHaveValue('5')
-      expect(await textoVisible(page, '#contenido .barra-de-total .total')).toBe('S/ 6.00')
+      await esperarTexto(page.locator('#contenido .barra-de-total .total'), 'S/ 6.00')
 
       await page.getByRole('button', { name: 'Registrar llegada' }).click()
       await expect(h1(page)).toHaveText('Llegó mercadería')
@@ -118,7 +135,7 @@ test.describe('Recorrido: un día de tienda', () => {
       )
       await dialogo.getByRole('button', { name: 'Sí, actualizar' }).click()
       await expect(h1(page)).toHaveText('Mercadería registrada')
-      expect(await stockEnElDetalle(page, 'jabon', JABON)).toContain('Tienes 8 unid.')
+      await esperarStockEnElDetalle(page, 'jabon', JABON, 'Tienes 8 unid.')
       await expect(page.locator('#contenido')).toContainText(comoSeLee('S/ 1.30'))
     })
 
@@ -144,20 +161,19 @@ test.describe('Recorrido: un día de tienda', () => {
     await test.step('7. Una venta con el costo nuevo; Inicio y Control cuadran (RN-AN-02/03)', async () => {
       await irA(page, 'Vender')
       await venderPorPantalla(page, [{ buscado: 'jabon', nombre: JABON, cantidad: 1 }], 'Exacto', 'S/ 2.00')
-      expect(await cifrasDeInicio(page)).toBe('Hoy ganaste S/ 4.00 Vendiste S/ 18.50')
+      await esperarCifrasDeInicio(page, 'Hoy ganaste S/ 4.00 Vendiste S/ 18.50')
 
-      await irA(page, 'Control')
+      await esperarCifrasDeControl(page, 'Hoy ganaste S/ 4.00 Vendiste S/ 18.50')
       const resumen = page.getByRole('region', { name: 'Resumen', exact: true })
-      expect(await textoVisible(page, '#contenido section .tarjeta-de-cifra')).toBe(
-        'Hoy ganaste S/ 4.00 Vendiste S/ 18.50',
+      await expect(resumen.locator('.fila-de-dato')).toHaveText(
+        [
+          'Ventas S/ 18.50',
+          'Costo de lo vendido S/ 12.10',
+          'Pérdidas (se dañó, se derramó o se venció) S/ 2.40',
+          'Diferencias de conteo -S/ 1.30',
+        ].map(exactoComoSeLee),
+        { useInnerText: true },
       )
-      const filas = await resumen.locator('.fila-de-dato').allInnerTexts()
-      expect(filas.map((f) => f.replace(/\s+/g, ' ').trim())).toEqual([
-        'Ventas S/ 18.50',
-        'Costo de lo vendido S/ 12.10',
-        'Pérdidas (se dañó, se derramó o se venció) S/ 2.40',
-        'Diferencias de conteo -S/ 1.30',
-      ])
       // Más vendidos: Lejía y Jabón en 2 ventas cada uno; Lejía vendió más en soles.
       const masVendidos = page.getByRole('region', { name: 'Más vendidos', exact: true })
       await expect(masVendidos.locator('ol').first().locator('li').first()).toContainText(LEJIA)
@@ -188,13 +204,10 @@ test.describe('Recorrido: un día de tienda', () => {
       await page.getByRole('button', { name: 'Sí, anular' }).click()
       await expect(h1(page)).toHaveText('Operación anulada')
 
-      expect(await stockEnElDetalle(page, 'lejia', LEJIA)).toContain('Tienes 7 unid.')
-      expect(await stockEnElDetalle(page, 'jabon', JABON)).toContain('Tienes 9 unid.')
-      expect(await cifrasDeInicio(page)).toBe('Hoy ganaste S/ 0.50 Vendiste S/ 9.00')
-      await irA(page, 'Control')
-      expect(await textoVisible(page, '#contenido section .tarjeta-de-cifra')).toBe(
-        'Hoy ganaste S/ 0.50 Vendiste S/ 9.00',
-      )
+      await esperarStockEnElDetalle(page, 'lejia', LEJIA, 'Tienes 7 unid.')
+      await esperarStockEnElDetalle(page, 'jabon', JABON, 'Tienes 9 unid.')
+      await esperarCifrasDeInicio(page, 'Hoy ganaste S/ 0.50 Vendiste S/ 9.00')
+      await esperarCifrasDeControl(page, 'Hoy ganaste S/ 0.50 Vendiste S/ 9.00')
     })
 
     // Plan 16, ítem 5: nada de lo que se vio en el día usa palabras que la guía manda evitar.

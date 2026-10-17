@@ -11,11 +11,10 @@ import {
   prepararTiendaEnUso,
 } from '../utilidades/pantallas-de-la-app'
 import {
-  comoSeLee,
   empezarElDia,
+  esperarTexto,
   h1,
   irA,
-  textoVisible,
   venderPorPantalla,
 } from '../utilidades/recorridos'
 import { anotarTextosVistos, esperarSinPalabrasQueEvitar } from '../utilidades/textos'
@@ -133,8 +132,9 @@ test.describe('Los textos de la spec, exactos', () => {
     await abrir(page, './control/necesito-comprar')
     await page.getByLabel('¿Qué producto quieres comprar?').fill('escoba')
     await page.getByRole('button', { name: /Escoba de paja/ }).click()
-    expect(await textoVisible(page, '.respuesta-grande')).toMatch(
-      comoSeLee('No compres: no se vende hace 53 días y tienes 5 unid.'),
+    await esperarTexto(
+      page.locator('.respuesta-grande'),
+      'No compres: no se vende hace 53 días y tienes 5 unid.',
     )
   })
 })

@@ -86,6 +86,8 @@ test.describe('Recorrido: guardar y restaurar una copia', () => {
       'S/ 13.00',
     )
     const antes = await loQueSeVe(page)
+    // Lo que se compara después es lo de verdad: 2 Lejía (gana 2.20) y 3 Jabón (gana 2.40).
+    expect(antes.inicio).toBe('Hoy ganaste S/ 4.60 Vendiste S/ 13.00')
     expect(antes.letra).toBe('MUY_GRANDE')
 
     // Guardar copia (Inicio → Ajustes → Guardar copia): sale del celular como archivo.

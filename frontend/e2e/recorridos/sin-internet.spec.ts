@@ -18,8 +18,21 @@ const HABLA_DE_LA_CONEXION =
   /conexi[oó]n|offline|network|fetch|en l[ií]nea|(no hay|necesitas|requiere|revisa tu|sin acceso a) (internet|la red|red)/i
 
 async function esperarSinErroresDeConexion(page: Page, pantalla: string): Promise<void> {
-  const texto = await page.locator('body').innerText()
-  expect(texto, `${pantalla}: nada habla de la conexión`).not.toMatch(HABLA_DE_LA_CONEXION)
+  await expect(page.locator('body'), `${pantalla}: nada habla de la conexión`).not.toContainText(
+    HABLA_DE_LA_CONEXION,
+    { useInnerText: true },
+  )
+}
+
+/**
+ * Anota los pedidos que fallan desde ahora (se llama al pasar a modo avión). Un pedido que el
+ * propio navegador cancela al cambiar de página (net::ERR_ABORTED) no es un fallo de conexión.
+ */
+function anotarPedidosFallidos(page: Page, fallidos: string[]): void {
+  page.on('requestfailed', (pedido) => {
+    const motivo = pedido.failure()?.errorText ?? ''
+    if (!motivo.includes('ERR_ABORTED')) fallidos.push(`${pedido.url()} (${motivo})`)
+  })
 }
 
 test.describe('RN-SIS-08 / RN-UX-14: en modo avión (build de producción con Service Worker)', () => {
@@ -32,7 +45,6 @@ test.describe('RN-SIS-08 / RN-UX-14: en modo avión (build de producción con Se
     test.setTimeout(60_000)
     const fallidos: string[] = []
     const errores: string[] = []
-    page.on('requestfailed', (pedido) => fallidos.push(pedido.url()))
     page.on('console', (m) => m.type() === 'error' && errores.push(m.text()))
     page.on('pageerror', (e) => errores.push(e.message))
 
@@ -56,6 +68,7 @@ test.describe('RN-SIS-08 / RN-UX-14: en modo avión (build de producción con Se
 
     // Modo avión: se cierra y se vuelve a abrir la app.
     await context.setOffline(true)
+    anotarPedidosFallidos(page, fallidos)
     await page.reload()
     await expect(h1(page)).toHaveText(/^Hola, Bodega Rosita/)
     await esperarSinErroresDeConexion(page, 'Inicio')
@@ -85,7 +98,7 @@ test.describe('RN-SIS-08 / RN-UX-14: en modo avión (build de producción con Se
 
     // Y abrirla de nuevo desde el ícono (otra ventana), todavía sin internet.
     const otra = await context.newPage()
-    otra.on('requestfailed', (pedido) => fallidos.push(pedido.url()))
+    anotarPedidosFallidos(otra, fallidos)
     await abrir(otra, './')
     await expect(h1(otra)).toHaveText(/^Hola, Bodega Rosita/)
     await expect(otra.locator('.tarjeta-de-cifra')).toContainText(comoSeLee('Vendiste S/ 10.50'))

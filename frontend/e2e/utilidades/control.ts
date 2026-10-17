@@ -28,6 +28,7 @@ export async function textoDe(locator: Locator): Promise<string> {
  */
 export async function palabrasPartidas(raiz: Locator): Promise<string[]> {
   return raiz.evaluate((elemento) => {
+    const ALFANUMERICO = /^[\p{L}\p{N}]$/u
     const partidas: string[] = []
     const textos = document.createTreeWalker(elemento, NodeFilter.SHOW_TEXT)
     for (let nodo = textos.nextNode(); nodo; nodo = textos.nextNode()) {
@@ -41,8 +42,9 @@ export async function palabrasPartidas(raiz: Locator): Promise<string[]> {
           rango.setStart(nodo, inicio)
           rango.setEnd(nodo, inicio + palabra.length)
           const lineas = new Set([...rango.getClientRects()].map((r) => Math.round(r.top)))
-          // Plan 16: cortar justo después de un guion ("respaldo-|bodega-rosita.json") es un
-          // corte permitido, no una palabra partida.
+          // Plan 16: cortar justo después de un guion ENTRE dos letras o cifras
+          // ("respaldo-|bodega-rosita.json") es un corte permitido, no una palabra partida.
+          // Un monto negativo ("-|S/ 1.30") sí queda partido.
           const texto = nodo
           const desde = inicio
           const arribaDe = (i: number) => {
@@ -53,7 +55,11 @@ export async function palabrasPartidas(raiz: Locator): Promise<string[]> {
           }
           const soloEnGuiones = () => {
             for (let i = 1; i < palabra.length; i += 1) {
-              if (arribaDe(i) !== arribaDe(i - 1) && palabra[i - 1] !== '-') return false
+              const enGuion =
+                palabra[i - 1] === '-' &&
+                ALFANUMERICO.test(palabra[i - 2] ?? '') &&
+                ALFANUMERICO.test(palabra[i] ?? '')
+              if (arribaDe(i) !== arribaDe(i - 1) && !enGuion) return false
             }
             return true
           }

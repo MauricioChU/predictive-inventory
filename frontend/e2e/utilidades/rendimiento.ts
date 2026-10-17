@@ -2,15 +2,11 @@
 // e2e/recorridos/rendimiento-interfaz.spec.ts). Opcionales, con MEDIR_RENDIMIENTO=1.
 import type { Page } from '@playwright/test'
 import { generarDatosMasivos } from '../../tests/soporte/datos-masivos'
+import { hoyEnLima } from './recorridos'
 
 export function mediana(valores: readonly number[]): number {
   const orden = [...valores].sort((a, b) => a - b)
   return orden[Math.floor(orden.length / 2)]!
-}
-
-/** El "hoy" de la tienda (America/Lima, UTC−5) para que la historia termine ayer. */
-function hoyEnLima(): string {
-  return new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString().slice(0, 10)
 }
 
 /**
@@ -19,6 +15,7 @@ function hoyEnLima(): string {
  * se venden por unidad.
  */
 export function copiaConHistoria(productosParaVender: number): { texto: string; productos: string[] } {
+  // La historia termina ayer (el "hoy" de la tienda, America/Lima).
   const datos = generarDatosMasivos({ hoy: hoyEnLima() })
   const stockPorProducto: Record<string, number> = {}
   for (const p of datos.productos) stockPorProducto[p.id] = 0
