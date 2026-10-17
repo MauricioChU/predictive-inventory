@@ -1,16 +1,20 @@
 import { expect, test } from '@playwright/test'
 import { esperarSinDesplazamientoHorizontal, esperarSinViolacionesGraves, usarLetra } from './utilidades/calidad'
 import { abrir } from './utilidades/navegacion'
+import { abrirTiendaLista } from './utilidades/tienda'
 
 const DESTINOS = ['Inicio', 'Vender', 'Recibir', 'Productos', 'Control']
 const ANCHOS = [320, 360, 768, 1280]
+/** Plan 14: Inicio saluda con el nombre de la tienda (el resto, por ahora, se titula como su destino). */
+const TITULOS: Partial<Record<string, RegExp>> = { Inicio: /^Hola, Bodega Rosita/ }
 
 test.describe('RN-UX-12: navegación', () => {
   test('los cinco destinos están visibles y funcionan', async ({ page }) => {
-    await abrir(page, './')
+    // Plan 14: con la primera vez sin hacer, Inicio es la bienvenida.
+    await abrirTiendaLista(page, './')
     for (const destino of DESTINOS) {
       await page.getByRole('link', { name: destino }).click()
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(destino)
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(TITULOS[destino] ?? destino)
     }
   })
 })

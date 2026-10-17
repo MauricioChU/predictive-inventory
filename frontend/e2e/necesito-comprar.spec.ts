@@ -42,9 +42,8 @@ async function abrirInicio(page: Page): Promise<void> {
   await expect(page.locator('[data-app-montada] #contenido h1')).toBeVisible()
 }
 
-/** Desde Inicio: Control → ¿Necesito comprar? → buscar → tocar el producto. */
+/** Desde Inicio: su botón ¿Necesito comprar? (plan 14) → buscar → tocar el producto. */
 async function preguntarDesdeInicio(page: Page, buscado: string, producto: string): Promise<void> {
-  await page.getByRole('link', { name: 'Control' }).click()
   await page.getByRole('button', { name: '¿Necesito comprar?' }).click()
   await page.getByLabel('¿Qué producto quieres comprar?').fill(buscado)
   await page.getByRole('button', { name: new RegExp(producto) }).click()
