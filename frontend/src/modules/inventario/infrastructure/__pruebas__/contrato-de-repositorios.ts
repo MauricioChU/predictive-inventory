@@ -161,6 +161,107 @@ export function probarOrdenDeRegistro(crear: () => RepositorioDeOperaciones): vo
   })
 }
 
+/** Los ids de una página, ordenados (el puerto no promete el orden dentro de la página). */
+const idsDe = (registros: readonly OperacionRegistro[]) => registros.map((r) => r.id).sort()
+
+/**
+ * Plan 17: el Historial pide el libro de a páginas (lo más reciente primero), sin leerlo todo.
+ * Los instantes son los que escribe la app (ISO UTC, `toISOString`).
+ */
+export function probarPaginasDelHistorial(crear: () => RepositorioDeOperaciones): void {
+  const a = (hora: string) => `2026-10-15T${hora}:00.000Z`
+
+  it('recientes: lo más reciente primero, de a `cuantas`, con el cursor para seguir', async () => {
+    const repositorio = crear()
+    // Registradas en otro orden: lo que manda es cuándo ocurrieron.
+    for (const [id, hora] of [
+      ['op-3', '13:00'],
+      ['op-1', '11:00'],
+      ['op-5', '15:00'],
+      ['op-2', '12:00'],
+      ['op-4', '14:00'],
+    ] as const) {
+      await repositorio.agregar(registro(id, { ocurridaEn: a(hora) }))
+    }
+    const primera = await repositorio.recientes({ cuantas: 2 })
+    expect(idsDe(primera.registros)).toEqual(['op-4', 'op-5'])
+    expect(primera.siguiente).toBe(a('14:00'))
+    const segunda = await repositorio.recientes({ cuantas: 2, antesDe: primera.siguiente! })
+    expect(idsDe(segunda.registros)).toEqual(['op-2', 'op-3'])
+    const tercera = await repositorio.recientes({ cuantas: 2, antesDe: segunda.siguiente! })
+    expect(idsDe(tercera.registros)).toEqual(['op-1'])
+    expect(tercera.siguiente).toBeNull()
+  })
+
+  it('recientes: si la página llega justo al final, no ofrece otra', async () => {
+    const repositorio = crear()
+    for (const [id, hora] of [
+      ['op-1', '11:00'],
+      ['op-2', '12:00'],
+    ] as const) {
+      await repositorio.agregar(registro(id, { ocurridaEn: a(hora) }))
+    }
+    expect(await repositorio.recientes({ cuantas: 2 })).toEqual({
+      registros: expect.any(Array),
+      siguiente: null,
+    })
+    expect(await repositorio.recientes({ cuantas: 5 })).toMatchObject({ siguiente: null })
+  })
+
+  it('recientes: nunca corta un grupo de operaciones del mismo instante', async () => {
+    const repositorio = crear()
+    await repositorio.agregar(registro('op-nueva', { ocurridaEn: a('15:00') }))
+    // Tres ventas anotadas "ayer a esta hora" (mismo ocurridaEn), registradas en otro momento.
+    for (const id of ['op-b', 'op-a', 'op-c']) {
+      await repositorio.agregar(registro(id, { ocurridaEn: a('12:00'), registradaEn: a('16:00') }))
+    }
+    await repositorio.agregar(registro('op-vieja', { ocurridaEn: a('10:00') }))
+    const primera = await repositorio.recientes({ cuantas: 2 })
+    expect(idsDe(primera.registros)).toEqual(['op-a', 'op-b', 'op-c', 'op-nueva'])
+    expect(primera.siguiente).toBe(a('12:00'))
+    const segunda = await repositorio.recientes({ cuantas: 2, antesDe: primera.siguiente! })
+    expect(segunda).toEqual({
+      registros: [registro('op-vieja', { ocurridaEn: a('10:00') })],
+      siguiente: null,
+    })
+  })
+
+  it('recientes: filtra por tipo (y el cursor sigue entre las de ese tipo)', async () => {
+    const repositorio = crear()
+    await repositorio.agregar(registro('merma-1', { tipo: 'MERMA', ocurridaEn: a('11:00') }))
+    await repositorio.agregar(registro('venta-1', { ocurridaEn: a('12:00') }))
+    await repositorio.agregar(registro('merma-2', { tipo: 'MERMA', ocurridaEn: a('13:00') }))
+    await repositorio.agregar(registro('venta-2', { ocurridaEn: a('14:00') }))
+    const primera = await repositorio.recientes({ tipo: 'MERMA', cuantas: 1 })
+    expect(idsDe(primera.registros)).toEqual(['merma-2'])
+    expect(primera.siguiente).toBe(a('13:00'))
+    const segunda = await repositorio.recientes({
+      tipo: 'MERMA',
+      cuantas: 1,
+      antesDe: primera.siguiente!,
+    })
+    expect(idsDe(segunda.registros)).toEqual(['merma-1'])
+    expect(segunda.siguiente).toBeNull()
+    expect(await repositorio.recientes({ tipo: 'AJUSTE', cuantas: 5 })).toEqual({
+      registros: [],
+      siguiente: null,
+    })
+  })
+
+  it('recientes: sin operaciones, una página vacía', async () => {
+    expect(await crear().recientes({ cuantas: 60 })).toEqual({ registros: [], siguiente: null })
+  })
+
+  it('conAnulacion: cuáles de esas operaciones tienen una anulación', async () => {
+    const repositorio = crear()
+    await repositorio.agregar(registro('op-1'))
+    await repositorio.agregar(registro('op-2'))
+    await repositorio.agregar(registro('op-3', { tipo: 'ANULACION', anulaA: 'op-1' }))
+    expect(await repositorio.conAnulacion(['op-1', 'op-2', 'op-9'])).toEqual(new Set(['op-1']))
+    expect(await repositorio.conAnulacion([])).toEqual(new Set())
+  })
+}
+
 export function probarRepositorioDeExistencias(crear: () => RepositorioDeExistencias): void {
   it('un producto sin registro tiene existencia 0', async () => {
     expect(await crear().obtener('lejia')).toEqual(Cantidad.cero())
@@ -215,6 +316,7 @@ export function probarRepositoriosDeInventario(
   describe(`RepositorioDeOperaciones${nombre}`, () => {
     probarRepositorioDeOperaciones(fabricas.operaciones)
     probarOrdenDeRegistro(fabricas.operaciones)
+    probarPaginasDelHistorial(fabricas.operaciones)
   })
   describe(`RepositorioDeExistencias${nombre}`, () =>
     probarRepositorioDeExistencias(fabricas.existencias))

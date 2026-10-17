@@ -90,6 +90,30 @@ describe('Historial (HU-OP-08)', () => {
     expect(items(p)[1]!.get('.hora').text()).toBe('18:30')
   })
 
+  it('plan 17: trae el libro de a 60 (sin leerlo todo) y "Ver más" agrega las siguientes', async () => {
+    const { app, lejia } = await tienda()
+    app.reloj.fijar(instanteLocal('2026-10-15 06:00'))
+    await app.inventario.registrarIngreso({
+      lineas: [{ productoId: lejia, cantidad: '100', costo: '2.40' }],
+    })
+    for (let i = 0; i < 70; i += 1) {
+      app.reloj.avanzarSegundos(60)
+      await app.inventario.registrarVenta({ lineas: [{ productoId: lejia, cantidad: '1' }] })
+    }
+    const todo = vi.spyOn(app.inventario, 'historial')
+    const pagina = vi.spyOn(app.inventario, 'paginaDelHistorial')
+    const p = await abrir(app)
+    expect(items(p)).toHaveLength(60)
+    expect(pagina).toHaveBeenLastCalledWith({ cuantas: 60 })
+    // 70 ventas, la llegada y los 2 stocks iniciales.
+    await tocar(p, 'Ver más')
+    expect(items(p)).toHaveLength(73)
+    expect(p.w.findAll('button').some((b) => b.text().includes('Ver más'))).toBe(false)
+    // El botón ya no está: el foco pasa a la primera de las recién traídas.
+    expect(document.activeElement).toBe(items(p)[60]!.element)
+    expect(todo).not.toHaveBeenCalled()
+  })
+
   it('se filtra por tipo con "Mostrar"', async () => {
     const { app, lejia } = await tienda()
     await app.inventario.registrarVenta({ lineas: [{ productoId: lejia, cantidad: '2' }] })

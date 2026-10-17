@@ -14,9 +14,12 @@ import type { ContextoDeInventario } from './contexto'
 import { ServicioDeDeshacer } from './deshacer'
 import {
   historial,
+  paginaDelHistorial,
   operacionPorId,
   ultimoIngresoDe,
+  type ConsultaDelHistorial,
   type FiltroDeHistorial,
+  type PaginaDelHistorial,
   type OperacionVista,
 } from './historial'
 import { registrarIngreso, type DatosDeIngreso, type RespuestaDeIngreso } from './ingresos'
@@ -39,7 +42,13 @@ export type { DatosDeVenta, LineaPedida } from './ventas'
 export type { DatosDeIngreso, RespuestaDeIngreso } from './ingresos'
 export type { DatosDeConteo, DatosDeMerma, RespuestaDeConteo } from './mermas-y-ajustes'
 export type { DatosDeAnulacion } from './anulaciones'
-export type { FiltroDeHistorial, LineaDeOperacionVista, OperacionVista } from './historial'
+export type {
+  ConsultaDelHistorial,
+  FiltroDeHistorial,
+  LineaDeOperacionVista,
+  OperacionVista,
+  PaginaDelHistorial,
+} from './historial'
 export type { ResultadoDeRevision } from './revisar-datos'
 export type { EstadoDelConteo, RespuestaDelConteoGuiado } from './conteo'
 
@@ -51,6 +60,8 @@ export interface ModuloInventario {
   anularOperacion(datos: DatosDeAnulacion): Promise<{ anulacionId: string }>
   deshacer: ServicioDeDeshacer
   historial(filtro?: FiltroDeHistorial): Promise<OperacionVista[]>
+  /** Plan 17: el Historial de a páginas ("Ver más"), sin leer todo el libro. */
+  paginaDelHistorial(consulta?: ConsultaDelHistorial): Promise<PaginaDelHistorial>
   /** HU-OP-08: el detalle de una operación (null si no existe). */
   operacion(operacionId: string): Promise<OperacionVista | null>
   revisarDatos(): Promise<ResultadoDeRevision>
@@ -96,6 +107,8 @@ export function crearModuloInventario(d: DependenciasDeInventario): ModuloInvent
     deshacer,
     // RN-SIS-09: el libro y los productos, en una sola transacción de solo lectura.
     historial: (filtro) => d.uow.leer(() => historial(ctx, filtro)),
+    // RN-SIS-09: cada página, en una sola transacción de solo lectura.
+    paginaDelHistorial: (consulta) => d.uow.leer(() => paginaDelHistorial(ctx, consulta)),
     // RN-SIS-09: también en una sola transacción de solo lectura.
     operacion: (operacionId) => d.uow.leer(() => operacionPorId(ctx, operacionId)),
     revisarDatos: () => revisarDatos(ctx),
