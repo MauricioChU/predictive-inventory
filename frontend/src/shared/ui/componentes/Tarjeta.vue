@@ -1,11 +1,37 @@
 <!-- eslint-disable vue/multi-word-component-names -- nombre exigido por el plan ("Tarjeta") -->
 <script setup lang="ts">
-import { useId } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 withDefaults(defineProps<{ comoBoton?: boolean }>(), { comoBoton: false })
 const emit = defineEmits<{ click: [evento: MouseEvent] }>()
 
-const idContenido = useId()
+const refContenido = ref<HTMLElement>()
+/** El nombre del botón: los textos del contenido, separados por espacios. */
+const nombre = ref('')
+let observador: MutationObserver | undefined
+
+function textoConSeparadores(elemento: HTMLElement): string {
+  const partes: string[] = []
+  const recorrido = document.createTreeWalker(elemento, NodeFilter.SHOW_TEXT)
+  for (let nodo = recorrido.nextNode(); nodo; nodo = recorrido.nextNode()) {
+    const texto = nodo.textContent?.replace(/\s+/g, ' ').trim()
+    if (texto) partes.push(texto)
+  }
+  return partes.join(' ')
+}
+
+function actualizarNombre(): void {
+  if (refContenido.value) nombre.value = textoConSeparadores(refContenido.value)
+}
+
+onMounted(() => {
+  if (!refContenido.value) return
+  actualizarNombre()
+  // Lo que dice la tarjeta puede cambiar (otro stock, otro precio): el nombre lo sigue.
+  observador = new MutationObserver(actualizarNombre)
+  observador.observe(refContenido.value, { childList: true, characterData: true, subtree: true })
+})
+onBeforeUnmount(() => observador?.disconnect())
 </script>
 
 <template>
@@ -15,19 +41,15 @@ const idContenido = useId()
   <!--
     Plan 17: un <button> solo admite contenido de frase, y una tarjeta lleva títulos y párrafos.
     Así que el contenido va afuera del botón, y el botón (vacío, encima de toda la tarjeta: se
-    toca en cualquier parte) toma su nombre de ese contenido con aria-labelledby. Lo que va en
-    la tarjeta no debe ser interactivo (quedaría debajo del botón).
+    toca en cualquier parte) se llama como lo que dice la tarjeta (aria-label con sus textos
+    separados por espacios). El contenido va con aria-hidden: el lector no lo lee dos veces. Lo
+    que va en la tarjeta no debe ser interactivo (quedaría debajo del botón).
   -->
   <div v-else class="tarjeta tarjeta--boton">
-    <div :id="idContenido" class="contenido">
+    <div ref="refContenido" class="contenido" aria-hidden="true">
       <slot />
     </div>
-    <button
-      type="button"
-      class="tocar"
-      :aria-labelledby="idContenido"
-      @click="emit('click', $event)"
-    />
+    <button type="button" class="tocar" :aria-label="nombre" @click="emit('click', $event)" />
   </div>
 </template>
 

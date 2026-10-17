@@ -1,6 +1,6 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it } from 'vitest'
-import { h } from 'vue'
+import { defineComponent, h, ref } from 'vue'
 import Tarjeta from '../componentes/Tarjeta.vue'
 
 /** Contenido de bloque, como el de una tarjeta de verdad (título y descripción). */
@@ -31,7 +31,7 @@ describe('Tarjeta', () => {
       expect(w.get('p').text()).toBe('Quedan 3 unid.')
     })
 
-    it('el botón se llama como lo que dice la tarjeta y emite click al tocarlo', async () => {
+    it('el botón se llama como lo que dice la tarjeta (con espacios) y emite click al tocarlo', async () => {
       const w = mount(Tarjeta, {
         props: { comoBoton: true },
         slots: { default: CONTENIDO },
@@ -39,10 +39,26 @@ describe('Tarjeta', () => {
       })
       const boton = w.get('button')
       expect(boton.attributes('type')).toBe('button')
-      const etiquetadoPor = document.getElementById(boton.attributes('aria-labelledby')!)
-      expect(etiquetadoPor?.textContent).toBe('Lejía 1 LQuedan 3 unid.')
+      await flushPromises()
+      expect(boton.attributes('aria-label')).toBe('Lejía 1 L Quedan 3 unid.')
       await boton.trigger('click')
       expect(w.emitted('click')).toHaveLength(1)
+    })
+
+    it('ronda 1: el contenido no se lee dos veces (aria-hidden) y el nombre sigue sus cambios', async () => {
+      const texto = ref('Quedan 3 unid.')
+      const w = mount(
+        defineComponent({
+          setup: () => () =>
+            h(Tarjeta, { comoBoton: true }, () => [h('h3', 'Lejía 1 L'), h('p', texto.value)]),
+        }),
+        { attachTo: document.body },
+      )
+      await flushPromises()
+      expect(w.get('.contenido').attributes('aria-hidden')).toBe('true')
+      texto.value = 'Se acabó'
+      await flushPromises()
+      expect(w.get('button').attributes('aria-label')).toBe('Lejía 1 L Se acabó')
     })
   })
 })
