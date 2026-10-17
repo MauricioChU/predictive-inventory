@@ -14,6 +14,13 @@ describe('RegistroDePasos', () => {
       .paso('vendo {string}', () => {})
     expect(() => pasos.buscar('vendo "2"')).toThrow('ambiguo')
   })
+  it('dice qué expresión encontró y lista las registradas (para detectar pasos sin usar)', () => {
+    const pasos = new RegistroDePasos<object>()
+      .paso('(que )vendo {string}', () => {})
+      .paso('compro {string}', () => {})
+    expect(pasos.buscar('que vendo "2"')?.expresion).toBe('(que )vendo {string}')
+    expect(pasos.expresiones).toEqual(['(que )vendo {string}', 'compro {string}'])
+  })
   it('une registros de varios archivos de pasos', () => {
     const a = new RegistroDePasos<object>().paso('paso a', () => {})
     const b = new RegistroDePasos<object>().paso('paso b', () => {})
