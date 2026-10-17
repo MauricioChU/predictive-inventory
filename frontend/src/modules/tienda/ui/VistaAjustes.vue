@@ -101,10 +101,22 @@ async function hacer(que: NonNullable<typeof ocupado.value>, accion: () => Promi
 
 /** RN-UX-01: toda la app cambia en el acto y queda guardado en la configuración. */
 function elegirLetra(tamano: TamanoDeLetra): void {
-  aplicarTamanoDeLetra(tamano)
-  if (configuracion.value) configuracion.value = { ...configuracion.value, tamanoDeLetra: tamano }
+  const anterior = configuracion.value?.tamanoDeLetra ?? estadoGlobal.tamanoDeLetra
+  const usar = (letra: TamanoDeLetra) => {
+    aplicarTamanoDeLetra(letra)
+    if (configuracion.value) configuracion.value = { ...configuracion.value, tamanoDeLetra: letra }
+  }
+  usar(tamano)
   void hacer('letra', async () => {
-    await aplicacion.tienda.actualizarConfiguracion({ tamanoDeLetra: tamano })
+    try {
+      await aplicacion.tienda.actualizarConfiguracion({ tamanoDeLetra: tamano })
+    } catch (causa) {
+      // No quedó guardada: la app vuelve a la letra que tiene la configuración.
+      usar(anterior)
+      console.error('No se pudo guardar el tamaño de letra:', causa)
+      error.value = 'No se pudo cambiar la letra'
+      return
+    }
     const etiqueta = OPCIONES_DE_LETRA.find((o) => o.valor === tamano)?.etiqueta ?? ''
     anunciador.anunciar(`Letra ${etiqueta.toLowerCase()}`)
   })

@@ -93,6 +93,20 @@ describe('Ajustes', () => {
     await vi.waitFor(() => expect(pantalla!.estadoGlobal.tamanoDeLetra).toBe('MUY_GRANDE'))
   })
 
+  it('RN-UX-01: si no se puede guardar la letra, vuelve a la que estaba y lo dice', async () => {
+    pantalla = await montarPantalla(app, '/ajustes')
+    document.documentElement.dataset.letra = 'GRANDE'
+    vi.spyOn(app.tienda, 'actualizarConfiguracion').mockRejectedValueOnce(new Error('base cerrada'))
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    await tocar('Muy grande')
+
+    expect(document.documentElement.dataset.letra).toBe('GRANDE')
+    expect((await app.tienda.obtenerConfiguracion()).tamanoDeLetra).toBe('GRANDE')
+    expect(control('Grande').attributes('aria-checked')).toBe('true')
+    expect(pantalla.wrapper.find('[role="alert"]').text()).toContain('No se pudo cambiar la letra')
+  })
+
   it('M1: desactivar los avisos lo guarda en la configuración de la tienda', async () => {
     app.notificador.permiso = true
     await app.tienda.actualizarConfiguracion({ notificacionesActivas: true })
