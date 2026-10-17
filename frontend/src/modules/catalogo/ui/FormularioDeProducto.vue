@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Camera, PackagePlus, Save } from 'lucide-vue-next'
+import { ArrowRight, Camera, PackagePlus, Save } from 'lucide-vue-next'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import { Cantidad, type Unidad } from '@/shared/domain/cantidad'
 import { Dinero } from '@/shared/domain/dinero'
@@ -33,6 +33,7 @@ import {
   type ErroresDeCampos,
   type ValoresDeProducto,
 } from './formulario'
+import { aPantalla } from './enlaces'
 import { montoParaEditar } from './presentacion'
 
 const props = withDefaults(
@@ -41,8 +42,10 @@ const props = withDefaults(
     productoId?: string
     /** Nombre ya escrito (p. ej. lo que se buscó en Productos sin encontrarlo). */
     nombreInicial?: string
+    /** Se carga uno por uno desde Primera vez (plan 14): al guardar se ofrece "Seguir". */
+    desdePrimeraVez?: boolean
   }>(),
-  { productoId: undefined, nombreInicial: '' },
+  { productoId: undefined, nombreInicial: '', desdePrimeraVez: false },
 )
 const emit = defineEmits<{ agregarOtro: [] }>()
 
@@ -390,6 +393,14 @@ function verProducto(productoId: string) {
             texto="Agregar otro producto"
             :icono="PackagePlus"
             @click="emit('agregarOtro')"
+          />
+          <!-- Contrato de rutas (ronda 1, ruling B): Primera vez sigue con "Ahora contemos lo
+               que tienes" (plan 14). -->
+          <Boton
+            v-if="desdePrimeraVez"
+            texto="Seguir"
+            :icono="ArrowRight"
+            @click="router.push(aPantalla(router, 'primera-vez', {}, { paso: 'contar' }))"
           />
           <Boton texto="Ver producto" @click="verProducto(exito.productoId)" />
         </template>

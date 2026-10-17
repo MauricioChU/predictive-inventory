@@ -13,12 +13,26 @@ const nombreInicial = computed(() =>
   typeof route.query.nombre === 'string' ? route.query.nombre : '',
 )
 
+/** `?desde=primera-vez` (plan 14): se carga uno por uno y al guardar se ofrece "Seguir". */
+const desdePrimeraVez = computed(() => route.query.desde === 'primera-vez')
+
+/** El nombre de la búsqueda era para el primero; "desde" sigue (el mismo recorrido). */
 async function agregarOtro() {
-  if (route.query.nombre !== undefined) await router.replace({ name: 'producto-nuevo' })
+  if (route.query.nombre !== undefined) {
+    const resto = Object.fromEntries(
+      Object.entries(route.query).filter(([clave]) => clave !== 'nombre'),
+    )
+    await router.replace({ name: 'producto-nuevo', query: resto })
+  }
   vez.value += 1
 }
 </script>
 
 <template>
-  <FormularioDeProducto :key="vez" :nombre-inicial="nombreInicial" @agregar-otro="agregarOtro" />
+  <FormularioDeProducto
+    :key="vez"
+    :nombre-inicial="nombreInicial"
+    :desde-primera-vez="desdePrimeraVez"
+    @agregar-otro="agregarOtro"
+  />
 </template>

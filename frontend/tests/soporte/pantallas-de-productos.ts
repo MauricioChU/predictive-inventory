@@ -40,8 +40,14 @@ const Otra = defineComponent({
 /** Inicio (plan 14): existe en develop desde antes de la Ola 4 (Pendiente). */
 const INICIO = { path: '/', name: 'inicio', component: Otra, props: { titulo: 'Inicio' } }
 
-/** Las rutas del plan 12 que estas pantallas enlazan por nombre (contrato de rutas). */
-const RUTAS_DEL_PLAN_12 = [
+/** Las rutas de los planes 12 y 14 que estas pantallas enlazan por nombre (contrato de rutas). */
+const RUTAS_DE_OTRAS_RAMAS = [
+  {
+    path: '/bienvenida',
+    name: 'primera-vez',
+    component: Otra,
+    props: { titulo: 'Bienvenida' },
+  },
   { path: '/productos/:id/merma', name: 'merma', component: Otra, props: { titulo: 'Merma' } },
   {
     path: '/productos/:id/contar',
@@ -61,8 +67,8 @@ export interface VistaMontada {
 /**
  * Monta la app de pantallas de Productos (las rutas reales de `rutas/productos.ts`) en `ruta`,
  * con la aplicación de prueba como `useAplicacion()`, el aviso Deshacer y el anunciador que
- * provee LayoutApp. `conOtrasRamas: false` deja afuera las rutas del plan 12 (como en develop
- * mientras no llegan).
+ * provee LayoutApp. `conOtrasRamas: false` deja afuera las rutas de los planes 12 y 14 (como en
+ * develop mientras no llegan).
  */
 export async function montarVista(
   app: AplicacionDePrueba,
@@ -75,7 +81,7 @@ export async function montarVista(
     routes: [
       INICIO,
       ...rutasDeProductos,
-      ...(opciones.conOtrasRamas === false ? [] : RUTAS_DEL_PLAN_12),
+      ...(opciones.conOtrasRamas === false ? [] : RUTAS_DE_OTRAS_RAMAS),
       // Como en router/index.ts: lo que no existe (todavía) lleva a Inicio.
       { path: '/:pathMatch(.*)*', redirect: '/' },
     ],

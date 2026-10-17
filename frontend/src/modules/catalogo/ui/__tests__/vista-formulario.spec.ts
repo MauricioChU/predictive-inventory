@@ -161,6 +161,7 @@ describe('Formulario de producto: crear (/productos/nuevo)', () => {
 
   it('RN-CAT-08 / RN-CAT-14: crea el producto con su stock inicial y su foto', async () => {
     const w = await abrir()
+    const reducir = vi.spyOn(app.procesadorDeFotos, 'reducir')
     await llenar(w)
     const foto = new File(['foto'], 'lejia.jpg', { type: 'image/jpeg' })
     const galeria = campo(w, 'Foto del producto').get<HTMLInputElement>(
@@ -180,8 +181,10 @@ describe('Formulario de producto: crear (/productos/nuevo)', () => {
     expect(formatearCantidad(creado!.stock, 'UNIDAD')).toBe('12 unid.')
     const [inicial] = await app.inventario.historial({ productoId: creado!.id })
     expect(inicial?.tipo).toBe('STOCK_INICIAL')
+    // RN-OP-18: crear un producto (aunque registre su STOCK_INICIAL) no ofrece Deshacer.
+    expect(vista!.aviso.activo.value).toBeUndefined()
     // La foto pasó por el procesador del catálogo (RN-CAT-14) y quedó guardada.
-    expect(app.procesadorDeFotos.reducidas).toBe(1)
+    expect(reducir).toHaveBeenCalledTimes(1)
     expect(await app.catalogo.obtenerFoto(creado!.id)).not.toBeNull()
 
     await boton(w, 'Ver producto').trigger('click')
@@ -204,6 +207,38 @@ describe('Formulario de producto: crear (/productos/nuevo)', () => {
     await esperar()
     expect(w.get('h1').text()).toBe('Producto nuevo')
     expect(entrada(w, 'Nombre del producto').element.value).toBe('')
+  })
+
+  it('desde Primera vez: al guardar ofrece además "Seguir" (a contar lo que tienes)', async () => {
+    const w = await abrir('/productos/nuevo?desde=primera-vez')
+    await llenar(w)
+    await guardar(w)
+    expect(w.findAll('button').map((b) => b.text().trim())).toEqual(
+      expect.arrayContaining(['Agregar otro producto', 'Seguir']),
+    )
+    await boton(w, 'Seguir').trigger('click')
+    await esperarRuta(vista!.router, 'primera-vez')
+    expect(vista!.router.currentRoute.value.query).toEqual({ paso: 'contar' })
+  })
+
+  it('desde Primera vez, "Agregar otro producto" sigue en el mismo recorrido', async () => {
+    const w = await abrir('/productos/nuevo?desde=primera-vez&nombre=jabon')
+    await llenar(w)
+    await guardar(w)
+    await boton(w, 'Agregar otro producto').trigger('click')
+    await esperar()
+    expect(vista!.router.currentRoute.value.query).toEqual({ desde: 'primera-vez' })
+    expect(entrada(w, 'Nombre del producto').element.value).toBe('')
+    await llenar(w, { 'Nombre del producto': 'Jabón Bolívar' })
+    await guardar(w)
+    expect(w.findAll('button').some((b) => b.text().trim() === 'Seguir')).toBe(true)
+  })
+
+  it('sin venir de Primera vez no hay "Seguir"', async () => {
+    const w = await abrir()
+    await llenar(w)
+    await guardar(w)
+    expect(w.findAll('button').some((b) => b.text().trim() === 'Seguir')).toBe(false)
   })
 
   it('por kilo: las cantidades aceptan decimales y dicen "kg"', async () => {

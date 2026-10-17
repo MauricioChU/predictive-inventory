@@ -60,6 +60,7 @@ describe('Detalle del producto', () => {
     vista?.wrapper.unmount()
     vista = undefined
     vi.useRealTimers()
+    vi.restoreAllMocks()
     await app.cerrar()
   })
 
@@ -195,6 +196,7 @@ describe('Detalle del producto', () => {
 
   it('mientras las pantallas del plan 12 no existan, sus botones llevan a Inicio', async () => {
     const id = await crearProducto(app, { ...ESCOBA, stockInicial: '3' })
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     vista = await montarVista(app, `/productos/${id}`, { conOtrasRamas: false })
     await boton(vista.wrapper, 'Contar stock').trigger('click')
     await esperarRuta(vista.router, 'inicio')
