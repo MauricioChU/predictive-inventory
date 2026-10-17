@@ -79,6 +79,19 @@ test.describe('RN-SIS-05: primera vez', () => {
     await expect(page.locator('html')).toHaveAttribute('data-letra', 'MUY_GRANDE')
   })
 
+  test('"Volver" y el botón atrás del celular recorren los pasos en el mismo orden', async ({ page }) => {
+    await abrir(page, './')
+    await page.getByRole('button', { name: 'Empezar' }).click()
+    await page.getByLabel('Nombre de la tienda').fill('Bodega Rosita')
+    await page.getByRole('button', { name: 'Seguir' }).click()
+    await expect(h1(page)).toHaveText('¿Qué tamaño de letra prefieres?')
+
+    await page.getByRole('button', { name: 'Volver' }).click()
+    await expect(h1(page)).toHaveText('¿Cómo se llama tu tienda?')
+    await page.goBack()
+    await expect(h1(page)).toHaveText('Te damos la bienvenida')
+  })
+
   test('"Uno por uno" abre Producto nuevo (plan 11)', async ({ page }) => {
     await abrir(page, './productos/nuevo')
     test.skip(
