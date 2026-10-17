@@ -5,7 +5,7 @@ import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 import LayoutApp from '@/app/LayoutApp.vue'
 import { proveerAplicacion } from '@/app/proveer-aplicacion'
 import { rutas } from '@/router'
-import { prepararDialogos } from '@/shared/ui/__tests__/dialogo-en-jsdom'
+import { simularDialogos } from '@/shared/ui/__tests__/dialogo-en-jsdom'
 import { instanteLocal, type Instante } from '@/shared/domain/fecha'
 import { crearAplicacionDePrueba, type AplicacionDePrueba } from './aplicacion-de-prueba'
 
@@ -33,7 +33,7 @@ export async function montarPantalla(
   ruta: string,
   opciones: { app?: AplicacionDePrueba; ahora?: Instante } = {},
 ): Promise<PantallaMontada> {
-  prepararDialogos()
+  simularDialogos()
   const ahora = opciones.ahora ?? HOY
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date(ahora))

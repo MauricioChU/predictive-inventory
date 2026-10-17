@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, type Component } from 'vue'
-import { usarAltoComoVariable } from '../alto-como-variable'
+import { usarAltoObservado } from '../alto-observado'
 import BotonPrincipal from './BotonPrincipal.vue'
 
 withDefaults(
@@ -22,7 +22,7 @@ const emit = defineEmits<{ accion: [] }>()
 // montada. LayoutApp lo suma a scroll-padding-bottom: el elemento que recibe el foco por teclado
 // (p. ej. el "+" de una línea del carrito) nunca queda escondido debajo de esta barra.
 const refBarra = ref<HTMLElement>()
-usarAltoComoVariable(refBarra, '--alto-barra-de-total')
+usarAltoObservado(refBarra, { variable: '--alto-barra-de-total' })
 </script>
 
 <template>

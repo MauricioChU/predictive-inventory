@@ -3,7 +3,7 @@ import { nextTick, onBeforeUnmount, provide, ref, watch } from 'vue'
 import AvisoDeshacer from '@/shared/ui/componentes/AvisoDeshacer.vue'
 import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import BarraNavegacion from '@/shared/ui/componentes/BarraNavegacion.vue'
-import { usarAltoComoVariable } from '@/shared/ui/alto-como-variable'
+import { usarAltoObservado } from '@/shared/ui/alto-observado'
 import { CLAVE_ANUNCIADOR, crearAnunciador } from '@/shared/ui/anunciador'
 import {
   CLAVE_AVISO_DESHACER,
@@ -38,8 +38,8 @@ watch(contextoAvisoDeshacer.resultado, async (resultado) => {
 // m5: alto real de lo que queda pegado abajo, para scroll-padding-bottom (ver estilos).
 const refPie = ref<HTMLElement>()
 const refZonaAviso = ref<HTMLElement>()
-usarAltoComoVariable(refPie, '--alto-pie')
-usarAltoComoVariable(refZonaAviso, '--alto-aviso')
+usarAltoObservado(refPie, { variable: '--alto-pie' })
+usarAltoObservado(refZonaAviso, { variable: '--alto-aviso' })
 
 onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
 </script>
@@ -130,7 +130,7 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
 
 /* m5 (WCAG 2.4.11): lo que queda pegado abajo no tapa al elemento que recibe el foco por
    teclado — el navegador desplaza la página dejando libre ese alto, medido en vivo
-   (alto-como-variable.ts), nunca adivinado. En celular es todo el pie (aviso + barra).
+   (alto-observado.ts), nunca adivinado. En celular es todo el pie (aviso + barra).
    Plan 12: más la BarraDeTotal de Vender/Recibir (pegada justo encima del pie), que publica
    su alto en --alto-barra-de-total mientras está en pantalla (0px si no hay ninguna). */
 :global(html) {

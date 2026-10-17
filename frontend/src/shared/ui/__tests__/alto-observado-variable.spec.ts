@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { defineComponent, h, nextTick, ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { usarAltoComoVariable } from '../alto-como-variable'
+import { usarAltoObservado } from '../alto-observado'
 
 /** ResizeObserver de mentira: jsdom no lo trae. Permite "redimensionar" a mano. */
 class ObservadorFalso {
@@ -33,14 +33,14 @@ function montar() {
   const Componente = defineComponent({
     setup() {
       const el = ref<HTMLElement>()
-      usarAltoComoVariable(el, '--alto-prueba')
+      usarAltoObservado(el, { variable: '--alto-prueba' })
       return () => (visible.value ? h('div', { ref: el }) : null)
     },
   })
   return { w: mount(Componente, { attachTo: document.body }), visible }
 }
 
-describe('m5: alto real de la barra inferior en una variable CSS (sin adivinar alturas)', () => {
+describe('usarAltoObservado con variable (m5: el alto del pie en una variable CSS, sin adivinar)', () => {
   beforeEach(() => {
     ObservadorFalso.instancias = []
     vi.stubGlobal('ResizeObserver', ObservadorFalso)

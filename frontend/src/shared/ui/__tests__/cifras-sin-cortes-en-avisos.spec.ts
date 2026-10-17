@@ -3,9 +3,9 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import AvisoDeshacer from '../componentes/AvisoDeshacer.vue'
 import DialogoConfirmacion from '../componentes/DialogoConfirmacion.vue'
 import PantallaExito from '../componentes/PantallaExito.vue'
-import { prepararDialogos } from './dialogo-en-jsdom'
+import { simularDialogos } from './dialogo-en-jsdom'
 
-beforeAll(prepararDialogos)
+beforeAll(simularDialogos)
 
 /**
  * Plan 12 (RN-UX-09): en 320 px con letra Muy grande, "S/ 2.60" se partía en "S/" | "2.60" y

@@ -1,9 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import DialogoConfirmacion from '../componentes/DialogoConfirmacion.vue'
-import { prepararDialogos } from './dialogo-en-jsdom'
+import { simularDialogos } from './dialogo-en-jsdom'
 
-beforeAll(prepararDialogos)
+beforeAll(simularDialogos)
 
 const PROPS = {
   abierto: true,

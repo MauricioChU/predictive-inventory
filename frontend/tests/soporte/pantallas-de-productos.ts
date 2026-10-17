@@ -1,3 +1,4 @@
+import { simularDialogos } from '@/shared/ui/__tests__/dialogo-en-jsdom'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { expect, vi } from 'vitest'
 import { createPinia } from 'pinia'
@@ -24,19 +25,8 @@ import { crearProductoDePrueba, type ProductoDePrueba } from './productos-de-pru
 /** "Hoy" de las pruebas de pantallas de Productos (el reloj de la app y el del celular). */
 export const HOY = instanteLocal('2026-10-16 10:00')
 
-/**
- * jsdom no implementa `showModal`/`close` de <dialog> (DialogoConfirmacion los usa): un doble
- * mínimo que solo pone y quita el atributo `open`.
- */
-export function simularDialogos(): void {
-  const prototipo = HTMLDialogElement.prototype
-  prototipo.showModal ??= function (this: HTMLDialogElement) {
-    this.setAttribute('open', '')
-  }
-  prototipo.close ??= function (this: HTMLDialogElement) {
-    this.removeAttribute('open')
-  }
-}
+/** El doble de <dialog> de todas las pruebas (uno solo: src/shared/ui/__tests__/dialogo-en-jsdom). */
+export { simularDialogos }
 
 const Otra = defineComponent({
   props: { titulo: { type: String, default: '' } },
