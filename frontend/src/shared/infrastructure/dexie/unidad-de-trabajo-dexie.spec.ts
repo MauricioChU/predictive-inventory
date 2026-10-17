@@ -161,6 +161,96 @@ describe('UnidadDeTrabajoDexie', () => {
       })
       expect(await idsGuardados(db)).toEqual(['c1'])
     })
+
+    it('dentro de una lectura (uow.leer) rechaza sin escribir: es un error de programación', async () => {
+      const { db, uow } = crear()
+      await expect(
+        uow.leer(() =>
+          enTransaccion(db, [db.categorias], async () => {
+            await db.categorias.put(categoria('c1'))
+          }),
+        ),
+      ).rejects.toThrow(/uow\.leer/)
+      expect(await idsGuardados(db)).toEqual([])
+    })
+  })
+
+  describe('leer', () => {
+    it('RN-SIS-09: abre una transacción nativa de solo lectura', async () => {
+      const { uow } = crear()
+      expect(await uow.leer(async () => transaccionNativa()?.mode)).toBe('readonly')
+    })
+
+    it('RN-SIS-09: una consulta que no es async (devuelve la promesa de otra función) sigue en la lectura tras awaits anidados', async () => {
+      const { db, uow } = crear()
+      await db.categorias.put(categoria('c1'))
+      // Como un caso de uso que llama a otro módulo, que llama a su repositorio.
+      async function repositorio() {
+        const filas = await db.categorias.toArray()
+        return filas.map((c) => c.id)
+      }
+      async function otroModulo() {
+        return [...(await repositorio())]
+      }
+      async function casoDeUso() {
+        return otroModulo()
+      }
+      async function consultaAnidada() {
+        const conteo = await db.categorias.count()
+        const primera = await casoDeUso()
+        const segunda = await casoDeUso()
+        return { primera, segunda, tercera: conteo, modo: transaccionNativa()?.mode }
+      }
+      expect(await uow.leer(() => consultaAnidada())).toEqual({
+        primera: ['c1'],
+        segunda: ['c1'],
+        tercera: 1,
+        modo: 'readonly',
+      })
+    })
+
+    it('RN-SIS-09: dentro de un ejecutar corre en la MISMA transacción nativa (de escritura)', async () => {
+      const { uow } = crear()
+      await uow.ejecutar(async () => {
+        const externa = transaccionNativa()
+        const dentro = await uow.leer(async () => transaccionNativa())
+        expect(externa).not.toBeNull()
+        expect(dentro).toBe(externa)
+        expect(dentro?.mode).toBe('readwrite')
+      })
+    })
+
+    it('RN-SIS-09: dentro de un ejecutar, un ejecutar anidado en el leer sí escribe (es la misma transacción)', async () => {
+      const { db, uow } = crear()
+      await uow.ejecutar(() =>
+        uow.leer(() =>
+          uow.ejecutar(() => db.categorias.put(categoria('c1')).then(() => undefined)),
+        ),
+      )
+      expect(await idsGuardados(db)).toEqual(['c1'])
+    })
+
+    it('RN-SIS-09: una llamada que llega después de cerrar la lectura que la originó abre una nueva', async () => {
+      const { db, uow } = crear()
+      let original: IDBTransaction | null = null
+      let tardia: Promise<IDBTransaction | null> | null = null
+      let seCerro!: () => void
+      const cerrada = new Dexie.Promise<void>((resolver) => (seCerro = resolver))
+      await uow.leer(async () => {
+        original = transaccionNativa()
+        await db.categorias.toArray()
+        // "Dispara y olvida": nace en la zona de esta lectura y sigue después de que cerró.
+        tardia = cerrada.then(() => uow.leer(async () => transaccionNativa()))
+      })
+      seCerro()
+      const propia = await tardia!
+      expect(propia).not.toBeNull()
+      expect(propia).not.toBe(original)
+      // Y como la lectura original ya cerró, también se puede escribir desde ahí.
+      await expect(
+        cerrada.then(() => uow.ejecutar(() => db.categorias.put(categoria('c1')))),
+      ).resolves.toBe('c1')
+    })
   })
 
   describe('alConfirmar', () => {

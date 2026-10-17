@@ -1,9 +1,11 @@
 import { ErrorDeDominio } from '../../../../shared/domain/errores'
 import { normalizar } from '../../../../shared/domain/texto'
-import readXlsxFile from 'read-excel-file/browser'
-import writeXlsxFile from 'write-excel-file/browser'
 import type { CeldaDeExcel, HojaDeExcel } from '../../domain/hojas-de-excel'
 import type { GeneradorDeExcel, LectorDeExcel } from '../../application/puertos'
+
+// RN-SIS-09 (primera carga): las librerías de Excel se cargan con `import()` recién al exportar
+// o importar, no al abrir la app (el service worker igual las deja guardadas para usarlas sin
+// conexión, RN-SIS-08).
 
 function celda(c: CeldaDeExcel) {
   if (typeof c.valor === 'number') {
@@ -15,6 +17,7 @@ function celda(c: CeldaDeExcel) {
 /** Genera un .xlsx real con write-excel-file (entrada para navegador). */
 export class GeneradorDeExcelDelNavegador implements GeneradorDeExcel {
   async generar(hojas: readonly HojaDeExcel[]): Promise<Blob> {
+    const { default: writeXlsxFile } = await import('write-excel-file/browser')
     const sheets = hojas.map((hoja) => ({
       sheet: hoja.nombre,
       data: [
@@ -29,6 +32,7 @@ export class GeneradorDeExcelDelNavegador implements GeneradorDeExcel {
 /** Lee la hoja "Productos" (o la primera si no existe) de un .xlsx; cada celda como texto. */
 export class LectorDeExcelDelNavegador implements LectorDeExcel {
   async leerPrimeraHoja(archivo: Blob): Promise<string[][]> {
+    const { default: readXlsxFile } = await import('read-excel-file/browser')
     let hojas
     try {
       hojas = await readXlsxFile(archivo)

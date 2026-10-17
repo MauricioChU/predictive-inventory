@@ -58,6 +58,7 @@ function preparar() {
         bitacora.push('trabajo terminado')
         return resultado
       }),
+    leer: (consulta) => transacciones.leer(consulta),
     alConfirmar: (accion) => transacciones.alConfirmar(accion),
   }
   const bus = new BusEnMemoria()

@@ -66,13 +66,13 @@ async function filasEntre(d: DependenciasDeAnalisis, desde: Dia, hasta: Dia) {
 
 function crearConsultable(d: DependenciasDeAnalisis): AnalisisConsultable {
   return {
-    async situacion(productoId) {
-      return (await evaluarProducto(d, productoId))?.situacion ?? null
-    },
-    async situaciones() {
-      const evaluaciones = await evaluarProductos(d, await cargarDatos(d))
-      return evaluaciones.map((e) => e.situacion)
-    },
+    situacion: (productoId) =>
+      d.uow.leer(async () => (await evaluarProducto(d, productoId))?.situacion ?? null),
+    situaciones: () =>
+      d.uow.leer(async () => {
+        const evaluaciones = await evaluarProductos(d, await cargarDatos(d))
+        return evaluaciones.map((e) => e.situacion)
+      }),
     async vecesVendido(desde, hasta) {
       return vecesVendido(await filasEntre(d, desde, hasta), { desde, hasta })
     },
@@ -85,21 +85,26 @@ function crearConsultable(d: DependenciasDeAnalisis): AnalisisConsultable {
   }
 }
 
-/** Módulo Análisis: la proyección ResumenDiario y la Torre de control (RN-AN). */
+/**
+ * Módulo Análisis: la proyección ResumenDiario y la Torre de control (RN-AN). Cada consulta
+ * de varias lecturas corre entera en UNA transacción de solo lectura (`uow.leer`, RN-SIS-09):
+ * una foto coherente que no hace fila como una escritura.
+ */
 export function crearModuloAnalisis(d: DependenciasDeAnalisis): ModuloAnalisis {
+  const leer = <T>(consulta: () => Promise<T>): Promise<T> => d.uow.leer(consulta)
   return {
     proyeccion: new ProyeccionDeResumenes(d.resumenes, d.uow),
     consultable: crearConsultable(d),
-    consultarResumen: (periodo) => consultarResumen(d, periodo),
-    consultarTorre: (opciones) => consultarTorre(d, opciones),
-    listaParaComprar: () => listaParaComprar(d),
+    consultarResumen: (periodo) => leer(() => consultarResumen(d, periodo)),
+    consultarTorre: (opciones) => leer(() => consultarTorre(d, opciones)),
+    listaParaComprar: () => leer(() => listaParaComprar(d)),
     cambiarCantidadEnLista: (productoId, cantidad) =>
       cambiarCantidadEnLista(d, productoId, cantidad),
     quitarDeLista: (productoId) => quitarDeLista(d, productoId),
     deshacerQuitarDeLista: (quitado) => deshacerQuitarDeLista(d, quitado),
-    textoParaCompartir: () => textoParaCompartir(d),
-    lineasParaRegistrarLlegada: () => lineasParaRegistrarLlegada(d),
-    necesitoComprar: (productoId) => necesitoComprar(d, productoId),
-    detalleDeProducto: (productoId) => detalleDeProducto(d, productoId),
+    textoParaCompartir: () => leer(() => textoParaCompartir(d)),
+    lineasParaRegistrarLlegada: () => leer(() => lineasParaRegistrarLlegada(d)),
+    necesitoComprar: (productoId) => leer(() => necesitoComprar(d, productoId)),
+    detalleDeProducto: (productoId) => leer(() => detalleDeProducto(d, productoId)),
   }
 }

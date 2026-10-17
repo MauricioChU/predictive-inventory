@@ -28,7 +28,7 @@ Criterios de aceptación ejecutables: [features/alertas.feature](features/alerta
 | Id | Regla |
 |---|---|
 | **RN-AL-01** | Cada producto activo tiene exactamente un **estado de stock**, calculado según la tabla anterior. Los productos archivados no tienen estado ni generan avisos. |
-| **RN-AL-02** | El estado se **re-evalúa** después de cada operación, al cambiar el stock mínimo o la configuración, y al abrir la app (la predicción cambia con los días aunque no haya ventas). |
+| **RN-AL-02** | El estado se **re-evalúa** después de cada operación, al cambiar el stock mínimo o la configuración, y al abrir la app (la predicción cambia con los días aunque no haya ventas). *Operaciones seguidas* (menos de 0.3 s entre una y otra, hasta 1.2 s en total) se re-evalúan juntas al final, comparando el estado final con el último avisado: un cambio que se revierte dentro de ese lapso no avisa, y el contador de *Control* se actualiza hasta ~1 s después (RN-SIS-09). |
 | **RN-AL-03** | Se genera un **aviso** solo cuando el estado **empeora**: `NORMAL → POR_ACABARSE`, `NORMAL → AGOTADO` o `POR_ACABARSE → AGOTADO`. Mientras el estado no mejore, no se repite el aviso del mismo producto. |
 | **RN-AL-04** | Cuando el estado de un producto **vuelve a `NORMAL`** (por ejemplo, llegó mercadería), el aviso se **rearma**: si vuelve a empeorar, se avisa de nuevo. |
 | **RN-AL-05** | El color **nunca es la única señal**: cada estado se muestra con color, ícono y texto. |

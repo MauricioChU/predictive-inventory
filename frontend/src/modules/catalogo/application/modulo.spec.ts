@@ -13,6 +13,7 @@ import {
   RepositorioDeFotosEnMemoria,
   RepositorioDeProductosEnMemoria,
 } from '../infrastructure/memoria/repositorios'
+import { UnidadDeTrabajoEspia } from '@/shared/application/__pruebas__/unidad-de-trabajo-espia'
 import { crearModuloCatalogo, type DependenciasDeCatalogo, type ModuloCatalogo } from './modulo'
 
 class InventarioFalso implements InventarioParaCatalogo {
@@ -329,4 +330,46 @@ describe('ModuloCatalogo.importacion', () => {
       }),
     ).rejects.toThrow('Ya existe un producto con ese nombre')
   })
+})
+
+describe('RN-SIS-09: los listados de Catálogo leen en una sola transacción de solo lectura', () => {
+  async function preparar() {
+    const { modulo, deps, inventario } = construirModulo()
+    const categoriaId = await modulo.importacion.crearCategoria('Otros')
+    const productoId = await modulo.importacion.crear({
+      nombre: 'Escoba',
+      categoriaId,
+      unidad: 'UNIDAD',
+      precioCompra: '6.00',
+      precioVenta: '9.00',
+      stockMinimo: '2',
+    })
+    const espia = new UnidadDeTrabajoEspia(deps.uow)
+    const vigilado = crearModuloCatalogo({
+      ...deps,
+      uow: espia,
+      productos: espia.vigilar('productos', deps.productos),
+      categorias: espia.vigilar('categorias', deps.categorias),
+      inventario: () => espia.vigilar('inventario', inventario),
+      ventas: () => espia.vigilar('ventas', deps.ventas()),
+    })
+    return { espia, modulo: vigilado, productoId }
+  }
+
+  const LISTADOS: [string, (m: ModuloCatalogo, productoId: string) => Promise<unknown>][] = [
+    ['buscarProductos', (m) => m.buscarProductos({ texto: 'esc' })],
+    ['buscarProductos (archivados)', (m) => m.buscarProductos({ texto: '', archivados: true })],
+    ['listarCategorias', (m) => m.listarCategorias()],
+    ['obtenerProducto', (m, productoId) => m.obtenerProducto(productoId)],
+  ]
+
+  it.each(LISTADOS)(
+    'RN-SIS-09: %s lee todo dentro de UN leer y no abre escrituras',
+    async (_, listado) => {
+      const { espia, modulo, productoId } = await preparar()
+      await listado(modulo, productoId)
+      expect(espia.transacciones()).toEqual({ lecturas: 1, escrituras: 0 })
+      expect(espia.llamadasSueltas).toEqual([])
+    },
+  )
 })
