@@ -17,10 +17,12 @@ import {
 import { ResumenDiario } from '../domain/resumen-diario'
 import {
   cambiarCantidadEnLista,
+  deshacerQuitarDeLista,
   lineasParaRegistrarLlegada,
   listaParaComprar,
   quitarDeLista,
   textoParaCompartir,
+  type QuitadoDeLista,
 } from './lista-de-compras'
 import {
   detalleDeProducto,
@@ -49,7 +51,9 @@ export interface ModuloAnalisis {
   consultarTorre(opciones?: OpcionesDeTorre): Promise<TorreDeControl>
   listaParaComprar(): Promise<ListaParaComprar>
   cambiarCantidadEnLista(productoId: string, cantidad: string): Promise<void>
-  quitarDeLista(productoId: string): Promise<void>
+  quitarDeLista(productoId: string): Promise<QuitadoDeLista>
+  /** RN-OP-18: deja la lista del día como estaba antes de quitar (ver deshacerQuitarDeLista). */
+  deshacerQuitarDeLista(quitado: QuitadoDeLista): Promise<void>
   textoParaCompartir(): Promise<string>
   lineasParaRegistrarLlegada(): Promise<{ productoId: string; cantidad: Cantidad; costo: Dinero }[]>
   necesitoComprar(productoId: string): Promise<RespuestaNecesitoComprar>
@@ -97,6 +101,7 @@ export function crearModuloAnalisis(d: DependenciasDeAnalisis): ModuloAnalisis {
     cambiarCantidadEnLista: (productoId, cantidad) =>
       cambiarCantidadEnLista(d, productoId, cantidad),
     quitarDeLista: (productoId) => quitarDeLista(d, productoId),
+    deshacerQuitarDeLista: (quitado) => deshacerQuitarDeLista(d, quitado),
     textoParaCompartir: () => leer(() => textoParaCompartir(d)),
     lineasParaRegistrarLlegada: () => leer(() => lineasParaRegistrarLlegada(d)),
     necesitoComprar: (productoId) => leer(() => necesitoComprar(d, productoId)),

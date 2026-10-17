@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ProductoResumido } from '@/shared/contratos/entre-modulos'
-import { formatearDinero } from '@/shared/domain/formato'
+import { formatearCantidad, formatearDinero } from '@/shared/domain/formato'
 import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'
 import { crearEntorno } from '../__pruebas__/entorno'
 import { historial } from '../domain/__pruebas__/historial'
@@ -61,6 +61,7 @@ describe('Torre de control', () => {
     expect(Object.keys(torre)).toEqual([
       'resumen',
       'atencion',
+      'productosEnAtencion',
       'paraComprar',
       'masVendidos',
       'semana',
@@ -70,6 +71,7 @@ describe('Torre de control', () => {
     ])
     expect(Object.values(torre.resumen).every((d) => d.esCero())).toBe(true)
     expect(torre.atencion).toEqual({ agotados: 0, porAcabarse: 0, preciosParaRevisar: 0 })
+    expect(torre.productosEnAtencion).toEqual({ agotados: [], porAcabarse: [] })
     expect(torre.paraComprar.lineas).toEqual([])
     expect(torre.paraComprar.total.esCero()).toBe(true)
     expect(torre.masVendidos).toEqual({ porVeces: [], porGanancia: [] })
@@ -190,6 +192,25 @@ describe('Torre de control', () => {
     expect(
       torre.preciosParaRevisar.map((p) => [p.nombre, formatearDinero(p.perdidaPorUnidad)]),
     ).toEqual([['Cera roja', 'S/ 0.50']])
+  })
+
+  // Plan 13: en Control, "Atención" abre la lista de cada grupo (04-torre-de-control). La lista
+  // de compras no sirve para eso: el usuario puede haber quitado productos de la lista de hoy.
+  it('Atención: la lista de agotados y la de por acabarse, aunque se hayan quitado de la lista para comprar', async () => {
+    const e = entorno([LEJIA, CARBON, JABON, BOLSAS, DETERGENTE, CERA_ROJA])
+    await e.cargar(...historialesDelEscenario())
+    await e.modulo.quitarDeLista('lejia')
+    await e.modulo.quitarDeLista('bolsas')
+
+    const { agotados, porAcabarse } = (await e.modulo.consultarTorre()).productosEnAtencion
+    const filas = (lista: typeof agotados) =>
+      lista.map((p) => [p.productoId, p.nombre, formatearCantidad(p.stock, p.unidad), p.cobertura])
+    expect(filas(agotados)).toEqual([['bolsas', 'Bolsas', '0 unid.', null]])
+    // Menos días de cobertura primero; sin predicción, al final.
+    expect(filas(porAcabarse)).toEqual([
+      ['lejia', 'Lejía 1 L', '5 unid.', 'Se acaba en ~2 días'],
+      ['jabon', 'Jabón', '2 unid.', null],
+    ])
   })
 
   it('RN-AN-09: los más vendidos pueden mirar 30 días', async () => {

@@ -83,6 +83,16 @@ describe('RespuestaGrande ("¿Necesito comprar?")', () => {
     for (const icono of w.findAll('svg')) expect(icono.attributes('aria-hidden')).toBe('true')
   })
 
+  // Plan 13: RN-AN-16 caso 4 ("Tienes 10 unid. Todavía no sé cuánto vendes…") no dice que
+  // compre ni que no: va con tono informativo, ni de alerta ni de éxito.
+  it('tono info para la respuesta que todavía no sabe (RN-AN-16 caso 4)', () => {
+    const w = mount(RespuestaGrande, {
+      props: { texto: 'Tienes 10 unid. Todavía no sé cuánto vendes', tono: 'info' },
+    })
+    expect(w.classes()).toContain('respuesta-grande--info')
+    expect(w.get('svg').attributes('aria-hidden')).toBe('true')
+  })
+
   it('RN-UX-15: al aparecer, anuncia la frase con el anunciador global (no con su propia región viva)', async () => {
     const anunciador = crearAnunciador()
     const w = mount(RespuestaGrande, {

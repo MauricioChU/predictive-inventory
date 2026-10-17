@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onUnmounted, watch } from 'vue'
-import { CircleCheck, CircleX, TriangleAlert } from 'lucide-vue-next'
+import { CircleCheck, CircleX, Info, TriangleAlert } from 'lucide-vue-next'
 import { CLAVE_ANUNCIADOR } from '../anunciador'
 import { largoSinCorte, pegarCifras } from '../texto-sin-cortes'
 
@@ -11,12 +11,20 @@ const props = defineProps<{
    * (otro producto con la misma respuesta), cambia la :key del componente: se monta de nuevo.
    */
   texto: string
-  /** atencion = hay que comprar · exito = alcanza · peligro = no compres. El texto lo dice igual. */
-  tono: 'atencion' | 'exito' | 'peligro'
+  /**
+   * atencion = hay que comprar · exito = alcanza · peligro = no compres · info = todavía no se
+   * sabe (RN-AN-16 caso 4). El texto lo dice igual.
+   */
+  tono: 'atencion' | 'exito' | 'peligro' | 'info'
 }>()
 
-// Mismo lenguaje visual que InsigniaEstado: ⚠ queda poco, ✓ bien, ✕ no.
-const ICONOS = { atencion: TriangleAlert, exito: CircleCheck, peligro: CircleX } as const
+// Mismo lenguaje visual que InsigniaEstado: ⚠ queda poco, ✓ bien, ✕ no; ⓘ para lo que solo informa.
+const ICONOS = {
+  atencion: TriangleAlert,
+  exito: CircleCheck,
+  peligro: CircleX,
+  info: Info,
+} as const
 const icono = computed(() => ICONOS[props.tono])
 const frase = computed(() => pegarCifras(props.texto))
 const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.texto)) }))
@@ -99,5 +107,9 @@ onUnmounted(retirar)
 .respuesta-grande--peligro {
   color: var(--color-peligro);
   background: var(--color-peligro-suave);
+}
+.respuesta-grande--info {
+  color: var(--color-primario);
+  background: var(--color-primario-suave);
 }
 </style>

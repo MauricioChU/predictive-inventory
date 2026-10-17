@@ -86,6 +86,41 @@ describe('RN-AN-08: lista para comprar editable', () => {
     ])
   })
 
+  // Plan 13, ronda 1: Deshacer (RN-OP-18) deja la lista del día exactamente como estaba.
+  it('RN-AN-08 / RN-OP-18: deshacer quitar una línea sin cambios la devuelve siguiendo la sugerencia', async () => {
+    const e = await conLejiaYCarbon()
+    const quitado = await e.modulo.quitarDeLista('carbon')
+    await e.modulo.deshacerQuitarDeLista(quitado)
+    expect(await cantidades(e)).toEqual([
+      ['Lejía 1 L', '12 unid.'],
+      ['Carbón', '1.5 kg'],
+    ])
+    // No queda como un cambio del usuario: si la sugerencia cambia, la línea la sigue.
+    expect((await e.listaDeCompras.delDia('2026-10-15'))?.cambios).toEqual([])
+  })
+
+  it('RN-AN-08 / RN-OP-18: deshacer quitar una línea cambiada la devuelve con su cantidad', async () => {
+    const e = await conLejiaYCarbon()
+    await e.modulo.cambiarCantidadEnLista('lejia', '24')
+    const quitado = await e.modulo.quitarDeLista('lejia')
+    await e.modulo.deshacerQuitarDeLista(quitado)
+    expect(await cantidades(e)).toEqual([
+      ['Lejía 1 L', '24 unid.'],
+      ['Carbón', '1.5 kg'],
+    ])
+    expect((await e.listaDeCompras.delDia('2026-10-15'))?.cambios).toEqual([
+      { productoId: 'lejia', cantidad: 24_000 },
+    ])
+  })
+
+  it('RN-AN-08: deshacer después de la medianoche no toca la lista del día nuevo', async () => {
+    const e = await conLejiaYCarbon()
+    const quitado = await e.modulo.quitarDeLista('carbon')
+    e.reloj.fijar('2026-10-16T13:00:00.000Z') // 2026-10-16 08:00 en Lima
+    await e.modulo.deshacerQuitarDeLista(quitado)
+    expect(await e.listaDeCompras.delDia('2026-10-16')).toBeNull()
+  })
+
   it.each([
     ['lejia', '0', 'La cantidad debe ser mayor que 0'],
     ['lejia', '1.5', 'Este producto se cuenta por unidades enteras'],
