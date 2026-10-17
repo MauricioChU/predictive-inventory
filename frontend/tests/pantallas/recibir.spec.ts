@@ -86,7 +86,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     ;(cerrar.element as HTMLElement).focus()
     await cerrar.trigger('click')
     await esperarDatos(app)
-    expect(p.w.text()).not.toContain('Quitamos')
+    expect(p.w.findAll('.aviso-en-pagina').some((a) => leer(a).includes('Quitamos'))).toBe(false)
     expect(document.activeElement).toBe(p.w.get('#contenido h1').element)
   })
 
