@@ -34,7 +34,14 @@ export class RegistroDePasos<M> {
     return this
   }
 
-  buscar(texto: string): { manejador: ManejadorDePaso<M>; argumentos: unknown[] } | null {
+  /** Las expresiones registradas, en orden (para comprobar que ningún paso quedó sin usar). */
+  get expresiones(): readonly string[] {
+    return this.definiciones.map((d) => d.texto)
+  }
+
+  buscar(
+    texto: string,
+  ): { manejador: ManejadorDePaso<M>; argumentos: unknown[]; expresion: string } | null {
     const coincidencias = this.definiciones.flatMap((d) => {
       const argumentos = d.expresion.match(texto)
       return argumentos
@@ -47,7 +54,13 @@ export class RegistroDePasos<M> {
       )
     }
     const [unica] = coincidencias
-    return unica ? { manejador: unica.definicion.manejador, argumentos: unica.argumentos } : null
+    return unica
+      ? {
+          manejador: unica.definicion.manejador,
+          argumentos: unica.argumentos,
+          expresion: unica.definicion.texto,
+        }
+      : null
   }
 
   unir(otro: RegistroDePasos<M>): RegistroDePasos<M> {

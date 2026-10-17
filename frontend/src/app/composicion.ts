@@ -134,6 +134,8 @@ export interface Aplicacion {
  * - Tras revisar datos, reconstruir o restaurar una copia (sin evento de dominio) la
  *   composición vuelve a evaluar los avisos enseguida (el contador llega con esa evaluación) y
  *   avisa a quien escuche `alCambiarEnBloque` (p. ej. el estado global, que recarga la letra).
+ * - Pedir el permiso de notificaciones (RN-AL-08) guarda la respuesta en la configuración de
+ *   la tienda (`notificacionesActivas`), que es la otra mitad de RN-AL-06c.
  */
 export function crearAplicacion(
   infra: Infraestructura,
@@ -192,7 +194,7 @@ export function crearAplicacion(
     proyecciones: () => [analisis.proyeccion],
   })
 
-  const alertas = crearModuloAlertas({
+  const alertasBase = crearModuloAlertas({
     avisos: r.avisos,
     notificador: infra.notificador,
     uow,
@@ -220,7 +222,24 @@ export function crearAplicacion(
     tienda: () => tienda.consultable,
   })
 
-  const dejarDeEscuchar = alertas.escucharEventos()
+  const dejarDeEscuchar = alertasBase.escucharEventos()
+
+  /**
+   * RN-AL-06c / RN-AL-08: el canal del sistema exige permiso del navegador Y la configuración
+   * activa. Lo que el usuario contesta en "Sí, avísame" es su decisión: se guarda en la
+   * configuración (sin esto, conceder el permiso nunca activaba las notificaciones).
+   */
+  const alertas: ModuloAlertas = {
+    ...alertasBase,
+    async solicitarPermiso() {
+      const concedido = await alertasBase.solicitarPermiso()
+      const { notificacionesActivas } = await tienda.obtenerConfiguracion()
+      if (notificacionesActivas !== concedido) {
+        await tienda.actualizarConfiguracion({ notificacionesActivas: concedido })
+      }
+      return concedido
+    },
+  }
 
   const manejadoresDeCambio = new Set<() => void>()
 

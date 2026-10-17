@@ -229,6 +229,33 @@ describe.each(ALMACENES)('Composición de la aplicación (%s)', (almacen) => {
     ])
   })
 
+  it('RN-AL-06c/08: conceder el permiso ("Sí, avísame") activa las notificaciones del sistema', async () => {
+    app = crearAplicacionDePrueba({ ahora: HOY, almacen })
+    expect(await app.alertas.notificacionesPermitidas()).toBe(false)
+
+    expect(await app.alertas.solicitarPermiso()).toBe(true)
+
+    expect(app.notificador.solicitudes).toBe(1)
+    expect((await app.tienda.obtenerConfiguracion()).notificacionesActivas).toBe(true)
+    expect(await app.alertas.notificacionesPermitidas()).toBe(true)
+    const id = await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '5' })
+    await app.inventario.registrarVenta({ lineas: [{ productoId: id, cantidad: '3' }] })
+    await app.esperarTareasPendientes()
+    expect(app.notificador.mostradas).toEqual([
+      { texto: 'Queda poco: Lejía 1 L (2 unid.)', url: `/productos/${id}` },
+    ])
+  })
+
+  it('RN-AL-08: si se rechaza el permiso, las notificaciones del sistema quedan apagadas', async () => {
+    await nuevaApp()
+    app.notificador.permiso = false
+
+    expect(await app.alertas.solicitarPermiso()).toBe(false)
+
+    expect((await app.tienda.obtenerConfiguracion()).notificacionesActivas).toBe(false)
+    expect(await app.alertas.notificacionesPermitidas()).toBe(false)
+  })
+
   it('ids secuenciales y reloj sin empates: cada operación tiene su propio registradaEn', async () => {
     await nuevaApp()
     const id = await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '9' })
@@ -295,5 +322,27 @@ describe.each(ALMACENES)('Aplicacion.detener (%s)', (almacen) => {
     await vi.advanceTimersByTimeAsync(10 * VENTANA)
 
     expect(situaciones).not.toHaveBeenCalled()
+  })
+})
+
+describe.each(ALMACENES)('AplicacionDePrueba.sinEventos (%s)', (almacen) => {
+  it('lo registrado en silencio queda guardado, pero no evalúa avisos ni notifica', async () => {
+    const app = crearAplicacionDePrueba({ ahora: HOY, almacen })
+    await app.tienda.actualizarConfiguracion({ notificacionesActivas: true })
+
+    const id = await app.sinEventos(async () => {
+      const nuevo = await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '5' })
+      await app.inventario.registrarVenta({ lineas: [{ productoId: nuevo, cantidad: '3' }] })
+      return nuevo
+    })
+
+    expect((await app.inventario.consultable.stockDe(id)).milesimas).toBe(2000)
+    expect(app.notificador.mostradas).toEqual([])
+    expect(await app.infraestructura.repositorios.avisos.todos()).toEqual([])
+    // Después del silencio, los eventos vuelven a llegar.
+    await app.inventario.registrarVenta({ lineas: [{ productoId: id, cantidad: '2' }] })
+    await app.esperarTareasPendientes()
+    expect(app.notificador.mostradas.map((n) => n.texto)).toEqual(['Se acabó: Lejía 1 L'])
+    await app.cerrar()
   })
 })

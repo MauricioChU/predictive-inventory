@@ -16,6 +16,10 @@
   --color-foco: #1946c4;
   /* M5: el foco #1946c4 casi no se ve sobre fondos oscuros (p. ej. el aviso Deshacer). */
   --color-foco-sobre-oscuro: #ffd60a;
+  /* Kit A (plan 09b, ronda 1): transparencias del texto (#121a18) escritas como token y no con
+     color-mix(), que un Chrome < 111 convierte en currentcolor (borde y sombra negros). */
+  --color-borde-foto: rgb(18 26 24 / 0.16);
+  --sombra-flotante: 0 -6px 16px -8px rgb(18 26 24 / 0.35);
 
   --fuente: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --espacio-1: 0.25rem;

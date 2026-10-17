@@ -33,8 +33,15 @@ jobs:
       - name: Tests con cobertura
         run: npm run test:cobertura
         env:
-          # En main todos los escenarios Gherkin deben estar implementados.
-          GHERKIN_ESTRICTO: ${{ (github.base_ref == 'main' || github.ref == 'refs/heads/main') && '1' || '0' }}
+          # Todos los escenarios Gherkin están implementados (plan 10): un paso sin definir
+          # hace fallar su escenario en cualquier rama.
+          GHERKIN_ESTRICTO: '1'
+      - name: Aceptación sobre Dexie
+        # Los mismos 158 casos de los .feature sobre IndexedDB (fake-indexeddb) en vez de memoria.
+        run: npx vitest run tests/aceptacion
+        env:
+          ACEPTACION_ALMACEN: dexie
+          GHERKIN_ESTRICTO: '1'
       - run: npm run build-only
       # RN-SIS-09: lo que se descarga al abrir y lo que precachea el service worker (lee dist/).
       - run: npm run test:build
