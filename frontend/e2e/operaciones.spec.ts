@@ -262,6 +262,29 @@ test.describe('Historial (HU-OP-08, RN-OP-17)', () => {
     await expect(page.getByRole('link', { name: /^Anulado/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /^Venta/ })).toContainText('Anulada')
   })
+
+  // Plan 17: DialogoConfirmacion en un navegador real (jsdom no tiene foco ni Escape nativos).
+  test('el diálogo de anular: mensaje como descripción, foco adentro, Escape no anula y el foco vuelve a "Anular"', async ({
+    page,
+  }) => {
+    await abrir(page, './')
+    const lejia = await crearProducto(page, LEJIA)
+    await venderPorCasoDeUso(page, lejia, '2')
+    await abrir(page, './historial')
+    await page.getByRole('link', { name: /^Venta/ }).click()
+    const anular = page.getByRole('button', { name: 'Anular' })
+    await anular.click()
+    const dialogo = page.getByRole('dialog', { name: '¿Anular esta venta?' })
+    await expect(dialogo).toHaveAccessibleDescription(
+      'El stock vuelve a como estaba antes de esta operación. Una anulación no se puede deshacer.',
+    )
+    // Lo seguro primero: el foco en "No", dentro del diálogo.
+    await expect(dialogo.getByRole('button', { name: 'No', exact: true })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(dialogo).toBeHidden()
+    await expect(anular).toBeFocused()
+    expect(await stockDe(page, lejia)).toBe(8)
+  })
 })
 
 interface FocoMedido {

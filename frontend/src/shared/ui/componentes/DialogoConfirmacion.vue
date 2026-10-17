@@ -28,19 +28,47 @@ const props = withDefaults(
 const emit = defineEmits<{ confirmar: []; cancelar: []; cerrar: [] }>()
 
 const idTitulo = useId()
+/** Plan 17: el mensaje es la descripción del diálogo (el lector la dice junto al título). */
+const idMensaje = useId()
 const dialogo = ref<HTMLDialogElement>()
 const botonCancelar = ref<HTMLButtonElement>()
 const botonConfirmar = ref<HTMLButtonElement>()
+
+/** Quien tenía el foco al abrirse (p. ej. el botón "Archivar producto"). */
+let abridor: HTMLElement | null = null
+
+/**
+ * Plan 17 (patrón de diálogo de WAI-ARIA): al cerrarse, el foco vuelve a quien lo abrió, si
+ * sigue en la pantalla y si el foco quedó en el diálogo (o perdido en <body>). Si la pantalla ya
+ * lo llevó a otro lado (p. ej. al resultado), no se toca.
+ */
+function cerrarYDevolverFoco(): void {
+  const elemento = dialogo.value
+  const activo = document.activeElement
+  const focoPerdido = !activo || activo === document.body || !!elemento?.contains(activo)
+  elemento?.close()
+  if (focoPerdido && abridor?.isConnected) abridor.focus()
+  abridor = null
+}
 
 watch(
   () => props.abierto,
   async (abierto) => {
     await nextTick()
     if (abierto) {
-      if (!dialogo.value?.open) dialogo.value?.showModal()
+      if (!dialogo.value?.open) {
+        const activo = document.activeElement
+        abridor =
+          activo instanceof HTMLElement &&
+          activo !== document.body &&
+          !dialogo.value?.contains(activo)
+            ? activo
+            : null
+        dialogo.value?.showModal()
+      }
       ;(props.enfocar === 'confirmar' ? botonConfirmar : botonCancelar).value?.focus()
-    } else {
-      dialogo.value?.close()
+    } else if (dialogo.value?.open) {
+      cerrarYDevolverFoco()
     }
   },
   { immediate: true },
@@ -58,11 +86,12 @@ function alCancelarNativo(evento: Event) {
     ref="dialogo"
     class="dialogo-confirmacion"
     :aria-labelledby="idTitulo"
+    :aria-describedby="idMensaje"
     @cancel="alCancelarNativo"
   >
     <!-- Plan 12: "S/ 2.60" o "1 L" nunca se parten en dos líneas (RN-UX-09). -->
     <h2 :id="idTitulo">{{ pegarCifras(titulo) }}</h2>
-    <p>{{ pegarCifras(mensaje) }}</p>
+    <p :id="idMensaje">{{ pegarCifras(mensaje) }}</p>
     <div class="acciones">
       <button ref="botonCancelar" type="button" class="cancelar" @click="emit('cancelar')">
         {{ textoCancelar }}
