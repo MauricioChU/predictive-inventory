@@ -1,20 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { Gauge, House, Package, PackagePlus, ShoppingCart } from 'lucide-vue-next'
+import { House } from 'lucide-vue-next'
+import { iconoDeRuta } from '../iconos-de-rutas'
 
 const props = withDefaults(defineProps<{ contadorControl?: number }>(), {
   contadorControl: undefined,
 })
 const router = useRouter()
-
-const ICONOS: Record<string, typeof House> = {
-  house: House,
-  'shopping-cart': ShoppingCart,
-  'package-plus': PackagePlus,
-  package: Package,
-  gauge: Gauge,
-}
 
 const destinos = computed(() =>
   router.options.routes
@@ -23,7 +16,7 @@ const destinos = computed(() =>
       nombre: String(ruta.name),
       ruta: ruta.path,
       titulo: String(ruta.meta?.titulo ?? ''),
-      icono: ICONOS[String(ruta.meta?.icono ?? '')] ?? House,
+      icono: iconoDeRuta(String(ruta.meta?.icono ?? '')) ?? House,
     })),
 )
 
