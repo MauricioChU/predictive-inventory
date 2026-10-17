@@ -45,6 +45,14 @@ jobs:
       - run: npm run build-only
       # RN-SIS-09: lo que se descarga al abrir y lo que precachea el service worker (lee dist/).
       - run: npm run test:build
+      # Plan 17: el job E2E prueba ESTE build (el mismo que pasó test:build), sin rehacerlo.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: frontend/dist
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 1
 
   specs:
     name: Specs (cada regla tiene escenario)
@@ -79,16 +87,20 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run build-only
+      # El build del job Frontend (needs: frontend). Playwright lo sirve con `npm run preview`
+      # porque GitHub Actions ya define CI=true (no hace falta repetirlo aquí).
+      - uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: frontend/dist
       - run: npx playwright test
-        env:
-          CI: 'true'
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: reporte-playwright
           path: frontend/playwright-report
           retention-days: 7
+          overwrite: true
 
   backend:
     name: Backend (ruff, mypy, pytest)

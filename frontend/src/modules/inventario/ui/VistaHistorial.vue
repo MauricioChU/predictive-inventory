@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Ban, ChevronDown, ChevronRight } from 'lucide-vue-next'
 import { useAplicacion } from '@/app/proveer-aplicacion'
@@ -28,25 +28,36 @@ import { hoyEnLaTienda } from '@/shared/domain/fecha'
 const aplicacion = useAplicacion()
 const router = useRouter()
 
-/** Cuántas operaciones se dibujan de una vez ("Ver más" agrega otras tantas). */
+/**
+ * Cuántas operaciones se traen de una vez ("Ver más" trae otras tantas). Plan 17: el libro se
+ * pide de a páginas (`paginaDelHistorial`), no entero: con años de ventas abre igual de rápido.
+ */
 const POR_PAGINA = 60
 
 const filtro = ref<FiltroDeTipo>('TODO')
 const operaciones = ref<OperacionVista[]>([])
-const visibles = ref(POR_PAGINA)
+/** Desde dónde sigue la página siguiente; null si ya no hay más. */
+const siguiente = ref<string | null>(null)
+const trayendoMas = ref(false)
 const cargado = ref(false)
 const error = ref<ErrorParaMostrar | null>(null)
 const hoy: Dia = hoyEnLaTienda(new Date())
+const refRaiz = ref<HTMLElement>()
 let pedido = 0
+
+function consulta(desde?: string) {
+  const tipo = filtro.value === 'TODO' ? undefined : filtro.value
+  return { ...(tipo ? { tipo } : {}), ...(desde ? { desde } : {}), cuantas: POR_PAGINA }
+}
 
 async function cargar(): Promise<void> {
   const numero = (pedido += 1)
+  trayendoMas.value = false
   try {
-    const tipo = filtro.value === 'TODO' ? undefined : filtro.value
-    const encontradas = await aplicacion.inventario.historial(tipo ? { tipo } : {})
+    const pagina = await aplicacion.inventario.paginaDelHistorial(consulta())
     if (numero !== pedido) return
-    operaciones.value = encontradas
-    visibles.value = POR_PAGINA
+    operaciones.value = pagina.operaciones
+    siguiente.value = pagina.siguiente
     error.value = null
   } catch (causa) {
     if (numero === pedido) error.value = errorParaMostrar(causa, 'anulacion')
@@ -55,12 +66,35 @@ async function cargar(): Promise<void> {
   }
 }
 
+/** "Ver más": la página que sigue, al final. El foco pasa a la primera recién traída. */
+async function verMas(): Promise<void> {
+  const desde = siguiente.value
+  if (desde === null || trayendoMas.value) return
+  const numero = pedido
+  const yaHabia = operaciones.value.length
+  trayendoMas.value = true
+  try {
+    const pagina = await aplicacion.inventario.paginaDelHistorial(consulta(desde))
+    if (numero !== pedido) return
+    operaciones.value = [...operaciones.value, ...pagina.operaciones]
+    siguiente.value = pagina.siguiente
+    error.value = null
+  } catch (causa) {
+    if (numero === pedido) error.value = errorParaMostrar(causa, 'anulacion')
+    return
+  } finally {
+    if (numero === pedido) trayendoMas.value = false
+  }
+  await nextTick()
+  refRaiz.value?.querySelectorAll<HTMLElement>('.operacion')[yaHabia]?.focus()
+}
+
 watch(filtro, () => void cargar(), { immediate: true })
 
 /** Ya vienen de la más reciente a la más antigua: se cortan por día de negocio. */
 const grupos = computed(() => {
   const resultado: { dia: Dia; items: OperacionVista[] }[] = []
-  for (const operacion of operaciones.value.slice(0, visibles.value)) {
+  for (const operacion of operaciones.value) {
     const dia = diaDe(operacion.ocurridaEn)
     const ultimo = resultado.at(-1)
     if (ultimo?.dia === dia) ultimo.items.push(operacion)
@@ -68,7 +102,7 @@ const grupos = computed(() => {
   }
   return resultado
 })
-const quedanMas = computed(() => operaciones.value.length > visibles.value)
+const quedanMas = computed(() => siguiente.value !== null)
 
 const vacio = computed(() =>
   filtro.value === 'TODO'
@@ -91,7 +125,7 @@ function alAccionDelVacio(): void {
 </script>
 
 <template>
-  <div class="vista-historial">
+  <div ref="refRaiz" class="vista-historial">
     <EncabezadoPagina titulo="Historial" volver />
     <SelectorSegmentado
       v-model="filtro"
@@ -127,13 +161,7 @@ function alAccionDelVacio(): void {
         </RouterLink>
       </template>
     </ListaAgrupadaPorDia>
-    <Boton
-      v-if="quedanMas"
-      class="ver-mas"
-      texto="Ver más"
-      :icono="ChevronDown"
-      @click="visibles += POR_PAGINA"
-    />
+    <Boton v-if="quedanMas" class="ver-mas" texto="Ver más" :icono="ChevronDown" @click="verMas" />
   </div>
 </template>
 

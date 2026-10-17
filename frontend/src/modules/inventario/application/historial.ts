@@ -43,6 +43,24 @@ export interface FiltroDeHistorial {
   tipo?: TipoDeOperacion
 }
 
+/** Plan 17: el Historial de a páginas. */
+export interface ConsultaDelHistorial {
+  tipo?: TipoDeOperacion
+  /** El `siguiente` de la página anterior; sin él, la primera. */
+  desde?: Instante
+  /** Cuántas operaciones, más o menos (nunca se corta un grupo del mismo momento). */
+  cuantas?: number
+}
+
+export interface PaginaDelHistorial {
+  operaciones: OperacionVista[]
+  /** Para pedir la página que sigue ("Ver más"); null si no hay más. */
+  siguiente: Instante | null
+}
+
+/** Cuántas trae una página si no se dice. */
+export const OPERACIONES_POR_PAGINA = 60
+
 /** Ids de las operaciones que tienen una anulación (RN-OP-17). */
 function idsAnulados(registros: readonly OperacionRegistro[]): Set<string> {
   return new Set(registros.flatMap((r) => (r.anulaA === null ? [] : [r.anulaA])))
@@ -108,6 +126,28 @@ export async function historial(
   return delMasReciente(registros)
     .filter((r) => filtro.tipo === undefined || r.tipo === filtro.tipo)
     .map((r) => vista(r, anuladas.has(r.id), productos))
+}
+
+/**
+ * HU-OP-08 / plan 17: una página del Historial, en el mismo orden y con la misma vista que
+ * `historial()`, sin leer todo el libro: solo esa página, si tienen anulación y los productos.
+ * Una tras otra dan exactamente lo mismo que el historial completo.
+ */
+export async function paginaDelHistorial(
+  ctx: ContextoDeInventario,
+  consulta: ConsultaDelHistorial = {},
+): Promise<PaginaDelHistorial> {
+  const { registros, siguiente } = await ctx.operaciones.recientes({
+    ...(consulta.tipo ? { tipo: consulta.tipo } : {}),
+    ...(consulta.desde ? { antesDe: consulta.desde } : {}),
+    cuantas: Math.max(1, consulta.cuantas ?? OPERACIONES_POR_PAGINA),
+  })
+  const anuladas = await ctx.operaciones.conAnulacion(registros.map((r) => r.id))
+  const productos = new Map((await ctx.catalogo().productos()).map((p) => [p.id, p]))
+  return {
+    operaciones: delMasReciente(registros).map((r) => vista(r, anuladas.has(r.id), productos)),
+    siguiente,
+  }
 }
 
 /**

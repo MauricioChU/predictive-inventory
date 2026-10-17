@@ -3,6 +3,8 @@ import type { ConteoGuiadoRegistro, OperacionRegistro } from '@/shared/contratos
 import type { AlmacenEnMemoria } from '@/shared/infrastructure/memoria/almacen-en-memoria'
 import { enOrdenDeRegistro } from '../../domain/orden'
 import type {
+  ConsultaDeRecientes,
+  PaginaDeOperaciones,
   RepositorioDeConteo,
   RepositorioDeExistencias,
   RepositorioDeOperaciones,
@@ -36,6 +38,35 @@ export class RepositorioDeOperacionesEnMemoria implements RepositorioDeOperacion
   /** Por `registradaEn` (orden estable). */
   async todas(): Promise<OperacionRegistro[]> {
     return enOrdenDeRegistro(this.almacen.todos('operaciones'))
+  }
+
+  /** Como el índice `ocurridaEn` de Dexie: por el texto del instante, de mayor a menor. */
+  async recientes({ tipo, antesDe, cuantas }: ConsultaDeRecientes): Promise<PaginaDeOperaciones> {
+    const candidatas = this.almacen
+      .todos('operaciones')
+      .filter((r) => tipo === undefined || r.tipo === tipo)
+      .filter((r) => antesDe === undefined || r.ocurridaEn < antesDe)
+      .sort((x, y) => Number(y.ocurridaEn > x.ocurridaEn) - Number(y.ocurridaEn < x.ocurridaEn))
+    if (candidatas.length <= cuantas) return { registros: candidatas, siguiente: null }
+    // El grupo del último instante va entero: la página que sigue empieza antes de él.
+    const limite = candidatas[cuantas - 1]!.ocurridaEn
+    let fin = cuantas
+    while (fin < candidatas.length && candidatas[fin]!.ocurridaEn === limite) fin += 1
+    return {
+      registros: candidatas.slice(0, fin),
+      siguiente: fin < candidatas.length ? limite : null,
+    }
+  }
+
+  async conAnulacion(operacionIds: readonly string[]): Promise<Set<string>> {
+    const buscadas = new Set(operacionIds)
+    return new Set(
+      this.almacen
+        .todos('operaciones')
+        .flatMap((r) =>
+          r.tipo === 'ANULACION' && r.anulaA !== null && buscadas.has(r.anulaA) ? [r.anulaA] : [],
+        ),
+    )
   }
 }
 

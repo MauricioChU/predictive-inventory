@@ -63,6 +63,33 @@ async function registrar(p: PantallaMontada) {
 }
 
 describe('Llegó mercadería (HU-OP-03)', () => {
+  it('plan 17 (RN-UX-15): un producto archivado sale del carrito; al cerrar el aviso, el foco va al título', async () => {
+    const { app, lejia } = await conLejia()
+    await crearProductoDePrueba(app, {
+      nombre: 'Carbón',
+      unidad: 'KILO',
+      compra: '2.75',
+      venta: '4.00',
+      minimo: '1',
+      stockInicial: '0',
+    })
+    const p = await abrir(app)
+    await agregar(p, 'lejia', 'Lejía 1 L')
+    await agregar(p, 'carbon', 'Carbón')
+    await p.ir('/historial')
+    await app.catalogo.archivarProducto({ productoId: lejia, confirmado: true })
+    await p.ir('/recibir')
+    expect(lineas(p).map((l) => l.get('.nombre').text())).toEqual(['Carbón'])
+    const aviso = p.w.findAll('.aviso-en-pagina').find((a) => leer(a).includes('Quitamos'))
+    expect(aviso && leer(aviso)).toContain('Quitamos Lejía 1 L: ya no está a la venta')
+    const cerrar = boton(aviso!, 'Cerrar')
+    ;(cerrar.element as HTMLElement).focus()
+    await cerrar.trigger('click')
+    await esperarDatos(app)
+    expect(p.w.findAll('.aviso-en-pagina').some((a) => leer(a).includes('Quitamos'))).toBe(false)
+    expect(document.activeElement).toBe(p.w.get('#contenido h1').element)
+  })
+
   it('RN-UX-12: la pantalla se titula "Llegó mercadería" y en la navegación se llama "Recibir"', async () => {
     const { app } = await conLejia()
     const p = await abrir(app)

@@ -180,6 +180,8 @@ describe('Ajustes', () => {
     pantalla = await montarPantalla(app, '/ajustes')
 
     expect(pantalla.wrapper.text()).toContain(`Versión ${VERSION}`)
+    // Plan 17: la Fase 1 se publica como v0.1.0 (la etiqueta del merge en main).
+    expect(VERSION).toBe('0.1.0')
   })
 })
 

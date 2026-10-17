@@ -142,5 +142,7 @@ export function alReves(repositorio: RepositorioDeOperaciones): RepositorioDeOpe
     anulacionDe: (operacionId) => repositorio.anulacionDe(operacionId),
     porProducto: async (productoId) => (await repositorio.porProducto(productoId)).reverse(),
     todas: async () => (await repositorio.todas()).reverse(),
+    recientes: (consulta) => repositorio.recientes(consulta),
+    conAnulacion: (operacionIds) => repositorio.conAnulacion(operacionIds),
   }
 }

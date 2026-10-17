@@ -165,5 +165,25 @@ describe('Categorías (/productos/categorias)', () => {
     vista!.aviso.activo.value?.alDeshacer()
     await esperar()
     expect(nombres(w)).toContain('Lavavajillas')
+    // Plan 17 (RN-UX-11): lo que se deshizo se ve y se anuncia, como en Vender y Recibir.
+    expect(vista!.aviso.resultado.value).toMatchObject({
+      tono: 'exito',
+      titulo: 'Deshiciste eliminar la categoría Lavavajillas. Volvió a tu lista.',
+    })
+  })
+
+  it('plan 17: si Deshacer ya no puede volver a crearla, lo dice con el porqué', async () => {
+    const w = await abrir()
+    await botonEn(fila(w, 'Lavavajillas'), 'Eliminar').trigger('click')
+    await esperar()
+    // Mientras tanto otra categoría tomó ese nombre.
+    await app.catalogo.crearCategoria('Lavavajillas')
+    vista!.aviso.activo.value?.alDeshacer()
+    await esperar()
+    expect(vista!.aviso.resultado.value).toMatchObject({
+      tono: 'atencion',
+      titulo: 'No pudimos deshacer',
+      texto: 'Ya existe una categoría con ese nombre.',
+    })
   })
 })

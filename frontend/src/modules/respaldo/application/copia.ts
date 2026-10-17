@@ -1,5 +1,6 @@
 import { ErrorDeDominio } from '../../../shared/domain/errores'
 import {
+  conInstantesCanonicos,
   crearRespaldo,
   leerRespaldo,
   resumenDeCopia,
@@ -67,7 +68,7 @@ export async function restaurarCopia(
   const respaldo = leerRespaldo(texto)
 
   await deps.uow.ejecutar(async () => {
-    await deps.almacen.reemplazarTodo(respaldo.datos)
+    await deps.almacen.reemplazarTodo(conInstantesCanonicos(respaldo.datos))
     await deps.reconstructor.reconstruirTodo()
 
     const existencias = await deps.inventario().existencias()
