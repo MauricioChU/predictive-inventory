@@ -171,7 +171,7 @@ describe('Detalle del producto', () => {
     await esperarRuta(vista.router, 'producto-editar')
   })
 
-  it('Editar · Contar stock · Registrar merma abren sus pantallas por nombre', async () => {
+  it('Editar · Contar stock · Registrar pérdida abren sus pantallas por nombre', async () => {
     const id = await crearProducto(app, { ...ESCOBA, stockInicial: '3' })
     vista = await montarVista(app, `/productos/${id}`)
     const ruta = () => vista!.router.currentRoute.value
@@ -182,7 +182,7 @@ describe('Detalle del producto', () => {
 
     await vista.router.push(`/productos/${id}`)
     await esperar()
-    await boton(vista.wrapper, 'Registrar merma').trigger('click')
+    await boton(vista.wrapper, 'Registrar pérdida').trigger('click')
     await esperarRuta(vista.router, 'merma')
     expect(ruta().params.id).toBe(id)
 
@@ -256,7 +256,7 @@ describe('Detalle del producto', () => {
     expect(w.get('h1').text()).toBe('Escoba')
     expect(texto(w)).toContain('Este producto está archivado')
     expect(hayBoton(w, 'Contar stock')).toBe(false)
-    expect(hayBoton(w, 'Registrar merma')).toBe(false)
+    expect(hayBoton(w, 'Registrar pérdida')).toBe(false)
 
     await boton(w, 'Reactivar producto').trigger('click')
     await esperar()

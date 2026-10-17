@@ -284,7 +284,7 @@ async function cambiarSinPreguntar(id: string, accion: 'archivar' | 'reactivar')
 
           <div v-if="producto.activo" class="acciones-de-stock">
             <Boton texto="Contar stock" :icono="ClipboardList" @click="irA('contar-stock')" />
-            <Boton texto="Registrar merma" :icono="PackageMinus" @click="irA('merma')" />
+            <Boton texto="Registrar pérdida" :icono="PackageMinus" @click="irA('merma')" />
           </div>
 
           <section class="seccion" aria-labelledby="titulo-datos">
