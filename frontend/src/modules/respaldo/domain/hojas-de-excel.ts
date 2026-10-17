@@ -44,7 +44,7 @@ function etiquetaDeTipo(tipo: TipoDeOperacion, motivo: string | null): string {
     case 'VENTA':
       return 'Venta'
     case 'MERMA':
-      return motivo || 'Merma'
+      return motivo || 'Pérdida' // Guía de palabras (06): nunca "Merma"
     case 'AJUSTE':
       return motivo || 'Conteo de stock'
     case 'ANULACION':

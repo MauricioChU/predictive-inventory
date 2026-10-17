@@ -9,7 +9,8 @@ describe('etiquetaDeOperacion', () => {
     ['VENTA', null, 'Venta'],
     ['MERMA', 'Se derramó', 'Se derramó'],
     ['MERMA', 'Otro', 'Otro'],
-    ['MERMA', null, 'Merma'],
+    // Guía de palabras (06): nunca "Merma" en pantalla, aunque falte el motivo.
+    ['MERMA', null, 'Pérdida'],
     ['AJUSTE', MOTIVO_CONTEO, 'Conteo de stock'],
     ['AJUSTE', MOTIVO_PRODUCTO_RETIRADO, 'Producto retirado'],
     ['AJUSTE', null, 'Conteo de stock'],
