@@ -15,15 +15,17 @@ import SelectorDeBilletes from '@/shared/ui/componentes/SelectorDeBilletes.vue'
 import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
 import { BILLETES_DE_SOLES } from '@/shared/ui/tipos-de-productos'
 import { calcularVuelto } from '../domain/vuelto'
-import BuscadorDeProductos from './BuscadorDeProductos.vue'
+import BuscadorDeProductos, { type OrigenDeLaEleccion } from './BuscadorDeProductos.vue'
+import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import CuandoFue from './CuandoFue.vue'
 import DisposicionDeCarrito from './DisposicionDeCarrito.vue'
 import ListaDelCarrito from './ListaDelCarrito.vue'
 import { textoDePrecio } from './carrito-de-pantalla'
 import { useCarritos } from './carritos'
 import { errorDeFechaDelDominio, instanteDe, type ErrorDeFecha } from './cuando'
-import { enfocarPrimerError, enfocarTitulo, vibrar } from './foco-y-respuesta'
+import { enfocarLinea, enfocarPrimerError, enfocarTitulo, vibrar } from './foco-y-respuesta'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
+import { usarCarritoAlDia } from './usar-carrito-al-dia'
 import { usarDeshacer } from './usar-deshacer'
 
 /**
@@ -38,6 +40,8 @@ const anunciador = useAnunciador()
 // r1 M9: el carrito (con su fecha) vive en un store: tocar otra pantalla no lo borra.
 const carrito = useCarritos().venta
 const cuando = carrito.cuando
+// r2 #1: al volver con un carrito guardado, sus productos se ponen al día.
+const alDia = usarCarritoAlDia(carrito)
 const deshacer = usarDeshacer()
 
 const idResumen = useId()
@@ -56,9 +60,10 @@ const tonoDelVuelto = computed(() => {
   return vuelto.value.mensaje ? ('atencion' as const) : ('normal' as const)
 })
 
-function agregar(producto: ProductoVista): void {
+function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): void {
   carrito.agregar(producto)
   anunciador.anunciar(`Agregaste ${producto.nombre}. Total ${textoTotal.value}`)
+  if (origen === 'resultados') void enfocarLinea(producto.id)
 }
 
 async function cobrar(): Promise<void> {
@@ -80,14 +85,6 @@ async function volverAlCarrito(): Promise<void> {
   await enfocarTitulo()
 }
 
-/** RN-OP-05: con el stock al día, las líneas que ya no alcanzan se marcan junto a su campo. */
-async function actualizarStock(): Promise<void> {
-  const productos = await Promise.all(
-    carrito.lineas.value.map((l) => aplicacion.catalogo.obtenerProducto(l.producto.id)),
-  )
-  carrito.actualizarProductos(productos.filter((p): p is ProductoVista => p !== null))
-}
-
 async function confirmar(): Promise<void> {
   if (registrando.value || !vuelto.value.puedeConfirmar) return
   error.value = null
@@ -96,8 +93,10 @@ async function confirmar(): Promise<void> {
   if (fecha.error) return
   registrando.value = true
   try {
+    // r2 #1: con los precios de ahora a la vista, se manda el precio que se vio si cambió.
+    const precios = await alDia.preciosActuales()
     await aplicacion.inventario.registrarVenta({
-      ...carrito.aDatosDeVenta(),
+      ...carrito.aDatosDeVenta(precios),
       ...(fecha.instante ? { ocurridaEn: fecha.instante } : {}),
     })
   } catch (causa) {
@@ -107,7 +106,8 @@ async function confirmar(): Promise<void> {
     if (errorFecha.value) return
     error.value = mostrado
     if (error.value.codigo === 'STOCK_INSUFICIENTE') {
-      await actualizarStock()
+      // RN-OP-05: con el stock al día, las líneas que ya no alcanzan se marcan junto a su campo.
+      await alDia.refrescar()
       paso.value = 'carrito'
     }
     return
@@ -210,6 +210,13 @@ const resumenDelCobro = computed(() =>
     <template v-else>
       <EncabezadoPagina titulo="Vender" />
       <div class="avisos">
+        <AvisoEnPagina
+          v-if="alDia.quitados.value.length > 0"
+          tono="atencion"
+          :titulo="alDia.textoDeQuitados.value"
+          texto-cerrar="Cerrar"
+          @cerrar="alDia.cerrarAviso"
+        />
         <MensajeDeError v-if="error" :mensaje="error.mensaje" :ayuda="error.ayuda" />
       </div>
       <DisposicionDeCarrito titulo-carrito="En esta venta">

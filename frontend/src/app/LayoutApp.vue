@@ -29,7 +29,17 @@ function alDeshacer() {
 
 // Plan 12, r1 #2 (RN-UX-11): el botón Deshacer desaparece al tocarlo y el foco quedaría en
 // <body>; cuando llega el resultado, el foco pasa a su "Cerrar" (no si la persona ya siguió).
-watch(contextoAvisoDeshacer.resultado, async (resultado) => {
+// r2 #3: y si se cierra (solo o con "Cerrar") con el foco adentro, el foco va al título de la
+// pantalla, no a <body>.
+watch(contextoAvisoDeshacer.resultado, async (resultado, anterior) => {
+  if (!resultado && anterior) {
+    if (!document.activeElement?.closest('.resultado-de-deshacer')) return
+    await nextTick()
+    const titulo = document.querySelector<HTMLElement>('#contenido h1')
+    if (titulo && !titulo.hasAttribute('tabindex')) titulo.setAttribute('tabindex', '-1')
+    titulo?.focus()
+    return
+  }
   if (!resultado || (document.activeElement && document.activeElement !== document.body)) return
   await nextTick()
   document.querySelector<HTMLElement>('.resultado-de-deshacer .cerrar')?.focus()

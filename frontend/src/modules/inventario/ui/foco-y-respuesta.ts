@@ -13,6 +13,15 @@ export async function enfocarTitulo(): Promise<void> {
   titulo.focus()
 }
 
+/**
+ * r2 #2: el foco a la línea del carrito de ese producto (recién agregada o sumada): se ve y se
+ * lee; no es un campo, así el teclado del celular no se abre encima del carrito.
+ */
+export async function enfocarLinea(productoId: string): Promise<void> {
+  await nextTick()
+  document.querySelector<HTMLElement>(`.lista-del-carrito [data-producto="${productoId}"]`)?.focus()
+}
+
 /** Lleva el foco (y la vista) al primer campo marcado con error dentro de `contenedor`. */
 export async function enfocarPrimerError(contenedor: string): Promise<void> {
   await nextTick()

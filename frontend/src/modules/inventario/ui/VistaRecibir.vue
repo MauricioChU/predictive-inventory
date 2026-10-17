@@ -14,14 +14,15 @@ import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import PantallaExito from '@/shared/ui/componentes/PantallaExito.vue'
 import type { DatosDeIngreso } from '../application/ingresos'
-import BuscadorDeProductos from './BuscadorDeProductos.vue'
+import BuscadorDeProductos, { type OrigenDeLaEleccion } from './BuscadorDeProductos.vue'
 import CuandoFue from './CuandoFue.vue'
 import DisposicionDeCarrito from './DisposicionDeCarrito.vue'
 import ListaDelCarrito from './ListaDelCarrito.vue'
 import { useCarritos } from './carritos'
 import { errorDeFechaDelDominio, instanteDe, type ErrorDeFecha } from './cuando'
-import { enfocarPrimerError, enfocarTitulo, vibrar } from './foco-y-respuesta'
+import { enfocarLinea, enfocarPrimerError, enfocarTitulo, vibrar } from './foco-y-respuesta'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
+import { usarCarritoAlDia } from './usar-carrito-al-dia'
 import { usarDeshacer } from './usar-deshacer'
 
 /**
@@ -42,6 +43,8 @@ const router = useRouter()
 // r1 M9: lo cargado (con su fecha) vive en un store: tocar otra pantalla no lo borra.
 const carrito = useCarritos().ingreso
 const cuando = carrito.cuando
+// r2 #1: al volver con lo cargado guardado, sus productos se ponen al día.
+const alDia = usarCarritoAlDia(carrito)
 const deshacer = usarDeshacer()
 
 const paso = ref<Paso>('carrito')
@@ -78,9 +81,10 @@ const tituloDePrecios = computed(() => {
     : 'Cambiaron los costos'
 })
 
-function agregar(producto: ProductoVista): void {
+function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): void {
   carrito.agregar(producto)
   anunciador.anunciar(`Agregaste ${producto.nombre}. Costo total ${textoTotal.value}`)
+  if (origen === 'resultados') void enfocarLinea(producto.id)
 }
 
 async function registrarLlegada(): Promise<void> {
@@ -241,6 +245,13 @@ watch(
     <template v-else>
       <EncabezadoPagina titulo="Llegó mercadería" />
       <div class="avisos">
+        <AvisoEnPagina
+          v-if="alDia.quitados.value.length > 0"
+          tono="atencion"
+          :titulo="alDia.textoDeQuitados.value"
+          texto-cerrar="Cerrar"
+          @cerrar="alDia.cerrarAviso"
+        />
         <AvisoEnPagina
           v-if="prellenada === 'con-lineas'"
           tono="info"

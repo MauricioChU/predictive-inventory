@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import CampoTexto from '@/shared/ui/componentes/CampoTexto.vue'
 import SelectorSegmentado from '@/shared/ui/componentes/SelectorSegmentado.vue'
 import { diasPermitidos, type Cuando, type ErrorDeFecha } from './cuando'
-import { hoyEnLaTienda } from './hoy-en-la-tienda'
+import { hoyEnLaTienda } from '@/shared/domain/fecha'
 
 /**
  * RN-OP-09 / HU-OP-07: "¿Cuándo fue?" — por defecto ahora; con "Otro día" se eligen el día (de
@@ -27,7 +27,7 @@ const OPCIONES = [
 ] as const
 
 const otroDia = computed(() => props.modelValue.modo === 'otro')
-const limites = computed(() => diasPermitidos(hoyEnLaTienda()))
+const limites = computed(() => diasPermitidos(hoyEnLaTienda(new Date())))
 const errorDia = computed(() => (props.error?.campo === 'dia' ? props.error.mensaje : undefined))
 const errorHora = computed(() => (props.error?.campo === 'hora' ? props.error.mensaje : undefined))
 

@@ -17,7 +17,7 @@ import type { OperacionVista } from '../application/historial'
 import { enfocarTitulo } from './foco-y-respuesta'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
 import { cuentaDeLinea, nombreConArticulo, totalesDe } from './presentacion-de-operaciones'
-import { hoyEnLaTienda } from './hoy-en-la-tienda'
+import { hoyEnLaTienda } from '@/shared/domain/fecha'
 
 /**
  * Detalle de una operación del Historial y **Anular** (RN-OP-02, RN-OP-17): invierte todos sus
@@ -68,7 +68,7 @@ watch(
 const cuando = computed(() => {
   const o = operacion.value
   if (!o) return ''
-  return `${etiquetaDeDia(diaDe(o.ocurridaEn), hoyEnLaTienda())}, ${horaDe(o.ocurridaEn)}`
+  return `${etiquetaDeDia(diaDe(o.ocurridaEn), hoyEnLaTienda(new Date()))}, ${horaDe(o.ocurridaEn)}`
 })
 const puedeAnular = computed(
   () =>
@@ -128,7 +128,7 @@ async function anular(): Promise<void> {
           titulo="Esta anulación deshizo otra operación"
           :texto="
             original
-              ? `${original.etiqueta} del ${etiquetaDeDia(diaDe(original.ocurridaEn), hoyEnLaTienda()).toLowerCase()}, ${horaDe(original.ocurridaEn)}.`
+              ? `${original.etiqueta} del ${etiquetaDeDia(diaDe(original.ocurridaEn), hoyEnLaTienda(new Date())).toLowerCase()}, ${horaDe(original.ocurridaEn)}.`
               : undefined
           "
           :texto-accion="original ? 'Ver la operación anulada' : undefined"

@@ -349,12 +349,143 @@ describe('Vender (HU-OP-01, HU-OP-02)', () => {
     expect((lineas(p)[0]!.get('.cantidad input').element as HTMLInputElement).value).toBe('3')
   })
 
-  it('r1 M2: al elegir un resultado, el foco vuelve al buscador para buscar el siguiente', async () => {
+  it('r2 #2: al elegir un resultado, el foco va a su línea del carrito (no al buscador: el teclado no tapa el carrito)', async () => {
+    const { app, ids } = await tiendaDePrueba()
+    const p = await abrirVender(app)
+    await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+    const linea = p.w.get(`.lista-del-carrito [data-producto="${ids.lejia}"]`)
+    expect(document.activeElement).toBe(linea.element)
+    expect(linea.attributes('tabindex')).toBe('-1')
+  })
+
+  describe('r2 #1: el carrito guardado se pone al día al volver a Vender', () => {
+    it('stock: un "Solo quedan" viejo no bloquea Cobrar después de una llegada', async () => {
+      const app = crearAplicacionDePrueba({ ahora: HOY })
+      const lejia = await crearProductoDePrueba(app, {
+        nombre: 'Lejía 1 L',
+        compra: '2.40',
+        venta: '3.50',
+        minimo: '3',
+        stockInicial: '2',
+      })
+      const p = await abrirVender(app)
+      await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+      await cambiarCantidad(p, 0, '5')
+      expect(lineas(p)[0]!.find('.campo-numero .error').exists()).toBe(true)
+      await p.ir('/recibir')
+      await app.inventario.registrarIngreso({
+        lineas: [{ productoId: lejia, cantidad: '10', costo: '2.40' }],
+        confirmarSobrecompra: true,
+      })
+      await p.ir('/vender')
+      expect(lineas(p)[0]!.find('.campo-numero .error').exists()).toBe(false)
+      await boton(p.w, 'Cobrar').trigger('click')
+      await esperarDatos(app)
+      expect(p.w.get('h1').text()).toBe('Cobrar')
+    })
+
+    it('precio: una línea sin precio especial toma el precio actual y se cobra lo que se ve', async () => {
+      const { app, ids } = await tiendaDePrueba()
+      const p = await abrirVender(app)
+      await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+      await p.ir('/historial')
+      await app.catalogo.editarProducto({ productoId: ids.lejia, precioVenta: '5.00' })
+      await p.ir('/vender')
+      expect(leer(lineas(p)[0]!.get('.precio'))).toBe('S/ 5.00 c/u')
+      expect(total(p)).toBe('S/ 5.00')
+      await boton(p.w, 'Cobrar').trigger('click')
+      await esperarDatos(app)
+      await boton(p.w, 'Confirmar venta').trigger('click')
+      await esperarDatos(app)
+      const [venta] = await app.inventario.historial({ tipo: 'VENTA' })
+      expect(venta?.total?.centimos).toBe(500)
+    })
+
+    it('precio especial: se queda como estaba aunque cambie el precio del producto', async () => {
+      const { app, ids } = await tiendaDePrueba()
+      const p = await abrirVender(app)
+      await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+      await boton(lineas(p)[0]!, 'Cambiar precio').trigger('click')
+      await lineas(p)[0]!.get('.edicion-precio input').setValue('3.00')
+      await boton(lineas(p)[0]!, 'Guardar precio').trigger('click')
+      await esperarDatos(app)
+      await p.ir('/historial')
+      await app.catalogo.editarProducto({ productoId: ids.lejia, precioVenta: '5.00' })
+      await p.ir('/vender')
+      expect(lineas(p)[0]!.text()).toContain('Precio especial')
+      expect(total(p)).toBe('S/ 3.00')
+      await boton(p.w, 'Cobrar').trigger('click')
+      await esperarDatos(app)
+      await boton(p.w, 'Confirmar venta').trigger('click')
+      await esperarDatos(app)
+      const [venta] = await app.inventario.historial({ tipo: 'VENTA' })
+      expect(venta?.total?.centimos).toBe(300)
+    })
+
+    it('un producto archivado sale del carrito con un aviso que lo dice', async () => {
+      const { app, ids } = await tiendaDePrueba()
+      const p = await abrirVender(app)
+      await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+      await agregarBuscando(p, 'carbon', 'Carbón')
+      await p.ir('/historial')
+      await app.catalogo.archivarProducto({ productoId: ids.carbon, confirmado: true })
+      await p.ir('/vender')
+      expect(lineas(p).map((l) => l.get('.nombre').text())).toEqual(['Lejía 1 L'])
+      expect(leer(p.w.get('.aviso-en-pagina'))).toContain('Quitamos Carbón: ya no está a la venta')
+    })
+
+    it('lo que se cobra es lo que se vio, aunque el precio del producto cambie con la pantalla abierta', async () => {
+      const { app, ids } = await tiendaDePrueba()
+      const p = await abrirVender(app)
+      await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+      await cambiarCantidad(p, 0, '2')
+      await app.catalogo.editarProducto({ productoId: ids.lejia, precioVenta: '5.00' })
+      await boton(p.w, 'Cobrar').trigger('click')
+      await esperarDatos(app)
+      expect(p.w.get('.selector-de-billetes .valor-total').text()).toBe('S/ 7.00')
+      await boton(p.w, 'Confirmar venta').trigger('click')
+      await esperarDatos(app)
+      const [venta] = await app.inventario.historial({ tipo: 'VENTA' })
+      expect(venta?.total?.centimos).toBe(700)
+    })
+  })
+
+  it('r2 #3: al cerrarse el resultado del Deshacer con el foco en su "Cerrar", el foco va al título', async () => {
     const { app } = await tiendaDePrueba()
     const p = await abrirVender(app)
     await agregarBuscando(p, 'lejia', 'Lejía 1 L')
-    expect(document.activeElement).toBe(p.w.get('.buscador-grande input').element)
+    await boton(p.w, 'Cobrar').trigger('click')
+    await esperarDatos(app)
+    await boton(p.w, 'Confirmar venta').trigger('click')
+    await esperarDatos(app)
+    await p.w.get('.aviso-deshacer .deshacer').trigger('click')
+    await esperarDatos(app)
+    const cerrar = p.w.get('.resultado-de-deshacer .cerrar')
+    ;(cerrar.element as HTMLElement).focus()
+    await cerrar.trigger('click')
+    await esperarDatos(app)
+    expect(document.activeElement).toBe(p.w.get('#contenido h1').element)
   })
+
+  it('r2 #3: y también cuando se cierra solo a los 6 s', async () => {
+    const { app } = await tiendaDePrueba()
+    const p = await abrirVender(app)
+    await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+    await boton(p.w, 'Cobrar').trigger('click')
+    await esperarDatos(app)
+    await boton(p.w, 'Confirmar venta').trigger('click')
+    await esperarDatos(app)
+    // Como con el dedo o el teclado: el botón Deshacer tiene el foco cuando se toca.
+    const deshacer = p.w.get('.aviso-deshacer .deshacer')
+    ;(deshacer.element as HTMLElement).focus()
+    await deshacer.trigger('click')
+    await esperarDatos(app)
+    expect(document.activeElement).toBe(p.w.get('.resultado-de-deshacer .cerrar').element)
+    await new Promise((resolver) => setTimeout(resolver, 6300))
+    await esperarDatos(app)
+    expect(p.w.find('.resultado-de-deshacer').exists()).toBe(false)
+    expect(document.activeElement).toBe(p.w.get('#contenido h1').element)
+  }, 12_000)
 
   it('RN-OP-05 / RN-UX-07: si al confirmar ya no alcanza el stock, el error del dominio se ve tal cual con su ayuda', async () => {
     const { app, ids } = await tiendaDePrueba()

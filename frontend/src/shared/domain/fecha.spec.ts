@@ -4,6 +4,7 @@ import {
   diaDeLaSemana,
   diasEntre,
   horaDe,
+  hoyEnLaTienda,
   inicioDelDia,
   instanteLocal,
   segundosEntre,
@@ -39,5 +40,9 @@ describe('fecha de negocio (America/Lima, UTC−5)', () => {
     expect(horaDe(instanteLocal('2026-10-15 09:05'))).toBe('09:05')
     expect(horaDe(instanteLocal('2026-10-15 22:40'))).toBe('22:40')
     expect(horaDe('2026-10-16T03:40:00.000Z')).toBe('22:40')
+  })
+  it('r2 #5: hoyEnLaTienda es el día de negocio del instante que recibe (America/Lima)', () => {
+    expect(hoyEnLaTienda(new Date('2026-10-17T03:00:00.000Z'))).toBe('2026-10-16')
+    expect(hoyEnLaTienda(new Date('2026-10-17T05:00:00.000Z'))).toBe('2026-10-17')
   })
 })

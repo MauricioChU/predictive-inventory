@@ -11,6 +11,16 @@ export function diaDe(instante: Instante): Dia {
   return new Date(Date.parse(instante) + DESFASE_MS).toISOString().slice(0, 10)
 }
 
+/**
+ * El día de negocio de la tienda en el instante `ahora` (America/Lima). Las pantallas le pasan
+ * el reloj del celular (`hoyEnLaTienda(new Date())`) para "Hoy" / "Ayer" y los límites de las
+ * fechas; los casos de uso usan su propio reloj. Un solo ayudante (plan 12, r2): antes había uno
+ * en Inventario y otro en Catálogo.
+ */
+export function hoyEnLaTienda(ahora: Date): Dia {
+  return diaDe(ahora.toISOString())
+}
+
 /** Hora del día en la tienda, "HH:mm" (24 h): la del Historial ("Hoy, 10:32"). */
 export function horaDe(instante: Instante): string {
   return new Date(Date.parse(instante) + DESFASE_MS).toISOString().slice(11, 16)

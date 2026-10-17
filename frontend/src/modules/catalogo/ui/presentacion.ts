@@ -24,11 +24,6 @@ export const OPCIONES_DE_ESTADO: readonly { valor: FiltroDeEstado; etiqueta: str
   { valor: 'ARCHIVADOS', etiqueta: 'Archivados' },
 ]
 
-/** El día de hoy de la tienda (America/Lima), según el reloj del celular. */
-export function hoyEnLaTienda(ahora: Date = new Date()): Dia {
-  return diaDe(ahora.toISOString())
-}
-
 /** Una fila de la lista: foto, nombre, stock con unidad, precio y estado (RN-UX-04). */
 export function aFilaDeLista(
   producto: ProductoVista,

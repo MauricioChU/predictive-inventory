@@ -9,7 +9,7 @@ import { mensajeStockInsuficiente } from '../domain/mensajes'
 import { leerCantidad, leerCosto, leerPrecioDeVenta } from '../domain/reglas'
 import type { DatosDeIngreso } from '../application/ingresos'
 import { cuandoInicial, type Cuando } from './cuando'
-import { hoyEnLaTienda } from './hoy-en-la-tienda'
+import { hoyEnLaTienda } from '@/shared/domain/fecha'
 import { AYUDA_STOCK_INSUFICIENTE } from './mensajes-de-error'
 
 /** Vender usa el precio de venta; Llegó mercadería, el costo (precio de compra). */
@@ -65,7 +65,7 @@ export function usarCarrito(concepto: Concepto) {
   /** Una línea con la cantidad vacía no se marca mientras se escribe; sí al intentar seguir. */
   const marcarVacias = ref(false)
   /** RN-OP-09 / HU-OP-07: ahora u otro día (hasta 7 días atrás). Va con el carrito (r1 M3). */
-  const cuando = ref<Cuando>(cuandoInicial(hoyEnLaTienda()))
+  const cuando = ref<Cuando>(cuandoInicial(hoyEnLaTienda(new Date())))
 
   const precioBase = (producto: ProductoVista): Dinero =>
     concepto === 'venta' ? producto.precioVenta : producto.precioCompra
@@ -161,12 +161,27 @@ export function usarCarrito(concepto: Concepto) {
       lineas.value = lineas.value.filter((l) => l.producto.id !== productoId)
     },
 
-    /** Con el stock al día (p. ej. si al confirmar ya no alcanzaba): las líneas se re-marcan. */
-    actualizarProductos(productos: readonly ProductoVista[]): void {
-      for (const producto of productos) {
-        const linea = buscar(producto.id)
-        if (linea) linea.producto = producto
-      }
+    /**
+     * r2 #1: pone al día las líneas con los productos como están ahora (al volver a la pantalla
+     * con un carrito guardado, o si al confirmar ya no alcanzaba): el stock se re-marca; una
+     * línea con el precio de siempre toma el precio actual; un precio especial (o un costo
+     * nuevo) se queda; lo que ya no existe o está archivado sale. Devuelve los nombres quitados.
+     */
+    refrescar(actuales: ReadonlyMap<string, ProductoVista | null>): string[] {
+      const quitados: string[] = []
+      lineas.value = lineas.value.flatMap((linea) => {
+        if (!actuales.has(linea.producto.id)) return [linea]
+        const actual = actuales.get(linea.producto.id)
+        if (!actual?.activo) {
+          quitados.push(linea.producto.nombre)
+          return []
+        }
+        const especial = !linea.precio.igualA(precioBase(linea.producto))
+        return [
+          { ...linea, producto: actual, precio: especial ? linea.precio : precioBase(actual) },
+        ]
+      })
+      return quitados
     },
 
     marcarVacias(): void {
@@ -177,7 +192,7 @@ export function usarCarrito(concepto: Concepto) {
     vaciar(): void {
       lineas.value = []
       marcarVacias.value = false
-      cuando.value = cuandoInicial(hoyEnLaTienda())
+      cuando.value = cuandoInicial(hoyEnLaTienda(new Date()))
     },
 
     /** Lo que había antes (Deshacer deja el carrito como estaba para corregirlo). */
@@ -193,14 +208,23 @@ export function usarCarrito(concepto: Concepto) {
       cuando.value = { ...copia.cuando }
     },
 
-    /** RN-OP-11: el precio va solo si se cambió para esta venta. */
-    aDatosDeVenta(): DatosDeVenta {
+    /**
+     * RN-OP-11: el precio va si se cambió para esta venta. r2 #1: también si difiere del precio
+     * ACTUAL del producto (`preciosActuales`, leídos al confirmar), así lo registrado es siempre
+     * lo que se vio en pantalla aunque el precio haya cambiado mientras tanto.
+     */
+    aDatosDeVenta(preciosActuales: ReadonlyMap<string, Dinero> = new Map()): DatosDeVenta {
       return {
-        lineas: calculadas.value.map((l) => ({
-          productoId: l.producto.id,
-          cantidad: l.cantidad,
-          ...(l.precioCambiado ? { precioEspecial: formatearDinero(l.precio) } : {}),
-        })),
+        lineas: calculadas.value.map((l) => {
+          const actual = preciosActuales.get(l.producto.id)
+          const mandarPrecio =
+            l.precioCambiado || (actual !== undefined && !l.precio.igualA(actual))
+          return {
+            productoId: l.producto.id,
+            cantidad: l.cantidad,
+            ...(mandarPrecio ? { precioEspecial: formatearDinero(l.precio) } : {}),
+          }
+        }),
       }
     },
 
@@ -222,11 +246,14 @@ export function usarCarrito(concepto: Concepto) {
     agregarFaltantes(
       productos: readonly { producto: ProductoVista; cantidad: Cantidad; precio: Dinero }[],
     ): number {
-      const nuevos = productos.filter(({ producto }) => !buscar(producto.id))
-      for (const { producto, cantidad, precio } of nuevos) {
+      // r2 #4: tampoco se repite un producto que venga dos veces en la lista (vale el primero).
+      let agregados = 0
+      for (const { producto, cantidad, precio } of productos) {
+        if (buscar(producto.id)) continue
         lineas.value.push({ producto, cantidad: formatearNumero(cantidad), precio })
+        agregados += 1
       }
-      return nuevos.length
+      return agregados
     },
   }
 }

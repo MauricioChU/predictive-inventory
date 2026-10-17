@@ -18,7 +18,7 @@ import {
   resumenDeProductos,
   type FiltroDeTipo,
 } from './presentacion-de-operaciones'
-import { hoyEnLaTienda } from './hoy-en-la-tienda'
+import { hoyEnLaTienda } from '@/shared/domain/fecha'
 
 /**
  * Historial (HU-OP-08; 06-experiencia-de-uso): todo lo que pasó, agrupado por día ("Hoy",
@@ -36,7 +36,7 @@ const operaciones = ref<OperacionVista[]>([])
 const visibles = ref(POR_PAGINA)
 const cargado = ref(false)
 const error = ref<ErrorParaMostrar | null>(null)
-const hoy: Dia = hoyEnLaTienda()
+const hoy: Dia = hoyEnLaTienda(new Date())
 let pedido = 0
 
 async function cargar(): Promise<void> {

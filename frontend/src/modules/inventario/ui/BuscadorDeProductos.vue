@@ -17,7 +17,7 @@ import {
 } from '@/shared/ui/tipos-de-productos'
 import type { Concepto } from './carrito-de-pantalla'
 import { errorParaMostrar, type ErrorParaMostrar } from './mensajes-de-error'
-import { hoyEnLaTienda } from './hoy-en-la-tienda'
+import { hoyEnLaTienda } from '@/shared/domain/fecha'
 import { usarDestinos } from './usar-destinos'
 import { usarFotos } from './usar-fotos'
 
@@ -27,7 +27,9 @@ import { usarFotos } from './usar-fotos'
  * y stock, los más vendidos primero (RN-CAT-12, lo ordena Catálogo). Tocar uno lo elige.
  */
 const props = defineProps<{ concepto: Concepto }>()
-const emit = defineEmits<{ elegir: [producto: ProductoVista] }>()
+/** De dónde vino la elección: tras un resultado, la pantalla lleva el foco a su línea (r2 #2). */
+export type OrigenDeLaEleccion = 'resultados' | 'accesos'
+const emit = defineEmits<{ elegir: [producto: ProductoVista, origen: OrigenDeLaEleccion] }>()
 
 const aplicacion = useAplicacion()
 const router = useRouter()
@@ -90,7 +92,7 @@ const vacioDeBusqueda = computed(() => ({
 
 async function cargarTodo(): Promise<void> {
   try {
-    const hoy = hoyEnLaTienda()
+    const hoy = hoyEnLaTienda(new Date())
     const [productos, veces] = await Promise.all([
       aplicacion.catalogo.buscarProductos({ texto: '' }),
       aplicacion.analisis.consultable.vecesVendido(
@@ -130,13 +132,12 @@ watch(texto, (consulta) => void buscar(consulta))
 function elegir(id: string): void {
   const producto = resultados.value.find((p) => p.id === id) ?? todos.value.find((p) => p.id === id)
   if (!producto) return
-  emit('elegir', producto)
-  // Listo para buscar el siguiente: el buscador vuelve a mostrar los más vendidos y el foco
-  // vuelve al campo (r1 M2: la tarjeta tocada desaparece y el foco no debe perderse).
-  if (buscando.value) {
-    refBuscador.value?.vaciar()
-    refBuscador.value?.enfocar()
-  }
+  const desdeResultados = buscando.value
+  emit('elegir', producto, desdeResultados ? 'resultados' : 'accesos')
+  // Listo para buscar el siguiente: el buscador vuelve a mostrar los más vendidos. El foco lo
+  // lleva la pantalla a la línea del carrito (r2 #2: si volviera al campo, el teclado de
+  // Android se abriría otra vez encima del carrito).
+  if (desdeResultados) refBuscador.value?.vaciar()
 }
 
 function borrarBusqueda(): void {

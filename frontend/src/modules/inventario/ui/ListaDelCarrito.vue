@@ -54,6 +54,7 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
         :key="linea.producto.id"
         class="linea"
         :data-producto="linea.producto.id"
+        tabindex="-1"
       >
         <FilaDeCarrito
           :nombre="linea.producto.nombre"
@@ -100,5 +101,11 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
 }
 .linea {
   min-inline-size: 0;
+  border-radius: var(--radio);
+}
+/* r2 #2: la línea recién agregada recibe el foco (tabindex -1, no entra en el orden de Tab). */
+.linea:focus-visible {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 2px;
 }
 </style>

@@ -164,6 +164,17 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     expect((lineas(p)[0]!.get('.cantidad input').element as HTMLInputElement).value).toBe('6')
   })
 
+  it('r2 #1: al volver, lo cargado se pone al día: el costo de siempre toma el precio de compra actual', async () => {
+    const { app, lejia } = await conLejia()
+    const p = await abrir(app)
+    await agregar(p, 'lejia', 'Lejía 1 L')
+    await p.ir('/vender')
+    await app.catalogo.editarProducto({ productoId: lejia, precioCompra: '2.80' })
+    await p.ir('/recibir')
+    expect(lineas(p)[0]!.get('.precio').text()).toBe('Costo S/ 2.80 c/u')
+    expect(lineas(p)[0]!.text()).not.toContain('Costo nuevo')
+  })
+
   it('r1 #2: Deshacer la llegada muestra qué se deshizo', async () => {
     const { app } = await conLejia()
     const p = await abrir(app)
