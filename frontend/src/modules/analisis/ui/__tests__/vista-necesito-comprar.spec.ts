@@ -40,6 +40,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
 })
 afterEach(() => {
+  vi.restoreAllMocks()
   montada?.unmount()
   montada = undefined
   vi.useRealTimers()
@@ -164,6 +165,31 @@ describe('¿Necesito comprar?', () => {
     await buscar(envoltura, 'xyz')
     expect(texto(envoltura.get('.estado-vacio'))).toBe(
       'No hay productos con ese nombre Revisa cómo lo escribiste o prueba con otra palabra.',
+    )
+  })
+
+  // Ronda 1: un fallo que no es del dominio (p. ej. la base no responde) también se dice.
+  it('RN-UX-07: si no se pudo responder, lo dice con qué hacer (no queda en silencio)', async () => {
+    const tienda = new TiendaDePrueba()
+    await tienda.producto({ ...JABON, stockInicial: '10' })
+    const { envoltura } = await abrir(tienda)
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.spyOn(tienda.app.analisis, 'necesitoComprar').mockRejectedValue(new Error('base cerrada'))
+    await preguntar(envoltura, 'jab', 'Jabón')
+    expect(texto(envoltura.get('.mensaje-de-error'))).toBe(
+      'No pudimos responder Vuelve a tocar el producto en un momento.',
+    )
+    expect(envoltura.find('.respuesta').exists()).toBe(false)
+  })
+
+  it('RN-UX-07: si no se pudo buscar, lo dice con qué hacer', async () => {
+    const tienda = new TiendaDePrueba()
+    const { envoltura } = await abrir(tienda)
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.spyOn(tienda.app.catalogo, 'buscarProductos').mockRejectedValue(new Error('base cerrada'))
+    await buscar(envoltura, 'jab')
+    expect(texto(envoltura.get('.mensaje-de-error'))).toBe(
+      'No pudimos buscar Vuelve a escribir el nombre en un momento.',
     )
   })
 

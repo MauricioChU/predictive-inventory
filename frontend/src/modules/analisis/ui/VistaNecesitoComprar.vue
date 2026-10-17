@@ -29,7 +29,10 @@ const elegido = shallowRef<{
   nombre: string
   respuesta: RespuestaNecesitoComprar
 } | null>(null)
-const noEncontrado = ref<string | null>(null)
+/** Lo que salió mal al buscar o al responder (RN-UX-07: qué pasó y qué hacer). */
+const fallo = ref<{ mensaje: string; ayuda: string } | null>(null)
+/** Si la última búsqueda falló: no se muestra "No hay productos con ese nombre". */
+const falloDeBusqueda = ref(false)
 const refBuscador = ref<InstanceType<typeof BuscadorGrande>>()
 const refTitulo = ref<HTMLElement>()
 
@@ -42,8 +45,21 @@ async function buscar(texto: string): Promise<void> {
     resultados.value = []
     return
   }
-  const productos = await aplicacion.catalogo.buscarProductos({ texto })
+  let productos: Awaited<ReturnType<typeof aplicacion.catalogo.buscarProductos>>
+  try {
+    productos = await aplicacion.catalogo.buscarProductos({ texto })
+  } catch (error) {
+    if (numero !== ultimaBusqueda) return
+    console.error('No se pudo buscar en ¿Necesito comprar?:', error)
+    falloDeBusqueda.value = true
+    fallo.value = {
+      mensaje: 'No pudimos buscar',
+      ayuda: 'Vuelve a escribir el nombre en un momento.',
+    }
+    return
+  }
   if (numero !== ultimaBusqueda) return
+  falloDeBusqueda.value = false
   const primeros = productos.slice(0, MAXIMO_DE_RESULTADOS)
   resultados.value = primeros.map((p) => ({
     id: p.id,
@@ -63,7 +79,7 @@ async function cargarFotos(ids: string[]): Promise<void> {
 }
 
 watch(buscado, (texto) => {
-  if (texto !== '') noEncontrado.value = null
+  if (texto !== '') fallo.value = null
   void buscar(texto)
 })
 
@@ -72,14 +88,25 @@ const conFotos = computed(() => resultados.value.map((p) => ({ ...p, imagen: fot
 /** RN-AN-16: una sola frase, con el stock y la última llegada debajo. */
 async function elegir(productoId: string): Promise<void> {
   const nombre = resultados.value.find((p) => p.id === productoId)?.nombre ?? ''
-  noEncontrado.value = null
+  fallo.value = null
   try {
     const respuesta = await aplicacion.analisis.necesitoComprar(productoId)
     elegido.value = { productoId, nombre, respuesta }
   } catch (error) {
-    if (!esErrorDeDominio(error)) throw error
     elegido.value = null
-    noEncontrado.value = error.message
+    if (!esErrorDeDominio(error)) {
+      // No es del producto (p. ej. la base no respondió): los resultados quedan para volver a tocar.
+      console.error('No se pudo responder ¿Necesito comprar?:', error)
+      fallo.value = {
+        mensaje: 'No pudimos responder',
+        ayuda: 'Vuelve a tocar el producto en un momento.',
+      }
+      return
+    }
+    fallo.value = {
+      mensaje: error.message,
+      ayuda: 'Búscalo otra vez: puede que ya no esté entre tus productos.',
+    }
   }
   // Listo para preguntar por otro; la tarjeta tocada desaparece con los resultados, así que el
   // foco pasa al producto respondido (la frase la anuncia RespuestaGrande).
@@ -102,8 +129,10 @@ async function elegir(productoId: string): Promise<void> {
       autofoco
     />
 
+    <MensajeDeError v-if="fallo" :mensaje="fallo.mensaje" :ayuda="fallo.ayuda" />
+
     <ListaDeProductos
-      v-if="buscado !== ''"
+      v-if="buscado !== '' && !falloDeBusqueda"
       :productos="conFotos"
       etiqueta="Productos encontrados"
       :vacio="{
@@ -113,13 +142,7 @@ async function elegir(productoId: string): Promise<void> {
       @elegir="elegir"
     />
 
-    <MensajeDeError
-      v-else-if="noEncontrado"
-      :mensaje="noEncontrado"
-      ayuda="Búscalo otra vez: puede que ya no esté entre tus productos."
-    />
-
-    <section v-else-if="elegido" class="respuesta" :aria-labelledby="idTitulo">
+    <section v-else-if="elegido && buscado === ''" class="respuesta" :aria-labelledby="idTitulo">
       <h2 :id="idTitulo" ref="refTitulo" tabindex="-1">
         {{ pegarCifras(elegido.nombre) }}
       </h2>
@@ -147,7 +170,7 @@ async function elegir(productoId: string): Promise<void> {
       </div>
     </section>
 
-    <p v-else class="ayuda">
+    <p v-else-if="!fallo && buscado === ''" class="ayuda">
       Escribe el nombre del producto y tócalo: te digo si te conviene comprarlo.
     </p>
   </div>
