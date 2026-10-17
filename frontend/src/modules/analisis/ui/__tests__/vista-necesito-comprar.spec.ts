@@ -193,6 +193,44 @@ describe('¿Necesito comprar?', () => {
     )
   })
 
+  // Plan 17: el aviso de un fallo no se queda si la persona vacía el buscador a mano.
+  it.each([
+    ['borra lo escrito', (w: VueWrapper) => buscar(w, '')],
+    [
+      'toca Borrar',
+      async (w: VueWrapper) => {
+        await w.get('.borrar').trigger('click')
+        await esperarCarga()
+      },
+    ],
+  ])('"No pudimos buscar" desaparece cuando %s', async (_como, vaciar) => {
+    const tienda = new TiendaDePrueba()
+    const { envoltura } = await abrir(tienda)
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.spyOn(tienda.app.catalogo, 'buscarProductos').mockRejectedValue(new Error('base cerrada'))
+    await buscar(envoltura, 'jab')
+    expect(envoltura.find('.mensaje-de-error').exists()).toBe(true)
+    await vaciar(envoltura)
+    expect(envoltura.find('.mensaje-de-error').exists()).toBe(false)
+    expect(texto(envoltura.get('.ayuda'))).toBe(
+      'Escribe el nombre del producto y tócalo: te digo si te conviene comprarlo.',
+    )
+  })
+
+  it('"No pudimos responder" desaparece al vaciar el buscador a mano (no al responder)', async () => {
+    const tienda = new TiendaDePrueba()
+    await tienda.producto({ ...JABON, stockInicial: '10' })
+    const { envoltura } = await abrir(tienda)
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.spyOn(tienda.app.analisis, 'necesitoComprar').mockRejectedValue(new Error('base cerrada'))
+    await preguntar(envoltura, 'jab', 'Jabón')
+    // Tras responder la pantalla vacía el buscador ella misma: el aviso sigue a la vista.
+    expect(envoltura.find('.mensaje-de-error').exists()).toBe(true)
+    await buscar(envoltura, 'ja')
+    await buscar(envoltura, '')
+    expect(envoltura.find('.mensaje-de-error').exists()).toBe(false)
+  })
+
   it('RN-AN-16: un producto archivado mientras se elegía: "No encontramos ese producto"', async () => {
     const tienda = new TiendaDePrueba()
     await tienda.producto({ ...JABON, stockInicial: '10' })

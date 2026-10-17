@@ -78,8 +78,15 @@ async function cargarFotos(ids: string[]): Promise<void> {
   }
 }
 
+/** La pantalla vacía el buscador tras responder: ese "" no es la persona borrando. */
+let vaciadoTrasResponder = false
+
 watch(buscado, (texto) => {
-  if (texto !== '') fallo.value = null
+  const porLaPantalla = vaciadoTrasResponder
+  vaciadoTrasResponder = false
+  // Escribir otra cosa, o vaciarlo a mano (borrando o con "Borrar"), deja atrás el fallo.
+  // Plan 17: el aviso de "No pudimos…" solo se queda cuando lo vació la pantalla al responder.
+  if (texto !== '' || !porLaPantalla) fallo.value = null
   void buscar(texto)
 })
 
@@ -110,8 +117,10 @@ async function elegir(productoId: string): Promise<void> {
   }
   // Listo para preguntar por otro; la tarjeta tocada desaparece con los resultados, así que el
   // foco pasa al producto respondido (la frase la anuncia RespuestaGrande).
+  vaciadoTrasResponder = buscado.value !== ''
   refBuscador.value?.vaciar()
   await nextTick()
+  vaciadoTrasResponder = false
   if (refTitulo.value) refTitulo.value.focus()
   else refBuscador.value?.enfocar()
 }
