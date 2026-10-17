@@ -1,12 +1,53 @@
-import type { ProductoResumido } from '@/shared/contratos/entre-modulos'
+import type { ProductoResumido, SituacionDeProducto } from '@/shared/contratos/entre-modulos'
 import { Cantidad, type Unidad } from '@/shared/domain/cantidad'
 import { Dinero, redondearMitadLejosDeCero } from '@/shared/domain/dinero'
 import { diaDeLaSemana, diasEntre, sumarDias, type Dia } from '@/shared/domain/fecha'
 import { estaEnRango, resumenDePeriodo, type RangoDeDias } from './periodos'
+import { compararParaComprar } from './compras'
+import { textoCobertura } from './prediccion'
 import type { ResumenDiario } from './resumen-diario'
 
 function porNombre(a: { nombre: string }, b: { nombre: string }): number {
   return a.nombre.localeCompare(b.nombre, 'es')
+}
+
+// ───────────── Atención (04-torre-de-control, sección 2) ─────────────
+
+/** Un producto de la lista que abre "Agotados" o "Queda poco" en Control. */
+export interface ProductoEnAtencion {
+  productoId: string
+  nombre: string
+  unidad: Unidad
+  stock: Cantidad
+  /** RN-AN-05: "Se acaba en ~2 días"; null sin predicción o agotado. */
+  cobertura: string | null
+}
+
+export interface ProductosEnAtencion {
+  agotados: ProductoEnAtencion[]
+  porAcabarse: ProductoEnAtencion[]
+}
+
+function enAtencion(s: SituacionDeProducto): ProductoEnAtencion {
+  return {
+    productoId: s.productoId,
+    nombre: s.nombre,
+    unidad: s.unidad,
+    stock: s.stock,
+    cobertura: textoCobertura(s.prediccion, s.stock),
+  }
+}
+
+/** Agotados y por acabarse (RN-AL-01), en el mismo orden que Para comprar (RN-AN-07). */
+export function productosEnAtencion(
+  situaciones: readonly SituacionDeProducto[],
+): ProductosEnAtencion {
+  const delEstado = (estado: SituacionDeProducto['estado']) =>
+    situaciones
+      .filter((s) => s.estado === estado)
+      .sort(compararParaComprar)
+      .map(enAtencion)
+  return { agotados: delEstado('AGOTADO'), porAcabarse: delEstado('POR_ACABARSE') }
 }
 
 // ───────────── Más vendidos (RN-AN-09) ─────────────
@@ -86,6 +127,7 @@ export function vecesVendido(
 export interface PrecioParaRevisar {
   productoId: string
   nombre: string
+  unidad: Unidad
   perdidaPorUnidad: Dinero
 }
 
@@ -95,6 +137,7 @@ export function preciosParaRevisar(productos: readonly ProductoResumido[]): Prec
     .map((p) => ({
       productoId: p.id,
       nombre: p.nombre,
+      unidad: p.unidad,
       perdidaPorUnidad: p.precioCompra.restar(p.precioVenta),
     }))
     .sort((a, b) => b.perdidaPorUnidad.compararCon(a.perdidaPorUnidad) || porNombre(a, b))

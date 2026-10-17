@@ -19,6 +19,8 @@ const props = withDefaults(
     textoPrecio: string
     /** "S/ 9.00" */
     textoImporte: string
+    /** Nombre del monto de la línea: "Importe" (Vender), "Costo estimado" (Para comprar). */
+    etiquetaImporte?: string
     precioEditable?: boolean
     /** "Precio especial": marca que este precio no es el de siempre. */
     textoPrecioEspecial?: string
@@ -47,6 +49,7 @@ const props = withDefaults(
     textoPrecioEspecial: undefined,
     valorPrecio: undefined,
     concepto: 'precio',
+    etiquetaImporte: 'Importe',
     errorCantidad: undefined,
     errorPrecio: undefined,
   },
@@ -168,7 +171,7 @@ function alPresionarEnter(evento: KeyboardEvent) {
         @update:model-value="emit('update:cantidad', $event)"
       />
       <p class="importe">
-        <span class="etiqueta-importe">Importe</span>
+        <span class="etiqueta-importe">{{ etiquetaImporte }}</span>
         <span class="valor-importe">{{ textoImporte }}</span>
       </p>
     </div>

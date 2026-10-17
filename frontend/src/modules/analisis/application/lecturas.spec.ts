@@ -58,3 +58,16 @@ describe('RN-SIS-09: las consultas de Análisis leen en una sola transacción de
     },
   )
 })
+
+// Plan 13, ronda 1: Deshacer de Quitar es una escritura: una sola transacción, sin lecturas
+// sueltas fuera de ella.
+describe('RN-SIS-09: deshacer quitar de la lista', () => {
+  it('RN-SIS-09: deshacerQuitarDeLista escribe en UNA transacción y no lee fuera de ella', async () => {
+    const { espia, modulo } = await preparar()
+    const quitado = await modulo.quitarDeLista('lejia')
+    espia.reiniciar()
+    await modulo.deshacerQuitarDeLista(quitado)
+    expect(espia.transacciones()).toEqual({ lecturas: 0, escrituras: 1 })
+    expect(espia.llamadasSueltas).toEqual([])
+  })
+})

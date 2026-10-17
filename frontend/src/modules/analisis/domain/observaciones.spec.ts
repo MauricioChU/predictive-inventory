@@ -3,7 +3,7 @@ import type { ProductoResumido } from '@/shared/contratos/entre-modulos'
 import { Cantidad } from '@/shared/domain/cantidad'
 import { sumarDias, type Dia } from '@/shared/domain/fecha'
 import { formatearCantidad, formatearDinero, formatearNumero } from '@/shared/domain/formato'
-import { historial } from './__pruebas__/historial'
+import { historial, prediccionCon } from './__pruebas__/historial'
 import { anulacionDe, nuevaOperacion } from './__pruebas__/operaciones'
 import {
   BOLSAS,
@@ -19,12 +19,14 @@ import {
   soles,
   TRAPEADOR,
 } from './__pruebas__/productos'
+import { evaluarSituacion } from './situacion'
 import {
   diasSinVender,
   masVendidos,
   mejorDiaDeLaSemana,
   podriaEstarParado,
   preciosParaRevisar,
+  productosEnAtencion,
   productosParados,
   semanaContraSemana,
   tendencia,
@@ -161,6 +163,15 @@ describe('RN-AN-10: precios para revisar', () => {
       ['Desatorador', 'S/ 0.00'],
     ])
     expect(revisar[0]?.productoId).toBe('cera')
+  })
+
+  // Plan 13: Control dice "por unidad", "por kilo" o "por litro".
+  it('RN-AN-10: cada precio para revisar lleva la unidad del producto', () => {
+    const carbon = producto('carbon', 'Carbón', 'KILO', '4.00', '3.50', '1')
+    expect(preciosParaRevisar([carbon, CERA_ROJA]).map((p) => [p.nombre, p.unidad])).toEqual([
+      ['Carbón', 'KILO'],
+      ['Cera roja', 'UNIDAD'],
+    ])
   })
 
   it('RN-AN-10: a igual pérdida, por nombre', () => {
@@ -435,5 +446,43 @@ describe('RN-AN-14: tendencia de 8 semanas', () => {
 
   it('RN-AN-14: sin ventas, los 8 bloques están en 0', () => {
     expect(tendencia([], HOY).map((c) => c.milesimas)).toEqual([0, 0, 0, 0, 0, 0, 0, 0])
+  })
+})
+
+describe('Atención: agotados y por acabarse (Control)', () => {
+  function situacion(p: ProductoResumido, stock: string, vpd: string | null) {
+    return evaluarSituacion({
+      producto: p,
+      stock: Cantidad.deTexto(stock, p.unidad),
+      prediccion: vpd === null ? null : prediccionCon(vpd),
+      diasEntreCompras: 7,
+      diasAnticipacion: 3,
+    })
+  }
+
+  it('separa por estado y ordena como Para comprar (RN-AN-07): menos cobertura, sin predicción al final, nombre', () => {
+    const { agotados, porAcabarse } = productosEnAtencion([
+      situacion(JABON, '2', null),
+      situacion(DETERGENTE, '20', '0.5'),
+      situacion(CARBON, '2', '0.5'),
+      situacion(BOLSAS, '0', null),
+      situacion(LEJIA, '5', '2'),
+      situacion(CERA_ROJA, '1', null),
+      situacion(ESCOBA, '0', '1'),
+    ])
+    // Ronda 1: el mismo orden que Para comprar (RN-AN-07): Escoba (con predicción, 0 días)
+    // antes que Bolsas (sin predicción).
+    expect(agotados.map((p) => [p.nombre, p.cobertura])).toEqual([
+      ['Escoba', null],
+      ['Bolsas', null],
+    ])
+    expect(
+      porAcabarse.map((p) => [p.nombre, formatearCantidad(p.stock, p.unidad), p.cobertura]),
+    ).toEqual([
+      ['Lejía 1 L', '5 unid.', 'Se acaba en ~2 días'],
+      ['Carbón', '2 kg', 'Se acaba en ~4 días'],
+      ['Cera roja', '1 unid.', null],
+      ['Jabón', '2 unid.', null],
+    ])
   })
 })
