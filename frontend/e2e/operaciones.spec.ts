@@ -60,9 +60,39 @@ test.describe('Vender (HU-OP-01, HU-OP-02)', () => {
 
     // RN-OP-18: Deshacer (10 s) anula la venta y deja el carrito para corregirlo.
     await page.getByRole('button', { name: /^Deshacer/ }).click()
-    await expect(page.locator('.aviso-en-pagina')).toContainText('Deshiciste la venta')
+    // r1 #2 (RN-UX-11): el resultado se ve en el pie y el foco queda en su "Cerrar".
+    const resultado = page.locator('.resultado-de-deshacer')
+    await expect(resultado).toContainText(
+      'Deshiciste la venta de S/ 3.50. Tus productos volvieron al carrito.',
+    )
+    await expect(resultado.getByRole('button', { name: 'Cerrar' })).toBeFocused()
     await expect.poll(() => stockDe(page, lejia)).toBe(9)
     await expect(lineaDe(page, 'Lejía 1 L')).toBeVisible()
+  })
+
+  test('r1 #2 (RN-UX-02): con el aviso Deshacer y la barra del total a la vez, hay al menos 8 px entre los dos', async ({
+    page,
+  }) => {
+    await usarLetra(page, 'MUY_GRANDE')
+    await abrir(page, './')
+    await crearProducto(page, LEJIA)
+    await crearProducto(page, CARBON)
+    await abrir(page, './vender')
+    await agregarBuscando(page, 'lejia', 'Lejía 1 L')
+    await page.getByRole('button', { name: 'Cobrar' }).click()
+    await page.getByRole('button', { name: 'Confirmar venta' }).click()
+    await page.getByRole('button', { name: 'Nueva venta' }).click()
+    await agregarBuscando(page, 'carbon', 'Carbón')
+    await expect(page.locator('.aviso-deshacer')).toBeVisible()
+    const separacion = await page.evaluate(() => {
+      const barra = document.querySelector('.barra-de-total')!.getBoundingClientRect()
+      const deshacer = document.querySelector('.aviso-deshacer .deshacer')!.getBoundingClientRect()
+      // Uno arriba del otro (celular) o en columnas distintas (PC): la distancia más corta.
+      const vertical = Math.max(deshacer.top - barra.bottom, barra.top - deshacer.bottom)
+      const horizontal = Math.max(deshacer.left - barra.right, barra.left - deshacer.right)
+      return Math.max(vertical, horizontal)
+    })
+    expect(separacion).toBeGreaterThanOrEqual(8)
   })
 
   test('RN-OP-05 / RN-UX-07: vender más de lo que hay se marca junto a la cantidad', async ({
@@ -153,7 +183,11 @@ test.describe('Llegó mercadería (HU-OP-03, HU-OP-09)', () => {
     const lejia = await crearProducto(page, { ...LEJIA, stock: '2' }) // queda poco: en la lista
     await crearProducto(page, CARBON) // está bien: no va
     await cambiarCantidadEnLista(page, lejia, '5')
-    await abrir(page, './recibir?desde=para-comprar')
+    // Por la pantalla real de Para comprar (plan 13): "Registrar llegada" abre Llegó mercadería.
+    await abrir(page, './control/para-comprar')
+    await page.getByRole('button', { name: 'Registrar llegada' }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Llegó mercadería')
+    await expect(page).toHaveURL(/\/recibir\?desde=para-comprar$/)
 
     await expect(page.getByText('Cargamos tu lista para comprar de hoy')).toBeVisible()
     await expect(page.locator('.lista-del-carrito .fila-de-carrito')).toHaveCount(1)
