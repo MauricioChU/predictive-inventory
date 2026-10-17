@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, shallowRef, useId } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, useId } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { PackagePlus, Share2 } from 'lucide-vue-next'
-import { useAvisoDeshacer } from '@/app/aviso-deshacer'
+import { resultadoDeDeshacerFallido, useAvisoDeshacer } from '@/app/aviso-deshacer'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import { esErrorDeDominio } from '@/shared/domain/errores'
 import { formatearDinero, formatearNumero } from '@/shared/domain/formato'
@@ -66,6 +66,11 @@ const pendientes = new Map<string, string>()
 let temporizador: ReturnType<typeof setTimeout> | undefined
 /** El guardado que está en camino, si lo hay: quien necesita lo guardado lo espera. */
 let guardando: Promise<void> | null = null
+/** Deshacer puede llegar con la pantalla ya cerrada (el aviso es global). */
+let montada = true
+onBeforeUnmount(() => {
+  montada = false
+})
 
 async function cargar(): Promise<void> {
   const nueva = await aplicacion.analisis.listaParaComprar()
@@ -195,13 +200,27 @@ function hayQueCorregir(accion: Accion): boolean {
   return true
 }
 
-async function deshacerQuitar(quitado: QuitadoDeLista): Promise<void> {
+/**
+ * Plan 17 (RN-UX-11): lo que se deshizo (o por qué no se pudo) se ve y se anuncia donde se ven
+ * todos los Deshacer, esté donde esté la persona, como en Vender y Recibir.
+ */
+async function deshacerQuitar(quitado: QuitadoDeLista, nombre: string): Promise<void> {
   try {
     await aplicacion.analisis.deshacerQuitarDeLista(quitado)
   } catch (error) {
-    mostrarError(error)
+    aviso.mostrarResultado(resultadoDeDeshacerFallido(error))
+    return
   }
-  await cargar()
+  aviso.mostrarResultado({
+    tono: 'exito',
+    titulo: `Deshiciste quitar ${nombre}. Volvió a la lista.`,
+  })
+  if (!montada) return
+  try {
+    await cargar()
+  } catch (error) {
+    console.error('No se pudo volver a leer la lista para comprar:', error)
+  }
 }
 
 /** RN-AN-08 + RN-OP-18: quitar solo vale por hoy, y Deshacer deja la lista como estaba. */
@@ -224,7 +243,7 @@ async function quitar(linea: LineaParaComprar): Promise<void> {
   else enfocarTitulo()
   aviso.mostrar({
     mensaje: `Quitaste ${linea.nombre} de la lista`,
-    alDeshacer: () => void deshacerQuitar(quitado),
+    alDeshacer: () => void deshacerQuitar(quitado, linea.nombre),
   })
 }
 

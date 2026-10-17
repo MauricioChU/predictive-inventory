@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { crearAnunciador, ESPERA_ANUNCIO_MS } from '@/shared/ui/anunciador'
-import { crearContextoAvisoDeshacer, SEGUNDOS_DEL_RESULTADO_DE_DESHACER } from '../aviso-deshacer'
+import { ErrorDeDominio } from '@/shared/domain/errores'
+import {
+  crearContextoAvisoDeshacer,
+  resultadoDeDeshacerFallido,
+  SEGUNDOS_DEL_RESULTADO_DE_DESHACER,
+} from '../aviso-deshacer'
 
 /**
  * Plan 12, r1 #2 (RN-UX-11): después de CUALQUIER Deshacer que salió bien, la persona ve (y
@@ -40,5 +45,34 @@ describe('RN-UX-11: resultado visible de un Deshacer', () => {
     contexto.mostrar({ mensaje: 'Venta registrada', alDeshacer: () => {} })
     expect(contexto.resultado.value).toBeUndefined()
     expect(contexto.activo.value?.mensaje).toBe('Venta registrada')
+  })
+})
+
+describe('plan 17: resultadoDeDeshacerFallido (un Deshacer que no se pudo, fuera de inventario)', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('un error del dominio se dice con su mensaje (y un punto final)', () => {
+    const error = new ErrorDeDominio(
+      'CATEGORIA_NOMBRE_DUPLICADO',
+      'Ya existe una categoría con ese nombre',
+    )
+    expect(resultadoDeDeshacerFallido(error)).toEqual({
+      tono: 'atencion',
+      titulo: 'No pudimos deshacer',
+      texto: 'Ya existe una categoría con ese nombre.',
+    })
+    const conPunto = new ErrorDeDominio('X', 'Ya no está.')
+    expect(resultadoDeDeshacerFallido(conPunto).texto).toBe('Ya no está.')
+  })
+
+  it('cualquier otro error se registra y se dice en palabras simples, con qué hacer', () => {
+    const registro = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const causa = new Error('base cerrada')
+    expect(resultadoDeDeshacerFallido(causa)).toEqual({
+      tono: 'atencion',
+      titulo: 'No pudimos deshacer',
+      texto: 'Vuelve a intentarlo. Si sigue pasando, cierra la app y ábrela otra vez.',
+    })
+    expect(registro).toHaveBeenCalledWith('No se pudo deshacer:', causa)
   })
 })

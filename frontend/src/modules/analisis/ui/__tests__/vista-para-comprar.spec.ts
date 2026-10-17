@@ -195,6 +195,26 @@ describe('Para comprar', () => {
       'Carbón',
       'Jabón',
     ])
+    // Plan 17 (RN-UX-11): lo que se deshizo se ve y se anuncia, como en Vender y Recibir.
+    expect(aviso.resultado.value).toMatchObject({
+      tono: 'exito',
+      titulo: 'Deshiciste quitar Jabón. Volvió a la lista.',
+    })
+  })
+
+  it('plan 17: si Deshacer quitar falla, lo dice donde se ven todos los Deshacer', async () => {
+    const tienda = await tiendaConLista()
+    const { envoltura, aviso } = await abrir(tienda)
+    await boton(linea(envoltura, 'Jabón'), 'Quitar').trigger('click')
+    await esperarCarga()
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.spyOn(tienda.app.analisis, 'deshacerQuitarDeLista').mockRejectedValue(new Error('base'))
+    aviso.activo.value?.alDeshacer()
+    await esperarCarga()
+    expect(aviso.resultado.value).toMatchObject({
+      tono: 'atencion',
+      titulo: 'No pudimos deshacer',
+    })
   })
 
   // Ronda 1: Deshacer no deja la línea "fijada" con la cantidad sugerida como si la hubiera

@@ -337,6 +337,11 @@ describe('Detalle del producto', () => {
     await esperar()
     expect((await app.catalogo.obtenerProducto(id))?.activo).toBe(true)
     expect(hayBoton(vista.wrapper, 'Archivar producto')).toBe(true)
+    // Plan 17 (RN-UX-11): lo que se deshizo se ve y se anuncia, como en Vender y Recibir.
+    expect(vista.aviso.resultado.value).toMatchObject({
+      tono: 'exito',
+      titulo: 'Deshiciste archivar Escoba. Está activo otra vez.',
+    })
   })
 
   it('un archivado se ve como archivado y se puede reactivar (con Deshacer)', async () => {
@@ -359,6 +364,26 @@ describe('Detalle del producto', () => {
     vista.aviso.activo.value?.alDeshacer()
     await esperar()
     expect((await app.catalogo.obtenerProducto(id))?.activo).toBe(false)
+    expect(vista.aviso.resultado.value).toMatchObject({
+      tono: 'exito',
+      titulo: 'Deshiciste reactivar Escoba. Quedó archivado otra vez.',
+    })
+    expect(estaArchivado(w)).toBe(true)
+  })
+
+  it('plan 17: si Deshacer falla por otra cosa (la base no respondió), lo dice en vez de callar', async () => {
+    const id = await crearProducto(app, ESCOBA)
+    vista = await montarVista(app, `/productos/${id}`)
+    await boton(vista.wrapper, 'Archivar producto').trigger('click')
+    await esperar()
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.spyOn(app.catalogo, 'reactivarProducto').mockRejectedValue(new Error('base cerrada'))
+    vista.aviso.activo.value?.alDeshacer()
+    await esperar()
+    expect(vista.aviso.resultado.value).toMatchObject({
+      tono: 'atencion',
+      titulo: 'No pudimos deshacer',
+    })
   })
 
   it('si "Deshacer" ya no puede archivarlo (llegó stock), lo dice en vez de callar', async () => {
@@ -376,9 +401,12 @@ describe('Detalle del producto', () => {
     vista.aviso.activo.value?.alDeshacer()
     await esperar()
     expect((await app.catalogo.obtenerProducto(id))?.activo).toBe(true)
-    const alerta = vista.wrapper.get('[role="alert"]')
-    expect(leer(alerta.text())).toContain('No pudimos deshacer: el producto ya tiene stock.')
-    expect(leer(alerta.text())).toContain('Si quieres archivarlo, toca «Archivar producto».')
+    // Plan 17: se ve y se anuncia donde se ven todos los Deshacer (esté donde esté la persona).
+    expect(vista.aviso.resultado.value).toMatchObject({
+      tono: 'atencion',
+      titulo: 'No pudimos deshacer: el producto ya tiene stock.',
+      texto: 'Si quieres archivarlo, toca «Archivar producto».',
+    })
   })
 
   it('un producto que no existe: "No encontramos ese producto" y un camino de vuelta', async () => {
