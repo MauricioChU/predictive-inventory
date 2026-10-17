@@ -115,6 +115,56 @@ describe('NotificadorDelSistema con navegador simulado', () => {
     expect(error).toHaveBeenCalled()
   })
 
+  // Plan 17: un registro que existe pero no puede mostrar (p. ej. el Service Worker todavía no
+  // está activo) no deja a la persona sin aviso: se intenta con la API básica.
+  it('RN-AL-06: si showNotification rechaza, respalda con new Notification', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const construida = vi.fn()
+    vi.stubGlobal(
+      'Notification',
+      class {
+        constructor(titulo: string, opciones: unknown) {
+          construida(titulo, opciones)
+        }
+      },
+    )
+    const showNotification = vi.fn().mockRejectedValue(new TypeError('No active registration'))
+    vi.stubGlobal('navigator', {
+      serviceWorker: { getRegistration: vi.fn().mockResolvedValue({ showNotification }) },
+    })
+
+    await expect(new NotificadorDelSistema().mostrar(aviso)).resolves.toBeUndefined()
+
+    expect(showNotification).toHaveBeenCalledOnce()
+    expect(construida).toHaveBeenCalledWith(
+      'Inventario',
+      expect.objectContaining({ body: aviso.texto, tag: aviso.url, renotify: true }),
+    )
+    expect(error).toHaveBeenCalled()
+  })
+
+  it('RN-AL-06: si showNotification rechaza y new Notification también falla, mostrar() no lanza', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.stubGlobal(
+      'Notification',
+      class {
+        constructor() {
+          throw new TypeError('Illegal constructor')
+        }
+      },
+    )
+    vi.stubGlobal('navigator', {
+      serviceWorker: {
+        getRegistration: vi.fn().mockResolvedValue({
+          showNotification: vi.fn().mockRejectedValue(new Error('falló')),
+        }),
+      },
+    })
+
+    await expect(new NotificadorDelSistema().mostrar(aviso)).resolves.toBeUndefined()
+    expect(error).toHaveBeenCalledTimes(2)
+  })
+
   it('RN-AL-06: si getRegistration rechaza, mostrar() no lanza', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.stubGlobal('Notification', class {})
