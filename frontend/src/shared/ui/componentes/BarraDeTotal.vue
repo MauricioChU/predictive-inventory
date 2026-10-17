@@ -35,17 +35,21 @@ usarAltoObservado(refBarra, { variable: '--alto-barra-de-total' })
     (--alto-aviso).
   -->
   <div ref="refBarra" class="barra-de-total">
-    <p class="resumen">
-      <span class="etiqueta">{{ etiqueta }}</span>
-      <span class="total">{{ textoTotal }}</span>
-    </p>
-    <BotonPrincipal
-      class="accion"
-      :texto="textoAccion"
-      :icono="icono"
-      :deshabilitado="deshabilitado"
-      @click="emit('accion')"
-    />
+    <!-- Envoltura: la barra es el contenedor (container-type) y lo de adentro se acomoda según
+         su ancho real (plan 17: forma compacta en celular con letra grande). -->
+    <div class="contenido">
+      <p class="resumen">
+        <span class="etiqueta">{{ etiqueta }}</span>
+        <span class="total">{{ textoTotal }}</span>
+      </p>
+      <BotonPrincipal
+        class="accion"
+        :texto="textoAccion"
+        :icono="icono"
+        :deshabilitado="deshabilitado"
+        @click="emit('accion')"
+      />
+    </div>
   </div>
 </template>
 
@@ -55,11 +59,6 @@ usarAltoObservado(refBarra, { variable: '--alto-barra-de-total' })
   position: sticky;
   bottom: var(--alto-pie, 0px);
   z-index: 5;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--espacio-3) var(--espacio-4);
-  padding: var(--espacio-3) var(--espacio-4);
   border: 2px solid var(--color-primario);
   border-radius: var(--radio);
   background: var(--color-fondo);
@@ -98,7 +97,58 @@ usarAltoObservado(refBarra, { variable: '--alto-barra-de-total' })
   line-height: 1.15;
   white-space: nowrap;
 }
+.contenido {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3) var(--espacio-4);
+  padding: var(--espacio-3) var(--espacio-4);
+}
 .accion {
   flex: 1 1 12rem;
+}
+
+/*
+ * Plan 17 — forma compacta (celular con letra Grande o Muy grande: la barra mide menos de
+ * 22rem). Antes eran dos filas (etiqueta y total arriba, el botón abajo) y a 320 px con letra
+ * Muy grande la barra ocupaba ~200 de 740 px. Ahora la etiqueta va en su propia línea, chica, y
+ * el total y el botón comparten una fila. Si el texto del botón no entra al lado del total
+ * ("Confirmar venta", "Registrar llegada", o un total muy largo), el botón baja entero a su
+ * propia fila, a todo el ancho: nunca se parte una palabra ni se sale de la barra.
+ */
+@container (max-width: 22rem) {
+  .contenido {
+    gap: var(--espacio-1) var(--separacion-toque);
+    padding: var(--espacio-1) var(--espacio-2) var(--espacio-2);
+  }
+  .resumen {
+    display: contents;
+  }
+  .etiqueta {
+    flex: 1 0 100%;
+    line-height: 1.2;
+  }
+  .total {
+    flex: none;
+    font-size: clamp(1rem, 9cqi, 1.1rem);
+  }
+  .contenido .accion {
+    flex: 1 1 auto;
+    inline-size: auto;
+    padding-inline: var(--espacio-1);
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+  .contenido .accion :deep(.icono) {
+    width: 1.2em;
+    height: 1.2em;
+  }
+}
+/* Muy angosta (320–360 px con letra Muy grande): sin el ícono el botón cabe al lado del total.
+   El texto queda (RN-UX-04: el ícono acompaña al texto, nunca al revés). */
+@container (max-width: 13.5rem) {
+  .contenido .accion :deep(.icono) {
+    display: none;
+  }
 }
 </style>
