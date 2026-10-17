@@ -41,7 +41,23 @@ export async function palabrasPartidas(raiz: Locator): Promise<string[]> {
           rango.setStart(nodo, inicio)
           rango.setEnd(nodo, inicio + palabra.length)
           const lineas = new Set([...rango.getClientRects()].map((r) => Math.round(r.top)))
-          if (lineas.size > 1) partidas.push(palabra.trim())
+          // Plan 16: cortar justo después de un guion ("respaldo-|bodega-rosita.json") es un
+          // corte permitido, no una palabra partida.
+          const texto = nodo
+          const desde = inicio
+          const arribaDe = (i: number) => {
+            const letra = document.createRange()
+            letra.setStart(texto, desde + i)
+            letra.setEnd(texto, desde + i + 1)
+            return Math.round(letra.getBoundingClientRect().top)
+          }
+          const soloEnGuiones = () => {
+            for (let i = 1; i < palabra.length; i += 1) {
+              if (arribaDe(i) !== arribaDe(i - 1) && palabra[i - 1] !== '-') return false
+            }
+            return true
+          }
+          if (lineas.size > 1 && !soloEnGuiones()) partidas.push(palabra.trim())
         }
         inicio += palabra.length + 1
       }
