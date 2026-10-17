@@ -100,6 +100,7 @@ jobs:
           name: reporte-playwright
           path: frontend/playwright-report
           retention-days: 7
+          overwrite: true
 
   backend:
     name: Backend (ruff, mypy, pytest)
