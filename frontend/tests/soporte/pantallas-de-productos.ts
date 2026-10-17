@@ -2,7 +2,13 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { expect, vi } from 'vitest'
 import { createPinia } from 'pinia'
 import { defineComponent, h } from 'vue'
-import { createMemoryHistory, createRouter, RouterView, type Router } from 'vue-router'
+import {
+  createMemoryHistory,
+  createRouter,
+  createWebHistory,
+  RouterView,
+  type Router,
+} from 'vue-router'
 import {
   CLAVE_AVISO_DESHACER,
   crearContextoAvisoDeshacer,
@@ -73,11 +79,17 @@ export interface VistaMontada {
 export async function montarVista(
   app: AplicacionDePrueba,
   ruta: string,
-  opciones: { conOtrasRamas?: boolean } = {},
+  opciones: {
+    conOtrasRamas?: boolean
+    /** 'web': historial del navegador (jsdom), con atrás/adelante de verdad; por defecto, memoria. */
+    historial?: 'memoria' | 'web'
+    /** Se llama cada vez que un componente se vuelve a dibujar (su nombre), p. ej. para contar. */
+    alActualizar?: (componente: string) => void
+  } = {},
 ): Promise<VistaMontada> {
   simularDialogos()
   const router = createRouter({
-    history: createMemoryHistory(),
+    history: opciones.historial === 'web' ? createWebHistory() : createMemoryHistory(),
     routes: [
       INICIO,
       ...rutasDeProductos,
@@ -94,6 +106,15 @@ export async function montarVista(
     attachTo: document.body,
     global: {
       plugins: [createPinia(), router],
+      mixins: opciones.alActualizar
+        ? [
+            {
+              updated(this: { $options: { __name?: string } }) {
+                opciones.alActualizar?.(this.$options.__name ?? '')
+              },
+            },
+          ]
+        : [],
       provide: {
         [CLAVE_APLICACION as symbol]: app,
         [CLAVE_AVISO_DESHACER as symbol]: aviso,

@@ -1,5 +1,6 @@
 import type { VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { simularUrlsDeObjeto } from '@/shared/ui/__tests__/utilidades-kit-productos'
 import type { AplicacionDePrueba } from '../../../../../tests/soporte/aplicacion-de-prueba'
 import {
   crearAplicacion,
@@ -110,6 +111,50 @@ describe('Productos (lista)', () => {
     expect(w.text()).toContain('3 productos')
   })
 
+  it('las fotos se ven en la lista y llegan juntas: la lista no se redibuja una vez por foto', async () => {
+    const urls = simularUrlsDeObjeto()
+    for (const nombre of ['Bolsa 1', 'Bolsa 2', 'Bolsa 3', 'Bolsa 4', 'Bolsa 5', 'Bolsa 6']) {
+      const id = await crearProducto(app, {
+        nombre,
+        compra: '0.05',
+        venta: '0.10',
+        stockInicial: '9',
+      })
+      await app.catalogo.guardarFoto(id, new Blob([nombre], { type: 'image/webp' }))
+    }
+    // Como en IndexedDB, cada lectura termina en su propio momento.
+    const leer = app.catalogo.obtenerFoto.bind(app.catalogo)
+    let orden = 0
+    vi.spyOn(app.catalogo, 'obtenerFoto').mockImplementation(async (id) => {
+      orden += 1
+      await new Promise((listo) => setTimeout(listo, orden * 5))
+      return leer(id)
+    })
+    let redibujos = 0
+    vista = await montarVista(app, '/productos', {
+      alActualizar: (componente) => {
+        if (componente === 'ListaDeProductos') redibujos += 1
+      },
+    })
+    await vi.waitFor(() =>
+      expect(vista!.wrapper.findAll('.tarjeta-de-producto img')).toHaveLength(6),
+    )
+    const fotos = vista.wrapper.findAll('.tarjeta-de-producto img')
+    expect(fotos.every((f) => f.attributes('src')?.startsWith('blob:'))).toBe(true)
+    // Primer dibujo con la lista; a lo sumo uno más cuando llegan TODAS las fotos.
+    expect(redibujos).toBeLessThanOrEqual(1)
+    urls.restaurar()
+    vi.restoreAllMocks()
+  })
+
+  it('con productos activos no busca también los archivados al abrir', async () => {
+    await crearProducto(app, { nombre: 'Escoba', compra: '6', venta: '9', stockInicial: '2' })
+    const buscar = vi.spyOn(app.catalogo, 'buscarProductos')
+    vista = await montarVista(app, '/productos')
+    expect(buscar.mock.calls.map(([filtro]) => filtro)).toEqual([{ texto: '' }])
+    vi.restoreAllMocks()
+  })
+
   it('RN-CAT-12: busca sin tildes y en cualquier orden, con el caso de uso del catálogo', async () => {
     await conProductos()
     vista = await montarVista(app, '/productos')
@@ -127,6 +172,11 @@ describe('Productos (lista)', () => {
     vista = await montarVista(app, '/productos')
     await buscar(vista.wrapper, 'shampoo')
     expect(vista.wrapper.text()).toContain('No encontramos «shampoo»')
+    // Una sola acción "Agregar producto": la del estado vacío (que lleva el nombre buscado).
+    expect(
+      vista.wrapper.findAll('button').filter((b) => b.text().trim() === 'Agregar producto'),
+    ).toHaveLength(1)
+    expect(vista.wrapper.find('.accion-principal').exists()).toBe(false)
     await boton(vista.wrapper, 'Agregar producto').trigger('click')
     await esperarRuta(vista.router, 'producto-nuevo')
     expect(vista.router.currentRoute.value.query).toEqual({ nombre: 'shampoo' })
@@ -196,20 +246,54 @@ describe('Productos (lista)', () => {
     expect(vista.router.currentRoute.value.query).toEqual({})
   })
 
-  it('al volver del detalle conserva la búsqueda y el filtro', async () => {
+  async function filtrarYSalir(w: VueWrapper) {
+    await elegirEstado(w, 'Queda poco')
+    await buscar(w, 'lejia')
+  }
+
+  function filtrosPuestos(w: VueWrapper) {
+    return {
+      texto: (w.get('input[type="search"]').element as HTMLInputElement).value,
+      estado: w.get('[role="radio"][aria-checked="true"]').text(),
+      productos: nombres(w).length,
+    }
+  }
+
+  it('al volver ATRÁS desde el detalle conserva la búsqueda y el filtro', async () => {
     await conProductos()
-    vista = await montarVista(app, '/productos')
-    await elegirEstado(vista.wrapper, 'Queda poco')
-    await buscar(vista.wrapper, 'lejia')
+    vista = await montarVista(app, '/productos', { historial: 'web' })
+    await filtrarYSalir(vista.wrapper)
     await vista.wrapper.get('.tarjeta-de-producto').trigger('click')
-    await esperar()
-    await vista.router.push('/productos')
-    await esperar()
+    await esperarRuta(vista.router, 'producto')
+    vista.router.back()
+    await esperarRuta(vista.router, 'productos')
     expect((vista.wrapper.get('input[type="search"]').element as HTMLInputElement).value).toBe(
       'lejia',
     )
     expect(vista.wrapper.get('[role="radio"][aria-checked="true"]').text()).toBe('Queda poco')
     expect(nombres(vista.wrapper)).toEqual(['Lejía Tradicional 1 L'])
+  })
+
+  it('entrando desde la navegación (no atrás) la lista empieza sin filtros', async () => {
+    await conProductos()
+    vista = await montarVista(app, '/productos', { historial: 'web' })
+    await filtrarYSalir(vista.wrapper)
+    await vista.wrapper.get('.tarjeta-de-producto').trigger('click')
+    await esperarRuta(vista.router, 'producto')
+    await vista.router.push('/productos')
+    await esperar()
+    expect(filtrosPuestos(vista.wrapper)).toEqual({ texto: '', estado: 'Todos', productos: 3 })
+  })
+
+  it('después de crear un producto la lista empieza sin filtros (que no lo escondan)', async () => {
+    await conProductos()
+    vista = await montarVista(app, '/productos', { historial: 'web' })
+    await filtrarYSalir(vista.wrapper)
+    await boton(vista.wrapper, 'Agregar producto').trigger('click')
+    await esperarRuta(vista.router, 'producto-nuevo')
+    vista.router.back()
+    await esperarRuta(vista.router, 'productos')
+    expect(filtrosPuestos(vista.wrapper)).toEqual({ texto: '', estado: 'Todos', productos: 3 })
   })
 
   it('"Categorías" abre la pantalla de categorías', async () => {

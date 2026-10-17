@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowReactive, watch } from 'vue'
+import { computed, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Tags } from 'lucide-vue-next'
 import { useAplicacion } from '@/app/proveer-aplicacion'
@@ -13,7 +13,7 @@ import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import SelectorSegmentado from '@/shared/ui/componentes/SelectorSegmentado.vue'
 import type { CategoriaVista, ProductoVista } from '../application/modulo'
 import FiltroDeCategoria from './FiltroDeCategoria.vue'
-import { useFiltrosDeProductos } from './filtros-de-productos'
+import { useFiltrosDeProductos, vuelveAtrasDelDetalle } from './filtros-de-productos'
 import {
   aFilaDeLista,
   filtrarProductos,
@@ -25,6 +25,7 @@ import {
 const app = useAplicacion()
 const router = useRouter()
 const filtros = useFiltrosDeProductos()
+if (!vuelveAtrasDelDetalle(router)) filtros.olvidar()
 
 const cargando = ref(true)
 /** ¿Hay algún producto (activo o archivado)? Sin ninguno no hay nada que buscar ni filtrar. */
@@ -33,29 +34,41 @@ const categorias = ref<CategoriaVista[]>([])
 /** Lo que devolvió la búsqueda del catálogo (RN-CAT-12: sin tildes, más vendidos primero). */
 const encontrados = ref<ProductoVista[]>([])
 const estados = ref<ReadonlyMap<string, EstadoDeStock>>(new Map())
-const fotos = shallowReactive(new Map<string, Blob>())
+/** Se reemplaza entera (no se modifica): un solo redibujo por tanda de fotos. */
+const fotos = shallowRef<ReadonlyMap<string, Blob>>(new Map())
 const fotosPedidas = new Set<string>()
 const error = ref<string | null>(null)
 
 /** Solo cuenta la última búsqueda: una respuesta vieja que llega tarde no pisa la nueva. */
 let ultimoPedido = 0
 
-function cargarFotos(productos: readonly ProductoVista[]) {
-  for (const producto of productos) {
-    if (!producto.tieneFoto || fotosPedidas.has(producto.id)) continue
-    fotosPedidas.add(producto.id)
-    app.catalogo
-      .obtenerFoto(producto.id)
-      .then((foto) => {
-        if (foto) fotos.set(producto.id, foto)
-      })
-      .catch((error: unknown) => console.error('No se pudo leer la foto del producto:', error))
-  }
+/**
+ * Lee de una vez (en paralelo) las fotos que faltan y las asigna JUNTAS: la lista se redibuja
+ * una sola vez por tanda, no una vez por foto (con 300 productos eran 300 redibujos).
+ */
+async function cargarFotos(productos: readonly ProductoVista[]) {
+  const pendientes = productos.filter((p) => p.tieneFoto && !fotosPedidas.has(p.id))
+  if (pendientes.length === 0) return
+  for (const p of pendientes) fotosPedidas.add(p.id)
+  const leidas = await Promise.all(
+    pendientes.map((p) =>
+      app.catalogo.obtenerFoto(p.id).catch((e: unknown) => {
+        console.error('No se pudo leer la foto del producto:', e)
+        return null
+      }),
+    ),
+  )
+  const nuevas = new Map(fotos.value)
+  pendientes.forEach((p, indice) => {
+    const foto = leidas[indice]
+    if (foto) nuevas.set(p.id, foto)
+  })
+  fotos.value = nuevas
 }
 
 function mostrar(productos: ProductoVista[]) {
   encontrados.value = productos
-  cargarFotos(productos)
+  void cargarFotos(productos)
 }
 
 /** RN-UX-07: si algo falla al leer los datos, se dice en lenguaje simple (nunca técnico). */
@@ -79,22 +92,26 @@ async function buscar() {
 
 async function cargar() {
   const pedido = ++ultimoPedido
-  const [lista, activos, archivados, situaciones] = await Promise.all([
+  const [lista, activos, situaciones] = await Promise.all([
     app.catalogo.listarCategorias(),
     app.catalogo.buscarProductos({ texto: '' }),
-    app.catalogo.buscarProductos({ texto: '', archivados: true }),
     app.analisis.consultable.situaciones(),
   ])
+  // Los archivados solo hacen falta para saber si hay ALGÚN producto (cuando no hay activos).
+  const archivados =
+    activos.length === 0
+      ? await app.catalogo.buscarProductos({ texto: '', archivados: true })
+      : null
   categorias.value = lista
-  hayProductos.value = activos.length + archivados.length > 0
+  hayProductos.value = activos.length > 0 || (archivados?.length ?? 0) > 0
   estados.value = new Map(situaciones.map((s) => [s.productoId, s.estado]))
   if (filtros.categoriaId !== '' && !lista.some((c) => c.id === filtros.categoriaId)) {
     filtros.categoriaId = ''
   }
-  if (filtros.texto.trim() !== '') {
+  if (filtros.texto.trim() !== '' || (filtros.estado === 'ARCHIVADOS' && !archivados)) {
     await buscar()
   } else if (pedido === ultimoPedido) {
-    mostrar(filtros.estado === 'ARCHIVADOS' ? archivados : activos)
+    mostrar(filtros.estado === 'ARCHIVADOS' ? (archivados ?? []) : activos)
   }
   cargando.value = false
 }
@@ -115,7 +132,7 @@ const visibles = computed(() =>
   }),
 )
 const filas = computed(() =>
-  visibles.value.map((p) => aFilaDeLista(p, estados.value.get(p.id), fotos.get(p.id))),
+  visibles.value.map((p) => aFilaDeLista(p, estados.value.get(p.id), fotos.value.get(p.id))),
 )
 const nombreDeCategoria = computed(
   () => categorias.value.find((c) => c.id === filtros.categoriaId)?.nombre ?? null,
@@ -127,6 +144,10 @@ const vacio = computed(() =>
     estado: filtros.estado,
     categoriaNombre: nombreDeCategoria.value,
   }),
+)
+/** El estado vacío ya ofrece "Agregar producto" (con lo buscado): no se repite abajo. */
+const agregarEnElVacio = computed(
+  () => filas.value.length === 0 && vacio.value.tipoDeAccion === 'agregar',
 )
 /** Lo que anuncia la región viva al cambiar la búsqueda o un filtro. */
 const resultado = computed(() =>
@@ -197,7 +218,7 @@ function abrirProducto(id: string) {
           <!-- Principio 1: la acción principal, abajo y al alcance del pulgar: pegada al fondo
                de la columna de la lista, sobre el pie. Sin productos, la del estado vacío ya
                es "Agregar el primero". -->
-          <div v-if="hayProductos" class="accion-principal">
+          <div v-if="hayProductos && !agregarEnElVacio" class="accion-principal">
             <BotonPrincipal texto="Agregar producto" :icono="Plus" @click="agregar()" />
           </div>
         </section>

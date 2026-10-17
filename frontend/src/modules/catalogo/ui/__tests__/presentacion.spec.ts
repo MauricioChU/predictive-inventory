@@ -168,6 +168,15 @@ describe('vacioDeLista (RN-UX-10: dice por qué está vacía y ofrece la acción
     })
   })
 
+  it('con productos, pero todos archivados: lo dice y ofrece agregar uno', () => {
+    expect(vacioDeLista(base)).toEqual({
+      titulo: 'No tienes productos a la venta',
+      descripcion: 'Los que ya no vendes están en «Archivados».',
+      accion: 'Agregar producto',
+      tipoDeAccion: 'agregar',
+    })
+  })
+
   it('una categoría sin productos ofrece ver todas', () => {
     expect(vacioDeLista({ ...base, categoriaNombre: 'Bolsas' })).toEqual({
       titulo: 'No tienes productos en Bolsas',

@@ -128,8 +128,17 @@ export function vacioDeLista(d: {
   if (d.estado !== 'TODOS') {
     return { ...VACIO_POR_ESTADO[d.estado], accion: 'Ver todos', tipoDeAccion: 'ver-todos' }
   }
+  if (d.categoriaNombre === null) {
+    // Hay productos, pero todos archivados.
+    return {
+      titulo: 'No tienes productos a la venta',
+      descripcion: 'Los que ya no vendes están en «Archivados».',
+      accion: 'Agregar producto',
+      tipoDeAccion: 'agregar',
+    }
+  }
   return {
-    titulo: `No tienes productos en ${d.categoriaNombre ?? ''}`,
+    titulo: `No tienes productos en ${d.categoriaNombre}`,
     descripcion: 'Elige otra categoría o agrega un producto nuevo.',
     accion: 'Ver todas las categorías',
     tipoDeAccion: 'ver-todos',
