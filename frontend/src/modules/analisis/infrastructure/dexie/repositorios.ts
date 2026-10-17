@@ -57,6 +57,28 @@ export class RepositorioDeResumenesDexie implements RepositorioDeResumenes {
     return fila?.dia ?? null
   }
 
+  /**
+   * Un cursor de claves 'nextunique' sobre el índice `productoId`: IndexedDB ordena las
+   * entradas de igual clave por la clave primaria (`productoId|dia`, es decir, por día), así
+   * que su `primaryKey` es la de la fila MÁS ANTIGUA de cada producto, sin recorrer las demás.
+   * Esas filas se leen de una vez (`bulkGet`). Si una es una fila sin movimiento (anulación del
+   * mismo día, raro), se busca la siguiente con `primerDiaDe`: la misma regla.
+   */
+  async primerosDias(): Promise<Map<string, Dia>> {
+    const claves: string[] = []
+    await this.db.resumenes.orderBy('productoId').eachUniqueKey((_, cursor) => {
+      claves.push(cursor.primaryKey)
+    })
+    const masAntiguas = await this.db.resumenes.bulkGet(claves)
+    const dias = new Map<string, Dia>()
+    for (const r of masAntiguas) {
+      if (!r) continue
+      const dia = esFilaSinMovimiento(r) ? await this.primerDiaDe(r.productoId) : r.dia
+      if (dia !== null) dias.set(r.productoId, dia)
+    }
+    return dias
+  }
+
   /** Cualquier fila cuenta (como en memoria): la regla de las filas sin movimiento es solo de `primerDiaDe`. */
   async primerDiaDeLaTienda(): Promise<Dia | null> {
     return (await this.db.resumenes.orderBy('dia').first())?.dia ?? null

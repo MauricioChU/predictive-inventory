@@ -87,7 +87,8 @@ export function crearModuloInventario(d: DependenciasDeInventario): ModuloInvent
     contarStock: (datos) => contarStock(ctx, datos),
     anularOperacion: (datos) => anularOperacion(ctx, datos),
     deshacer,
-    historial: (filtro) => historial(ctx, filtro),
+    // RN-SIS-09: el libro y los productos, en una sola transacción de solo lectura.
+    historial: (filtro) => d.uow.leer(() => historial(ctx, filtro)),
     revisarDatos: () => revisarDatos(ctx),
     reconstruirExistencias: () => reconstruirExistencias(ctx),
     iniciarConteoGuiado: () => iniciarConteoGuiado(ctx),
