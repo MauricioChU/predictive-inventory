@@ -434,6 +434,22 @@ describe('Vender (HU-OP-01, HU-OP-02)', () => {
       expect(leer(p.w.get('.aviso-en-pagina'))).toContain('Quitamos Carbón: ya no está a la venta')
     })
 
+    it('plan 17 (RN-UX-15): al cerrar el aviso de lo quitado, el foco va al título', async () => {
+      const { app, ids } = await tiendaDePrueba()
+      const p = await abrirVender(app)
+      await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+      await agregarBuscando(p, 'carbon', 'Carbón')
+      await p.ir('/historial')
+      await app.catalogo.archivarProducto({ productoId: ids.carbon, confirmado: true })
+      await p.ir('/vender')
+      const cerrar = boton(p.w.get('.aviso-en-pagina'), 'Cerrar')
+      ;(cerrar.element as HTMLElement).focus()
+      await cerrar.trigger('click')
+      await esperarDatos(app)
+      expect(p.w.find('.aviso-en-pagina').exists()).toBe(false)
+      expect(document.activeElement).toBe(p.w.get('#contenido h1').element)
+    })
+
     it('lo que se cobra es lo que se vio, aunque el precio del producto cambie con la pantalla abierta', async () => {
       const { app, ids } = await tiendaDePrueba()
       const p = await abrirVender(app)
