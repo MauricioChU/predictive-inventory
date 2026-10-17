@@ -390,6 +390,20 @@ describe('Para comprar', () => {
       expect(await listaGuardada(tienda)).toContainEqual(['Jabón', '9'])
     })
 
+    it('ronda 1: si el guardado que espera la última tecla falla, se registra (sin rechazo sin manejar)', async () => {
+      const tienda = await tiendaConLista()
+      const { envoltura } = await abrir(tienda)
+      const registro = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      vi.spyOn(tienda.app.analisis, 'listaParaComprar').mockRejectedValue(new Error('base cerrada'))
+      await escribirCantidad(envoltura, 'Jabón', '9')
+      await vi.advanceTimersByTimeAsync(500)
+      await esperarCarga()
+      expect(registro).toHaveBeenCalledWith(
+        'No se pudo guardar la lista para comprar:',
+        expect.any(Error),
+      )
+    })
+
     it('RN-UX-07: el aviso de bloqueo pasa a la siguiente línea al corregir la que nombra', async () => {
       const share = vi.fn(() => Promise.resolve())
       vi.stubGlobal('navigator', { share })

@@ -161,7 +161,12 @@ function alCambiarCantidad(linea: LineaParaComprar, texto: string): void {
   quitarError(id)
   pendientes.set(id, texto)
   if (temporizador !== undefined) clearTimeout(temporizador)
-  temporizador = setTimeout(() => void guardarPendientes(), ESPERA_PARA_GUARDAR_MS)
+  // Ronda 1: un fallo de este guardado en segundo plano se registra (sin rechazo sin manejar).
+  temporizador = setTimeout(() => {
+    guardarPendientes().catch((error: unknown) => {
+      console.error('No se pudo guardar la lista para comprar:', error)
+    })
+  }, ESPERA_PARA_GUARDAR_MS)
 }
 
 function enfocarCampo(productoId: string): void {
