@@ -352,6 +352,86 @@ describe('Para comprar', () => {
     })
   })
 
+  describe('pulido (plan 17)', () => {
+    it('al salir, si la lista no se puede volver a leer, la salida no se bloquea (y se registra)', async () => {
+      const tienda = await tiendaConLista()
+      const { envoltura, router } = await abrir(tienda)
+      const registro = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      const lectura = vi
+        .spyOn(tienda.app.analisis, 'listaParaComprar')
+        .mockRejectedValue(new Error('base cerrada'))
+      await escribirCantidad(envoltura, 'Jabón', '9')
+      await router.push('/control')
+      await esperarCarga()
+      expect(router.currentRoute.value.name).toBe('control')
+      expect(registro).toHaveBeenCalled()
+      lectura.mockRestore()
+      // Lo escrito sí se guardó antes de salir.
+      expect(await listaGuardada(tienda)).toContainEqual(['Jabón', '9'])
+    })
+
+    it('RN-UX-07: el aviso de bloqueo pasa a la siguiente línea al corregir la que nombra', async () => {
+      const share = vi.fn(() => Promise.resolve())
+      vi.stubGlobal('navigator', { share })
+      const { envoltura } = await abrir(await tiendaConLista())
+      await escribirCantidad(envoltura, 'Carbón', '0')
+      await escribirCantidad(envoltura, 'Jabón', '0')
+      await boton(envoltura, 'Compartir').trigger('click')
+      await esperarCarga()
+      expect(texto(envoltura.get('.bloqueo'))).toBe(
+        'Revisa la cantidad de Carbón Corrígela o toca Quitar antes de compartir la lista.',
+      )
+
+      await escribirCantidad(envoltura, 'Carbón', '2')
+      expect(texto(envoltura.get('.bloqueo'))).toBe(
+        'Revisa la cantidad de Jabón Corrígela o toca Quitar antes de compartir la lista.',
+      )
+      expect(envoltura.get('.bloqueo').attributes('role')).toBe('alert')
+
+      await escribirCantidad(envoltura, 'Jabón', '5')
+      expect(envoltura.find('.bloqueo').exists()).toBe(false)
+      expect(share).not.toHaveBeenCalled()
+    })
+
+    it('RN-UX-07: una cantidad en blanco no se comparte ni se registra: se pide escribirla', async () => {
+      const share = vi.fn(() => Promise.resolve())
+      vi.stubGlobal('navigator', { share })
+      const tienda = await tiendaConLista()
+      const { envoltura, router } = await abrir(tienda)
+      await escribirCantidad(envoltura, 'Jabón', '')
+      // Otro cambio se guarda mientras tanto: la línea en blanco no se vuelve a llenar sola.
+      await escribirCantidad(envoltura, 'Carbón', '2')
+      await vi.advanceTimersByTimeAsync(500)
+      await esperarCarga()
+      const campo = linea(envoltura, 'Jabón').get('input').element as HTMLInputElement
+      expect(campo.value).toBe('')
+
+      await boton(envoltura, 'Compartir').trigger('click')
+      await esperarCarga()
+      expect(share).not.toHaveBeenCalled()
+      expect(texto(envoltura.get('.bloqueo'))).toBe(
+        'Revisa la cantidad de Jabón Corrígela o toca Quitar antes de compartir la lista.',
+      )
+      expect(texto(linea(envoltura, 'Jabón').get('[role="alert"]'))).toBe(
+        'Falta la cantidad. Escribe cuánto vas a comprar o toca Quitar.',
+      )
+      expect(document.activeElement).toBe(campo)
+
+      await boton(envoltura, 'Registrar llegada').trigger('click')
+      await esperarCarga()
+      expect(router.currentRoute.value.name).toBe('para-comprar')
+      expect(texto(envoltura.get('.bloqueo'))).toBe(
+        'Revisa la cantidad de Jabón Corrígela o toca Quitar antes de registrar la llegada.',
+      )
+
+      await escribirCantidad(envoltura, 'Jabón', '6')
+      expect(envoltura.find('.bloqueo').exists()).toBe(false)
+      await boton(envoltura, 'Compartir').trigger('click')
+      await esperarCarga()
+      expect(share).toHaveBeenCalledTimes(1)
+    })
+  })
+
   it('RN-UX-10: sin nada que comprar lo dice y ofrece "¿Necesito comprar?"', async () => {
     const tienda = new TiendaDePrueba()
     await tienda.producto({ ...JABON, stockInicial: '20' })

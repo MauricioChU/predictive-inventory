@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref, shallowRef, useId } from 'vue'
+import { computed, nextTick, onMounted, ref, shallowRef, useId } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { PackagePlus, Share2 } from 'lucide-vue-next'
 import { useAvisoDeshacer } from '@/app/aviso-deshacer'
@@ -22,6 +22,7 @@ import { textoCostoUnitario } from './textos'
 /** Espera tras la última tecla antes de guardar una cantidad (no se guarda en cada letra). */
 const ESPERA_PARA_GUARDAR_MS = 400
 const AYUDA_CANTIDAD = 'Escribe cuánto vas a comprar o toca Quitar.'
+const MENSAJE_EN_BLANCO = 'Falta la cantidad'
 const AYUDA_SIN_PRODUCTO = 'Vuelve a abrir la lista: ya no está en tus productos.'
 const COPIADA = { titulo: 'Copiamos la lista', texto: 'Pégala en WhatsApp o en otra app.' }
 
@@ -38,8 +39,22 @@ const lista = shallowRef<ListaParaComprar | null>(null)
 const escritas = ref<Record<string, string>>({})
 const errores = ref<Record<string, string>>({})
 const errorGeneral = ref<{ mensaje: string; ayuda: string } | null>(null)
-/** Por qué no se compartió ni se registró la llegada (una cantidad que no vale). */
-const bloqueo = ref<{ mensaje: string; ayuda: string } | null>(null)
+/** Lo que no se pudo hacer (compartir o registrar) mientras quede una cantidad por corregir. */
+const accionBloqueada = ref<Accion | null>(null)
+/**
+ * Por qué no se compartió ni se registró la llegada: nombra la primera línea que falta corregir.
+ * Plan 17: al corregir esa, pasa a la siguiente (no se queda nombrando una que ya está bien).
+ */
+const bloqueo = computed(() => {
+  const accion = accionBloqueada.value
+  if (accion === null) return null
+  const conError = lista.value?.lineas.find((l) => errores.value[l.productoId] !== undefined)
+  if (!conError) return null
+  return {
+    mensaje: `Revisa la cantidad de ${conError.nombre}`,
+    ayuda: `Corrígela o toca Quitar antes de ${accion}.`,
+  }
+})
 const copiada = ref(false)
 /** Si no se pudo compartir ni copiar: el texto, para copiarlo a mano. */
 const textoParaCopiar = ref<string | null>(null)
@@ -57,8 +72,10 @@ async function cargar(): Promise<void> {
   const textos: Record<string, string> = {}
   for (const linea of nueva.lineas) {
     const id = linea.productoId
-    // Lo que se está escribiendo (pendiente o con error) no se pisa con lo guardado.
-    const enEdicion = pendientes.has(id) || errores.value[id] !== undefined
+    // Lo que se está escribiendo (pendiente, con error o borrado para escribir otro) no se pisa
+    // con lo guardado.
+    const enEdicion =
+      pendientes.has(id) || errores.value[id] !== undefined || escritas.value[id] === ''
     textos[id] = enEdicion ? (escritas.value[id] ?? '') : formatearNumero(linea.cantidad)
   }
   escritas.value = textos
@@ -87,7 +104,7 @@ function quitarError(productoId: string): void {
   delete resto[productoId]
   errores.value = resto
   // Ya no queda nada que corregir: se va el aviso de por qué no se compartió.
-  if (Object.keys(resto).length === 0) bloqueo.value = null
+  if (Object.keys(resto).length === 0) accionBloqueada.value = null
 }
 
 async function guardar(cambios: [string, string][]): Promise<void> {
@@ -160,15 +177,20 @@ function enfocarTitulo(): void {
  * sigue. Se dice por qué (MensajeDeError, role="alert") y el foco va a ese campo.
  */
 function hayQueCorregir(accion: Accion): boolean {
-  const conError = lista.value?.lineas.find((l) => errores.value[l.productoId] !== undefined)
+  const lineas = lista.value?.lineas ?? []
+  // Plan 17: una cantidad en blanco tampoco es lo que se compartiría: se pide escribirla.
+  const enBlanco = lineas.filter((l) => (escritas.value[l.productoId] ?? '').trim() === '')
+  if (enBlanco.length > 0) {
+    const nuevos = { ...errores.value }
+    for (const l of enBlanco) nuevos[l.productoId] ??= `${MENSAJE_EN_BLANCO}. ${AYUDA_CANTIDAD}`
+    errores.value = nuevos
+  }
+  const conError = lineas.find((l) => errores.value[l.productoId] !== undefined)
   if (!conError) {
-    bloqueo.value = null
+    accionBloqueada.value = null
     return false
   }
-  bloqueo.value = {
-    mensaje: `Revisa la cantidad de ${conError.nombre}`,
-    ayuda: `Corrígela o toca Quitar antes de ${accion}.`,
-  }
+  accionBloqueada.value = accion
   enfocarCampo(conError.productoId)
   return true
 }
@@ -230,8 +252,14 @@ async function registrarLlegada(): Promise<void> {
 
 onMounted(cargar)
 // Lo escrito y todavía sin guardar no se pierde al salir: la salida espera a que se guarde.
+// Plan 17: si algo falla (p. ej. volver a leer la lista), se registra y la salida sigue: la
+// persona nunca queda atrapada en la pantalla.
 onBeforeRouteLeave(async () => {
-  await guardarPendientes()
+  try {
+    await guardarPendientes()
+  } catch (error) {
+    console.error('No se pudo terminar de guardar la lista para comprar al salir:', error)
+  }
 })
 </script>
 
@@ -305,9 +333,11 @@ onBeforeRouteLeave(async () => {
         />
       </div>
 
-      <!-- Junto a las acciones: dice por qué no se compartió ni se registró la llegada. -->
+      <!-- Junto a las acciones: dice por qué no se compartió ni se registró la llegada. La :key
+           lo vuelve a montar (y a anunciar, role="alert") cuando pasa a nombrar otra línea. -->
       <MensajeDeError
         v-if="bloqueo"
+        :key="`${bloqueo.mensaje} ${bloqueo.ayuda}`"
         class="bloqueo"
         :mensaje="bloqueo.mensaje"
         :ayuda="bloqueo.ayuda"
