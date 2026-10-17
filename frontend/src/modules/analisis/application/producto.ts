@@ -1,0 +1,70 @@
+import type { SituacionDeProducto } from '@/shared/contratos/entre-modulos'
+import type { Cantidad, Unidad } from '@/shared/domain/cantidad'
+import { ErrorDeDominio } from '@/shared/domain/errores'
+import { diaDe, diasEntre, type Instante } from '@/shared/domain/fecha'
+import { decidirNecesitoComprar, type CasoNecesitoComprar } from '../domain/necesito-comprar'
+import { tendencia } from '../domain/observaciones'
+import { textoCobertura, textoVentaDiaria } from '../domain/prediccion'
+import { cambiosDelDia, PRODUCTO_NO_ENCONTRADO } from './lista-de-compras'
+import type { DependenciasDeAnalisis } from './puertos'
+import { evaluarProducto } from './situaciones'
+
+export interface RespuestaNecesitoComprar {
+  /** RN-AN-16: una sola frase. */
+  respuesta: string
+  /** Cuál de los cuatro casos de RN-AN-16 respondió: la pantalla elige el tono con esto. */
+  caso: CasoNecesitoComprar
+  stock: Cantidad
+  unidad: Unidad
+  /** Última vez que llegó mercadería de ese producto. */
+  ultimoIngreso: Instante | null
+  /** Días de la tienda desde esa llegada (0 = hoy), o null si nunca llegó. */
+  diasDesdeUltimoIngreso: number | null
+}
+
+export interface DetalleDeProducto {
+  situacion: SituacionDeProducto
+  /** RN-AN-05. */
+  textoCobertura: string | null
+  /** "Vendes ~2 unid. al día". */
+  textoVentaDiaria: string | null
+  /** RN-AN-14: 8 valores, del bloque más antiguo al más reciente. */
+  tendencia: Cantidad[]
+}
+
+/** RN-AN-16: "¿Necesito comprar?" para un producto activo, con la lista de hoy (RN-AN-08). */
+export async function necesitoComprar(
+  d: DependenciasDeAnalisis,
+  productoId: string,
+): Promise<RespuestaNecesitoComprar> {
+  const evaluacion = await evaluarProducto(d, productoId)
+  if (!evaluacion) throw new ErrorDeDominio('PRODUCTO_NO_ENCONTRADO', PRODUCTO_NO_ENCONTRADO)
+  const { hoy, producto, situacion } = evaluacion
+  const cambio = (await cambiosDelDia(d, hoy)).find((c) => c.productoId === productoId)
+  const { respuesta, caso } = decidirNecesitoComprar(situacion, producto.precioCompra, cambio)
+  const ultimoIngreso = await d.inventario().ultimoIngresoDe(productoId)
+  return {
+    respuesta,
+    caso,
+    stock: situacion.stock,
+    unidad: situacion.unidad,
+    ultimoIngreso,
+    diasDesdeUltimoIngreso: ultimoIngreso === null ? null : diasEntre(diaDe(ultimoIngreso), hoy),
+  }
+}
+
+/** Lo que el detalle del producto muestra del análisis; null si no existe o está archivado. */
+export async function detalleDeProducto(
+  d: DependenciasDeAnalisis,
+  productoId: string,
+): Promise<DetalleDeProducto | null> {
+  const evaluacion = await evaluarProducto(d, productoId)
+  if (!evaluacion) return null
+  const { hoy, situacion, filas } = evaluacion
+  return {
+    situacion,
+    textoCobertura: textoCobertura(situacion.prediccion, situacion.stock),
+    textoVentaDiaria: textoVentaDiaria(situacion.prediccion, situacion.unidad),
+    tendencia: tendencia(filas, hoy),
+  }
+}

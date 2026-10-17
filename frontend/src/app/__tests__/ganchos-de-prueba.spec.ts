@@ -1,0 +1,60 @@
+import { afterEach, describe, expect, it } from 'vitest'
+import { crearAnunciador } from '@/shared/ui/anunciador'
+import { crearContextoAvisoDeshacer } from '../aviso-deshacer'
+import type { Aplicacion } from '../composicion'
+import { exponerAplicacionParaPruebas, exponerGanchosDePrueba } from '../ganchos-de-prueba'
+
+describe('m11: ganchos para las pruebas E2E (solo desarrollo o navegador automatizado)', () => {
+  afterEach(() => {
+    delete window.__pruebas
+  })
+
+  it('en desarrollo expone mostrarAvisoDeshacer, que muestra el aviso global, y se retira al llamar a la limpieza', () => {
+    const contexto = crearContextoAvisoDeshacer(crearAnunciador())
+    const retirar = exponerGanchosDePrueba(contexto)
+    window.__pruebas?.mostrarAvisoDeshacer('Venta registrada')
+    expect(contexto.activo.value).toMatchObject({ mensaje: 'Venta registrada' })
+    retirar()
+    expect(window.__pruebas).toBeUndefined()
+  })
+
+  it('RN-OP-18: el gancho no puede cambiar los 10 s del aviso', () => {
+    const contexto = crearContextoAvisoDeshacer(crearAnunciador())
+    const retirar = exponerGanchosDePrueba(contexto)
+    const mostrar = window.__pruebas?.mostrarAvisoDeshacer as unknown as (
+      ...args: unknown[]
+    ) => void
+    mostrar('Venta registrada', 60)
+    expect(contexto.activo.value).not.toHaveProperty('segundos')
+    retirar()
+    expect(window.__pruebas).toBeUndefined()
+  })
+})
+
+describe('ronda 5: gancho para medir GraficoBarras en las E2E', () => {
+  afterEach(() => {
+    delete window.__pruebas
+    document.body.innerHTML = ''
+  })
+
+  it('mostrarGrafico monta un GraficoBarras al final de #contenido', async () => {
+    document.body.innerHTML = '<main id="contenido"></main>'
+    const retirar = exponerGanchosDePrueba(crearContextoAvisoDeshacer(crearAnunciador()))
+    await window.__pruebas?.mostrarGrafico('Ventas por mes', [
+      { etiqueta: 'Limpiavidrios', valor: 9.5, textoValor: 'S/ 9.50' },
+    ])
+    const grafico = document.querySelector('#contenido .grafico-barras')
+    expect(grafico?.textContent).toContain('Limpiavidrios')
+    retirar()
+  })
+})
+
+describe('Ola 3: la aplicación al alcance de las E2E (solo desarrollo o navegador automatizado)', () => {
+  it('expone la aplicación real en window.__aplicacion y la retira al llamar a la limpieza', () => {
+    const aplicacion = { bus: {} } as unknown as Aplicacion
+    const retirar = exponerAplicacionParaPruebas(aplicacion)
+    expect(window.__aplicacion).toBe(aplicacion)
+    retirar()
+    expect(window.__aplicacion).toBeUndefined()
+  })
+})
