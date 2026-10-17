@@ -60,6 +60,8 @@ async function preparar(): Promise<void> {
   error.value = null
   try {
     copia.value = await aplicacion.respaldo.guardarCopia()
+    // RN-UX-15: el botón pasa de "Preparando tu copia…" a "Guardar copia ahora".
+    anunciador.anunciar('Tu copia está lista para guardar')
   } catch (causa) {
     error.value = mensajeDe(causa, 'No se pudo preparar la copia')
   } finally {

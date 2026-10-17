@@ -99,6 +99,33 @@ describe('Guardar copia', () => {
     expect(descargas).toHaveLength(1)
   })
 
+  it('RN-UX-15: cuando la copia queda lista, se anuncia', async () => {
+    pantalla = await montarPantalla(app, '/ajustes/copia')
+
+    expect(await pantalla.anunciado()).toContain('Tu copia está lista para guardar')
+  })
+
+  it('si no se pudo preparar, lo dice y "Preparar la copia de nuevo" la vuelve a armar', async () => {
+    const preparar = vi
+      .spyOn(app.respaldo, 'guardarCopia')
+      .mockRejectedValueOnce(new Error('base ocupada'))
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    pantalla = await montarPantalla(app, '/ajustes/copia')
+
+    expect(pantalla.wrapper.text()).toContain('No se pudo preparar la copia')
+    expect(pantalla.wrapper.findAll('button').some((b) => b.text() === 'Guardar copia ahora')).toBe(
+      false,
+    )
+
+    await tocar('Preparar la copia de nuevo')
+
+    expect(preparar).toHaveBeenCalledTimes(2)
+    expect(pantalla.wrapper.text()).not.toContain('No se pudo preparar la copia')
+    await tocar('Guardar copia ahora')
+    expect(descargas.map((d) => d.nombre)).toEqual(['respaldo-bodega-rosita-2026-10-15-2030.json'])
+    expect(pantalla.wrapper.get('h1').text()).toBe('Copia guardada')
+  })
+
   it('mientras se prepara, el botón lo dice y no se puede tocar', async () => {
     vi.spyOn(app.respaldo, 'guardarCopia').mockReturnValue(new Promise(() => undefined))
     pantalla = await montarPantalla(app, '/ajustes/copia')
