@@ -22,9 +22,7 @@ import { anotarTextosVistos, esperarSinPalabrasQueEvitar } from '../utilidades/t
 import { abrirTiendaLista } from '../utilidades/tienda'
 
 test.describe('Auditoría de textos: la guía de palabras en todas las pantallas', () => {
-  test.beforeEach(({}, testInfo) => {
-    test.skip(testInfo.project.name !== 'celular', 'Los textos son los mismos en PC')
-  })
+  test.skip(({ isMobile }) => !isMobile, 'Los textos son los mismos en PC: se revisan en celular')
 
   test('la primera vez y los estados vacíos', async ({ page }) => {
     await anotarTextosVistos(page)
@@ -44,9 +42,7 @@ test.describe('Auditoría de textos: la guía de palabras en todas las pantallas
 })
 
 test.describe('Los textos de la spec, exactos', () => {
-  test.beforeEach(({}, testInfo) => {
-    test.skip(testInfo.project.name !== 'celular', 'Los textos son los mismos en PC')
-  })
+  test.skip(({ isMobile }) => !isMobile, 'Los textos son los mismos en PC: se revisan en celular')
 
   test('navegación, Inicio, estados vacíos, conteos y Deshacer fuera de tiempo', async ({ page }) => {
     await anotarTextosVistos(page)
