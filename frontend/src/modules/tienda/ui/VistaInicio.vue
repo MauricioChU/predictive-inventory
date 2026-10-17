@@ -312,8 +312,10 @@ h1 {
   position: sticky;
   bottom: var(--alto-pie, 0px);
   z-index: 5;
-  margin-block: calc(-1 * var(--espacio-2));
-  padding-block: var(--espacio-2);
+  /* Un poco más ancha que el botón: el borde de la franja (que el navegador dibuja aparte) es
+     del color del fondo y no deja una línea del color del botón. */
+  margin: calc(-1 * var(--espacio-2)) calc(-1 * var(--espacio-1));
+  padding: var(--espacio-2) var(--espacio-1);
   background: var(--color-fondo);
 }
 /* Lo enfocado con el teclado no queda debajo de "Vender" pegado (WCAG 2.4.11). */
@@ -383,8 +385,8 @@ h1 {
   }
   .vender-fijo {
     position: static;
-    margin-block: 0;
-    padding-block: 0;
+    margin: 0;
+    padding: 0;
   }
   .vista-inicio :is(a, button) {
     scroll-margin-bottom: 0;
