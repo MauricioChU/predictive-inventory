@@ -87,6 +87,22 @@ export class ConteoGuiado {
     return this.avanzar(ahora, { saltados: [...this.registro.saltados, productoId] })
   }
 
+  /**
+   * RN-OP-18 en el conteo guiado: la respuesta de `productoId` se deshizo (su AJUSTE se anuló).
+   * Deja de contar en el resumen y pasa a "Te faltó contar", en el orden del recorrido. No
+   * mueve el producto actual. Un producto que no estaba contado no cambia nada.
+   */
+  deshacerRespuesta(productoId: string): ConteoGuiado {
+    const { contados, saltados, orden } = this.registro
+    if (!contados.some((c) => c.productoId === productoId)) return this
+    const posicion = (id: string) => orden.indexOf(id)
+    return new ConteoGuiado({
+      ...this.registro,
+      contados: contados.filter((c) => c.productoId !== productoId),
+      saltados: [...saltados, productoId].sort((a, b) => posicion(a) - posicion(b)),
+    })
+  }
+
   /** Pasa de largo los productos que ya no se pueden contar (p. ej. archivados durante el conteo). */
   omitirNoContables(esContable: (productoId: string) => boolean, ahora: Instante): ConteoGuiado {
     const productoId = this.productoActual

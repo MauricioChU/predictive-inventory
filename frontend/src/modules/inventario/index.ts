@@ -15,6 +15,7 @@ export type {
   OperacionVista,
   RespuestaDeConteo,
   RespuestaDeIngreso,
+  RespuestaDelConteoGuiado,
   ResultadoDeRevision,
 } from './application/modulo'
 export type {

@@ -143,4 +143,23 @@ describe('ConteoGuiado', () => {
     expect(ConteoGuiado.desdeRegistro(registro).aRegistro()).toEqual(registro)
     expect(ConteoGuiado.desdeRegistro(registro).productoActual).toBe('detergente')
   })
+
+  it('RN-OP-21 / RN-OP-18: deshacer una respuesta la saca de los contados y la deja en "Te faltó contar"', () => {
+    const conteo = iniciar()
+      .contar(Cantidad.cero(), Dinero.cero(), AHORA)
+      .saltar(AHORA)
+      .contar(unidades(-2), Dinero.deTexto('-4.80'), DESPUES)
+    expect(conteo.deshacerRespuesta('lejia').resumen(nombreDe)).toEqual([
+      'Contaste 1 producto. Todo cuadraba.',
+      'Te faltó contar 2: Detergente a granel, Lejía 1 L',
+    ])
+    // "Te faltó contar" sigue el orden del recorrido.
+    expect(conteo.deshacerRespuesta('carbon').resumen(nombreDe)).toEqual([
+      'Contaste 1 producto. 1 con diferencia: -S/ 4.80',
+      'Te faltó contar 2: Carbón, Detergente a granel',
+    ])
+    expect(conteo.deshacerRespuesta('lejia').terminado).toBe(true)
+    // Un producto que no se contó no cambia nada.
+    expect(conteo.deshacerRespuesta('detergente').aRegistro()).toEqual(conteo.aRegistro())
+  })
 })

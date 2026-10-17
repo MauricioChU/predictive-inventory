@@ -3,10 +3,12 @@ import { enOrdenDeRegistro } from '../domain/orden'
 import { anularOperacion, type DatosDeAnulacion } from './anulaciones'
 import {
   conteoActual,
+  deshacerRespuestaDeConteo,
   iniciarConteoGuiado,
   responderConteo,
   saltarEnConteo,
   type EstadoDelConteo,
+  type RespuestaDelConteoGuiado,
 } from './conteo'
 import type { ContextoDeInventario } from './contexto'
 import { ServicioDeDeshacer } from './deshacer'
@@ -38,7 +40,7 @@ export type { DatosDeConteo, DatosDeMerma, RespuestaDeConteo } from './mermas-y-
 export type { DatosDeAnulacion } from './anulaciones'
 export type { FiltroDeHistorial, LineaDeOperacionVista, OperacionVista } from './historial'
 export type { ResultadoDeRevision } from './revisar-datos'
-export type { EstadoDelConteo } from './conteo'
+export type { EstadoDelConteo, RespuestaDelConteoGuiado } from './conteo'
 
 export interface ModuloInventario {
   registrarVenta(datos: DatosDeVenta): Promise<{ operacionId: string }>
@@ -52,7 +54,9 @@ export interface ModuloInventario {
   reconstruirExistencias(): Promise<void>
   iniciarConteoGuiado(): Promise<EstadoDelConteo>
   conteoActual(): Promise<EstadoDelConteo | null>
-  responderConteo(contado: string): Promise<EstadoDelConteo>
+  responderConteo(contado: string): Promise<RespuestaDelConteoGuiado>
+  /** RN-OP-18: deshace la respuesta que registró ese AJUSTE (vuelve a "Te faltó contar"). */
+  deshacerRespuestaDeConteo(operacionId: string): Promise<EstadoDelConteo>
   saltarEnConteo(): Promise<EstadoDelConteo>
   consultable: InventarioParaCatalogo
 }
@@ -93,6 +97,8 @@ export function crearModuloInventario(d: DependenciasDeInventario): ModuloInvent
     iniciarConteoGuiado: () => iniciarConteoGuiado(ctx),
     conteoActual: () => conteoActual(ctx),
     responderConteo: (contado) => responderConteo(ctx, contado),
+    deshacerRespuestaDeConteo: (operacionId) =>
+      deshacerRespuestaDeConteo(ctx, deshacer, operacionId),
     saltarEnConteo: () => saltarEnConteo(ctx),
     consultable,
   }

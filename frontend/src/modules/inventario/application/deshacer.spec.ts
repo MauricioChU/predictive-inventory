@@ -60,6 +60,18 @@ describe('ServicioDeDeshacer', () => {
     expect(anuladas).toEqual(['op-2'])
   })
 
+  it('RN-OP-18: deshacer una operación que ya no es la ofrecida se rechaza y no anula nada', async () => {
+    const { deshacer, anuladas } = servicio()
+    deshacer.ofrecer('op-1', AHORA)
+    deshacer.ofrecer('op-2', AHORA)
+    await expect(deshacer.deshacer('op-1')).rejects.toThrow(
+      'Ya pasó el tiempo para deshacer. Puedes anularla desde el Historial.',
+    )
+    expect(anuladas).toEqual([])
+    await deshacer.deshacer('op-2')
+    expect(anuladas).toEqual(['op-2'])
+  })
+
   it('RN-OP-18: un toque hecho mientras se ofrecía se respeta aunque llegue tarde (2 s de margen)', async () => {
     const { reloj, deshacer, anuladas } = servicio()
     deshacer.ofrecer('op-1', AHORA)
