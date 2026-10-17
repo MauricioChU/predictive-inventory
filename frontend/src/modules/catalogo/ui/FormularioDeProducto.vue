@@ -35,7 +35,7 @@ import {
   type ValoresDeProducto,
 } from './formulario'
 import { aPantalla } from './enlaces'
-import { usarAltoObservado } from './alto-observado'
+import { usarAltoObservado } from '@/shared/ui/alto-observado'
 import { montoParaEditar } from './presentacion'
 
 const props = withDefaults(

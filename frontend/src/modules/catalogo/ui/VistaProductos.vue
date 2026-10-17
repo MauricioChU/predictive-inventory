@@ -12,7 +12,7 @@ import ListaDeProductos from '@/shared/ui/componentes/ListaDeProductos.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import SelectorSegmentado from '@/shared/ui/componentes/SelectorSegmentado.vue'
 import type { CategoriaVista, ProductoVista } from '../application/modulo'
-import { usarAltoObservado } from './alto-observado'
+import { usarAltoObservado } from '@/shared/ui/alto-observado'
 import FiltroDeCategoria from './FiltroDeCategoria.vue'
 import { useFiltrosDeProductos, vuelveAtrasDelDetalle } from './filtros-de-productos'
 import {
