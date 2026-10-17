@@ -9,7 +9,7 @@ export default defineConfig({
   expect: { timeout: 5_000 },
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: { baseURL: BASE, trace: 'on-first-retry', locale: 'es-PE', timezoneId: 'America/Lima' },
   projects: [
