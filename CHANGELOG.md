@@ -4,6 +4,14 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+### Nuevo
+
+- Si cambias de celular, puedes restaurar tu copia desde la bienvenida.
+
+### Cambiado
+
+- La primera vez que abres la app te guía paso a paso y no te deja salir hasta terminar.
+
 ## [0.1.0] · 2026-10-17
 
 ### Nuevo
