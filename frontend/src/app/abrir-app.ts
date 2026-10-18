@@ -13,6 +13,8 @@ export interface InicioDeLaApp {
   resumenDelDia: ResumenDelDia | null
   /** RN-RE-06: `null` si todavía no toca recordar. */
   recordatorioDeCopia: string | null
+  /** RN-AL-10: la frase del pago del local, o `null` si no toca recordarla hoy. */
+  recordatorioDelLocal: string | null
 }
 
 export interface OpcionesDeApertura {
@@ -39,7 +41,7 @@ async function sinDetenerse<T>(que: string, paso: () => Promise<T>, siFalla: T):
  * arranca y se muestra la pantalla sin datos): el estado del sistema (la primera vez crea el
  * `dispositivoId`) y la configuración, con su tamaño de letra (la fuente de verdad; la copia de
  * localStorage solo evita el parpadeo). ACCESORIO (si falla, se registra y se sigue): sembrar las
- * categorías iniciales, el resumen del día, el recordatorio de copia y la evaluación de avisos
+ * categorías iniciales, el resumen del día, los recordatorios (copia y pago del local) y la evaluación de avisos
  * (RN-AL-02: la predicción cambia con los días). La evaluación se encola y no se espera (la cola
  * de Alertas registra su error); el almacenamiento persistente se pide DESPUÉS de montar
  * (`pedirAlmacenamientoPersistente`).
@@ -72,6 +74,11 @@ export async function abrirApp(
     recordatorioDeCopia: await sinDetenerse(
       'preparar el recordatorio de copia',
       () => aplicacion.respaldo.recordatorioDeCopia(),
+      null,
+    ),
+    recordatorioDelLocal: await sinDetenerse(
+      'preparar el recordatorio del pago del local',
+      async () => (await aplicacion.alertas.recordatorioDelLocal())?.texto ?? null,
       null,
     ),
   }

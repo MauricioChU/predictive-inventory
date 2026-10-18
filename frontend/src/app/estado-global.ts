@@ -53,6 +53,7 @@ export const useEstadoGlobal = defineStore('estado-global', () => {
   const primeraVez = ref(false)
   const resumenDelDia = ref<ResumenDelDia | null>(null)
   const recordatorioDeCopia = ref<string | null>(null)
+  const recordatorioDelLocal = ref<string | null>(null)
 
   let aplicacion: Aplicacion | null = null
   let cancelaciones: (() => void)[] = []
@@ -95,6 +96,11 @@ export const useEstadoGlobal = defineStore('estado-global', () => {
     recordatorioDeCopia.value = await conectada().respaldo.recordatorioDeCopia()
   })
 
+  /** RN-AL-10: la frase del pago del local de hoy (cambia al configurar el local). */
+  const refrescarRecordatorioDelLocal = deAUna('el recordatorio del pago del local', async () => {
+    recordatorioDelLocal.value = (await conectada().alertas.recordatorioDelLocal())?.texto ?? null
+  })
+
   function desconectar(): void {
     for (const cancelar of cancelaciones) cancelar()
     cancelaciones = []
@@ -109,16 +115,19 @@ export const useEstadoGlobal = defineStore('estado-global', () => {
     primeraVez.value = inicio.primeraVez
     resumenDelDia.value = inicio.resumenDelDia
     recordatorioDeCopia.value = inicio.recordatorioDeCopia
+    recordatorioDelLocal.value = inicio.recordatorioDelLocal
 
     cancelaciones = [
       app.alertas.alCalcularLaAtencion(alCalcularLaAtencion),
       app.bus.suscribir('ConfiguracionActualizada', (): void => {
         void recargarConfiguracion()
+        void refrescarRecordatorioDelLocal()
       }),
       // Tras restaurar una copia cambian la configuración (letra) y los estados de stock; el
       // contador llega con la re-evaluación que la composición pide en ese momento.
       app.alCambiarEnBloque(() => {
         void recargarConfiguracion()
+        void refrescarRecordatorioDelLocal()
       }),
     ]
     void refrescarAtencion()
@@ -131,17 +140,26 @@ export const useEstadoGlobal = defineStore('estado-global', () => {
     resumenDelDia.value = null
   }
 
+  /** RN-AL-10: *Entendido* cierra la tarjeta del pago; no vuelve hasta el día siguiente. */
+  async function cerrarRecordatorioDelLocal(): Promise<void> {
+    await conectada().alertas.cerrarRecordatorioDelLocal()
+    recordatorioDelLocal.value = null
+  }
+
   return {
     contadorDeAtencion,
     tamanoDeLetra,
     primeraVez,
     resumenDelDia,
     recordatorioDeCopia,
+    recordatorioDelLocal,
     conectar,
     desconectar,
     refrescarAtencion,
     recargarConfiguracion,
     refrescarRecordatorioDeCopia,
+    refrescarRecordatorioDelLocal,
     cerrarResumenDelDia,
+    cerrarRecordatorioDelLocal,
   }
 })
