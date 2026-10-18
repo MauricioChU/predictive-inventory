@@ -29,21 +29,45 @@ type VentanaConAplicacion = Window & { __aplicacion?: AplicacionE2E }
 export const NOMBRE_DE_LA_TIENDA = 'Bodega Rosita'
 
 /**
- * La tienda como en el uso diario: la primera vez (nombre y letra) ya está hecha, por el caso de
- * uso real. Después abre `ruta` (Inicio ya no lleva a la bienvenida).
+ * RN-UX-16: la primera vez es obligatoria; mientras falta, la navegación no existe y toda
+ * dirección lleva a la bienvenida. Cuando ya se completó (el estado global lo recarga con el
+ * evento de configuración) la app vuelve a mostrar la navegación: esperar eso asegura que las
+ * navegaciones siguientes, dentro de la app, ya no se desvíen a la bienvenida.
  */
-export async function abrirTiendaLista(
+export async function esperarPrimeraVezCompleta(page: Page): Promise<void> {
+  await expect(page.locator('[data-app-montada]:not(.sin-navegacion)')).toBeAttached()
+}
+
+/**
+ * La primera vez ya hecha, por el caso de uso real (sin recorrer los pasos): abre `./`, espera la
+ * bienvenida montada y completa nombre y letra (la que la tienda ya tenía). La página queda
+ * en la bienvenida, con la navegación ya visible.
+ */
+export async function completarPrimeraVez(
   page: Page,
-  ruta = './',
   nombreTienda = NOMBRE_DE_LA_TIENDA,
 ): Promise<void> {
-  await abrir(page, './ajustes')
+  await abrir(page, './')
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Te damos la bienvenida')
   await page.evaluate(async (nombre) => {
     const app = (window as VentanaConAplicacion).__aplicacion
     if (!app) throw new Error('La app no expuso window.__aplicacion')
     const { tamanoDeLetra } = await app.tienda.obtenerConfiguracion()
     await app.tienda.completarPrimeraVez({ nombreTienda: nombre, tamanoDeLetra })
   }, nombreTienda)
+  await esperarPrimeraVezCompleta(page)
+}
+
+/**
+ * La tienda como en el uso diario: la primera vez (nombre y letra) ya está hecha. Después abre
+ * `ruta` (con una recarga completa, que ya no pasa por la bienvenida).
+ */
+export async function abrirTiendaLista(
+  page: Page,
+  ruta = './',
+  nombreTienda = NOMBRE_DE_LA_TIENDA,
+): Promise<void> {
+  await completarPrimeraVez(page, nombreTienda)
   await abrir(page, ruta)
 }
 

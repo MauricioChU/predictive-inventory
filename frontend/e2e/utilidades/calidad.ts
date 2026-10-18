@@ -174,15 +174,20 @@ export async function esperarOrdenDeFocoLogico(page: Page, pasos = 80): Promise<
   expect(haciaAtras, 'el foco sigue el orden del código').toEqual([])
 
   const navegacion = enfocados.filter((e) => e.zona === 'navegacion')
-  expect(
-    navegacion.map((e) => e.que.replace(/^a "(Inicio|Vender|Recibir|Productos|Control).*$/, '$1')),
-    'la navegación entera y en orden',
-  ).toEqual(['Inicio', 'Vender', 'Recibir', 'Productos', 'Control'])
-  const ultimaDeLaPantalla = enfocados.findLastIndex((e) => e.zona === 'contenido')
-  const primeraDeLaNavegacion = enfocados.findIndex((e) => e.zona === 'navegacion')
-  expect(primeraDeLaNavegacion, 'la navegación va después de la pantalla').toBeGreaterThan(
-    ultimaDeLaPantalla,
-  )
+  // RN-UX-16: durante la primera vez no hay navegación (ni nada a lo que el foco pueda salir).
+  if ((await page.locator('nav').count()) === 0) {
+    expect(navegacion.map((e) => e.que), 'sin navegación, el foco no sale de la pantalla').toEqual([])
+  } else {
+    expect(
+      navegacion.map((e) => e.que.replace(/^a "(Inicio|Vender|Recibir|Productos|Control).*$/, '$1')),
+      'la navegación entera y en orden',
+    ).toEqual(['Inicio', 'Vender', 'Recibir', 'Productos', 'Control'])
+    const ultimaDeLaPantalla = enfocados.findLastIndex((e) => e.zona === 'contenido')
+    const primeraDeLaNavegacion = enfocados.findIndex((e) => e.zona === 'navegacion')
+    expect(primeraDeLaNavegacion, 'la navegación va después de la pantalla').toBeGreaterThan(
+      ultimaDeLaPantalla,
+    )
+  }
 
   const pantalla = enfocados.filter((e) => e.zona === 'contenido')
   const saltosHaciaAtras: string[] = []

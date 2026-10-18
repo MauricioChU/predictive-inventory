@@ -6,6 +6,7 @@ import { expect, type Page } from '@playwright/test'
 import { prepararHistoriaDeDemostracion, type IdsDeDemostracion } from './historia-de-demostracion'
 import { abrir } from './navegacion'
 import { agregarAlCarrito, lineaDelCarrito } from './recorridos'
+import { crearProducto } from './tienda'
 
 export interface Pantalla {
   /** Cómo se llama en el informe de la prueba. */
@@ -28,6 +29,21 @@ export const PANTALLAS_DE_LA_PRIMERA_VEZ: readonly Pantalla[] = [
     },
   },
   { nombre: 'Primera vez: letra', ruta: './bienvenida?paso=letra' },
+  { nombre: 'Primera vez: cargar productos', ruta: './bienvenida?paso=productos' },
+  { nombre: 'Primera vez: contar (sin productos)', ruta: './bienvenida?paso=contar' },
+  {
+    // Con un producto cargado: "Contar ahora" y "Terminar" (RN-UX-16). Va al final: deja un producto.
+    nombre: 'Primera vez: contar (con productos)',
+    ruta: './bienvenida?paso=contar',
+    preparar: async (page) => {
+      await crearProducto(page, { nombre: 'Lejía 1 L', compra: '2.40', venta: '3.50', stock: '10' })
+      await abrir(page, './bienvenida?paso=contar')
+      await expect(page.getByRole('button', { name: 'Contar ahora' })).toBeVisible()
+    },
+  },
+  { nombre: 'Primera vez: restaurar copia (desde la bienvenida)', ruta: './ajustes/restaurar?desde=primera-vez' },
+  { nombre: 'Primera vez: producto nuevo', ruta: './productos/nuevo?desde=primera-vez' },
+  { nombre: 'Primera vez: importar productos', ruta: './ajustes/importar?desde=primera-vez' },
 ]
 
 /** Con la primera vez hecha y todavía sin productos: los estados vacíos (RN-UX-10). */
