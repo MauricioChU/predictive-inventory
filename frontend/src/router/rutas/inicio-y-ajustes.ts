@@ -1,6 +1,4 @@
-import { getActivePinia } from 'pinia'
 import type { RouteRecordRaw } from 'vue-router'
-import { useEstadoGlobal } from '@/app/estado-global'
 import { VistaAvisos } from '@/modules/alertas'
 import { VistaGuardarCopia, VistaImportarProductos, VistaRestaurarCopia } from '@/modules/respaldo'
 import {
@@ -10,14 +8,7 @@ import {
   VistaInicio,
   VistaPrimeraVez,
 } from '@/modules/tienda'
-
-/**
- * Falta la primera vez (nombre y letra)? Lo dice el estado global. Sin Pinia activa (un router de
- * pruebas sin la app montada) no hay estado que mirar y no se redirige.
- */
-function faltaLaPrimeraVez(): boolean {
-  return getActivePinia() !== undefined && useEstadoGlobal().primeraVez
-}
+import { faltaLaPrimeraVez } from '../primera-vez'
 
 // RN-UX-13: el navegador ofrece instalar la app una sola vez y en cualquier pantalla; se escucha
 // desde que arranca la app (este archivo se carga con el router), no recién al abrir Inicio.
@@ -30,8 +21,6 @@ export const rutasDeInicioYAjustes: RouteRecordRaw[] = [
     name: 'inicio',
     component: VistaInicio,
     meta: { titulo: 'Inicio', enNavegacion: true, icono: 'house' },
-    // Mientras falte la primera vez (nombre y letra), Inicio es la bienvenida.
-    beforeEnter: () => (faltaLaPrimeraVez() ? { name: 'primera-vez' } : true),
   },
   {
     path: '/bienvenida',

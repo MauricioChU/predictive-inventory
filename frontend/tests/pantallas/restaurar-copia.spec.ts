@@ -26,8 +26,13 @@ describe('Restaurar copia', () => {
     await esperarPantalla()
   }
 
-  async function elegir(texto: string, nombre = 'respaldo-bodega-rosita-2026-10-15-2030.json') {
-    pantalla = await montarPantalla(app, '/ajustes/restaurar')
+  async function elegir(
+    texto: string,
+    nombre = 'respaldo-bodega-rosita-2026-10-15-2030.json',
+    ruta = '/ajustes/restaurar',
+    enLaApp: AplicacionDePrueba = app,
+  ) {
+    pantalla = await montarPantalla(enLaApp, ruta)
     const input = pantalla.wrapper.get('input[type="file"]').element as HTMLInputElement
     await elegirArchivo(input, new File([texto], nombre, { type: 'application/json' }))
     await esperarPantalla()
@@ -138,5 +143,117 @@ describe('Restaurar copia', () => {
       'La copia tiene datos que no cuadran. No se cambió nada',
     )
     expect(await stockDeLejia()).toBe(5000)
+  })
+
+  // RN-RE-10: quien cambió de celular restaura desde la bienvenida (la primera vez sigue pendiente).
+  describe('desde la bienvenida (RN-RE-10)', () => {
+    const DESDE_LA_BIENVENIDA = '/ajustes/restaurar?desde=primera-vez'
+    let celularNuevo: AplicacionDePrueba
+
+    beforeEach(() => {
+      celularNuevo = crearAplicacionDePrueba({ ahora: HOY })
+    })
+
+    afterEach(async () => {
+      await celularNuevo.cerrar()
+    })
+
+    function elegirEnElCelularNuevo(): ReturnType<typeof elegir> {
+      return elegir(
+        copia,
+        'respaldo-bodega-rosita-2026-10-15-2030.json',
+        DESDE_LA_BIENVENIDA,
+        celularNuevo,
+      )
+    }
+
+    it('la pantalla se puede abrir aunque falte la primera vez, y no hay navegación a otra parte', async () => {
+      await elegirEnElCelularNuevo()
+
+      expect(pantalla!.router.currentRoute.value.name).toBe('restaurar-copia')
+      expect(pantalla!.wrapper.get('h1').text()).toBe('Restaurar copia')
+    })
+
+    it('Volver regresa a la bienvenida', async () => {
+      await elegirEnElCelularNuevo()
+
+      await tocar('Volver')
+
+      expect(pantalla!.router.currentRoute.value.name).toBe('primera-vez')
+      expect(pantalla!.router.currentRoute.value.query).toEqual({})
+      expect(pantalla!.wrapper.get('h1').text()).toBe('Te damos la bienvenida')
+    })
+
+    it('cancelar en la primera confirmación regresa a la bienvenida', async () => {
+      await elegirEnElCelularNuevo()
+
+      await tocar('Restaurar esta copia')
+      await tocar('No, cancelar')
+
+      expect(pantalla!.router.currentRoute.value.name).toBe('primera-vez')
+      expect(pantalla!.wrapper.get('h1').text()).toBe('Te damos la bienvenida')
+      expect((await celularNuevo.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(
+        false,
+      )
+    })
+
+    it('cancelar en la segunda confirmación regresa a la bienvenida sin restaurar nada', async () => {
+      await elegirEnElCelularNuevo()
+
+      await tocar('Restaurar esta copia')
+      await tocar('Sí, continuar')
+      await tocar('No, mejor no')
+
+      expect(pantalla!.router.currentRoute.value.name).toBe('primera-vez')
+      expect(
+        await celularNuevo.catalogo.consultable.productos({ soloActivos: false }),
+      ).toHaveLength(0)
+      expect((await celularNuevo.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(
+        false,
+      )
+    })
+
+    it('restaurar completa la primera vez: la navegación vuelve y "Ir al inicio" abre Inicio con los datos', async () => {
+      await elegirEnElCelularNuevo()
+      expect(pantalla!.estadoGlobal.primeraVez).toBe(true)
+
+      await tocar('Restaurar esta copia')
+      await tocar('Sí, continuar')
+      await tocar('Sí, restaurar')
+
+      expect(pantalla!.wrapper.get('h1').text()).toBe('Copia restaurada')
+      expect((await celularNuevo.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(
+        true,
+      )
+      expect(pantalla!.estadoGlobal.primeraVez).toBe(false)
+
+      await tocar('Ir al inicio')
+
+      expect(pantalla!.router.currentRoute.value.name).toBe('inicio')
+      expect(await celularNuevo.catalogo.consultable.productos({ soloActivos: true })).toHaveLength(
+        1,
+      )
+    })
+
+    it('si la copia no cuadra, se queda en la pantalla con el error y la primera vez sigue pendiente', async () => {
+      const alterada = JSON.parse(copia)
+      alterada.control.stockPorProducto[lejia] = 99_000
+      await elegir(
+        JSON.stringify(alterada),
+        'respaldo-bodega-rosita-2026-10-15-2030.json',
+        DESDE_LA_BIENVENIDA,
+        celularNuevo,
+      )
+
+      await tocar('Restaurar esta copia')
+      await tocar('Sí, continuar')
+      await tocar('Sí, restaurar')
+
+      expect(pantalla!.wrapper.text()).toContain('La copia tiene datos que no cuadran')
+      expect(pantalla!.estadoGlobal.primeraVez).toBe(true)
+      expect((await celularNuevo.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(
+        false,
+      )
+    })
   })
 })

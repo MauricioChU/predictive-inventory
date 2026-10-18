@@ -235,6 +235,131 @@ describe('Primera vez', () => {
       })
     })
 
+    describe('paso 5: no se muestra nada hasta saber si hay productos (RN-UX-16, ruling R8)', () => {
+      /** Una promesa que se resuelve cuando la prueba quiere. */
+      function pendiente<T>() {
+        let resolver!: (valor: T) => void
+        let rechazar!: (causa: unknown) => void
+        const promesa = new Promise<T>((alResolver, alRechazar) => {
+          resolver = alResolver
+          rechazar = alRechazar
+        })
+        return { promesa, resolver, rechazar }
+      }
+
+      function textosDeLosBotones(): string[] {
+        return pantalla!.wrapper.findAll('button').map((b) => b.text().trim())
+      }
+
+      it('con productos: mientras se leen no hay cuerpo ni botones, y después aparece "Contar ahora" (sin parpadeo)', async () => {
+        await crearProductoDePrueba(app, {
+          nombre: 'Lejía 1 L',
+          compra: '2.40',
+          venta: '3.50',
+          minimo: '3',
+          stockInicial: '0',
+        })
+        const lectura = pendiente<Awaited<ReturnType<typeof app.catalogo.consultable.productos>>>()
+        const productos = app.catalogo.consultable.productos.bind(app.catalogo.consultable)
+        // Se retiene la lectura de la pantalla (no las de abrirApp): se entra al paso 5 desde el 4.
+        pantalla = await montarPantalla(app, '/bienvenida?paso=productos')
+        vi.spyOn(app.catalogo.consultable, 'productos').mockImplementation(() => lectura.promesa)
+        await tocar('Más tarde')
+
+        expect(titulo()).toBe('Ahora contemos lo que tienes')
+        expect(textosDeLosBotones()).not.toContain('Terminar')
+        expect(textosDeLosBotones()).not.toContain('Contar ahora')
+        // Ni la versión "sin productos" del texto, que sería la que parpadea.
+        expect(pantalla.wrapper.text()).not.toContain('Cuando cargues tus productos')
+
+        lectura.resolver(await productos({ soloActivos: true }))
+        await esperarPantalla()
+
+        expect(textosDeLosBotones()).toContain('Contar ahora')
+        expect(textosDeLosBotones()).toContain('Terminar')
+        expect(pantalla.wrapper.text()).not.toContain('Cuando cargues tus productos')
+      })
+
+      it('sin productos: aparece solo "Terminar"', async () => {
+        const lectura = pendiente<never[]>()
+        pantalla = await montarPantalla(app, '/bienvenida?paso=productos')
+        vi.spyOn(app.catalogo.consultable, 'productos').mockImplementation(() => lectura.promesa)
+        await tocar('Más tarde')
+        expect(textosDeLosBotones()).not.toContain('Terminar')
+
+        lectura.resolver([])
+        await esperarPantalla()
+
+        expect(textosDeLosBotones()).toContain('Terminar')
+        expect(textosDeLosBotones()).not.toContain('Contar ahora')
+        expect(pantalla.wrapper.text()).toContain('Cuando cargues tus productos')
+      })
+
+      it('si no se pueden leer los productos: lo registra y sigue como si no hubiera (solo "Terminar")', async () => {
+        const registro = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+        const causa = new Error('sin disco')
+        pantalla = await montarPantalla(app, '/bienvenida?paso=productos')
+        vi.spyOn(app.catalogo.consultable, 'productos').mockRejectedValue(causa)
+        await tocar('Más tarde')
+
+        expect(registro).toHaveBeenCalledWith('No se pudieron leer los productos:', causa)
+        expect(textosDeLosBotones()).toEqual(expect.arrayContaining(['Terminar']))
+        expect(textosDeLosBotones()).not.toContain('Contar ahora')
+        await tocar('Terminar')
+        expect(pantalla.router.currentRoute.value.name).toBe('inicio')
+      })
+    })
+
+    describe('paso 5 tras recargar: no se puede terminar antes de leer el nombre (ruling R8)', () => {
+      it('los botones esperan a la configuración y "Terminar" no rebota al paso del nombre', async () => {
+        const original = app.tienda.obtenerConfiguracion.bind(app.tienda)
+        let lecturaRetenida: (() => void) | undefined
+        let llamadas = 0
+        vi.spyOn(app.tienda, 'obtenerConfiguracion').mockImplementation(() => {
+          llamadas += 1
+          // La 1.ª es de abrirApp; la 2.ª, de la pantalla, que es la que tarda.
+          if (llamadas !== 2) return original()
+          return new Promise((resolver) => {
+            lecturaRetenida = () => resolver(original())
+          })
+        })
+
+        pantalla = await montarPantalla(app, '/bienvenida?paso=contar')
+        expect(lecturaRetenida, 'la pantalla pidió la configuración').toBeDefined()
+
+        const terminar = boton('Terminar')
+        expect(terminar.attributes('disabled')).toBeDefined()
+        await terminar.trigger('click')
+        await esperarPantalla()
+        expect(titulo()).toBe('Ahora contemos lo que tienes')
+        expect((await app.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(false)
+
+        lecturaRetenida!()
+        await esperarPantalla()
+        expect(boton('Terminar').attributes('disabled')).toBeUndefined()
+
+        await tocar('Terminar')
+        expect(pantalla.router.currentRoute.value.name).toBe('inicio')
+        expect((await app.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(true)
+        expect((await app.tienda.obtenerConfiguracion()).nombreTienda).toBe('Bodega Rosita')
+      })
+
+      it('si la configuración no se puede leer, los botones se habilitan igual (y sin nombre vuelve al paso del nombre)', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => undefined)
+        const original = app.tienda.obtenerConfiguracion.bind(app.tienda)
+        let llamadas = 0
+        vi.spyOn(app.tienda, 'obtenerConfiguracion').mockImplementation(() => {
+          llamadas += 1
+          return llamadas === 2 ? Promise.reject(new Error('sin disco')) : original()
+        })
+
+        pantalla = await montarPantalla(app, '/bienvenida?paso=contar')
+        await esperarPantalla()
+
+        expect(boton('Terminar').attributes('disabled')).toBeUndefined()
+      })
+    })
+
     describe('paso 5, con productos', () => {
       beforeEach(async () => {
         await crearProductoDePrueba(app, {

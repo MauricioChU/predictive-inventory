@@ -347,6 +347,47 @@ describe('restaurarCopia en una sola unidad de trabajo', () => {
   })
 })
 
+describe('restaurarCopia completa la primera vez (RN-RE-10)', () => {
+  it('tras restaurar, la primera vez queda completada aunque estuviera pendiente', async () => {
+    const { deps, tienda, seedProductosYOperaciones, reconstructor } = crearContexto()
+    seedProductosYOperaciones()
+    await reconstructor.reconstruirTodo()
+    const texto = await (await guardarCopia(deps)).contenido.text()
+    tienda.fijarEstado({ primeraVezCompletada: false })
+
+    await restaurarCopia(deps, texto, { confirmaciones: 2 })
+
+    expect((await tienda.estadoDelSistema()).primeraVezCompletada).toBe(true)
+  })
+
+  it('si la restauración falla (control que no cuadra), la primera vez sigue pendiente', async () => {
+    const { deps, tienda, seedProductosYOperaciones, reconstructor } = crearContexto()
+    seedProductosYOperaciones()
+    await reconstructor.reconstruirTodo()
+    const respaldo = JSON.parse(await (await guardarCopia(deps)).contenido.text())
+    respaldo.control.stockPorProducto.carbon = 99000
+    tienda.fijarEstado({ primeraVezCompletada: false })
+
+    await expect(
+      restaurarCopia(deps, JSON.stringify(respaldo), { confirmaciones: 2 }),
+    ).rejects.toThrow('La copia tiene datos que no cuadran')
+
+    expect((await tienda.estadoDelSistema()).primeraVezCompletada).toBe(false)
+  })
+
+  it('con menos de 2 confirmaciones tampoco se completa', async () => {
+    const { deps, tienda, seedProductosYOperaciones, reconstructor } = crearContexto()
+    seedProductosYOperaciones()
+    await reconstructor.reconstruirTodo()
+    const texto = await (await guardarCopia(deps)).contenido.text()
+    tienda.fijarEstado({ primeraVezCompletada: false })
+
+    await expect(restaurarCopia(deps, texto, { confirmaciones: 1 })).rejects.toThrow()
+
+    expect((await tienda.estadoDelSistema()).primeraVezCompletada).toBe(false)
+  })
+})
+
 describe('copia consistente (RN-RE-02/03/04)', () => {
   it('el nombre usa la hora de Lima: 2026-10-16T03:00Z es 15/10 a las 22:00', async () => {
     const { deps, reloj } = crearContexto()

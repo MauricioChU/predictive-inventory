@@ -57,6 +57,12 @@ const letra = computed(() => letraElegida.value ?? estadoGlobal.tamanoDeLetra)
 const guardando = ref(false)
 const errorAlGuardar = ref<string>()
 
+/**
+ * Si ya se leyó la configuración guardada. Hasta entonces el paso 5 no deja terminar: con el
+ * nombre todavía vacío (tras recargar en `?paso=contar`), *Terminar* rebotaría al paso del nombre.
+ */
+const configuracionLeida = ref(false)
+
 // Si se abre directo en un paso (p. ej. tras recargar), el nombre guardado no se pierde.
 aplicacion.tienda
   .obtenerConfiguracion()
@@ -64,9 +70,16 @@ aplicacion.tienda
     if (nombre.value === '') nombre.value = configuracion.nombreTienda
   })
   .catch((error: unknown) => console.error('No se pudo leer el nombre de la tienda:', error))
+  .finally(() => {
+    configuracionLeida.value = true
+  })
 
-/** Paso 5: *Contar ahora* solo se ofrece si ya hay productos activos que contar. */
-const hayProductos = ref(false)
+/**
+ * Paso 5: *Contar ahora* solo se ofrece si ya hay productos activos que contar. Es `undefined`
+ * mientras se lee: el paso no muestra su cuerpo ni sus botones hasta saberlo (sin parpadeo de
+ * "sin productos" a "Contar ahora"). Si no se pueden leer, se sigue como si no hubiera.
+ */
+const hayProductos = ref<boolean | undefined>()
 watch(
   paso,
   (actual) => {
@@ -76,7 +89,10 @@ watch(
       .then((productos) => {
         hayProductos.value = productos.length > 0
       })
-      .catch((error: unknown) => console.error('No se pudieron leer los productos:', error))
+      .catch((error: unknown) => {
+        console.error('No se pudieron leer los productos:', error)
+        hayProductos.value = false
+      })
   },
   { immediate: true },
 )
@@ -278,7 +294,7 @@ async function terminar(destino: 'contar-todo' | 'inicio'): Promise<void> {
     </template>
 
     <!-- 5. Contar lo que hay (conteo guiado, RN-OP-21) y terminar -->
-    <template v-else>
+    <template v-else-if="hayProductos !== undefined">
       <div class="cuerpo">
         <template v-if="hayProductos">
           <p>
@@ -299,13 +315,13 @@ async function terminar(destino: 'contar-todo' | 'inicio'): Promise<void> {
           v-if="hayProductos"
           texto="Contar ahora"
           :icono="ClipboardCheck"
-          :deshabilitado="guardando"
+          :deshabilitado="guardando || !configuracionLeida"
           @click="terminar('contar-todo')"
         />
         <BotonPrincipal
           texto="Terminar"
           :variante="hayProductos ? 'secundario' : 'primario'"
-          :deshabilitado="guardando"
+          :deshabilitado="guardando || !configuracionLeida"
           @click="terminar('inicio')"
         />
       </div>
