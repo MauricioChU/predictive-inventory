@@ -100,6 +100,8 @@ export class TiendaFalsa implements TiendaConsultable {
     ultimoRespaldoEn: null,
     almacenamientoPersistente: 'DESCONOCIDO',
     ultimoResumenDelDiaMostrado: null,
+    ultimoPagoDelLocalAvisado: null,
+    recordatorioDelLocalCerradoEl: null,
   }
 
   async configuracion(): Promise<ConfiguracionDeNegocio> {

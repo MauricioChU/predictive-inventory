@@ -41,6 +41,7 @@ function registroDeNegocio(c: ConfiguracionRegistro): ConfiguracionRegistro {
     diasMaximosDeCompra: c.diasMaximosDeCompra,
     tamanoDeLetra: c.tamanoDeLetra,
     notificacionesActivas: c.notificacionesActivas,
+    alquilerDelLocal: c.alquilerDelLocal ?? null,
   }
 }
 

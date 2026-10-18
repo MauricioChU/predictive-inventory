@@ -52,6 +52,7 @@ function respaldoValido() {
         diasMaximosDeCompra: 30,
         tamanoDeLetra: 'GRANDE',
         notificacionesActivas: false,
+        alquilerDelLocal: null,
       },
       categorias: [{ id: 'cat-1', nombre: 'Otros', nombreNormalizado: 'otros' }],
       productos: [producto()],

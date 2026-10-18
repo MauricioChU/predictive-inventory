@@ -68,6 +68,7 @@ export class AlmacenDeRespaldoEnMemoria implements AlmacenDeRespaldo {
         diasMaximosDeCompra: c.diasMaximosDeCompra,
         tamanoDeLetra: c.tamanoDeLetra,
         notificacionesActivas: c.notificacionesActivas,
+        alquilerDelLocal: c.alquilerDelLocal ?? null,
       })
     }
     for (const categoria of datos.categorias) this.almacen.guardar('categorias', categoria)

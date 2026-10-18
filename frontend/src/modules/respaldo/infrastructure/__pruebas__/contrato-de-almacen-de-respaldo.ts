@@ -36,6 +36,7 @@ export const NEGOCIO: ConfiguracionRegistro = {
   diasMaximosDeCompra: 30,
   tamanoDeLetra: 'GRANDE',
   notificacionesActivas: false,
+  alquilerDelLocal: null,
 }
 
 export const SISTEMA: EstadoDelSistemaRegistro = {
@@ -45,6 +46,8 @@ export const SISTEMA: EstadoDelSistemaRegistro = {
   ultimoRespaldoEn: '2026-10-01T00:00:00.000Z',
   almacenamientoPersistente: 'CONCEDIDO',
   ultimoResumenDelDiaMostrado: null,
+  ultimoPagoDelLocalAvisado: null,
+  recordatorioDelLocalCerradoEl: null,
 }
 
 export function producto(id: string): ProductoRegistro {

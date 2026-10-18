@@ -55,3 +55,34 @@ describe('validarCambios', () => {
     )
   })
 })
+
+describe('validarCambios: alquiler del local', () => {
+  const mensual = (montoCentimos: number, dia: number) => ({
+    alquilerDelLocal: { tipo: 'MENSUAL' as const, montoCentimos, dias: [dia] as [number] },
+  })
+
+  it('sin configurar y NO_PAGA son válidos', () => {
+    expect(validarCambios({ alquilerDelLocal: null })).toBeNull()
+    expect(validarCambios({ alquilerDelLocal: { tipo: 'NO_PAGA' } })).toBeNull()
+  })
+
+  it('un alquiler correcto es válido', () => {
+    expect(validarCambios(mensual(120_000, 5))).toBeNull()
+    expect(
+      validarCambios({
+        alquilerDelLocal: { tipo: 'QUINCENAL', montoCentimos: 60_000, dias: [20, 5] },
+      }),
+    ).toBeNull()
+  })
+
+  it('cada mensaje de la spec', () => {
+    expect(validarCambios(mensual(0, 5))).toBe('El monto debe ser mayor que S/ 0.00')
+    expect(validarCambios(mensual(10_000_000, 5))).toBe('El monto no puede pasar de S/ 99 999.99')
+    expect(validarCambios(mensual(100, 32))).toBe('El día de pago va del 1 al 31')
+    expect(
+      validarCambios({
+        alquilerDelLocal: { tipo: 'QUINCENAL', montoCentimos: 100, dias: [5, 5] },
+      }),
+    ).toBe('Elige dos días distintos')
+  })
+})
