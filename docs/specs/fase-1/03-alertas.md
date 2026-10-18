@@ -12,6 +12,7 @@ Criterios de aceptación ejecutables: [features/alertas.feature](features/alerta
 | HU-AL-02 | Como usuario principal quiero que el celular **me avise** cuando un producto se acaba o está por acabarse. |
 | HU-AL-03 | Como usuario principal quiero que los avisos **no se repitan** a cada rato por el mismo producto. |
 | HU-AL-04 | Como usuario principal quiero un **resumen al empezar el día**. |
+| HU-AL-05 | Como usuario principal quiero que la app me **recuerde cuándo toca pagar el local**. |
 
 ## Estados de stock
 
@@ -37,6 +38,13 @@ Criterios de aceptación ejecutables: [features/alertas.feature](features/alerta
 | **RN-AL-08** | El **permiso de notificaciones** nunca se pide al abrir la app por primera vez. Se pide desde una pantalla que explica para qué sirve, con botón "Sí, avísame". Si se rechaza, la app funciona igual con avisos internos, y Ajustes explica cómo activarlas. |
 | **RN-AL-09** | **Resumen del día**: la primera vez que se abre la app cada día se muestra una tarjeta con productos agotados, productos por acabarse y la ganancia de ayer. Se cierra con un toque y no vuelve a salir ese día. |
 
+### Recordatorio de pago del local
+
+| Id | Regla |
+|---|---|
+| **RN-AL-10** | **Recordatorio en Inicio**: si el local tiene pago configurado (RN-AN-17) y la siguiente fecha de pago **igual o posterior a hoy** (RN-AN-18) cae **hoy, mañana o pasado mañana**, Inicio muestra una tarjeta con el texto de la tabla de abajo y el botón *Entendido*, que la cierra **hasta el día siguiente**. El resumen del día (RN-AL-09) incluye la misma frase. Sin configurar o con *No pago*, no hay recordatorio. |
+| **RN-AL-11** | **Notificación del pago**: con permiso de notificaciones (RN-AL-08), se envía **una sola notificación por cada fecha de pago**, la primera vez que se evalúan los avisos (RN-AL-02) dentro de esa ventana de 3 días. Tocarla abre **Control**. Se guarda la última fecha de pago avisada para no repetirla; si cambia la configuración del local, una fecha nueva sí se avisa. Tiene la misma limitación de la Fase 1 que los avisos de stock (ver abajo). |
+
 ## Textos de los avisos
 
 | Situación | Texto |
@@ -44,6 +52,11 @@ Criterios de aceptación ejecutables: [features/alertas.feature](features/alerta
 | Un producto pasa a *Por acabarse* | `Queda poco: <nombre> (<stock>)` y, si hay predicción, `Queda poco: <nombre> (<stock>, se acaba en ~N días)` |
 | Un producto pasa a *Agotado* | `Se acabó: <nombre>` |
 | Varios avisos a la vez | `N productos se están acabando` |
+| Pago del local en 2 días | `Pasado mañana pagas el local: S/ <monto>` |
+| Pago del local en 1 día | `Mañana pagas el local: S/ <monto>` |
+| Pago del local hoy | `Hoy pagas el local: S/ <monto>` |
+
+El recordatorio del local va siempre en su propia notificación; no se agrupa con los avisos de stock (RN-AL-07).
 
 Las cantidades usan singular o plural según corresponda: "Solo queda 1 kg", "Solo quedan 2 unid.".
 
@@ -55,4 +68,5 @@ Sin servidor, el celular solo puede mostrar notificaciones cuando la app **está
 
 - `EstadoDeStock` (objeto de valor): `AGOTADO` | `POR_ACABARSE` | `NORMAL`, con orden de gravedad `AGOTADO > POR_ACABARSE > NORMAL`.
 - `RegistroDeAviso` (por producto): último estado avisado. Se usa para aplicar RN-AL-03 y RN-AL-04.
+- `ultimoPagoDelLocalAvisado` (estado del sistema): fecha de pago (AAAA-MM-DD) de la última notificación del local (RN-AL-11).
 - Puerto `Notificador`: `notificar(aviso)`. Adaptadores: notificación del sistema (Service Worker) y aviso dentro de la app. En la Fase 2 se agrega el adaptador push.

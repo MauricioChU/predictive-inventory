@@ -165,3 +165,71 @@ Característica: Alertas de stock
     Cuando cierro el resumen
     Y abro la app
     Entonces no se muestra el resumen del día
+
+  # ---------- Recordatorio de pago del local ----------
+
+  @RN-AL-10
+  Esquema del escenario: Recordatorio del pago del local en Inicio
+    Dado que hoy es "<hoy> 10:00"
+    Y el local se paga "S/ 1200.00" "Una vez al mes" los días "20"
+    Cuando abro la app
+    Entonces Inicio muestra "<recordatorio>"
+
+    Ejemplos:
+      | hoy        | recordatorio                                   |
+      | 2026-10-18 | Pasado mañana pagas el local: S/ 1 200.00      |
+      | 2026-10-19 | Mañana pagas el local: S/ 1 200.00             |
+      | 2026-10-20 | Hoy pagas el local: S/ 1 200.00                |
+
+  @RN-AL-10
+  Escenario: Fuera de la ventana no hay recordatorio
+    Dado que hoy es "2026-10-17 10:00"
+    Y el local se paga "S/ 1200.00" "Una vez al mes" los días "20"
+    Cuando abro la app
+    Entonces Inicio no muestra el recordatorio del local
+
+  @RN-AL-10
+  Escenario: "Entendido" cierra el recordatorio hasta el día siguiente
+    Dado que hoy es "2026-10-18 10:00"
+    Y el local se paga "S/ 1200.00" "Una vez al mes" los días "20"
+    Cuando abro la app
+    Y toco "Entendido" en el recordatorio del local
+    Y abro la app
+    Entonces Inicio no muestra el recordatorio del local
+    Cuando pasa un día
+    Y abro la app
+    Entonces Inicio muestra "Mañana pagas el local: S/ 1 200.00"
+
+  @RN-AL-10
+  Escenario: Sin alquiler no hay recordatorio
+    Dado que hoy es "2026-10-20 10:00"
+    Y el local está configurado como "No pago (el local es mío)"
+    Cuando abro la app
+    Entonces Inicio no muestra el recordatorio del local
+
+  @RN-AL-10
+  Escenario: El resumen del día incluye el recordatorio
+    Dado que hoy es "2026-10-19 10:00"
+    Y el local se paga "S/ 1200.00" "Una vez al mes" los días "20"
+    Cuando abro la app
+    Entonces el resumen del día incluye "Mañana pagas el local: S/ 1 200.00"
+
+  @RN-AL-11
+  Escenario: Una sola notificación por fecha de pago
+    Dado que hoy es "2026-10-18 10:00"
+    Y el local se paga "S/ 1200.00" "Una vez al mes" los días "20"
+    Cuando abro la app
+    Entonces se envía la notificación "Pasado mañana pagas el local: S/ 1 200.00"
+    Y al tocar la notificación se abre "Control"
+    Cuando pasa un día
+    Y abro la app
+    Entonces no se envía la notificación del local
+
+  @RN-AL-11
+  Escenario: Cambiar la fecha de pago avisa la fecha nueva
+    Dado que hoy es "2026-10-18 10:00"
+    Y el local se paga "S/ 1200.00" "Una vez al mes" los días "20"
+    Y abro la app
+    Cuando configuro el local con pago "Una vez al mes", monto "1200.00" y días "19"
+    Y abro la app
+    Entonces se envía la notificación "Mañana pagas el local: S/ 1 200.00"

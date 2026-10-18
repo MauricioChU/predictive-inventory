@@ -13,3 +13,4 @@ Cada decisión importante se registra aquí con su contexto y consecuencias. Un 
 | [0007](0007-hosting-github-pages.md) | Frontend en GitHub Pages | Aceptado |
 | [0008](0008-postgres-neon.md) | Postgres en Neon (Fase 2) | Aceptado |
 | [0009](0009-flujo-de-ramas-y-ci.md) | Flujo de ramas y CI | Aceptado |
+| [0010](0010-versiones-y-publicacion.md) | Versiones y publicación | Aceptado |

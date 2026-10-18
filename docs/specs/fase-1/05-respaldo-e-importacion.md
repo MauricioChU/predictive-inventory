@@ -26,17 +26,21 @@ Criterios de aceptación ejecutables: [features/respaldo.feature](features/respa
 | **RN-RE-07** | **Importar productos desde Excel**: la app ofrece una **plantilla** descargable con las columnas: nombre, categoría, unidad (unid / kg / L), precio de compra, precio de venta, stock mínimo, stock inicial. Al subir el archivo se muestra una **vista previa** con filas válidas y filas con problema, explicadas en lenguaje simple: "Fila 7: falta el precio de venta". Se importan **solo las filas válidas** después de confirmar. |
 | **RN-RE-08** | En la importación, cada fila se valida con las mismas reglas que el formulario (RN-CAT-01 a RN-CAT-08, salvo la RN-CAT-07 retirada). Un nombre repetido, contra el catálogo **o dentro del mismo archivo**, invalida la fila ("ya existe"). Una categoría que no existe **se crea**. El stock inicial mayor que 0 genera una operación `STOCK_INICIAL` por producto. |
 | **RN-RE-09** | La app solicita al navegador **almacenamiento persistente** en el primer uso, para que Android no borre los datos al liberar espacio. Si no se concede, el recordatorio de RN-RE-06 aparece a los **3 días** en lugar de 7. |
+| **RN-RE-10** | **Restaurar desde la bienvenida**: el primer paso de la primera vez ofrece *Ya tengo una copia guardada*, que abre *Restaurar copia* con las mismas reglas (RN-RE-03 a RN-RE-05). Si la restauración termina bien, la primera vez queda **completada** y se abre Inicio con los datos restaurados. Si se cancela o falla, se vuelve a la bienvenida. |
+| **RN-RE-11** | **Formato versión 2**: la configuración incluye el costo del local (`alquilerDelLocal`, RN-AN-17). Una copia de la versión 1 se migra con el local **sin configurar** (`null`). |
 
-## Formato del respaldo (versión 1)
+## Formato del respaldo (versión 2)
 
 ```json
 {
-  "versionDeFormato": 1,
+  "versionDeFormato": 2,
   "creadoEn": "2026-10-15T20:30:00-05:00",
   "app": "predictive-inventory",
   "control": { "productos": 152, "operaciones": 3840, "stockPorProducto": { "<id>": 12000 } },
   "datos": {
-    "configuracion": {},
+    "configuracion": {
+      "alquilerDelLocal": { "tipo": "QUINCENAL", "montoCentimos": 60000, "dias": [5, 20] }
+    },
     "categorias": [],
     "productos": [],
     "operaciones": [],

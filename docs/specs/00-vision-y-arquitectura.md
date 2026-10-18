@@ -162,3 +162,4 @@ predictive-inventory/
 | [0007](../adr/0007-hosting-github-pages.md) | Frontend publicado gratis en GitHub Pages |
 | [0008](../adr/0008-postgres-neon.md) | Postgres en Neon para la nube (Fase 2) |
 | [0009](../adr/0009-flujo-de-ramas-y-ci.md) | Flujo de ramas `main` / `develop` / `feat/*` con CI obligatorio |
+| [0010](../adr/0010-versiones-y-publicacion.md) | Versiones SemVer, CHANGELOG y PR de entrega `release: vX.Y.Z` |

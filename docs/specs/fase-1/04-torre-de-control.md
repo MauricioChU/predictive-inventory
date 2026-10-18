@@ -16,16 +16,18 @@ Criterios de aceptación ejecutables: [features/torre-de-control.feature](featur
 | HU-AN-06 | Como administrador quiero que me avisen de **precios mal puestos**. |
 | HU-AN-07 | Como administrador quiero comparar **esta semana con la anterior** y saber **qué día se vende más**. |
 | HU-AN-08 | Como usuario principal quiero **preguntar a la app si necesito comprar** un producto cuando estoy en el mercado, para no comprar de más. |
+| HU-AN-09 | Como usuario principal quiero saber **si lo que voy ganando ya cubre el alquiler del local** antes de la próxima fecha de pago. |
 
 ## Secciones de la vista (en este orden)
 
 1. **Resumen**: ventas, ganancia y pérdidas del periodo (Hoy · Ayer · 7 días · 30 días).
-2. **Atención**: agotados, por acabarse y precios para revisar, con su cantidad. Cada uno abre su lista.
-3. **Para comprar**: lista sugerida con costo total.
-4. **Más vendidos**.
-5. **Semana contra semana**.
-6. **Mejor día de la semana**.
-7. **Productos parados**.
+2. **Alquiler del local**: cuánto llevas ganado para el próximo pago (RN-AN-17 a RN-AN-19).
+3. **Atención**: agotados, por acabarse y precios para revisar, con su cantidad. Cada uno abre su lista.
+4. **Para comprar**: lista sugerida con costo total.
+5. **Más vendidos**.
+6. **Semana contra semana**.
+7. **Mejor día de la semana**.
+8. **Productos parados**.
 
 Cada sección con poca información muestra un mensaje claro en lugar de quedar vacía: "Todavía no hay ventas esta semana", "Necesito al menos 2 semanas de ventas para saberlo".
 
@@ -81,6 +83,24 @@ Total estimado: S/ 32.93
 |---|---|
 | **RN-AN-16** | **"¿Necesito comprar?"**: al elegir un producto, la app responde con **una sola frase** según el primer caso que se cumpla: (1) si está **parado** (RN-AN-11): "No compres: no se vende hace N días y tienes X"; (2) si está en **Para comprar** (RN-AN-07): "Sí, compra ~N" con la cantidad de la lista de hoy (la sugerida o la que el usuario cambió, RN-AN-08) y su costo estimado; si el usuario lo quitó de la lista de hoy y su estado es `AGOTADO` o `POR_ACABARSE`, se responde igual con la cantidad sugerida (quitarlo solo lo saca de la lista: nunca se dice "No hace falta" de un producto agotado o por acabarse); si lo quitó y su estado es `NORMAL`, se sigue con el caso 3; (3) si tiene predicción: "No hace falta: te alcanza para ~N días"; (4) si no: "Tienes X. Todavía no sé cuánto vendes; vuelve a preguntar en unos días". Debajo se muestra el stock actual y la última vez que llegó mercadería de ese producto. Si el producto no existe o está archivado: "No encontramos ese producto". |
 
+### Alquiler del local
+
+| Id | Regla |
+|---|---|
+| **RN-AN-17** | **Costo del local** (configuración de la tienda, valor inicial: *sin configurar*). Se responde **"¿Pagas alquiler por tu local?"** con una de tres opciones: **Una vez al mes**, **Dos veces al mes** o **No pago (el local es mío)**. Si paga, se indica **cuánto paga cada vez** (mayor que S/ 0.00, con dos decimales como máximo y hasta S/ 99 999.99; el mismo monto en cada pago) y **qué día paga**: un día del 1 al 31, o **dos días distintos** si paga dos veces al mes. Se configura desde la tarjeta *Alquiler del local* de Control y desde *Ajustes → Datos de la tienda*. Los cambios valen desde ese momento para todos los cálculos (el avance se calcula del libro de operaciones; no hay historial que corregir). |
+| **RN-AN-18** | **Fechas de pago**: en cada mes, la fecha de pago es el día elegido; si el mes no tiene ese día, es su **último día** (el 31 en febrero de 2027 es el 28/02/2027). El **último pago** es la fecha de pago más reciente **igual o anterior a hoy**; el **próximo pago** es la primera fecha de pago **posterior a hoy**. El **periodo actual** va desde el último pago (incluido) hasta hoy (incluido): el mismo día de pago empieza un periodo nuevo. |
+| **RN-AN-19** | **Tarjeta *Alquiler del local*** (no depende del periodo elegido en el Resumen). **Llevas** = ganancia neta (RN-AN-02) del periodo actual. Si *llevas* es menor que el monto: "Para el pago del <próximo pago, DD/MM> llevas S/ X de S/ M", "Te falta S/ (M − X)" y una barra de avance de ⌊X ÷ M × 100⌋ % (entre 0 % y 100 %; con *llevas* negativo, 0 %). Si *llevas* es igual o mayor que el monto: "✓ Ya cubriste el local del <próximo pago, DD/MM>" y "Lo que ganes de más es tuyo: llevas S/ (X − M)", con la barra al 100 %. **Sin configurar**: la tarjeta pregunta "¿Pagas alquiler por tu local?" con el botón *Configurar*. **No pago**: la tarjeta no se muestra. |
+
+Ejemplos de RN-AN-18 (pagos el 5 y el 20 de cada mes):
+
+| Hoy | Último pago | Próximo pago | Periodo actual |
+|---|---|---|---|
+| 15/10/2026 | 05/10/2026 | 20/10/2026 | 05/10 – 15/10 |
+| 20/10/2026 | 20/10/2026 | 05/11/2026 | 20/10 – 20/10 |
+| 03/11/2026 | 20/10/2026 | 05/11/2026 | 20/10 – 03/11 |
+
+Pago una vez al mes, el día 31: hoy 15/02/2027 → último pago 31/01/2027, próximo pago 28/02/2027.
+
 ## Ejemplos
 
 Configuración: días entre compras = 7, días de anticipación = 3.
@@ -95,4 +115,5 @@ Configuración: días entre compras = 7, días de anticipación = 3.
 ## Modelo
 
 - `ResumenDiario` (proyección, reconstruible): por producto y día: cantidad vendida, número de líneas vendidas, ventas, costo de lo vendido, costo de mermas, valor de ajustes, cambio neto de stock. Se actualiza en la misma transacción que cada operación y anulación, para que la Torre de control cargue rápido.
-- Los cálculos (VPD, cobertura, sugerido, rankings) son **funciones puras del dominio**, sin acceso a base de datos, probadas con datos de ejemplo compartidos ([ADR-0006](../../adr/0006-specs-ejecutables.md)).
+- `AlquilerDelLocal` (objeto de valor, en la configuración de la tienda): `null` (sin configurar) · `{ tipo: 'NO_PAGA' }` · `{ tipo: 'MENSUAL', montoCentimos, dias: [d] }` · `{ tipo: 'QUINCENAL', montoCentimos, dias: [d1, d2] }`, con los días ordenados de menor a mayor. Dinero en céntimos ([ADR-0003](../../adr/0003-enteros-para-dinero-y-cantidades.md)).
+- Los cálculos (VPD, cobertura, sugerido, rankings, fechas de pago y avance del alquiler) son **funciones puras del dominio**, sin acceso a base de datos, probadas con datos de ejemplo compartidos ([ADR-0006](../../adr/0006-specs-ejecutables.md)).
