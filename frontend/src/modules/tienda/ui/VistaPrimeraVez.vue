@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ClipboardCheck, FileSpreadsheet, Plus, Store } from 'lucide-vue-next'
 import { useEstadoGlobal } from '@/app/estado-global'
@@ -23,8 +23,9 @@ import { haciaPantalla } from './pantallas-de-otras-ramas'
 /**
  * Primera vez (06-experiencia-de-uso): bienvenida → nombre → letra → cargar productos → contar.
  * Cada paso va en la dirección (`?paso=…`), así el botón "atrás" del celular vuelve al paso
- * anterior en vez de salir de la app. La primera vez queda completada al elegir la letra: los
- * dos últimos pasos se pueden dejar para después.
+ * anterior en vez de salir de la app. El nombre y la letra se guardan al elegir la letra (paso 3),
+ * pero la primera vez queda completada recién al responder el paso 5 (RN-UX-16): *Contar ahora* o
+ * *Terminar*. Los pasos 4 y 5 aceptan *Más tarde* / *Terminar* como respuesta válida.
  */
 type Paso = 'bienvenida' | 'nombre' | 'letra' | 'productos' | 'contar'
 const PASOS: readonly Paso[] = ['bienvenida', 'nombre', 'letra', 'productos', 'contar']
@@ -64,6 +65,22 @@ aplicacion.tienda
   })
   .catch((error: unknown) => console.error('No se pudo leer el nombre de la tienda:', error))
 
+/** Paso 5: *Contar ahora* solo se ofrece si ya hay productos activos que contar. */
+const hayProductos = ref(false)
+watch(
+  paso,
+  (actual) => {
+    if (actual !== 'contar') return
+    aplicacion.catalogo.consultable
+      .productos({ soloActivos: true })
+      .then((productos) => {
+        hayProductos.value = productos.length > 0
+      })
+      .catch((error: unknown) => console.error('No se pudieron leer los productos:', error))
+  },
+  { immediate: true },
+)
+
 function ubicacionDe(paso: Paso) {
   return { name: 'primera-vez', query: paso === 'bienvenida' ? {} : { paso } }
 }
@@ -87,11 +104,6 @@ function alVolver(): void {
   }
 }
 
-/** "Dejar para después": Inicio en lugar de la bienvenida (atrás no vuelve a ella). */
-function dejarParaDespues(): void {
-  void router.replace({ name: 'inicio' })
-}
-
 function seguirConElNombre(): void {
   errorDelNombre.value = validarCambios({ nombreTienda: nombre.value }) ?? undefined
   if (!errorDelNombre.value) irA('letra')
@@ -103,12 +115,46 @@ function elegirLetra(tamano: TamanoDeLetra): void {
   aplicarTamanoDeLetra(tamano)
 }
 
-async function guardarPrimeraVez(): Promise<void> {
+/** Valida el nombre; si no sirve, vuelve al paso del nombre con su mensaje. */
+function nombreValido(): boolean {
   errorDelNombre.value = validarCambios({ nombreTienda: nombre.value }) ?? undefined
-  if (errorDelNombre.value) {
-    irA('nombre', 'replace')
-    return
+  if (!errorDelNombre.value) return true
+  irA('nombre', 'replace')
+  return false
+}
+
+function avisarQueNoSeGuardo(error: unknown, que: string): void {
+  if (!esErrorDeDominio(error)) console.error(`No se pudo guardar ${que}:`, error)
+  errorAlGuardar.value = esErrorDeDominio(error) ? error.message : 'No se pudo guardar'
+}
+
+/**
+ * Paso 3: guarda el nombre y la letra, pero NO completa la primera vez (eso es del paso 5);
+ * si la app se cierra aquí, vuelve a la bienvenida con las dos respuestas prellenadas.
+ */
+async function guardarNombreYLetra(): Promise<void> {
+  if (!nombreValido()) return
+  guardando.value = true
+  errorAlGuardar.value = undefined
+  try {
+    await aplicacion.tienda.actualizarConfiguracion({
+      nombreTienda: nombre.value,
+      tamanoDeLetra: letra.value,
+    })
+    irA('productos')
+  } catch (error) {
+    avisarQueNoSeGuardo(error, 'el nombre y la letra')
+  } finally {
+    guardando.value = false
   }
+}
+
+/**
+ * Paso 5: *Contar ahora* o *Terminar* completan la primera vez (RN-UX-16) y reemplazan la
+ * bienvenida por el destino (atrás no vuelve a ella).
+ */
+async function terminar(destino: 'contar-todo' | 'inicio'): Promise<void> {
+  if (!nombreValido()) return
   guardando.value = true
   errorAlGuardar.value = undefined
   try {
@@ -118,10 +164,11 @@ async function guardarPrimeraVez(): Promise<void> {
     })
     // Inicio decide con el estado global: que ya sepa que la primera vez terminó.
     await estadoGlobal.recargarConfiguracion()
-    irA('productos')
+    void router.replace(
+      destino === 'inicio' ? { name: 'inicio' } : haciaPantalla(router, 'contar-todo'),
+    )
   } catch (error) {
-    if (!esErrorDeDominio(error)) console.error('No se pudo guardar la primera vez:', error)
-    errorAlGuardar.value = esErrorDeDominio(error) ? error.message : 'No se pudo guardar'
+    avisarQueNoSeGuardo(error, 'la primera vez')
   } finally {
     guardando.value = false
   }
@@ -152,6 +199,11 @@ async function guardarPrimeraVez(): Promise<void> {
       </div>
       <div class="acciones">
         <BotonPrincipal texto="Empezar" @click="irA('nombre')" />
+        <!-- RN-RE-10: quien cambió de celular trae su copia desde aquí. -->
+        <Boton
+          texto="Ya tengo una copia guardada"
+          @click="router.push({ name: 'restaurar-copia', query: { desde: 'primera-vez' } })"
+        />
       </div>
     </template>
 
@@ -197,7 +249,7 @@ async function guardarPrimeraVez(): Promise<void> {
         />
       </div>
       <div class="acciones">
-        <BotonPrincipal texto="Seguir" :deshabilitado="guardando" @click="guardarPrimeraVez" />
+        <BotonPrincipal texto="Seguir" :deshabilitado="guardando" @click="guardarNombreYLetra" />
       </div>
     </template>
 
@@ -221,28 +273,40 @@ async function guardarPrimeraVez(): Promise<void> {
           :icono="FileSpreadsheet"
           @click="router.push({ name: 'importar-productos', query: { desde: 'primera-vez' } })"
         />
-        <Boton texto="Dejar para después" class="despues" @click="dejarParaDespues" />
+        <Boton texto="Más tarde" class="despues" @click="irA('contar')" />
       </div>
     </template>
 
-    <!-- 5. Contar lo que hay (conteo guiado, RN-OP-21) -->
+    <!-- 5. Contar lo que hay (conteo guiado, RN-OP-21) y terminar -->
     <template v-else>
       <div class="cuerpo">
-        <p>
-          Cuenta cuántos hay de cada producto, uno por uno. Así la app sabe tu stock real desde hoy.
-        </p>
-        <p>Puedes dejarlo para después y seguir cuando quieras.</p>
+        <template v-if="hayProductos">
+          <p>
+            Cuenta cuántos hay de cada producto, uno por uno. Así la app sabe tu stock real desde
+            hoy.
+          </p>
+          <p>Puedes contarlos después desde Inicio.</p>
+        </template>
+        <p v-else>Cuando cargues tus productos, podrás contar tu stock desde Inicio.</p>
+        <MensajeDeError
+          v-if="errorAlGuardar"
+          :mensaje="errorAlGuardar"
+          ayuda="Vuelve a intentarlo en un momento."
+        />
       </div>
       <div class="acciones">
         <BotonPrincipal
+          v-if="hayProductos"
           texto="Contar ahora"
           :icono="ClipboardCheck"
-          @click="router.push(haciaPantalla(router, 'contar-todo'))"
+          :deshabilitado="guardando"
+          @click="terminar('contar-todo')"
         />
         <BotonPrincipal
-          texto="Dejar para después"
-          variante="secundario"
-          @click="dejarParaDespues"
+          texto="Terminar"
+          :variante="hayProductos ? 'secundario' : 'primario'"
+          :deshabilitado="guardando"
+          @click="terminar('inicio')"
         />
       </div>
     </template>

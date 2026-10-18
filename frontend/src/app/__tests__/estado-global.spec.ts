@@ -103,7 +103,19 @@ describe('estado global (Pinia)', () => {
     expect(localStorage.getItem('pi.letra')).toBe('MUY_GRANDE')
   })
 
-  it('al completar la primera vez, primeraVez pasa a false', async () => {
+  it('RN-UX-16: guardar nombre y letra (pasos 2 y 3) no completa la primera vez: primeraVez sigue en true', async () => {
+    const estado = await conectar()
+
+    await app.tienda.actualizarConfiguracion({
+      nombreTienda: 'Bodega Rosita',
+      tamanoDeLetra: 'NORMAL',
+    })
+
+    await vi.waitFor(() => expect(estado.tamanoDeLetra).toBe('NORMAL'))
+    expect(estado.primeraVez).toBe(true)
+  })
+
+  it('RN-UX-16: al completar la primera vez (paso 5), primeraVez pasa a false', async () => {
     const estado = await conectar()
 
     await app.tienda.completarPrimeraVez({ nombreTienda: 'Bodega Rosita', tamanoDeLetra: 'NORMAL' })
