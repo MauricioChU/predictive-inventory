@@ -7,7 +7,12 @@ export type {
   RepositorioDeListaDeCompras,
   RepositorioDeResumenes,
 } from './application/puertos'
-export type { OpcionesDeTorre, TorreDeControl } from './application/torre'
+export type { AlquilerEnControl, OpcionesDeTorre, TorreDeControl } from './application/torre'
+export {
+  BOTON_CONFIGURAR_ALQUILER,
+  PREGUNTA_DEL_ALQUILER,
+  type AvanceDelAlquiler,
+} from './domain/alquiler'
 export type { DetalleDeProducto, RespuestaNecesitoComprar } from './application/producto'
 export type { QuitadoDeLista } from './application/lista-de-compras'
 export type { LineaParaComprar, ListaParaComprar } from './domain/compras'

@@ -1,9 +1,15 @@
 import { expect } from 'vitest'
-import type { Periodo, TorreDeControl } from '@/modules/analisis'
+import {
+  BOTON_CONFIGURAR_ALQUILER,
+  PREGUNTA_DEL_ALQUILER,
+  type Periodo,
+  type TorreDeControl,
+} from '@/modules/analisis'
 import { Cantidad } from '@/shared/domain/cantidad'
 import { Dinero } from '@/shared/domain/dinero'
 import { instanteLocal, sumarDias } from '@/shared/domain/fecha'
 import { formatearCantidad, formatearDinero, formatearNumero } from '@/shared/domain/formato'
+import { proximoPago, ultimoPago } from '@/shared/domain/fechas-de-pago'
 import type { ArgumentoExtra } from '../../gherkin/registro-de-pasos'
 import type { Mundo } from './mundo'
 import {
@@ -595,4 +601,62 @@ export function pasosDeTorre(pasos: Pasos): void {
   afirmacion(pasos, 'la respuesta es {string}', (m: Mundo, respuesta: string) => {
     expect(m.respuesta).toBe(respuesta)
   })
+
+  // ───────────── Alquiler del local (RN-AN-17 a RN-AN-19) ─────────────
+  // Configurarlo (y sus errores) está en contexto.ts: lo comparten Control, Alertas y Respaldo.
+
+  afirmacion(
+    pasos,
+    'la tarjeta del alquiler pregunta {string} con el botón {string}',
+    async (m: Mundo, pregunta: string, boton: string) => {
+      expect((await m.app.analisis.consultarTorre()).alquiler).toEqual({ estado: 'SIN_CONFIGURAR' })
+      expect(pregunta).toBe(PREGUNTA_DEL_ALQUILER)
+      expect(boton).toBe(BOTON_CONFIGURAR_ALQUILER)
+    },
+  )
+
+  afirmacion(pasos, 'no se muestra la tarjeta del alquiler', async (m: Mundo) => {
+    expect((await m.app.analisis.consultarTorre()).alquiler).toEqual({ estado: 'NO_PAGA' })
+  })
+
+  afirmacion(pasos, 'la tarjeta del alquiler dice {string}', async (m: Mundo, texto: string) => {
+    expect(await textosDeLaTarjeta(m)).toContain(texto)
+  })
+
+  afirmacion(pasos, 'la barra del alquiler está en {string} %', async (m: Mundo, valor: string) => {
+    expect((await avanceDelAlquilerDe(m)).porcentaje).toBe(Number(valor))
+  })
+
+  // RN-AN-18: las fechas salen de la configuración guardada; el próximo pago, además, es el
+  // que la Torre usa para la tarjeta.
+  afirmacion(
+    pasos,
+    'el último pago es {string} y el próximo pago es {string}',
+    async (m: Mundo, ultimo: string, proximo: string) => {
+      const { alquilerDelLocal } = await m.app.tienda.consultable.configuracion()
+      if (alquilerDelLocal === null || alquilerDelLocal.tipo === 'NO_PAGA') {
+        throw new Error('El escenario no configuró un pago del local')
+      }
+      expect(ultimoPago(alquilerDelLocal.dias, m.dia)).toBe(ultimo)
+      expect(proximoPago(alquilerDelLocal.dias, m.dia)).toBe(proximo)
+      expect((await avanceDelAlquilerDe(m)).proximoPago).toBe(proximo)
+    },
+  )
+}
+
+/** El avance de la tarjeta del alquiler; falla si la Torre no la muestra con un pago. */
+async function avanceDelAlquilerDe(m: Mundo) {
+  const { alquiler } = await m.app.analisis.consultarTorre()
+  if (alquiler.estado !== 'CON_PAGO') {
+    throw new Error(`La tarjeta del alquiler está en "${alquiler.estado}", no con un pago`)
+  }
+  return alquiler.avance
+}
+
+async function textosDeLaTarjeta(m: Mundo): Promise<string[]> {
+  const { alquiler } = await m.app.analisis.consultarTorre()
+  if (alquiler.estado !== 'CON_PAGO') {
+    throw new Error(`La tarjeta del alquiler está en "${alquiler.estado}", no con un pago`)
+  }
+  return alquiler.textos
 }
