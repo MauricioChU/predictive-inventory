@@ -229,6 +229,16 @@ export function pantallasDeLaTienda(ids: IdsDeDemostracion): Pantalla[] {
     // Ajustes
     { nombre: 'Ajustes', ruta: './ajustes' },
     { nombre: 'Datos de la tienda', ruta: './ajustes/tienda' },
+    { nombre: 'Alquiler del local', ruta: './control/alquiler' },
+    {
+      nombre: 'Alquiler del local: dos veces al mes (con errores)',
+      ruta: './control/alquiler',
+      preparar: async (page) => {
+        await page.getByRole('radio', { name: 'Dos veces al mes' }).click()
+        await page.getByRole('button', { name: 'Guardar' }).click()
+        await expect(page.getByRole('alert').first()).toBeVisible()
+      },
+    },
     { nombre: 'Avisos en tu celular', ruta: './ajustes/avisos' },
     { nombre: 'Guardar copia', ruta: './ajustes/copia' },
     { nombre: 'Restaurar copia', ruta: './ajustes/restaurar' },

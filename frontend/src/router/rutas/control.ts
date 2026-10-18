@@ -1,5 +1,10 @@
 import type { RouteRecordRaw } from 'vue-router'
-import { VistaControl, VistaNecesitoComprar, VistaParaComprar } from '@/modules/analisis'
+import {
+  VistaAlquilerDelLocal,
+  VistaControl,
+  VistaNecesitoComprar,
+  VistaParaComprar,
+} from '@/modules/analisis'
 
 /** Ola 4, plan 13 (`feat/ui-control`): Torre de control, Para comprar y ¿Necesito comprar? */
 export const rutasDeControl: RouteRecordRaw[] = [
@@ -22,5 +27,12 @@ export const rutasDeControl: RouteRecordRaw[] = [
     name: 'necesito-comprar',
     component: VistaNecesitoComprar,
     meta: { titulo: '¿Necesito comprar?', icono: 'circle-help' },
+  },
+  {
+    // La abren la tarjeta de Control y Ajustes → Datos de la tienda (?desde=ajustes).
+    path: '/control/alquiler',
+    name: 'alquiler-del-local',
+    component: VistaAlquilerDelLocal,
+    meta: { titulo: 'Alquiler del local' },
   },
 ]

@@ -49,3 +49,4 @@ export {
 export const VistaControl = () => import('./ui/VistaControl.vue')
 export const VistaParaComprar = () => import('./ui/VistaParaComprar.vue')
 export const VistaNecesitoComprar = () => import('./ui/VistaNecesitoComprar.vue')
+export const VistaAlquilerDelLocal = () => import('./ui/VistaAlquilerDelLocal.vue')
