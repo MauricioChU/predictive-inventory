@@ -357,6 +357,11 @@ describe('Primera vez', () => {
         await esperarPantalla()
 
         expect(boton('Terminar').attributes('disabled')).toBeUndefined()
+
+        await tocar('Terminar')
+        expect(titulo()).toBe('¿Cómo se llama tu tienda?')
+        expect(pantalla.router.currentRoute.value.query.paso).toBe('nombre')
+        expect((await app.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(false)
       })
     })
 

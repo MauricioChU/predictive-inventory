@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { useEstadoGlobal } from '@/app/estado-global'
 import router, { rutas } from '@/router'
@@ -96,6 +96,9 @@ describe('guardia global de la primera vez (RN-UX-16)', () => {
   })
 
   describe('sin la aplicación montada (sin Pinia activa)', () => {
+    // Que no se filtre el "sin Pinia" a las demás pruebas.
+    afterEach(() => setActivePinia(createPinia()))
+
     it('no hay estado que mirar: no redirige', async () => {
       setActivePinia(undefined)
       const enrutador = crearRouterConGuardia()

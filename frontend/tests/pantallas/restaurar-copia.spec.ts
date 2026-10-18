@@ -251,6 +251,11 @@ describe('Restaurar copia', () => {
 
       expect(pantalla!.wrapper.text()).toContain('La copia tiene datos que no cuadran')
       expect(pantalla!.estadoGlobal.primeraVez).toBe(true)
+
+      // R10: tras el fallo, Volver lleva a la bienvenida.
+      await tocar('Volver')
+      expect(pantalla!.router.currentRoute.value.name).toBe('primera-vez')
+      expect(pantalla!.wrapper.get('h1').text()).toBe('Te damos la bienvenida')
       expect((await celularNuevo.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(
         false,
       )

@@ -114,6 +114,7 @@ async function restaurar(): Promise<void> {
   </PantallaExito>
 
   <div v-else class="vista-restaurar-copia">
+    <!-- Dos encabezados: EncabezadoPagina solo deja el "Volver" al padre si este escucha @volver. -->
     <EncabezadoPagina
       v-if="desdePrimeraVez"
       titulo="Restaurar copia"
