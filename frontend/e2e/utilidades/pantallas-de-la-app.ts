@@ -31,8 +31,12 @@ export const PANTALLAS_DE_LA_PRIMERA_VEZ: readonly Pantalla[] = [
   { nombre: 'Primera vez: letra', ruta: './bienvenida?paso=letra' },
   { nombre: 'Primera vez: cargar productos', ruta: './bienvenida?paso=productos' },
   { nombre: 'Primera vez: contar (sin productos)', ruta: './bienvenida?paso=contar' },
+  { nombre: 'Primera vez: restaurar copia (desde la bienvenida)', ruta: './ajustes/restaurar?desde=primera-vez' },
+  { nombre: 'Primera vez: producto nuevo', ruta: './productos/nuevo?desde=primera-vez' },
+  { nombre: 'Primera vez: importar productos', ruta: './ajustes/importar?desde=primera-vez' },
   {
-    // Con un producto cargado: "Contar ahora" y "Terminar" (RN-UX-16). Va al final: deja un producto.
+    // Con un producto cargado: "Contar ahora" y "Terminar" (RN-UX-16). Es la última: deja un producto cargado,
+    // así que los estados vacíos se revisan en otro perfil (otra prueba).
     nombre: 'Primera vez: contar (con productos)',
     ruta: './bienvenida?paso=contar',
     preparar: async (page) => {
@@ -41,9 +45,6 @@ export const PANTALLAS_DE_LA_PRIMERA_VEZ: readonly Pantalla[] = [
       await expect(page.getByRole('button', { name: 'Contar ahora' })).toBeVisible()
     },
   },
-  { nombre: 'Primera vez: restaurar copia (desde la bienvenida)', ruta: './ajustes/restaurar?desde=primera-vez' },
-  { nombre: 'Primera vez: producto nuevo', ruta: './productos/nuevo?desde=primera-vez' },
-  { nombre: 'Primera vez: importar productos', ruta: './ajustes/importar?desde=primera-vez' },
 ]
 
 /** Con la primera vez hecha y todavía sin productos: los estados vacíos (RN-UX-10). */
