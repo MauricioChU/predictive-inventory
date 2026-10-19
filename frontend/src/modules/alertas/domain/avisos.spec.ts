@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Cantidad } from '@/shared/domain/cantidad'
 import type { SituacionDeProducto } from '@/shared/contratos/entre-modulos'
-import { agruparAvisos, empeoro, RUTA_PARA_COMPRAR, rutaDeProducto, textoDeAviso } from './avisos'
+import { agruparAvisos, empeoro, RUTA_SE_ACABAN, rutaDeProducto, textoDeAviso } from './avisos'
 
 function situacion(datos: Partial<SituacionDeProducto> = {}): SituacionDeProducto {
   return {
@@ -70,12 +70,12 @@ describe('textoDeAviso', () => {
   })
 })
 
-describe('rutaDeProducto y RUTA_PARA_COMPRAR', () => {
+describe('rutaDeProducto y RUTA_SE_ACABAN', () => {
   it('RN-AL-07: rutaDeProducto construye la ruta del producto', () => {
     expect(rutaDeProducto('abc-123')).toBe('/productos/abc-123')
   })
-  it('RN-AL-07: RUTA_PARA_COMPRAR apunta a la lista de para comprar', () => {
-    expect(RUTA_PARA_COMPRAR).toBe('/control/para-comprar')
+  it('RN-AL-07: RUTA_SE_ACABAN apunta a Productos filtrado por Se acaban', () => {
+    expect(RUTA_SE_ACABAN).toBe('/productos?estado=se-acaban')
   })
 })
 
@@ -89,12 +89,12 @@ describe('agruparAvisos (RN-AL-07)', () => {
       { texto: 'Queda poco: Lejía 1 L (3 unid.)', url: '/productos/p1' },
     ])
   })
-  it('RN-AL-07: tres avisos a la vez se agrupan en una sola notificación con RUTA_PARA_COMPRAR', () => {
+  it('RN-AL-07: tres avisos a la vez se agrupan en una sola notificación con RUTA_SE_ACABAN', () => {
     const s1 = situacion({ productoId: 'p1', estado: 'POR_ACABARSE' })
     const s2 = situacion({ productoId: 'p2', estado: 'AGOTADO' })
     const s3 = situacion({ productoId: 'p3', estado: 'POR_ACABARSE' })
     expect(agruparAvisos([s1, s2, s3])).toEqual([
-      { texto: '3 productos se están acabando', url: RUTA_PARA_COMPRAR },
+      { texto: '3 productos se están acabando', url: RUTA_SE_ACABAN },
     ])
   })
 })

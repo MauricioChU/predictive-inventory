@@ -27,11 +27,11 @@ describe('rutaDeLaApp', () => {
   it('convierte la URL absoluta de la app en la ruta del router', () => {
     expect(
       rutaDeLaApp(
-        { tipo: 'abrir-ruta', url: `${ORIGEN}/predictive-inventory/control/para-comprar` },
+        { tipo: 'abrir-ruta', url: `${ORIGEN}/predictive-inventory/productos?estado=se-acaban` },
         BASE,
         ORIGEN,
       ),
-    ).toBe('/control/para-comprar')
+    ).toBe('/productos?estado=se-acaban')
     expect(
       rutaDeLaApp({ tipo: 'abrir-ruta', url: `${ORIGEN}/predictive-inventory/` }, BASE, ORIGEN),
     ).toBe('/')

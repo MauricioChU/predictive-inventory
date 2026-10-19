@@ -49,9 +49,6 @@ describe.each(ALMACENES)('abrirApp (%s)', (almacen) => {
     expect(inicio).toEqual({
       primeraVez: true,
       tamanoDeLetra: 'GRANDE',
-      resumenDelDia: { lineas: ['Nada agotado', 'Nada por acabarse', 'Ayer no hubo ventas'] },
-      recordatorioDeCopia: 'Todavía no guardas una copia de tus datos',
-      recordatorioDelLocal: null,
     })
     const estado = await app.tienda.consultable.estadoDelSistema()
     expect(estado.dispositivoId).toBe('id-1')
@@ -104,15 +101,6 @@ describe.each(ALMACENES)('abrirApp (%s)', (almacen) => {
       'sembrar las categorías',
       (a: AplicacionDePrueba) => vi.spyOn(a.catalogo, 'sembrarCategoriasIniciales'),
     ],
-    ['el resumen del día', (a: AplicacionDePrueba) => vi.spyOn(a.alertas, 'resumenDelDia')],
-    [
-      'el recordatorio de copia',
-      (a: AplicacionDePrueba) => vi.spyOn(a.respaldo, 'recordatorioDeCopia'),
-    ],
-    [
-      'el recordatorio del pago del local',
-      (a: AplicacionDePrueba) => vi.spyOn(a.alertas, 'recordatorioDelLocal'),
-    ],
   ])('si falla %s, lo registra y la app abre igual', async (_paso, espiar) => {
     nuevaApp()
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
@@ -125,19 +113,7 @@ describe.each(ALMACENES)('abrirApp (%s)', (almacen) => {
     expect(error).toHaveBeenCalledWith(expect.stringMatching(/^No se pudo /), expect.any(Error))
   })
 
-  it('RN-AL-10: con el pago del local a la vista, entrega el recordatorio; sin él, null', async () => {
-    nuevaApp()
-    expect((await abrirApp(app, { aplicarTamanoDeLetra })).recordatorioDelLocal).toBeNull()
-
-    await app.tienda.actualizarConfiguracion({
-      alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [17] },
-    })
-    const inicio = await abrirApp(app, { aplicarTamanoDeLetra })
-
-    expect(inicio.recordatorioDelLocal).toBe('Pasado mañana pagas el local: S/ 1 200.00')
-  })
-
-  it('si fallan las lecturas de Análisis (resumen y avisos), la app abre igual sin resumen del día', async () => {
+  it('si fallan las lecturas de Análisis (resumen y avisos), la app abre igual', async () => {
     nuevaApp()
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     app.infraestructura.repositorios.resumenes.entre = () =>
@@ -146,8 +122,7 @@ describe.each(ALMACENES)('abrirApp (%s)', (almacen) => {
     const inicio = await abrirApp(app, { aplicarTamanoDeLetra })
     await app.esperarTareasPendientes()
 
-    expect(inicio).toMatchObject({ primeraVez: true, resumenDelDia: null })
-    expect(error).toHaveBeenCalledWith('No se pudo preparar el resumen del día:', expect.any(Error))
+    expect(inicio).toMatchObject({ primeraVez: true })
     expect(error).toHaveBeenCalledWith('Falló la evaluación de avisos:', expect.any(Error))
   })
 
@@ -210,17 +185,6 @@ describe.each(ALMACENES)('abrirApp (%s)', (almacen) => {
       CATEGORIAS_INICIALES_ESPERADAS.length,
     )
     expect((await app.tienda.consultable.estadoDelSistema()).dispositivoId).toBe(dispositivoId)
-  })
-
-  it('RN-AL-09: el resumen del día no vuelve a salir el mismo día, sí al día siguiente', async () => {
-    nuevaApp()
-    await abrirApp(app, { aplicarTamanoDeLetra })
-    await app.alertas.cerrarResumenDelDia()
-
-    expect((await abrirApp(app, { aplicarTamanoDeLetra })).resumenDelDia).toBeNull()
-
-    app.reloj.fijar(instanteLocal('2026-10-16 08:00'))
-    expect((await abrirApp(app, { aplicarTamanoDeLetra })).resumenDelDia).not.toBeNull()
   })
 })
 

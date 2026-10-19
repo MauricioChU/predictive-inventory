@@ -22,9 +22,7 @@ export const SISTEMA: EstadoDelSistemaRegistro = {
   primeraVezCompletada: false,
   ultimoRespaldoEn: null,
   almacenamientoPersistente: 'DESCONOCIDO',
-  ultimoResumenDelDiaMostrado: null,
   ultimoPagoDelLocalAvisado: null,
-  recordatorioDelLocalCerradoEl: null,
 }
 
 /**
@@ -55,16 +53,14 @@ export function probarRepositorioDeConfiguracion(crear: () => RepositorioDeConfi
     expect((await repo.negocio())?.alquilerDelLocal).toEqual(alquilerDelLocal)
   })
 
-  it('guarda y recupera las fechas del aviso del local', async () => {
+  it('guarda y recupera la fecha del aviso del local', async () => {
     const repo = crear()
     await repo.guardarSistema({
       ...SISTEMA,
       ultimoPagoDelLocalAvisado: '2026-10-05',
-      recordatorioDelLocalCerradoEl: '2026-10-18',
     })
     const guardado = await repo.sistema()
     expect(guardado?.ultimoPagoDelLocalAvisado).toBe('2026-10-05')
-    expect(guardado?.recordatorioDelLocalCerradoEl).toBe('2026-10-18')
   })
 
   it('guarda y recupera el estado del sistema, sin mezclarse con el negocio', async () => {

@@ -69,7 +69,7 @@ describe('aFilaDeLista (fila de Productos: foto, nombre, stock con unidad, estad
   })
 })
 
-describe('filtrarProductos (Todos · Queda poco · Agotados · Archivados, y categoría)', () => {
+describe('filtrarProductos (Todos · Se acaban · Queda poco · Agotados · Archivados, y categoría)', () => {
   const lejia = producto({ id: 'lejia' })
   const carbon = producto({ id: 'carbon', categoriaId: 'c-carbon' })
   const bolsa = producto({ id: 'bolsa', categoriaId: 'c-carbon' })
@@ -95,6 +95,17 @@ describe('filtrarProductos (Todos · Queda poco · Agotados · Archivados, y cat
     ).toEqual(['lejia'])
     expect(
       filtrarProductos(todos, { estado: 'AGOTADO', categoriaId: '', estados }).map((p) => p.id),
+    ).toEqual(['carbon'])
+  })
+
+  it('RN-CAT-16: "Se acaban" deja agotados y por acabarse, sin los que tienen stock', () => {
+    expect(
+      filtrarProductos(todos, { estado: 'SE_ACABAN', categoriaId: '', estados }).map((p) => p.id),
+    ).toEqual(['lejia', 'carbon'])
+    expect(
+      filtrarProductos(todos, { estado: 'SE_ACABAN', categoriaId: 'c-carbon', estados }).map(
+        (p) => p.id,
+      ),
     ).toEqual(['carbon'])
   })
 
@@ -152,6 +163,12 @@ describe('vacioDeLista (RN-UX-10: dice por qué está vacía y ofrece la acción
     expect(vacioDeLista({ ...base, estado: 'POR_ACABARSE' })).toMatchObject({
       titulo: 'Ningún producto queda poco',
       descripcion: 'Por ahora ninguno se está acabando.',
+      accion: 'Ver todos',
+      tipoDeAccion: 'ver-todos',
+    })
+    expect(vacioDeLista({ ...base, estado: 'SE_ACABAN' })).toMatchObject({
+      titulo: 'No se acaba ningún producto',
+      descripcion: 'Por ahora todos tienen stock suficiente.',
       accion: 'Ver todos',
       tipoDeAccion: 'ver-todos',
     })

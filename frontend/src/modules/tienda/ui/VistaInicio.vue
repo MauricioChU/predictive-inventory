@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, useId, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import {
   ChevronRight,
@@ -8,28 +8,22 @@ import {
   PackagePlus,
   Settings,
   ShoppingCart,
-  X,
 } from 'lucide-vue-next'
 import { useEstadoGlobal } from '@/app/estado-global'
 import { useAplicacion } from '@/app/proveer-aplicacion'
-import type { ResumenDeAtencion } from '@/modules/alertas'
+import { RUTA_SE_ACABAN, type ResumenDeAtencion } from '@/modules/alertas'
 import type { Dinero } from '@/shared/domain/dinero'
 import { formatearDinero, plural } from '@/shared/domain/formato'
 import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
-import Boton from '@/shared/ui/componentes/Boton.vue'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import EstadoVacio from '@/shared/ui/componentes/EstadoVacio.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import TarjetaDeCifra from '@/shared/ui/componentes/TarjetaDeCifra.vue'
-import { usarInstalacion } from './instalacion'
 import { haciaPantalla, type PantallaDeOtraRama } from './pantallas-de-otras-ramas'
 
 const aplicacion = useAplicacion()
 const estadoGlobal = useEstadoGlobal()
 const router = useRouter()
-const instalacion = usarInstalacion()
-const idResumen = useId()
-const titulo = ref<HTMLHeadingElement>()
 
 const nombreTienda = ref('')
 const deHoy = ref<{ ganancia: Dinero; ventas: Dinero } | null>(null)
@@ -82,7 +76,6 @@ async function cargar(): Promise<void> {
 
 onMounted(() => {
   void cargar()
-  void estadoGlobal.refrescarRecordatorioDeCopia()
 })
 
 // El contador del botón Control cambia con los eventos: el aviso de Inicio lo sigue.
@@ -95,30 +88,20 @@ watch(
   },
 )
 
-/**
- * RN-UX-15: el botón que se tocó desaparece con su tarjeta; el foco va al saludo (no se pierde
- * en la página).
- */
-async function despuesDeCerrar(cerrar: () => unknown): Promise<void> {
-  try {
-    await cerrar()
-  } catch (error) {
-    console.error('No se pudo cerrar la tarjeta de Inicio:', error)
-    return
-  }
-  await nextTick()
-  titulo.value?.focus({ preventScroll: true })
-}
-
 function ir(nombre: PantallaDeOtraRama): void {
   void router.push(haciaPantalla(router, nombre))
+}
+
+/** RN-AL-06a: el aviso abre Productos ya filtrado por "Se acaban" (RN-CAT-16). */
+function verLoQueSeAcaba(): void {
+  void router.push(RUTA_SE_ACABAN)
 }
 </script>
 
 <template>
   <div class="vista-inicio">
     <header class="saludo">
-      <h1 ref="titulo" tabindex="-1">{{ saludo }} <span aria-hidden="true">👋</span></h1>
+      <h1>{{ saludo }} <span aria-hidden="true">👋</span></h1>
       <RouterLink :to="{ name: 'ajustes' }" class="enlace-ajustes">
         <Settings aria-hidden="true" class="icono" />
         <span>Ajustes</span>
@@ -132,10 +115,10 @@ function ir(nombre: PantallaDeOtraRama): void {
     />
 
     <!--
-      Celular: lo de hoy (cifras y lo que se acaba) → las acciones → el resto (resumen del día,
-      recordatorio de copia, instalación). "Vender" queda pegado sobre la navegación mientras su
-      lugar está más abajo: siempre a la vista. PC: lo que hay que saber a la izquierda y lo que
-      hay que hacer a la derecha.
+      Inicio es para vender (plan 19). Celular: lo de hoy (cifras y lo que se acaba) → las
+      acciones. "Vender" queda pegado sobre la navegación mientras su lugar está más abajo:
+      siempre a la vista. PC: lo que hay que saber a la izquierda y lo que hay que hacer a la
+      derecha.
     -->
     <div class="cuerpo">
       <TarjetaDeCifra
@@ -160,8 +143,8 @@ function ir(nombre: PantallaDeOtraRama): void {
           tono="atencion"
           :titulo="tituloDeAtencion"
           :texto="atencion.texto"
-          texto-accion="Ver qué comprar"
-          @accion="ir('para-comprar')"
+          texto-accion="Ver productos"
+          @accion="verLoQueSeAcaba"
         />
         <AvisoEnPagina v-else tono="exito" :titulo="atencion.texto" />
       </div>
@@ -188,72 +171,6 @@ function ir(nombre: PantallaDeOtraRama): void {
           <ChevronRight aria-hidden="true" class="icono" />
         </RouterLink>
       </div>
-
-      <!-- RN-AL-09: una vez al día; se cierra con un toque. Sin productos no hay qué resumir. -->
-      <section
-        v-if="estadoGlobal.resumenDelDia && hayProductos === true"
-        class="resumen-del-dia"
-        data-resumen-del-dia
-        :aria-labelledby="idResumen"
-      >
-        <h2 :id="idResumen">Resumen del día</h2>
-        <ul>
-          <li v-for="linea in estadoGlobal.resumenDelDia.lineas" :key="linea">{{ linea }}</li>
-        </ul>
-        <Boton
-          texto="Cerrar"
-          :icono="X"
-          @click="despuesDeCerrar(estadoGlobal.cerrarResumenDelDia)"
-        />
-      </section>
-
-      <div
-        v-if="
-          estadoGlobal.recordatorioDelLocal ||
-          estadoGlobal.recordatorioDeCopia ||
-          instalacion.mostrar.value
-        "
-        class="extras"
-      >
-        <!-- RN-AL-10: el pago del local dentro de 2 días; Entendido lo cierra hasta mañana. -->
-        <AvisoEnPagina
-          v-if="estadoGlobal.recordatorioDelLocal"
-          tono="info"
-          :titulo="estadoGlobal.recordatorioDelLocal"
-          texto-cerrar="Entendido"
-          @cerrar="despuesDeCerrar(estadoGlobal.cerrarRecordatorioDelLocal)"
-        />
-        <!-- RN-RE-06 -->
-        <AvisoEnPagina
-          v-if="estadoGlobal.recordatorioDeCopia"
-          tono="info"
-          :titulo="estadoGlobal.recordatorioDeCopia"
-          texto="Si pierdes el celular, con una copia recuperas todo."
-          texto-accion="Guardar copia ahora"
-          @accion="router.push({ name: 'guardar-copia' })"
-        />
-        <!-- RN-UX-13: con el botón del navegador o, si no lo ofrece, con los pasos. -->
-        <template v-if="instalacion.mostrar.value">
-          <AvisoEnPagina
-            v-if="instalacion.sePuedeInstalar.value"
-            tono="info"
-            titulo="Instala la app en tu celular"
-            texto="Así la abres con un toque, como cualquier app, y funciona sin internet."
-            texto-accion="Instalar"
-            texto-cerrar="Ahora no"
-            @accion="instalacion.instalar()"
-            @cerrar="despuesDeCerrar(instalacion.cerrar)"
-          />
-          <AvisoEnPagina
-            v-else
-            tono="info"
-            titulo="Instala la app en tu celular"
-            texto="En Chrome, toca el menú ⋮ (arriba a la derecha) y elige «Agregar a la pantalla principal» o «Instalar app»."
-            texto-cerrar="Ahora no"
-            @cerrar="despuesDeCerrar(instalacion.cerrar)"
-          />
-        </template>
-      </div>
     </div>
   </div>
 </template>
@@ -274,7 +191,6 @@ function ir(nombre: PantallaDeOtraRama): void {
 }
 h1 {
   margin: 0;
-  outline: none;
   font-size: 1.5rem;
   line-height: 1.2;
 }
@@ -311,11 +227,6 @@ h1 {
   flex-direction: column;
   gap: var(--espacio-4);
 }
-.extras {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espacio-4);
-}
 /* Celular: sin caja propia, así "Vender" se pega abajo dentro de todo el cuerpo de Inicio (un
    elemento pegajoso no sale de la caja de su padre). */
 .acciones {
@@ -343,42 +254,17 @@ h1 {
   scroll-margin-bottom: 0;
 }
 
-.resumen-del-dia {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--espacio-2);
-  padding: var(--espacio-4);
-  border-radius: var(--radio);
-  border-left: 6px solid var(--color-primario);
-  background: var(--color-primario-suave);
-}
-.resumen-del-dia h2 {
-  margin: 0;
-  font-size: 1.1rem;
-}
-.resumen-del-dia ul {
-  margin: 0;
-  padding-left: 1.25em;
-}
-.resumen-del-dia li + li {
-  margin-top: var(--espacio-1);
-}
-
-/* PC, en el mismo orden que el código (WCAG 1.3.2 / 2.4.3): arriba, las cifras y el aviso a la
-   izquierda y las acciones a la derecha; debajo, el resumen del día y las tarjetas (copia,
-   instalación) una al lado de la otra. Sin filas vacías: la separación es el margen de cada
-   bloque, no el espacio entre filas. */
+/* PC, en el mismo orden que el código (WCAG 1.3.2 / 2.4.3): las cifras y el aviso a la izquierda
+   y las acciones a la derecha. Sin filas vacías: la separación es el margen de cada bloque, no
+   el espacio entre filas. */
 @media (min-width: 1024px) {
   .cuerpo {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    grid-template-rows: auto 1fr auto auto;
+    grid-template-rows: auto 1fr;
     grid-template-areas:
       'cifra acciones'
-      'atencion acciones'
-      'resumen .'
-      'extras extras';
+      'atencion acciones';
     align-items: start;
     gap: 0 var(--espacio-6);
   }
@@ -394,19 +280,9 @@ h1 {
     flex-direction: column;
     gap: var(--espacio-3);
   }
-  .resumen-del-dia {
-    grid-area: resumen;
-  }
-  .extras {
-    grid-area: extras;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
-    align-items: start;
-  }
   .cifra,
   .atencion,
-  .acciones,
-  .resumen-del-dia {
+  .acciones {
     margin-bottom: var(--espacio-4);
   }
   .vender-fijo {

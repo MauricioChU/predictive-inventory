@@ -28,7 +28,7 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 | **RN-UX-10** | **Estados vacíos útiles**: cada lista vacía explica por qué y ofrece la acción siguiente ("Aún no tienes productos. **Agregar el primero**"). |
 | **RN-UX-11** | **Retroalimentación inmediata**: cada operación muestra una confirmación visible (pantalla verde con ✓ y el resumen) y una vibración corta si el celular la permite. |
 | **RN-UX-12** | **Navegación fija** con 5 destinos, ícono y texto: **Inicio · Vender · Recibir · Productos · Control**. En celular va abajo; desde 1024 px, a la izquierda. *Ajustes* e *Historial* se abren desde Inicio. |
-| **RN-UX-13** | **Instalación guiada**: si la app se abre en el navegador sin instalar, Inicio muestra una tarjeta "Instala la app en tu celular" con el botón de instalar (o los pasos, si el navegador no lo ofrece). |
+| ~~RN-UX-13~~ | **Retirada** (2026-10-19): el dueño no quiere la tarjeta "Instala la app" en Inicio; instalar sigue posible desde el menú del navegador. |
 | **RN-UX-14** | **Sin internet no hay diferencia**: ninguna pantalla muestra errores de conexión en la Fase 1, y la app abre y funciona completa en modo avión. |
 | **RN-UX-15** | **Accesible**: navegable con lector de pantalla (TalkBack): cada control tiene nombre, los avisos importantes se anuncian (`aria-live`), el orden de foco es lógico y se respeta "reducir movimiento" del sistema. |
 | **RN-UX-16** | **Primera vez obligatoria**: mientras no esté completada, la app **no deja navegar**. Cualquier dirección lleva a la bienvenida y la navegación fija (RN-UX-12) no se muestra. Las únicas pantallas que se abren desde ella, sin navegación fija, son las que ofrecen sus pasos: *Restaurar copia* (RN-RE-10), *Producto nuevo* e *Importar productos* (paso 4, al terminar vuelven al paso 5) y *Contar todo* (paso 5). La primera vez queda **completada al responder el paso 5**, con *Contar ahora* o *Terminar*. Los pasos 4 y 5 aceptan *Más tarde* como respuesta válida. Si la app se cierra a mitad, vuelve a empezar en la bienvenida con lo ya respondido (nombre y letra) prellenado. |
@@ -44,7 +44,8 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 │ │ Vendiste     S/ 162.50   │ │
 │ └──────────────────────────┘ │
 │ ┌ 🟠 4 productos se acaban ┐ │
-│ │      Ver qué comprar  ›  │ │
+│ │ 1 agotado y 3 por acabarse│ │
+│ │      Ver productos  ›    │ │
 │ └──────────────────────────┘ │
 │ [ 🛒  VENDER               ] │
 │ [ 📦  LLEGÓ MERCADERÍA     ] │
@@ -72,7 +73,7 @@ Buscador grande → al tocar un producto, una respuesta clara en letras grandes:
 Un producto por pantalla, con foto grande, agrupados por categoría: "¿Cuántos hay?" → *Siguiente*. Barra de progreso ("Llevas 23 de 80"), botones *Saltar* y *Seguir después* (RN-OP-21).
 
 ### Productos
-Lista con buscador, filtros por categoría y por estado (Todos · Queda poco · Agotados · Archivados). Cada fila: foto, nombre, **stock con unidad**, estado (color + ícono + texto). El **detalle** muestra: stock, "se acaba en ~N días", precios y ganancia por unidad, tendencia de 8 semanas, últimos movimientos y botones *Editar*, *Contar stock*, *Registrar pérdida*, *Archivar*.
+Lista con buscador, filtros por categoría y por estado (Todos · Se acaban · Queda poco · Agotados · Archivados). *Se acaban* suma agotados y los que quedan poco; se abre ya elegido desde el aviso de Inicio (`/productos?estado=se-acaban`). Cada fila: foto, nombre, **stock con unidad**, estado (color + ícono + texto). El **detalle** muestra: stock, "se acaba en ~N días", precios y ganancia por unidad, tendencia de 8 semanas, últimos movimientos y botones *Editar*, *Contar stock*, *Registrar pérdida*, *Archivar*.
 
 ### Control (Torre de control)
 Tarjetas apiladas en el orden de [04](04-torre-de-control.md); desde 768 px en dos columnas.
@@ -87,13 +88,15 @@ La tarjeta **Alquiler del local** (RN-AN-19), en sus dos estados configurados:
 │                    Cambiar  ›    │   │                    Cambiar  ›    │
 └──────────────────────────────────┘   └──────────────────────────────────┘
 ```
+Cuando el pago cae hoy, mañana o pasado mañana, la tarjeta suma una línea arriba ("Mañana pagas el local: S/ 1 200.00", RN-AL-10).
+
 *Configurar* y *Cambiar* abren la pantalla **Alquiler del local**: tres botones de opción (*Una vez al mes* · *Dos veces al mes* · *No pago, el local es mío*) y, si paga, el monto (con − / +, RN-UX-06) y uno o dos selectores del día del mes (1 al 31). Abajo, *Guardar*. La misma pantalla se abre desde *Ajustes → Datos de la tienda*.
 
 ### Historial
 Operaciones agrupadas por día ("Hoy", "Ayer", "Lunes 12"), con filtro por tipo. Tocar una muestra el detalle y el botón **Anular**.
 
 ### Ajustes
-Datos de la tienda (incluye *Alquiler del local*), días entre compras, días de anticipación, aviso de sobrecompra, tamaño de letra, notificaciones, categorías, **Guardar copia**, **Restaurar copia**, **Exportar a Excel**, **Importar productos**, **Revisar datos** y *Acerca de* (versión).
+Datos de la tienda (incluye *Alquiler del local*), días entre compras, días de anticipación, aviso de sobrecompra, tamaño de letra, notificaciones, categorías, **Guardar copia** (con el aviso "Hace N días que no guardas una copia", RN-RE-06), **Restaurar copia**, **Exportar a Excel**, **Importar productos**, **Revisar datos** y *Acerca de* (versión).
 
 ### Primera vez
 Obligatoria (RN-UX-16), sin navegación fija:

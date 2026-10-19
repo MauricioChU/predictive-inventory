@@ -1,7 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { instanteLocal } from '@/shared/domain/fecha'
-import { olvidarInstalacionParaPruebas } from '@/modules/tienda'
-import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
 import { crearAplicacionDePrueba, type AplicacionDePrueba } from '../soporte/aplicacion-de-prueba'
 import { esperarPantalla, montarPantalla, type PantallaMontada } from '../soporte/montar-pantalla'
 import { crearProductoDePrueba } from '../soporte/productos-de-prueba'
@@ -37,7 +35,6 @@ describe('Inicio', () => {
 
   beforeEach(() => {
     app = crearAplicacionDePrueba({ ahora: HOY })
-    olvidarInstalacionParaPruebas()
   })
 
   afterEach(async () => {
@@ -81,7 +78,7 @@ describe('Inicio', () => {
     expect(wrapper.get('.tarjeta-de-cifra').text()).toContain('Todavía no hay ventas hoy')
   })
 
-  it('RN-AL-06: avisa cuántos productos se acaban y lleva a Para comprar', async () => {
+  it('RN-AL-06: avisa cuántos productos se acaban y lleva a Productos ya filtrado', async () => {
     await tiendaLista()
     await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '0' })
     await crearProductoDePrueba(app, { ...CARBON, stockInicial: '2' })
@@ -91,9 +88,10 @@ describe('Inicio', () => {
     expect(aviso.text()).toContain('2 productos se acaban')
     expect(aviso.text()).toContain('1 agotado y 1 por acabarse')
 
-    await botonCon('Ver qué comprar').trigger('click')
+    await botonCon('Ver productos').trigger('click')
     await esperarPantalla()
-    expect(router.currentRoute.value.name).toBe('para-comprar')
+    expect(router.currentRoute.value.name).toBe('productos')
+    expect(router.currentRoute.value.query).toEqual({ estado: 'se-acaban' })
   })
 
   it('RN-AL-06: si nada se acaba, lo dice', async () => {
@@ -132,111 +130,26 @@ describe('Inicio', () => {
     expect(router.currentRoute.value.name).toBe(nombre)
   })
 
-  it('RN-RE-06: recuerda guardar una copia y lleva a Guardar copia', async () => {
-    await tiendaLista()
-    const { wrapper, router } = await abrirInicio()
-
-    expect(wrapper.text()).toContain('Todavía no guardas una copia de tus datos')
-    await botonCon('Guardar copia ahora').trigger('click')
-    await esperarPantalla()
-    expect(router.currentRoute.value.name).toBe('guardar-copia')
-  })
-
-  it('RN-RE-06: con una copia reciente no recuerda nada', async () => {
-    await tiendaLista()
-    await app.respaldo.marcarCopiaGuardada()
-
-    const { wrapper } = await abrirInicio()
-
-    expect(wrapper.text()).not.toContain('guardas una copia')
-  })
-
-  describe('RN-AL-10: recordatorio del pago del local', () => {
-    async function localSePagaElDia(dia: number): Promise<void> {
-      await app.tienda.actualizarConfiguracion({
-        alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [dia] },
-      })
-    }
-
-    it('dentro de la ventana muestra la tarjeta con el texto y Entendido', async () => {
-      await tiendaLista()
-      await localSePagaElDia(17)
-      const { wrapper } = await abrirInicio()
-
-      expect(wrapper.text()).toContain(pegarCifras('Pasado mañana pagas el local: S/ 1 200.00'))
-      expect(wrapper.findAll('button').some((b) => b.text() === 'Entendido')).toBe(true)
-    })
-
-    it('fuera de la ventana o sin alquiler no muestra nada', async () => {
-      await tiendaLista()
-      await localSePagaElDia(25)
-      const { wrapper } = await abrirInicio()
-
-      expect(wrapper.text()).not.toContain('pagas el local')
-    })
-
-    it('Entendido la cierra, no vuelve ese día y el foco va al saludo', async () => {
-      await tiendaLista()
-      await localSePagaElDia(17)
-      const { wrapper } = await abrirInicio()
-
-      await botonCon('Entendido').trigger('click')
-      await esperarPantalla()
-
-      expect(wrapper.text()).not.toContain('Pasado mañana pagas el local')
-      expect(document.activeElement).toBe(wrapper.get('h1').element)
-      expect(await app.alertas.recordatorioDelLocal()).toBeNull()
-    })
-
-    it('se muestra aunque todavía no haya productos', async () => {
-      await tiendaLista()
-      await localSePagaElDia(15)
-      const { wrapper } = await abrirInicio()
-
-      expect(wrapper.text()).toContain('Aún no tienes productos')
-      expect(wrapper.text()).toContain(pegarCifras('Hoy pagas el local: S/ 1 200.00'))
-    })
-
-    it('aparece también si se configura el local con Inicio ya abierto', async () => {
-      await tiendaLista()
-      const { wrapper } = await abrirInicio()
-      expect(wrapper.text()).not.toContain('pagas el local')
-
-      await localSePagaElDia(16)
-      await vi.waitFor(() => expect(wrapper.text()).toContain('Mañana pagas el local'))
-    })
-  })
-
-  it('RN-AL-09: el resumen del día se cierra con un toque y no vuelve ese día', async () => {
+  it('plan 19: Inicio es solo para vender: sin resumen del día, recordatorios ni instalación', async () => {
     await tiendaLista()
     await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '0' })
+    await app.tienda.actualizarConfiguracion({
+      alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [16] },
+    })
     const { wrapper } = await abrirInicio()
-
-    const resumen = wrapper.get('[data-resumen-del-dia]')
-    expect(resumen.text()).toContain('Resumen del día')
-    expect(resumen.text()).toContain('1 agotado')
-    expect(resumen.text()).toContain('Nada por acabarse')
-    expect(resumen.text()).toContain('Ayer no hubo ventas')
-
-    await botonCon('Cerrar').trigger('click')
-    await esperarPantalla()
 
     expect(wrapper.find('[data-resumen-del-dia]').exists()).toBe(false)
-    expect(await app.alertas.resumenDelDia()).toBeNull()
+    for (const texto of [
+      'Resumen del día',
+      'guardas una copia',
+      'pagas el local',
+      'Instala la app',
+    ]) {
+      expect(wrapper.text()).not.toContain(texto)
+    }
   })
 
-  it('RN-UX-15: al cerrar el resumen del día el foco no se pierde: va al saludo', async () => {
-    await tiendaLista()
-    await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '10' })
-    const { wrapper } = await abrirInicio()
-
-    await botonCon('Cerrar').trigger('click')
-    await esperarPantalla()
-
-    expect(document.activeElement).toBe(wrapper.get('h1').element)
-  })
-
-  it('celular: Vender y las otras acciones van antes del resumen del día, el recordatorio y la instalación', async () => {
+  it('celular: Vender y las otras acciones van después de las cifras y del aviso', async () => {
     await tiendaLista()
     await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '0' })
     const { wrapper } = await abrirInicio()
@@ -252,101 +165,7 @@ describe('Inicio', () => {
       posicion('aviso-en-pagina--atencion'),
       posicion('class="vender-fijo"'),
       posicion('class="enlace-historial"'),
-      posicion('data-resumen-del-dia'),
-      posicion('Todavía no guardas una copia'),
-      posicion('Instala la app en tu celular'),
     ]
     expect(orden).toEqual([...orden].sort((a, b) => a - b))
-  })
-
-  it('sin productos no muestra el resumen del día (no hay nada que resumir)', async () => {
-    await tiendaLista()
-    const { wrapper } = await abrirInicio()
-
-    expect(wrapper.text()).toContain('Aún no tienes productos')
-    expect(wrapper.find('[data-resumen-del-dia]').exists()).toBe(false)
-  })
-
-  describe('RN-UX-13: tarjeta de instalación', () => {
-    function ofrecerInstalacion(resultado: 'accepted' | 'dismissed') {
-      const evento = new Event('beforeinstallprompt', { cancelable: true }) as Event & {
-        prompt: () => Promise<void>
-        userChoice: Promise<{ outcome: string }>
-        pedidas: number
-      }
-      evento.pedidas = 0
-      evento.prompt = async () => {
-        evento.pedidas += 1
-      }
-      evento.userChoice = Promise.resolve({ outcome: resultado })
-      window.dispatchEvent(evento)
-      return evento
-    }
-
-    it('si el navegador la ofrece, el botón Instalar abre el diálogo del navegador', async () => {
-      await tiendaLista()
-      const { wrapper } = await abrirInicio()
-      const evento = ofrecerInstalacion('accepted')
-      await esperarPantalla()
-
-      expect(wrapper.text()).toContain('Instala la app en tu celular')
-      await botonCon('Instalar').trigger('click')
-      await esperarPantalla()
-
-      expect(evento.pedidas).toBe(1)
-      expect(evento.defaultPrevented).toBe(true)
-      expect(wrapper.text()).not.toContain('Instala la app en tu celular')
-    })
-
-    it('si el diálogo del navegador falla, se registra y quedan los pasos', async () => {
-      await tiendaLista()
-      const { wrapper } = await abrirInicio()
-      const evento = ofrecerInstalacion('accepted')
-      evento.prompt = () => Promise.reject(new Error('El navegador no lo permitió'))
-      const registro = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-      await esperarPantalla()
-
-      await botonCon('Instalar').trigger('click')
-      await esperarPantalla()
-
-      expect(registro).toHaveBeenCalled()
-      expect(wrapper.text()).toContain('Agregar a la pantalla principal')
-      registro.mockRestore()
-    })
-
-    it('si el navegador no la ofrece, muestra los pasos', async () => {
-      await tiendaLista()
-      const { wrapper } = await abrirInicio()
-
-      expect(wrapper.text()).toContain('Instala la app en tu celular')
-      expect(wrapper.text()).toContain('Agregar a la pantalla principal')
-      expect(wrapper.findAll('button').some((b) => b.text() === 'Instalar')).toBe(false)
-    })
-
-    it('"Ahora no" la esconde', async () => {
-      await tiendaLista()
-      const { wrapper } = await abrirInicio()
-
-      await botonCon('Ahora no').trigger('click')
-      await esperarPantalla()
-
-      expect(wrapper.text()).not.toContain('Instala la app en tu celular')
-      expect(document.activeElement).toBe(wrapper.get('h1').element)
-    })
-
-    it('instalada (abierta como app) no aparece', async () => {
-      await tiendaLista()
-      window.matchMedia = ((consulta: string) => ({
-        matches: consulta === '(display-mode: standalone)',
-      })) as unknown as typeof window.matchMedia
-      olvidarInstalacionParaPruebas()
-      try {
-        const { wrapper } = await abrirInicio()
-        expect(wrapper.text()).not.toContain('Instala la app en tu celular')
-      } finally {
-        Reflect.deleteProperty(window, 'matchMedia')
-        olvidarInstalacionParaPruebas()
-      }
-    })
   })
 })

@@ -48,6 +48,8 @@ const VERSION = __VERSION_DE_LA_APP__
 
 const configuracion = ref<ConfiguracionDeNegocio | null>(null)
 const ultimaCopia = ref<string | null>(null)
+/** RN-RE-06: "Hace N días que no guardas una copia", o `null` si todavía no toca recordar. */
+const recordatorioDeCopia = ref<string | null>(null)
 const avisosActivos = ref<boolean | null>(null)
 const exportado = ref<string | null>(null)
 const revision = ref<string | null>(null)
@@ -60,10 +62,13 @@ const resumenDeLaTienda = computed(() => {
   const dias = `${c.diasEntreCompras} ${plural(c.diasEntreCompras, 'día', 'días')}`
   return `${c.nombreTienda} · compras cada ${dias}`
 })
-const textoUltimaCopia = computed(() =>
-  ultimaCopia.value === null
-    ? 'Todavía no guardas una copia de tus datos'
-    : `Tu última copia es del ${formatearDia(diaDe(ultimaCopia.value))}`,
+/** RN-RE-06: el recordatorio, si toca; si no, cuándo fue la última copia. */
+const textoUltimaCopia = computed(
+  () =>
+    recordatorioDeCopia.value ??
+    (ultimaCopia.value === null
+      ? 'Todavía no guardas una copia de tus datos'
+      : `Tu última copia es del ${formatearDia(diaDe(ultimaCopia.value))}`),
 )
 
 async function leerAvisos(): Promise<void> {
@@ -72,13 +77,15 @@ async function leerAvisos(): Promise<void> {
 
 onMounted(async () => {
   try {
-    const [config, sistema] = await Promise.all([
+    const [config, sistema, recordatorio] = await Promise.all([
       aplicacion.tienda.obtenerConfiguracion(),
       aplicacion.tienda.consultable.estadoDelSistema(),
+      aplicacion.respaldo.recordatorioDeCopia(),
       leerAvisos(),
     ])
     configuracion.value = config
     ultimaCopia.value = sistema.ultimoRespaldoEn
+    recordatorioDeCopia.value = recordatorio
   } catch (causa) {
     console.error('No se pudo leer la configuración en Ajustes:', causa)
     error.value = 'No pudimos leer tus ajustes'

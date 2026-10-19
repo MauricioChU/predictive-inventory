@@ -107,11 +107,12 @@ test.describe('RN-SIS-05: guardar y restaurar una copia', () => {
     await sinMenuDeCompartir(page)
     await abrirTiendaLista(page, './')
     const lejia = await crearProducto(page, { nombre: 'Lejía 1 L', compra: '2.40', venta: '3.50', stock: '10' })
-    await abrir(page, './')
+    await abrir(page, './ajustes')
 
-    // RN-RE-06: el recordatorio de Inicio lleva a Guardar copia.
-    await expect(page.getByText('Todavía no guardas una copia de tus datos')).toBeVisible()
-    await page.getByRole('button', { name: 'Guardar copia ahora' }).click()
+    // RN-RE-06: el recordatorio vive en Ajustes, en el enlace Guardar copia (ya no en Inicio).
+    const enlaceDeCopia = page.getByRole('link', { name: /^Guardar copia/ })
+    await expect(enlaceDeCopia).toContainText('Todavía no guardas una copia de tus datos')
+    await enlaceDeCopia.click()
     await expect(h1(page)).toHaveText('Guardar copia')
     const descarga = page.waitForEvent('download')
     await page.getByRole('button', { name: 'Guardar copia ahora' }).click()
@@ -123,6 +124,9 @@ test.describe('RN-SIS-05: guardar y restaurar una copia', () => {
     await page.getByRole('button', { name: 'Volver al inicio' }).click()
     await expect(h1(page)).toHaveText(/^Hola/)
     await expect(page.getByText('guardas una copia')).toHaveCount(0)
+    await page.getByRole('link', { name: 'Ajustes' }).click()
+    await expect(page.getByRole('link', { name: /^Guardar copia/ })).toContainText('Tu última copia es del')
+    await abrir(page, './')
 
     await vender(page, lejia, '5')
     expect(await stockDe(page, lejia)).toBe(5000)
@@ -254,7 +258,7 @@ test.describe('M1 / RN-AL-08: avisos en tu celular', () => {
 })
 
 test.describe('Inicio', () => {
-  test('cifras de hoy, lo que se acaba, resumen del día que se cierra con un toque', async ({ page }) => {
+  test('cifras de hoy y lo que se acaba; sin resumen, recordatorios ni instalación (plan 19)', async ({ page }) => {
     await abrirTiendaLista(page, './')
     const lejia = await crearProducto(page, { nombre: 'Lejía 1 L', compra: '2.40', venta: '3.50', minimo: '3', stock: '10' })
     await crearProducto(page, { nombre: 'Carbón', compra: '2.75', venta: '4.00', stock: '0' })
@@ -266,48 +270,16 @@ test.describe('Inicio', () => {
     await expect(cifra).toContainText('S/ 2.20')
     await expect(cifra).toContainText('Vendiste S/ 7.00')
     await expect(page.getByText('1 producto se acaba')).toBeVisible()
-    await expect(page.getByText('1 agotado')).toHaveCount(2) // el aviso y el resumen del día
+    await expect(page.getByText('1 agotado')).toHaveCount(1)
+    await expect(page.getByRole('button', { name: 'Ver productos' })).toBeVisible()
 
-    const resumen = page.getByRole('region', { name: 'Resumen del día' })
-    await expect(resumen).toBeVisible()
-    await resumen.getByRole('button', { name: 'Cerrar' }).click()
-    await expect(resumen).toHaveCount(0)
-    await abrir(page, './')
-    await expect(page.getByText('Hoy ganaste')).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Resumen del día' })).toHaveCount(0)
-  })
-
-  test('RN-UX-13: con el botón del navegador, "Instalar" lo usa; si no lo ofrece, muestra los pasos', async ({ page }) => {
-    // El pedido real del navegador no llega en esta prueba: solo el que se simula abajo.
-    await page.addInitScript(() => {
-      window.addEventListener('beforeinstallprompt', (e) => e.isTrusted && e.stopImmediatePropagation(), true)
-    })
-    await abrirTiendaLista(page, './')
-    await expect(page.getByText('Instala la app en tu celular')).toBeVisible()
-    await expect(page.getByText('Agregar a la pantalla principal')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Instalar' })).toHaveCount(0)
-
-    await page.evaluate(() => {
-      const pedido = new Event('beforeinstallprompt', { cancelable: true }) as Event & {
-        prompt: () => Promise<void>
-        userChoice: Promise<{ outcome: string }>
-      }
-      pedido.prompt = async () => {
-        document.documentElement.dataset.instalacionPedida = 'si'
-      }
-      pedido.userChoice = Promise.resolve({ outcome: 'accepted' })
-      window.dispatchEvent(pedido)
-    })
-    await page.getByRole('button', { name: 'Instalar' }).click()
-    await expect(page.locator('html')).toHaveAttribute('data-instalacion-pedida', 'si')
-    await expect(page.getByText('Instala la app en tu celular')).toHaveCount(0)
+    for (const texto of ['Resumen del día', 'guardas una copia', 'pagas el local', 'Instala la app en tu celular']) {
+      await expect(page.getByText(texto)).toHaveCount(0)
+    }
   })
 })
 
-/**
- * Inicio en celular con TODAS las tarjetas (primera apertura del día: resumen del día, aviso de
- * lo que se acaba, recordatorio de copia y tarjeta de instalación).
- */
+/** Inicio en celular con todo lo que puede mostrar: cifras de hoy y el aviso de lo que se acaba. */
 async function abrirInicioCompleto(page: Page, letra: 'GRANDE' | 'MUY_GRANDE', ancho: number, alto: number) {
   await usarLetra(page, letra)
   await page.setViewportSize({ width: ancho, height: alto })
@@ -315,10 +287,7 @@ async function abrirInicioCompleto(page: Page, letra: 'GRANDE' | 'MUY_GRANDE', a
   await crearProducto(page, { nombre: 'Lejía 1 L', compra: '2.40', venta: '3.50', minimo: '3', stock: '2' })
   await crearProducto(page, { nombre: 'Carbón', compra: '2.75', venta: '4.00', stock: '0' })
   await abrir(page, './')
-  await expect(page.getByRole('region', { name: 'Resumen del día' })).toBeVisible()
   await expect(page.getByText('2 productos se acaban')).toBeVisible()
-  await expect(page.getByText('Todavía no guardas una copia de tus datos')).toBeVisible()
-  await expect(page.getByText('Instala la app en tu celular')).toBeVisible()
   await page.evaluate(() => document.fonts.ready)
 }
 
@@ -386,7 +355,7 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
 })
 
 test.describe('Inicio en PC (1280 px): el orden de lectura es el del código (WCAG 1.3.2 / 2.4.3)', () => {
-  test('cifras y aviso a la izquierda, acciones a la derecha, y después el resumen y las tarjetas', async ({
+  test('cifras y aviso a la izquierda, acciones a la derecha', async ({
     page,
   }, testInfo) => {
     test.skip(testInfo.project.name !== 'pc', 'La disposición en columnas es de PC')
@@ -401,22 +370,16 @@ test.describe('Inicio en PC (1280 px): el orden de lectura es el del código (WC
     const cifra = await caja('.cifra')
     const atencion = await caja('.atencion')
     const acciones = await caja('.acciones')
-    const resumen = await caja('.resumen-del-dia')
-    const extras = await caja('.extras')
 
     // Arriba, en dos columnas: cifras sobre el aviso a la izquierda, acciones a la derecha.
     expect(atencion.y).toBeGreaterThanOrEqual(cifra.y + cifra.height - 1)
     expect(Math.abs(atencion.x - cifra.x)).toBeLessThanOrEqual(1)
     expect(acciones.x).toBeGreaterThanOrEqual(cifra.x + cifra.width - 1)
     expect(Math.abs(acciones.y - cifra.y)).toBeLessThanOrEqual(1)
-    // Después, debajo de todo lo de arriba y en este orden: el resumen del día y las tarjetas.
-    const finDeArriba = Math.max(atencion.y + atencion.height, acciones.y + acciones.height)
-    expect(resumen.y).toBeGreaterThanOrEqual(finDeArriba - 1)
-    expect(extras.y).toBeGreaterThanOrEqual(resumen.y + resumen.height - 1)
 
     // Y el código va en ese mismo orden.
     const ordenEnElCodigo = await page.evaluate(() =>
-      ['.cifra', '.atencion', '.acciones', '.resumen-del-dia', '.extras'].map((selector) =>
+      ['.cifra', '.atencion', '.acciones'].map((selector) =>
         Array.from(document.querySelectorAll('#contenido .cuerpo > *')).indexOf(
           document.querySelector(`#contenido .cuerpo > ${selector}`)!,
         ),

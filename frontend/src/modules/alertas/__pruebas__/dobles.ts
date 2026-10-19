@@ -1,8 +1,4 @@
-import type {
-  AnalisisConsultable,
-  SituacionDeProducto,
-  TotalesDeDia,
-} from '@/shared/contratos/entre-modulos'
+import type { AnalisisConsultable, SituacionDeProducto } from '@/shared/contratos/entre-modulos'
 import {
   CONFIGURACION_INICIAL,
   type ConfiguracionDeNegocio,
@@ -11,7 +7,6 @@ import {
 import type { TiendaConsultable } from '@/shared/contratos/entre-modulos'
 import type { UnidadDeTrabajo } from '@/shared/application/unidad-de-trabajo'
 import { Cantidad } from '@/shared/domain/cantidad'
-import { Dinero } from '@/shared/domain/dinero'
 import { BusEnMemoria } from '@/shared/domain/eventos'
 import { RelojFijo } from '@/shared/domain/reloj'
 import { AlmacenEnMemoria } from '@/shared/infrastructure/memoria/almacen-en-memoria'
@@ -39,27 +34,10 @@ export function crearSituacion(
   }
 }
 
-function totalesDeDiaVacios(dia: string): TotalesDeDia {
-  return {
-    dia,
-    ventas: Dinero.cero(),
-    costoVendido: Dinero.cero(),
-    gananciaBruta: Dinero.cero(),
-    mermas: Dinero.cero(),
-    gananciaNeta: Dinero.cero(),
-    diferenciasDeConteo: Dinero.cero(),
-  }
-}
-
 /** Doble de prueba de Análisis: solo lo que Alertas consume (RN-AL-02 lo re-evalúa). */
-export class AnalisisFalso implements Pick<AnalisisConsultable, 'situaciones' | 'totalesDelDia'> {
+export class AnalisisFalso implements Pick<AnalisisConsultable, 'situaciones'> {
   situacionesActuales: SituacionDeProducto[] = []
-  private readonly totalesPorDia = new Map<string, TotalesDeDia>()
   private readonly respuestasRetrasadas: Array<() => Promise<SituacionDeProducto[]>> = []
-
-  fijarTotalesDeDia(totales: TotalesDeDia): void {
-    this.totalesPorDia.set(totales.dia, totales)
-  }
 
   /**
    * Para probar RN-AL-02 bajo evaluaciones superpuestas: hace que la PRÓXIMA llamada a
@@ -81,10 +59,6 @@ export class AnalisisFalso implements Pick<AnalisisConsultable, 'situaciones' | 
     if (respuestaRetrasada) return respuestaRetrasada()
     return this.situacionesActuales
   }
-
-  async totalesDelDia(dia: string): Promise<TotalesDeDia> {
-    return this.totalesPorDia.get(dia) ?? totalesDeDiaVacios(dia)
-  }
 }
 
 /** Doble de prueba de Tienda: configuración y estado del sistema en memoria. */
@@ -98,9 +72,7 @@ export class TiendaFalsa implements TiendaConsultable {
     primeraVezCompletada: true,
     ultimoRespaldoEn: null,
     almacenamientoPersistente: 'DESCONOCIDO',
-    ultimoResumenDelDiaMostrado: null,
     ultimoPagoDelLocalAvisado: null,
-    recordatorioDelLocalCerradoEl: null,
   }
 
   async configuracion(): Promise<ConfiguracionDeNegocio> {

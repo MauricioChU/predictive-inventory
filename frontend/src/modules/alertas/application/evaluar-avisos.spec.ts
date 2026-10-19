@@ -211,7 +211,7 @@ describe('evaluarAvisos', () => {
     const notificaciones = await evaluarAvisos(dependencias)
 
     expect(notificaciones).toEqual([
-      { texto: '3 productos se están acabando', url: '/control/para-comprar' },
+      { texto: '3 productos se están acabando', url: '/productos?estado=se-acaban' },
     ])
     expect(notificador.mostradas).toHaveLength(1)
   })
@@ -373,7 +373,7 @@ describe('evaluarAvisos', () => {
       await evaluarAvisos(dependencias)
 
       expect(notificador.mostradas).toEqual([
-        { texto: '2 productos se están acabando', url: '/control/para-comprar' },
+        { texto: '2 productos se están acabando', url: '/productos?estado=se-acaban' },
         { texto: 'Pasado mañana pagas el local: S/ 1 200.00', url: '/control' },
       ])
     })

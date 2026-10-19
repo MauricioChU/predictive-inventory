@@ -182,12 +182,15 @@ describe('Productos (lista)', () => {
     expect(vista.router.currentRoute.value.query).toEqual({ nombre: 'shampoo' })
   })
 
-  it('filtros por estado: Queda poco · Agotados · Archivados', async () => {
+  it('filtros por estado: Se acaban · Queda poco · Agotados · Archivados', async () => {
     await conProductos()
     vista = await montarVista(app, '/productos')
     const w = vista.wrapper
     const opciones = w.findAll('[role="radiogroup"] [role="radio"]').map((o) => o.text())
-    expect(opciones).toEqual(['Todos', 'Queda poco', 'Agotados', 'Archivados'])
+    expect(opciones).toEqual(['Todos', 'Se acaban', 'Queda poco', 'Agotados', 'Archivados'])
+
+    await elegirEstado(w, 'Se acaban')
+    expect(nombres(w).sort()).toEqual(['Carbón vegetal', 'Lejía Tradicional 1 L'])
 
     await elegirEstado(w, 'Queda poco')
     expect(nombres(w)).toEqual(['Lejía Tradicional 1 L'])
@@ -197,6 +200,22 @@ describe('Productos (lista)', () => {
     expect(nombres(w)).toEqual(['Bolsa chica'])
     expect(w.get('.tarjeta-de-producto').text()).toContain('Archivado')
     expect(w.find('.insignia').exists()).toBe(false)
+  })
+
+  it('RN-CAT-16: /productos?estado=se-acaban abre la lista ya filtrada', async () => {
+    await conProductos()
+    vista = await montarVista(app, '/productos?estado=se-acaban')
+    const w = vista.wrapper
+    expect(w.get('[role="radio"][aria-checked="true"]').text()).toBe('Se acaban')
+    expect(nombres(w).sort()).toEqual(['Carbón vegetal', 'Lejía Tradicional 1 L'])
+    await elegirEstado(w, 'Todos')
+    expect(nombres(w)).toHaveLength(3)
+  })
+
+  it('RN-CAT-16: un estado desconocido en la dirección se ignora', async () => {
+    await conProductos()
+    vista = await montarVista(app, '/productos?estado=otra-cosa')
+    expect(vista.wrapper.get('[role="radio"][aria-checked="true"]').text()).toBe('Todos')
   })
 
   it('un filtro sin productos lo explica y "Ver todos" lo quita', async () => {

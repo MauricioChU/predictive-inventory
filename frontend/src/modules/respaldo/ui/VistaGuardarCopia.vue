@@ -2,7 +2,6 @@
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { Download, RotateCcw, Save } from 'lucide-vue-next'
-import { useEstadoGlobal } from '@/app/estado-global'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import { diaDe } from '@/shared/domain/fecha'
 import { esErrorDeDominio } from '@/shared/domain/errores'
@@ -31,7 +30,6 @@ import {
  * descarga.
  */
 const aplicacion = useAplicacion()
-const estadoGlobal = useEstadoGlobal()
 const router = useRouter()
 const anunciador = useAnunciador()
 
@@ -94,7 +92,6 @@ async function guardar(modo: 'compartir' | 'descargar'): Promise<void> {
     }
     try {
       await aplicacion.respaldo.marcarCopiaGuardada()
-      await estadoGlobal.refrescarRecordatorioDeCopia()
     } catch (causa) {
       // El archivo ya salió: es una copia válida aunque no quede anotada.
       console.error('La copia salió, pero no se pudo anotar como guardada:', causa)

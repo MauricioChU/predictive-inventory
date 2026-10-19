@@ -46,9 +46,7 @@ export const SISTEMA: EstadoDelSistemaRegistro = {
   primeraVezCompletada: true,
   ultimoRespaldoEn: '2026-10-01T00:00:00.000Z',
   almacenamientoPersistente: 'CONCEDIDO',
-  ultimoResumenDelDiaMostrado: null,
   ultimoPagoDelLocalAvisado: null,
-  recordatorioDelLocalCerradoEl: null,
 }
 
 export function producto(id: string): ProductoRegistro {

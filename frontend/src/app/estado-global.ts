@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { ResumenDeAtencion, ResumenDelDia } from '@/modules/alertas'
+import type { ResumenDeAtencion } from '@/modules/alertas'
 import type { TamanoDeLetra } from '@/shared/contratos/configuracion'
 import { aplicarTamanoDeLetra } from '@/shared/ui/preferencias/tamano-de-letra'
 import type { InicioDeLaApp } from './abrir-app'
@@ -37,7 +37,7 @@ function deAUna(nombre: string, tarea: () => Promise<void>): () => Promise<void>
 /**
  * Estado que comparte toda la app: el contador de atención del botón Control
  * (`BarraNavegacion.contadorControl`, RN-AL-06b), el tamaño de letra de la configuración, si
- * falta la primera vez, el resumen del día y el recordatorio de copia.
+ * falta la primera vez.
  *
  * El contador sale de cada re-evaluación de Alertas (`alertas.alCalcularLaAtencion`, RN-SIS-09):
  * después de una operación, avisos y contador usan UN solo cálculo de situaciones, y una ráfaga
@@ -51,9 +51,6 @@ export const useEstadoGlobal = defineStore('estado-global', () => {
   const contadorDeAtencion = ref(0)
   const tamanoDeLetra = ref<TamanoDeLetra>('GRANDE')
   const primeraVez = ref(false)
-  const resumenDelDia = ref<ResumenDelDia | null>(null)
-  const recordatorioDeCopia = ref<string | null>(null)
-  const recordatorioDelLocal = ref<string | null>(null)
 
   let aplicacion: Aplicacion | null = null
   let cancelaciones: (() => void)[] = []
@@ -92,15 +89,6 @@ export const useEstadoGlobal = defineStore('estado-global', () => {
     primeraVez.value = !estado.primeraVezCompletada
   })
 
-  const refrescarRecordatorioDeCopia = deAUna('el recordatorio de copia', async () => {
-    recordatorioDeCopia.value = await conectada().respaldo.recordatorioDeCopia()
-  })
-
-  /** RN-AL-10: la frase del pago del local de hoy (cambia al configurar el local). */
-  const refrescarRecordatorioDelLocal = deAUna('el recordatorio del pago del local', async () => {
-    recordatorioDelLocal.value = (await conectada().alertas.recordatorioDelLocal())?.texto ?? null
-  })
-
   function desconectar(): void {
     for (const cancelar of cancelaciones) cancelar()
     cancelaciones = []
@@ -113,53 +101,29 @@ export const useEstadoGlobal = defineStore('estado-global', () => {
     aplicacion = app
     tamanoDeLetra.value = inicio.tamanoDeLetra
     primeraVez.value = inicio.primeraVez
-    resumenDelDia.value = inicio.resumenDelDia
-    recordatorioDeCopia.value = inicio.recordatorioDeCopia
-    recordatorioDelLocal.value = inicio.recordatorioDelLocal
 
     cancelaciones = [
       app.alertas.alCalcularLaAtencion(alCalcularLaAtencion),
       app.bus.suscribir('ConfiguracionActualizada', (): void => {
         void recargarConfiguracion()
-        void refrescarRecordatorioDelLocal()
       }),
       // Tras restaurar una copia cambian la configuración (letra) y los estados de stock; el
       // contador llega con la re-evaluación que la composición pide en ese momento.
       app.alCambiarEnBloque(() => {
         void recargarConfiguracion()
-        void refrescarRecordatorioDelLocal()
       }),
     ]
     void refrescarAtencion()
     return desconectar
   }
 
-  /** RN-AL-09: cerrar la tarjeta; no vuelve hasta el día siguiente. */
-  async function cerrarResumenDelDia(): Promise<void> {
-    await conectada().alertas.cerrarResumenDelDia()
-    resumenDelDia.value = null
-  }
-
-  /** RN-AL-10: *Entendido* cierra la tarjeta del pago; no vuelve hasta el día siguiente. */
-  async function cerrarRecordatorioDelLocal(): Promise<void> {
-    await conectada().alertas.cerrarRecordatorioDelLocal()
-    recordatorioDelLocal.value = null
-  }
-
   return {
     contadorDeAtencion,
     tamanoDeLetra,
     primeraVez,
-    resumenDelDia,
-    recordatorioDeCopia,
-    recordatorioDelLocal,
     conectar,
     desconectar,
     refrescarAtencion,
     recargarConfiguracion,
-    refrescarRecordatorioDeCopia,
-    refrescarRecordatorioDelLocal,
-    cerrarResumenDelDia,
-    cerrarRecordatorioDelLocal,
   }
 })

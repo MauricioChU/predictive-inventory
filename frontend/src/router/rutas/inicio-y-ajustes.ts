@@ -1,18 +1,8 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { VistaAvisos } from '@/modules/alertas'
 import { VistaGuardarCopia, VistaImportarProductos, VistaRestaurarCopia } from '@/modules/respaldo'
-import {
-  escucharInstalacion,
-  VistaAjustes,
-  VistaDatosDeLaTienda,
-  VistaInicio,
-  VistaPrimeraVez,
-} from '@/modules/tienda'
+import { VistaAjustes, VistaDatosDeLaTienda, VistaInicio, VistaPrimeraVez } from '@/modules/tienda'
 import { faltaLaPrimeraVez } from '../primera-vez'
-
-// RN-UX-13: el navegador ofrece instalar la app una sola vez y en cualquier pantalla; se escucha
-// desde que arranca la app (este archivo se carga con el router), no recién al abrir Inicio.
-escucharInstalacion()
 
 /** Ola 4, plan 14 (`feat/ui-inicio-ajustes`): Inicio, Primera vez, Ajustes y avisos del celular. */
 export const rutasDeInicioYAjustes: RouteRecordRaw[] = [

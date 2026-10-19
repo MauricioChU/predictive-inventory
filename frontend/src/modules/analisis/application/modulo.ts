@@ -1,19 +1,10 @@
-import type {
-  AnalisisConsultable,
-  ProyeccionDeOperaciones,
-  TotalesDeDia,
-} from '@/shared/contratos/entre-modulos'
+import type { AnalisisConsultable, ProyeccionDeOperaciones } from '@/shared/contratos/entre-modulos'
 import type { Cantidad } from '@/shared/domain/cantidad'
 import type { Dinero } from '@/shared/domain/dinero'
 import type { Dia } from '@/shared/domain/fecha'
 import type { ListaParaComprar } from '../domain/compras'
 import { vecesVendido } from '../domain/observaciones'
-import {
-  resumenDePeriodo,
-  totalesPorDia,
-  type Periodo,
-  type ResumenDePeriodo,
-} from '../domain/periodos'
+import { totalesPorDia, type Periodo, type ResumenDePeriodo } from '../domain/periodos'
 import { ResumenDiario } from '../domain/resumen-diario'
 import {
   cambiarCantidadEnLista,
@@ -75,9 +66,6 @@ function crearConsultable(d: DependenciasDeAnalisis): AnalisisConsultable {
       }),
     async vecesVendido(desde, hasta) {
       return vecesVendido(await filasEntre(d, desde, hasta), { desde, hasta })
-    },
-    async totalesDelDia(dia): Promise<TotalesDeDia> {
-      return { dia, ...resumenDePeriodo(await filasEntre(d, dia, dia), { desde: dia, hasta: dia }) }
     },
     async resumenesDeTienda(desde, hasta) {
       return totalesPorDia(await filasEntre(d, desde, hasta))

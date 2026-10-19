@@ -4,6 +4,17 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+### Nuevo
+
+- En Productos puedes filtrar por «Se acaban».
+- El aviso de copia ahora está en Ajustes.
+- El recordatorio del pago del local se ve en la tarjeta de Control.
+
+### Cambiado
+
+- Inicio queda solo para vender: se quitaron el resumen del día, el recordatorio del local, el aviso de copia y el de instalar la app.
+- Cuando algo se acaba, el aviso te lleva a Productos ya filtrado.
+
 ## [0.2.0] · 2026-10-18
 
 ### Nuevo

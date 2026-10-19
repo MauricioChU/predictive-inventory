@@ -159,6 +159,16 @@ Característica: Catálogo de productos
     Cuando busco "lejia"
     Entonces los resultados son "Lejía Tradicional 2 L, Lejía Tradicional 1 L"
 
+  @RN-CAT-16
+  Escenario: "Se acaban" reúne los agotados y los que quedan poco
+    Dado los productos:
+      | nombre    | categoría | unidad | compra | venta | mínimo | stock |
+      | Lejía 1 L | Otros     | UNIDAD | 2.40   | 3.50  | 3      | 0     |
+      | Carbón    | Otros     | KILO   | 2.75   | 4.00  | 3      | 2     |
+      | Bolsas    | Otros     | UNIDAD | 0.05   | 0.10  | 50     | 200   |
+    Cuando filtro los productos por "Se acaban"
+    Entonces los resultados son "Carbón, Lejía 1 L"
+
   @RN-CAT-14
   Escenario: La foto se reduce y se comprime
     Cuando agrego al producto una foto de 4000 x 3000 px

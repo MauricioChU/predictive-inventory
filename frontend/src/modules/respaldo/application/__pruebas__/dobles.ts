@@ -226,9 +226,7 @@ export class TiendaDePrueba implements TiendaConsultable {
     primeraVezCompletada: false,
     ultimoRespaldoEn: null,
     almacenamientoPersistente: 'DESCONOCIDO',
-    ultimoResumenDelDiaMostrado: null,
     ultimoPagoDelLocalAvisado: null,
-    recordatorioDelLocalCerradoEl: null,
   }
 
   fijarConfiguracion(cambios: Partial<ConfiguracionDeNegocio>): void {
