@@ -4,6 +4,10 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+### Cambiado
+
+- Inicio muestra la fecha y la hora, y los botones de Vender y Llegó mercadería quedan abajo, al alcance del pulgar.
+
 ## [0.3.0] · 2026-10-19
 
 ### Nuevo

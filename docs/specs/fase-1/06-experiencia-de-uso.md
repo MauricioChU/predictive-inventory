@@ -38,7 +38,8 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 ### Inicio
 ```
 ┌──────────────────────────────┐
-│ Hola 👋  Bodega Rosita   ⚙   │
+│ Hola, Bodega Rosita 👋    ⚙  │
+│ lunes 19 de octubre 3:24 p. m.│
 │ ┌──────────────────────────┐ │
 │ │ Hoy ganaste  S/ 48.20    │ │
 │ │ Vendiste     S/ 162.50   │ │
@@ -47,6 +48,8 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 │ │ 1 agotado y 3 por acabarse│ │
 │ │      Ver productos  ›    │ │
 │ └──────────────────────────┘ │
+│                              │
+│   (espacio libre)            │
 │ [ 🛒  VENDER               ] │
 │ [ 📦  LLEGÓ MERCADERÍA     ] │
 │ [ 🤔  ¿NECESITO COMPRAR?   ] │
@@ -55,6 +58,7 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 │ Inicio Vender Recibir Prod. Control │
 └──────────────────────────────┘
 ```
+Debajo del saludo va la **fecha a la izquierda y la hora a la derecha** (hora de la tienda, Lima; se actualiza sola, sin anunciarse). Las acciones quedan **abajo, sobre la navegación**, al alcance del pulgar; si el contenido es más alto que la pantalla (letra Muy grande, 320 px), todo fluye hacia abajo sin taparse.
 
 ### Vender
 1. Buscar (campo grande arriba) → resultados con **foto grande**, nombre, precio y stock; los más vendidos primero. Debajo del buscador, accesos rápidos a los 8 productos más vendidos.
