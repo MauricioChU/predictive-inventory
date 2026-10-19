@@ -135,7 +135,11 @@ const MONTO_CUALQUIERA = '600.00'
  * convertidor que la pantalla (el error de más de dos decimales sale de ahí); lo demás lo
  * valida `tienda.actualizarConfiguracion`.
  */
-function alquilerDeTextos(frecuencia: string, monto: string, dias: string): AlquilerDelLocal {
+export function alquilerDeTextos(
+  frecuencia: string,
+  monto: string,
+  dias: string,
+): AlquilerDelLocal {
   const tipo = FRECUENCIAS_DE_PAGO[frecuencia as keyof typeof FRECUENCIAS_DE_PAGO]
   if (tipo === undefined) throw new Error(`Frecuencia de pago desconocida: "${frecuencia}"`)
   if (tipo === 'NO_PAGA') return { tipo }

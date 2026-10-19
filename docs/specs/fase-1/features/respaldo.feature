@@ -168,4 +168,4 @@ Característica: Respaldo, Excel e importación
   Escenario: La copia guarda el costo del local
     Dado el local se paga "S/ 600.00" "Dos veces al mes" los días "5, 20"
     Cuando guardo una copia y la restauro
-    Entonces el local se paga "S/ 600.00" "Dos veces al mes" los días "5, 20"
+    Entonces el costo del local guardado es "S/ 600.00" "Dos veces al mes" los días "5, 20"

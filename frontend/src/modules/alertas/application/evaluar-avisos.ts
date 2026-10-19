@@ -1,6 +1,6 @@
 import type { SituacionDeProducto } from '@/shared/contratos/entre-modulos'
 import { agruparAvisos, empeoro } from '../domain/avisos'
-import { RUTA_DEL_ALQUILER } from '../domain/recordatorio-del-local'
+import { RUTA_DE_CONTROL } from '../domain/recordatorio-del-local'
 import type { DependenciasDeAlertas } from './modulo'
 import { notificacionesPermitidas } from './permiso'
 import type { Notificacion } from './puertos'
@@ -39,7 +39,8 @@ export async function evaluarAvisos(
   // RN-AL-11: el pago del local de hoy y la última fecha ya avisada, leídos antes de la unidad
   // de trabajo (igual que las situaciones).
   const pago = pagoDelLocal ? await recordatorioVigenteDelLocal(d) : null
-  const ultimoAvisado = (await d.tienda().estadoDelSistema()).ultimoPagoDelLocalAvisado
+  const ultimoAvisado =
+    pago === null ? null : (await d.tienda().estadoDelSistema()).ultimoPagoDelLocalAvisado
 
   await d.uow.ejecutar(async () => {
     const registrados = await d.avisos.todos()
@@ -77,7 +78,7 @@ export async function evaluarAvisos(
         mostradas.push(notificacion)
       }
       if (!avisarElPago) return
-      const notificacionDelPago = { texto: pago.texto, url: RUTA_DEL_ALQUILER }
+      const notificacionDelPago = { texto: pago.texto, url: RUTA_DE_CONTROL }
       await d.notificador.mostrar(notificacionDelPago)
       mostradas.push(notificacionDelPago)
       // Solo se marca avisada si de verdad salió: sin permiso se avisa cuando lo den.

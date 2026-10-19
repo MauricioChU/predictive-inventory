@@ -10,6 +10,7 @@ import { diasEntre, instanteLocal, sumarDias, sumarSegundos } from '@/shared/dom
 import { normalizar } from '@/shared/domain/texto'
 import type { ArgumentoExtra } from '../../gherkin/registro-de-pasos'
 import { crearAplicacionDePrueba } from '../../soporte/aplicacion-de-prueba'
+import { alquilerDeTextos } from './contexto'
 import type { Mundo } from './mundo'
 import { accion, afirmacion, celda, filasDe, lista, preparacion, type Pasos } from './registro'
 
@@ -295,6 +296,17 @@ export function pasosDeRespaldo(pasos: Pasos): void {
     const { alquilerDelLocal } = await m.app.tienda.consultable.configuracion()
     expect(alquilerDelLocal).toBeNull()
   })
+
+  // RN-RE-11: el costo guardado en la configuración tiene el tipo, el monto en centavos y los días
+  // que describe el escenario (el texto pasa por el mismo convertidor que la pantalla).
+  afirmacion(
+    pasos,
+    'el costo del local guardado es {string} {string} los días {string}',
+    async (m: Mundo, monto: string, frecuencia: string, dias: string) => {
+      const { alquilerDelLocal } = await m.app.tienda.consultable.configuracion()
+      expect(alquilerDelLocal).toEqual(alquilerDeTextos(frecuencia, monto, dias))
+    },
+  )
 
   // RN-RE-03: Restaurar copia muestra el resumen y pide las dos confirmaciones.
   async function prepararRestauracion(m: Mundo): Promise<string> {

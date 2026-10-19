@@ -1,7 +1,7 @@
 import { createPinia } from 'pinia'
 import { expect } from 'vitest'
 import { useEstadoGlobal } from '@/app/estado-global'
-import { RUTA_DEL_ALQUILER, RUTA_PARA_COMPRAR } from '@/modules/alertas'
+import { RUTA_DE_CONTROL, RUTA_PARA_COMPRAR } from '@/modules/alertas'
 import { sumarDias } from '@/shared/domain/fecha'
 import { PRESENTACION_DE_ESTADO, type EstadoVisual } from '@/shared/ui/presentacion-estado'
 import type { Mundo } from './mundo'
@@ -10,7 +10,7 @@ import { accion, afirmacion, preparacion, type Pasos } from './registro'
 /** Adónde lleva tocar una notificación, por el nombre de la pantalla (M5: rutas del plan 13). */
 const RUTAS_DE_PANTALLA: Record<string, string> = {
   'Para comprar': RUTA_PARA_COMPRAR,
-  Control: RUTA_DEL_ALQUILER,
+  Control: RUTA_DE_CONTROL,
 }
 
 /**
@@ -174,7 +174,7 @@ export function pasosDeAlertas(pasos: Pasos): void {
 
   afirmacion(pasos, 'no se envía la notificación del local', (m: Mundo) => {
     const enviadas = m.app.notificador.mostradas.slice(m.notificacionesAntes)
-    expect(enviadas.filter((n) => n.url === RUTA_DEL_ALQUILER)).toEqual([])
+    expect(enviadas.filter((n) => n.url === RUTA_DE_CONTROL)).toEqual([])
   })
 
   accion(pasos, 'cierro el resumen', async (m: Mundo) => {

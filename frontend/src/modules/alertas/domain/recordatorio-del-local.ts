@@ -10,7 +10,7 @@ export interface RecordatorioDelLocal {
 }
 
 /** RN-AL-11: tocar la notificación del pago abre Control. Su `url` es también su etiqueta propia. */
-export const RUTA_DEL_ALQUILER = '/control'
+export const RUTA_DE_CONTROL = '/control'
 
 const VENTANA_EN_DIAS = 2
 

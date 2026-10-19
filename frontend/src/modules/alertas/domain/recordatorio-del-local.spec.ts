@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AlquilerDelLocal } from '@/shared/contratos/configuracion'
-import { RUTA_DEL_ALQUILER, recordatorioDelLocal } from './recordatorio-del-local'
+import { RUTA_DE_CONTROL, recordatorioDelLocal } from './recordatorio-del-local'
 
 const mensual20: AlquilerDelLocal = { tipo: 'MENSUAL', montoCentimos: 120000, dias: [20] }
 
@@ -57,6 +57,6 @@ describe('recordatorioDelLocal (RN-AL-10)', () => {
   })
 
   it('RN-AL-11: el recordatorio se abre en Control', () => {
-    expect(RUTA_DEL_ALQUILER).toBe('/control')
+    expect(RUTA_DE_CONTROL).toBe('/control')
   })
 })
