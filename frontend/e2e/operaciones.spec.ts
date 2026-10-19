@@ -7,6 +7,12 @@ import {
 import { abrir } from './utilidades/navegacion'
 import { abrirTiendaLista } from './utilidades/tienda'
 import {
+  abrirDetalleDeVenta,
+  agregarAlCarrito,
+  cerrarDetalleDeVenta,
+  totalDeLaVenta,
+} from './utilidades/recorridos'
+import {
   CARBON,
   cambiarCantidadEnLista,
   crearProducto,
@@ -25,22 +31,18 @@ import {
  * tocando la pantalla como lo haría la persona.
  */
 
-const resultados = (page: Page) => page.getByRole('list', { name: 'Resultados' })
 const lineaDe = (page: Page, nombre: string) =>
   page.locator('.lista-del-carrito').getByRole('group', { name: nombre })
 
+/** Busca y toca el producto; en Vender en celular deja el detalle del panel abierto. */
 async function agregarBuscando(page: Page, texto: string, nombre: string): Promise<void> {
-  await page.getByLabel('Buscar producto').fill(texto)
-  await resultados(page)
-    .getByRole('button', { name: new RegExp(`^${nombre}`) })
-    .click()
-  await expect(lineaDe(page, nombre)).toBeVisible()
+  await agregarAlCarrito(page, texto, nombre)
 }
 
 /**
  * Plan 17, ronda 1 (RN-UX-02): la forma compacta de la BarraDeTotal es SOLO para letra Muy
  * grande en 320–360 px. Con la letra por defecto (Grande) en celulares comunes y en la columna
- * del carrito en PC, el total sigue a 1.6rem y "Cobrar" va en su propia fila, a todo el ancho.
+ * del carrito en PC, el total sigue a 1.6rem y "Registrar llegada" va en su propia fila, a todo el ancho.
  */
 test.describe('BarraDeTotal fuera de la forma compacta', () => {
   for (const ancho of [360, 412, 1280]) {
@@ -51,7 +53,8 @@ test.describe('BarraDeTotal fuera de la forma compacta', () => {
       await page.setViewportSize({ width: ancho, height: 800 })
       await abrirTiendaLista(page, './')
       await crearProducto(page, LEJIA)
-      await abrir(page, './vender')
+      // La BarraDeTotal ya no es de Vender (usa el panel de venta): se mide en Llegó mercadería.
+      await abrir(page, './recibir')
       await agregarBuscando(page, 'lejia', 'Lejía 1 L')
       const m = await page.evaluate(() => {
         const contenido = document.querySelector<HTMLElement>('.barra-de-total .contenido')!
@@ -77,8 +80,8 @@ test.describe('BarraDeTotal fuera de la forma compacta', () => {
   }
 })
 
-test.describe('Vender (HU-OP-01, HU-OP-02)', () => {
-  test('criterio de éxito 1: una venta de un producto en menos de 15 s desde Inicio, con vuelto y Deshacer', async ({
+test.describe('Vender (HU-OP-01, RN-OP-22)', () => {
+  test('criterio de éxito 1: una venta de un producto en menos de 15 s desde Inicio, con el panel de venta y Deshacer', async ({
     page,
   }) => {
     // Plan 14: la tienda ya hizo la primera vez; Inicio es el de todos los días.
@@ -86,16 +89,13 @@ test.describe('Vender (HU-OP-01, HU-OP-02)', () => {
     const lejia = await crearProducto(page, LEJIA)
     await venderPorCasoDeUso(page, lejia, '1') // ya es uno de los más vendidos
     await abrir(page, './')
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Hola, Bodega Rosita/)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^BODEGA ROSITA/)
 
     const inicio = Date.now()
     // El botón "Vender" de Inicio (no el enlace de la navegación).
     await page.getByRole('button', { name: 'Vender' }).click()
     await page.locator('.accesos-rapidos').getByRole('button', { name: 'Lejía 1 L' }).click()
-    await expect(page.locator('.barra-de-total .total')).toHaveText('S/ 3.50')
-    await page.getByRole('button', { name: 'Cobrar' }).click()
-    await page.getByRole('button', { name: 'S/ 20', exact: true }).click()
-    await expect(page.locator('.selector-de-billetes .mensaje')).toHaveText(/^Vuelto S\/\s16\.50$/)
+    await expect(totalDeLaVenta(page)).toHaveText('S/ 3.50')
     await page.getByRole('button', { name: 'Confirmar venta' }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'Venta registrada' })).toBeVisible()
     const segundos = (Date.now() - inicio) / 1000
@@ -111,10 +111,11 @@ test.describe('Vender (HU-OP-01, HU-OP-02)', () => {
     )
     await expect(resultado.getByRole('button', { name: 'Cerrar' })).toBeFocused()
     await expect.poll(() => stockDe(page, lejia)).toBe(9)
+    await abrirDetalleDeVenta(page)
     await expect(lineaDe(page, 'Lejía 1 L')).toBeVisible()
   })
 
-  test('r1 #2 (RN-UX-02): con el aviso Deshacer y la barra del total a la vez, hay al menos 8 px entre los dos', async ({
+  test('r1 #2 (RN-UX-02): con el aviso Deshacer y el panel del total a la vez, hay al menos 8 px entre los dos', async ({
     page,
   }) => {
     await usarLetra(page, 'MUY_GRANDE')
@@ -123,13 +124,14 @@ test.describe('Vender (HU-OP-01, HU-OP-02)', () => {
     await crearProducto(page, CARBON)
     await abrir(page, './vender')
     await agregarBuscando(page, 'lejia', 'Lejía 1 L')
-    await page.getByRole('button', { name: 'Cobrar' }).click()
     await page.getByRole('button', { name: 'Confirmar venta' }).click()
     await page.getByRole('button', { name: 'Nueva venta' }).click()
     await agregarBuscando(page, 'carbon', 'Carbón')
     await expect(page.locator('.aviso-deshacer')).toBeVisible()
     const separacion = await page.evaluate(() => {
-      const barra = document.querySelector('.barra-de-total')!.getBoundingClientRect()
+      const barra = document
+        .querySelector('.panel-de-venta .hoja, .barra-de-total')!
+        .getBoundingClientRect()
       const deshacer = document.querySelector('.aviso-deshacer .deshacer')!.getBoundingClientRect()
       // Uno arriba del otro (celular) o en columnas distintas (PC): la distancia más corta.
       const vertical = Math.max(deshacer.top - barra.bottom, barra.top - deshacer.bottom)
@@ -150,6 +152,85 @@ test.describe('Vender (HU-OP-01, HU-OP-02)', () => {
     await expect(lineaDe(page, 'Lejía 1 L').getByRole('alert')).toHaveText(
       'Solo quedan 10 unid. de Lejía 1 L. Cambia la cantidad o registra la llegada de mercadería.',
     )
+  })
+})
+
+test.describe('Panel de venta (RN-OP-22)', () => {
+  test('celular: sube compacto, abre con Ver detalle, dice cuánto queda y confirma desde el compacto', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'celular', 'El panel deslizable es de celular (< 1024 px)')
+    await abrirTiendaLista(page, './')
+    const lejia = await crearProducto(page, LEJIA)
+    await crearProducto(page, CARBON)
+    await abrir(page, './vender')
+    await expect(page.locator('.panel-de-venta')).toHaveCount(0)
+
+    await page.getByLabel('Buscar producto').fill('lejia')
+    await page
+      .getByRole('list', { name: 'Resultados' })
+      .getByRole('button', { name: /^Lejía 1 L/ })
+      .click()
+    const panel = page.getByRole('region', { name: 'En esta venta · 1 producto' })
+    await expect(panel).toBeVisible()
+    await expect(totalDeLaVenta(page)).toHaveText('S/ 3.50')
+    await expect(panel.getByRole('button', { name: 'Ver detalle' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+    // Compacto: no tapa la grilla (el buscador sigue a la vista) y mide lo mínimo.
+    await expect(page.locator('.lista-del-carrito')).toHaveCount(0)
+    const caja = (await panel.boundingBox())!
+    expect(caja.height, 'el panel compacto mide poco').toBeLessThan(200)
+    await expect(page.getByLabel('Buscar producto')).toBeInViewport()
+
+    await panel.getByRole('button', { name: 'Ver detalle' }).click()
+    const linea = lineaDe(page, 'Lejía 1 L')
+    await expect(linea.getByText('Quedan 9 unid.')).toBeVisible()
+    await expect(page.getByRole('radio', { name: 'Ahora' })).toBeVisible()
+    await linea.getByLabel('Cantidad (unid.)').fill('10')
+    await expect(linea.getByText('Se acaba')).toBeVisible()
+    await linea.getByLabel('Cantidad (unid.)').fill('3')
+    await expect(linea.getByText('Quedan 7 unid.')).toBeVisible()
+    await esperarSinDesplazamientoHorizontal(page)
+
+    await panel.getByRole('button', { name: 'Cerrar' }).click()
+    await expect(panel.getByRole('button', { name: 'Ver detalle' })).toBeFocused()
+    await expect(totalDeLaVenta(page)).toHaveText('S/ 10.50')
+    await page.getByRole('button', { name: 'Confirmar venta' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Venta registrada' })).toBeVisible()
+    expect(await stockDe(page, lejia)).toBe(7)
+  })
+
+  test('celular: quitar la última línea baja el panel', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'celular', 'El panel deslizable es de celular (< 1024 px)')
+    await abrirTiendaLista(page, './')
+    await crearProducto(page, LEJIA)
+    await abrir(page, './vender')
+    await agregarBuscando(page, 'lejia', 'Lejía 1 L')
+    await lineaDe(page, 'Lejía 1 L').getByRole('button', { name: 'Quitar Lejía 1 L' }).click()
+    await expect(page.locator('.panel-de-venta')).toHaveCount(0)
+    await expect(page.getByRole('heading', { level: 1, name: 'Vender' })).toBeFocused()
+  })
+
+  test('PC: el carrito va a la derecha, sin panel deslizable, con Confirmar venta', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'pc', 'El carrito a la derecha es de PC (≥ 1024 px)')
+    await abrirTiendaLista(page, './')
+    const lejia = await crearProducto(page, LEJIA)
+    await abrir(page, './vender')
+    await agregarBuscando(page, 'lejia', 'Lejía 1 L')
+    await expect(page.locator('.panel-de-venta')).toHaveCount(0)
+    const linea = lineaDe(page, 'Lejía 1 L')
+    await expect(linea.getByText('Quedan 9 unid.')).toBeVisible()
+    await expect(page.getByRole('radio', { name: 'Ahora' })).toBeVisible()
+    const buscador = (await page.getByLabel('Buscar producto').boundingBox())!
+    const carrito = (await linea.boundingBox())!
+    expect(carrito.x, 'el carrito queda a la derecha del buscador').toBeGreaterThan(buscador.x + buscador.width - 1)
+    await page.getByRole('button', { name: 'Confirmar venta' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Venta registrada' })).toBeVisible()
+    expect(await stockDe(page, lejia)).toBe(9)
   })
 })
 
@@ -344,7 +425,9 @@ async function recorrerElCarritoConTab(page: Page, veces: number): Promise<FocoM
       const activo = document.activeElement
       if (!activo?.closest('.lista-del-carrito')) return null
       const caja = activo.getBoundingClientRect()
-      const barra = document.querySelector('.barra-de-total')!.getBoundingClientRect()
+      const barra = document
+        .querySelector('.pie-del-panel, .barra-de-total')!
+        .getBoundingClientRect()
       return { arriba: caja.top, abajo: caja.bottom, barra: barra.top, nombre: activo.outerHTML }
     })
     if (medida) medidas.push(medida)
@@ -352,8 +435,8 @@ async function recorrerElCarritoConTab(page: Page, veces: number): Promise<FocoM
   return medidas
 }
 
-test.describe('WCAG 2.4.11: el foco nunca queda tapado por la BarraDeTotal', () => {
-  test('al recorrer el carrito con Tab, cada control enfocado queda entero por encima de la barra', async ({
+test.describe('WCAG 2.4.11: el foco nunca queda tapado por el total y Confirmar venta', () => {
+  test('al recorrer el carrito con Tab, cada control enfocado queda entero por encima del total', async ({
     page,
   }) => {
     await usarLetra(page, 'MUY_GRANDE')
@@ -392,7 +475,10 @@ const TEXTOS_SIN_CORTES = [
   '.operacion .productos',
   '.operacion .monto',
   '.barra-de-total .total',
+  '.panel-de-venta .total',
+  '.panel-de-venta .titulo-carrito',
   '.fila-de-carrito .precio',
+  '.fila-de-carrito .quedan',
 ].join(', ')
 
 /**
@@ -424,10 +510,9 @@ test.describe('Pantallas de operaciones: responsive, accesibles y tocables (letr
       await abrir(page, './vender')
       await page.locator('.accesos-rapidos').getByRole('button', { name: 'Lejía 1 L' }).click()
       await agregarBuscando(page, 'carbon', 'Carbón')
-      await revisar('Vender con carrito')
-      await page.getByRole('button', { name: 'Cobrar' }).click()
-      await page.getByRole('button', { name: 'S/ 50', exact: true }).click()
-      await revisar('Cobrar')
+      await revisar('Vender con carrito (panel abierto en celular)')
+      await cerrarDetalleDeVenta(page)
+      await revisar('Vender: panel compacto')
       await page.getByRole('button', { name: 'Confirmar venta' }).click()
       await expect(page.locator('.aviso-deshacer')).toBeVisible()
       await revisar('Venta registrada')

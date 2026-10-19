@@ -130,6 +130,12 @@ export async function esperarOrdenDeFocoLogico(page: Page, pasos = 80): Promise<
       }
       const todos = Array.from(document.querySelectorAll('*'))
       const caja = el.getBoundingClientRect()
+      // Posición en la página: además del scroll de la ventana, lo que se desplazó cada
+      // contenedor que se desplaza por dentro (la hoja del panel de venta abierta).
+      let desplazado = window.scrollY
+      for (let padre = el.parentElement; padre; padre = padre.parentElement) {
+        if (/(auto|scroll)/.test(getComputedStyle(padre).overflowY)) desplazado += padre.scrollTop
+      }
       const zona = el.matches('.saltar-al-contenido')
         ? 'salto'
         : el.closest('dialog[open]')
@@ -146,8 +152,8 @@ export async function esperarOrdenDeFocoLogico(page: Page, pasos = 80): Promise<
         zona,
         orden: todos.indexOf(el),
         despuesDelAnterior,
-        arriba: caja.top + window.scrollY,
-        abajo: caja.bottom + window.scrollY,
+        arriba: caja.top + desplazado,
+        abajo: caja.bottom + desplazado,
         izquierda: caja.left,
         derecha: caja.right,
         visibleEnPantalla: caja.width > 0 && caja.height > 0 && fraccionALaVista(el, caja) >= 0.5,

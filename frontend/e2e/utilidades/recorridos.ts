@@ -75,7 +75,7 @@ export async function hacerPrimeraVez(
   await page.getByRole('button', { name: 'Más tarde' }).click()
   await expect(h1(page)).toHaveText('Ahora contemos lo que tienes')
   await page.getByRole('button', { name: 'Terminar' }).click()
-  await expect(h1(page)).toHaveText(new RegExp(`^Hola, ${nombre}`))
+  await expect(h1(page)).toHaveText(new RegExp(`^${nombre.toLocaleUpperCase('es')}`))
 }
 
 export interface ProductoPorPantalla {
@@ -133,15 +133,49 @@ export async function irA(
 export const lineaDelCarrito = (page: Page, nombre: string) =>
   page.locator('.lista-del-carrito').getByRole('group', { name: nombre })
 
-/** En Vender o Recibir: busca y toca el producto; queda en el carrito. */
+/** Vender en celular (< 1024 px): ahí la venta va en el panel de venta (RN-OP-22), no en columna. */
+function esVenderEnCelular(page: Page): boolean {
+  return /\/vender(\?|$)/.test(page.url()) && (page.viewportSize()?.width ?? 0) < 1024
+}
+
+const alternarDelPanel = (page: Page) => page.locator('.panel-de-venta .alternar')
+
+/** Celular: abre el detalle del panel de venta (líneas, "quedan", ¿Cuándo fue?). Si ya está abierto, nada. */
+export async function abrirDetalleDeVenta(page: Page): Promise<void> {
+  if ((page.viewportSize()?.width ?? 0) >= 1024) return // PC: el carrito ya está a la vista
+  const alternar = alternarDelPanel(page)
+  await expect(alternar).toBeVisible()
+  if ((await alternar.getAttribute('aria-expanded')) === 'false') await alternar.click()
+  await expect(alternar).toHaveAttribute('aria-expanded', 'true')
+}
+
+/** Celular: cierra el detalle del panel de venta si estaba abierto (vuelve al compacto). */
+export async function cerrarDetalleDeVenta(page: Page): Promise<void> {
+  const alternar = alternarDelPanel(page)
+  if ((await alternar.count()) === 0) return
+  if ((await alternar.getAttribute('aria-expanded')) === 'true') await alternar.click()
+  await expect(alternar).toHaveAttribute('aria-expanded', 'false')
+}
+
+/**
+ * En Vender o Recibir: busca y toca el producto; queda en el carrito. En Vender en celular deja
+ * el detalle del panel abierto para ver la línea (y lo cierra antes para volver a buscar).
+ */
 export async function agregarAlCarrito(page: Page, buscado: string, nombre: string): Promise<void> {
+  const enPanel = esVenderEnCelular(page)
+  if (enPanel) await cerrarDetalleDeVenta(page)
   await page.getByLabel('Buscar producto').fill(buscado)
   await page
     .getByRole('list', { name: 'Resultados' })
     .getByRole('button', { name: new RegExp(`^${nombre}`) })
     .click()
+  if (enPanel) await abrirDetalleDeVenta(page)
   await expect(lineaDelCarrito(page, nombre)).toBeVisible()
 }
+
+/** El total de la venta en curso: el del panel (celular) o el de la barra del carrito (PC). */
+export const totalDeLaVenta = (page: Page) =>
+  page.locator('.panel-de-venta .total, .barra-de-total .total').first()
 
 export interface LineaDeVenta {
   buscado: string
@@ -150,16 +184,13 @@ export interface LineaDeVenta {
 }
 
 /**
- * Una venta entera desde Vender: agrega las líneas, cambia la cantidad con "+", Cobrar, paga con
- * un billete (o "Exacto") y confirma. Con `vueltoEsperado`, antes de confirmar verifica el
- * mensaje del vuelto ("Vuelto S/ 3.00"). Termina en "Venta registrada".
+ * Una venta entera desde Vender: agrega las líneas, cambia la cantidad con "+", verifica el total
+ * y toca Confirmar venta (RN-OP-22). Termina en "Venta registrada".
  */
 export async function venderPorPantalla(
   page: Page,
   lineas: readonly LineaDeVenta[],
-  billete: 'S/ 10' | 'S/ 20' | 'S/ 50' | 'S/ 100' | 'Exacto',
   totalEsperado: string,
-  vueltoEsperado?: string,
 ): Promise<void> {
   await expect(h1(page)).toHaveText('Vender')
   for (const linea of lineas) {
@@ -173,12 +204,7 @@ export async function venderPorPantalla(
       String(linea.cantidad),
     )
   }
-  await expect(page.locator('.barra-de-total .total')).toHaveText(comoSeLee(totalEsperado))
-  await page.getByRole('button', { name: 'Cobrar' }).click()
-  await page.getByRole('button', { name: billete, exact: true }).click()
-  if (vueltoEsperado !== undefined) {
-    await esperarTexto(page.locator('.selector-de-billetes .mensaje'), vueltoEsperado)
-  }
+  await expect(totalDeLaVenta(page)).toHaveText(comoSeLee(totalEsperado))
   await page.getByRole('button', { name: 'Confirmar venta' }).click()
   await expect(h1(page)).toHaveText('Venta registrada')
 }

@@ -5,7 +5,7 @@
 import { expect, type Page } from '@playwright/test'
 import { prepararHistoriaDeDemostracion, type IdsDeDemostracion } from './historia-de-demostracion'
 import { abrir } from './navegacion'
-import { agregarAlCarrito, lineaDelCarrito } from './recorridos'
+import { agregarAlCarrito, cerrarDetalleDeVenta, lineaDelCarrito } from './recorridos'
 import { crearProducto } from './tienda'
 
 export interface Pantalla {
@@ -86,6 +86,7 @@ export function pantallasDeLaTienda(ids: IdsDeDemostracion): Pantalla[] {
     { nombre: 'Primera vez: contar', ruta: './bienvenida?paso=contar' },
     // Vender
     {
+      // Celular: el panel de venta abierto (líneas, "quedan" y ¿Cuándo fue?); en PC, el carrito.
       nombre: 'Vender con carrito',
       ruta: './vender',
       preparar: async (page) => {
@@ -94,12 +95,12 @@ export function pantallasDeLaTienda(ids: IdsDeDemostracion): Pantalla[] {
       },
     },
     {
-      nombre: 'Vender: Cobrar',
+      // Celular: el panel de venta compacto (RN-OP-22); en PC, el carrito de la derecha.
+      nombre: 'Vender: panel compacto',
       ruta: './vender',
       preparar: async (page) => {
         await agregarAlCarrito(page, 'jabon', 'Jabón Bolívar')
-        await page.getByRole('button', { name: 'Cobrar' }).click()
-        await page.getByRole('button', { name: 'S/ 50', exact: true }).click()
+        await cerrarDetalleDeVenta(page)
       },
     },
     {
@@ -107,7 +108,6 @@ export function pantallasDeLaTienda(ids: IdsDeDemostracion): Pantalla[] {
       ruta: './vender',
       preparar: async (page) => {
         await agregarAlCarrito(page, 'jabon', 'Jabón Bolívar')
-        await page.getByRole('button', { name: 'Cobrar' }).click()
         await page.getByRole('button', { name: 'Confirmar venta' }).click()
         await expect(page.locator('.aviso-deshacer')).toBeVisible()
       },

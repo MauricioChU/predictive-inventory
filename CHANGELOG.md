@@ -4,6 +4,15 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+### Cambiado
+
+- Vender: al elegir un producto sube un panel con lo que llevas, cuánto queda de cada uno y el botón para confirmar.
+- Inicio muestra la fecha en mayúsculas y el nombre de tu tienda sin saludo; Ajustes queda solo con la tuerca.
+
+### Quitado
+
+- Ya no se calcula el vuelto ni se pregunta con cuánto pagan.
+
 ## [0.3.1] · 2026-10-19
 
 ### Cambiado

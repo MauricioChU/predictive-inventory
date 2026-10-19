@@ -77,7 +77,7 @@ test.describe('RN-SIS-09 con la interfaz (medición opcional)', () => {
     await abrir(page, './ajustes')
     await prepararTienda(page, [])
     await abrir(page, './')
-    await expect(h1(page)).toHaveText(/^Hola, Bodega Rosita/)
+    await expect(h1(page)).toHaveText(/^BODEGA ROSITA/)
     await frenarCpu(page, 4)
 
     // Abrir Control desde la navegación, desde Inicio.
@@ -92,8 +92,6 @@ test.describe('RN-SIS-09 con la interfaz (medición opcional)', () => {
     await irA(page, 'Vender')
     for (let i = 0; i < VECES; i += 1) {
       await page.locator('.accesos-rapidos button').first().click()
-      await page.getByRole('button', { name: 'Cobrar' }).click()
-      await page.getByRole('button', { name: 'Exacto', exact: true }).click()
       await expect(page.getByRole('button', { name: 'Confirmar venta' })).toBeEnabled()
       venta.push(await medirToque(page, '#contenido button', 'Confirmar venta', VENTA_LISTA))
       await page.getByRole('button', { name: 'Nueva venta' }).click()

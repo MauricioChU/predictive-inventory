@@ -44,7 +44,7 @@ test.describe('Recorrido: los avisos en el celular', () => {
 
     // Una venta deja poca Lejía: un aviso de ese producto.
     await irA(page, 'Vender')
-    await venderPorPantalla(page, [{ buscado: 'lejia', nombre: LEJIA, cantidad: 3 }], 'S/ 20', 'S/ 10.50')
+    await venderPorPantalla(page, [{ buscado: 'lejia', nombre: LEJIA, cantidad: 3 }], 'S/ 10.50')
     await expect.poll(() => notificacionesMostradas(page)).toHaveLength(1)
     const [deUno] = await notificacionesMostradas(page)
     expect(deUno!.texto).toMatch(comoSeLee('Queda poco: Lejía Tradicional 1 L (2 unid.)'))
@@ -58,7 +58,6 @@ test.describe('Recorrido: los avisos en el celular', () => {
         { buscado: 'jabon', nombre: 'Jabón Bolívar', cantidad: 2 },
         { buscado: 'bolsas', nombre: 'Bolsas de basura x10', cantidad: 2 },
       ],
-      'S/ 10',
       'S/ 9.00',
     )
     await expect.poll(() => notificacionesMostradas(page)).toHaveLength(2)
@@ -90,6 +89,6 @@ test.describe('Recorrido: los avisos en el celular', () => {
     await abrir(otra, direccionDeLaNotificacion(deUno!.url))
     await expect(h1(otra)).toHaveText(LEJIA)
     await otra.getByRole('button', { name: 'Volver' }).click()
-    await expect(h1(otra)).toHaveText(/^Hola, Bodega Rosita/)
+    await expect(h1(otra)).toHaveText(/^BODEGA ROSITA/)
   })
 })

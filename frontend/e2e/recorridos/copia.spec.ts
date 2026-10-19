@@ -81,7 +81,6 @@ test.describe('Recorrido: guardar y restaurar una copia', () => {
         { buscado: 'lejia', nombre: LEJIA, cantidad: 2 },
         { buscado: 'jabon', nombre: 'Jabón Bolívar', cantidad: 3 },
       ],
-      'S/ 20',
       'S/ 13.00',
     )
     const antes = await loQueSeVe(page)
@@ -134,7 +133,7 @@ test.describe('Recorrido: guardar y restaurar una copia', () => {
     await nuevo.getByRole('button', { name: 'Sí, restaurar' }).click()
     await expect(h1(nuevo)).toHaveText('Copia restaurada')
     await nuevo.getByRole('button', { name: 'Ir al inicio' }).click()
-    await expect(h1(nuevo)).toHaveText(/^Hola, Bodega Rosita/)
+    await expect(h1(nuevo)).toHaveText(/^BODEGA ROSITA/)
     await expect(nuevo.getByRole('navigation')).toBeVisible()
 
     expect(await loQueSeVe(nuevo)).toEqual(antes)
