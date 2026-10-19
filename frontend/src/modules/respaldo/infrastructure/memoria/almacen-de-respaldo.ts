@@ -5,6 +5,11 @@ import type { DatosDelRespaldo } from '../../domain/formato-de-respaldo'
 import type { AlmacenDeRespaldo } from '../../application/puertos'
 import { base64ABlob, blobABase64 } from '../navegador/imagenes'
 
+/** Una configuración guardada antes del costo del local lo trae sin definir: en la copia es `null`. */
+function conLocal(c: ConfiguracionRegistro | undefined): ConfiguracionRegistro | null {
+  return c ? { ...c, alquilerDelLocal: c.alquilerDelLocal ?? null } : null
+}
+
 /**
  * Lee y reemplaza todo lo que guarda un respaldo, sobre el mismo AlmacenEnMemoria que usan
  * las demás pruebas de Respaldo. No toca 'sistema' en la tabla 'configuracion' (el estado
@@ -24,9 +29,9 @@ export class AlmacenDeRespaldoEnMemoria implements AlmacenDeRespaldo {
   async leerTodo(): Promise<DatosDelRespaldo> {
     const leer = async () => ({
       registros: {
-        configuracion:
-          (this.almacen.obtener('configuracion', 'negocio') as ConfiguracionRegistro | undefined) ??
-          null,
+        configuracion: conLocal(
+          this.almacen.obtener('configuracion', 'negocio') as ConfiguracionRegistro | undefined,
+        ),
         categorias: this.almacen.todos('categorias'),
         productos: this.almacen.todos('productos'),
         operaciones: this.almacen.todos('operaciones'),

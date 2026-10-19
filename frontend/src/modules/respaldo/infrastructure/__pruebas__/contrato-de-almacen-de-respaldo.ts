@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest'
+import type { AlquilerDelLocal } from '../../../../shared/contratos/configuracion'
 import type {
   ConfiguracionRegistro,
   EstadoDelSistemaRegistro,
@@ -127,6 +128,29 @@ export function probarAlmacenDeRespaldo(crear: () => EntornoDeAlmacenDeRespaldo)
     await e.sembrar('configuracion', NEGOCIO, SISTEMA)
     const datos = await e.almacen.leerTodo()
     expect(datos.configuracion).toEqual(NEGOCIO)
+  })
+
+  it('leerTodo conserva el costo del local y completa con null una configuración anterior sin él (RN-RE-11)', async () => {
+    const alquiler: AlquilerDelLocal = { tipo: 'QUINCENAL', montoCentimos: 60000, dias: [5, 20] }
+    const e = crear()
+    await e.sembrar('configuracion', { ...NEGOCIO, alquilerDelLocal: alquiler })
+    expect((await e.almacen.leerTodo()).configuracion?.alquilerDelLocal).toEqual(alquiler)
+
+    const anterior = crear()
+    const { alquilerDelLocal: _sin, ...sinLocal } = NEGOCIO
+    await anterior.sembrar('configuracion', sinLocal as ConfiguracionRegistro)
+    expect((await anterior.almacen.leerTodo()).configuracion?.alquilerDelLocal).toBeNull()
+  })
+
+  it('reemplazarTodo guarda el costo del local de la copia (RN-RE-11)', async () => {
+    const alquiler: AlquilerDelLocal = { tipo: 'MENSUAL', montoCentimos: 120000, dias: [20] }
+    const e = crear()
+    await e.almacen.reemplazarTodo({
+      ...DATOS_VACIOS,
+      configuracion: { ...NEGOCIO, alquilerDelLocal: alquiler },
+    })
+    const negocio = (await e.leer('configuracion')).find((r) => r.clave === 'negocio')
+    expect(negocio).toMatchObject({ alquilerDelLocal: alquiler })
   })
 
   it('leerTodo trae categorías, productos, operaciones y avisos tal como están guardados', async () => {

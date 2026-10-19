@@ -4,6 +4,10 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+### Nuevo
+
+- Control muestra si lo que llevas ganado ya cubre el alquiler del local, y la app te recuerda el pago dos días antes.
+
 ## [0.1.0] · 2026-10-17
 
 ### Nuevo

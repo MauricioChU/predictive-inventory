@@ -86,6 +86,12 @@ describe('leerRespaldo: versión', () => {
       INVALIDA,
     )
   })
+
+  it('RN-RE-05: la versión 3 es más nueva que la de la app y pide actualizar', () => {
+    expect(() => leerRespaldo(JSON.stringify({ ...clon(), versionDeFormato: 3 }))).toThrow(
+      'Actualiza la app para abrir este respaldo',
+    )
+  })
 })
 
 const INSTANTES_INVALIDOS = [

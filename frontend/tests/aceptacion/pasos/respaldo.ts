@@ -260,15 +260,41 @@ export function pasosDeRespaldo(pasos: Pasos): void {
     m.textoCopia = await guardarCopiaDeEstaTienda(m)
   })
 
-  // RN-RE-05: una copia hecha por una versión futura de la app.
+  // RN-RE-05 / RN-RE-11: una copia hecha por otra versión de la app. La "1" es de antes del costo
+  // del local (su configuración no trae `alquilerDelLocal`) y la "3" de una versión futura.
   preparacion(
     pasos,
     'una copia con versión de formato {string}',
     async (m: Mundo, version: string) => {
-      const respaldo = JSON.parse(await guardarCopiaDeEstaTienda(m)) as Record<string, unknown>
+      const respaldo = JSON.parse(await guardarCopiaDeEstaTienda(m)) as {
+        datos: { configuracion: Record<string, unknown> | null }
+      } & Record<string, unknown>
+      if (Number(version) === 1 && respaldo.datos.configuracion) {
+        delete respaldo.datos.configuracion.alquilerDelLocal
+        // Esta tienda ya paga un local: al abrir la copia vieja, eso debe quedar sin configurar.
+        await m.app.tienda.actualizarConfiguracion({
+          alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 10000, dias: [1] },
+        })
+      }
       m.textoCopia = JSON.stringify({ ...respaldo, versionDeFormato: Number(version) })
     },
   )
+
+  // RN-RE-11: la copia guarda el costo del local. Antes de restaurar se deja el local sin
+  // configurar, y el paso comprueba que volvió igual que cuando se guardó la copia.
+  accion(pasos, 'guardo una copia y la restauro', async (m: Mundo) => {
+    const { alquilerDelLocal: guardado } = await m.app.tienda.consultable.configuracion()
+    m.textoCopia = await guardarCopiaDeEstaTienda(m)
+    await m.app.tienda.actualizarConfiguracion({ alquilerDelLocal: null })
+    await restaurar(m, m.textoCopia)
+    const { alquilerDelLocal: restaurado } = await m.app.tienda.consultable.configuracion()
+    expect(restaurado).toEqual(guardado)
+  })
+
+  afirmacion(pasos, 'el costo del local está sin configurar', async (m: Mundo) => {
+    const { alquilerDelLocal } = await m.app.tienda.consultable.configuracion()
+    expect(alquilerDelLocal).toBeNull()
+  })
 
   // RN-RE-03: Restaurar copia muestra el resumen y pide las dos confirmaciones.
   async function prepararRestauracion(m: Mundo): Promise<string> {
