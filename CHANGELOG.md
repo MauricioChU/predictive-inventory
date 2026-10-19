@@ -4,6 +4,8 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+## [0.3.1] · 2026-10-19
+
 ### Cambiado
 
 - Inicio muestra la fecha y la hora, y los botones de Vender y Llegó mercadería quedan abajo, al alcance del pulgar.
@@ -43,6 +45,7 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 - Control: cuánto ganas, qué comprar y cuánto dinero necesitas, lo que más se vende, productos parados y "¿Necesito comprar?".
 - Guardar y restaurar copias, exportar a Excel e importar productos desde una plantilla.
 
+[0.3.1]: https://github.com/MauricioChU/predictive-inventory/releases/tag/v0.3.1
 [0.3.0]: https://github.com/MauricioChU/predictive-inventory/releases/tag/v0.3.0
 [0.2.0]: https://github.com/MauricioChU/predictive-inventory/releases/tag/v0.2.0
 [0.1.0]: https://github.com/MauricioChU/predictive-inventory/releases/tag/v0.1.0
