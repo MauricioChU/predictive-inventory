@@ -1,10 +1,14 @@
 import { expect, vi } from 'vitest'
+import type { AlquilerDelLocal } from '@/shared/contratos/configuracion'
+import { montoDelAlquilerDeTexto } from '@/shared/domain/alquiler-del-local'
 import { diaDe, diasEntre, sumarSegundos } from '@/shared/domain/fecha'
 import type { Mundo } from './mundo'
-import { accion, preparacion, type Pasos } from './registro'
+import { accion, lista, preparacion, type Pasos } from './registro'
 
 /** Pasos de contexto: la fecha, la configuración de la tienda y el estado del celular. */
 export function pasosDeContexto(pasos: Pasos): void {
+  pasosDelLocal(pasos)
+
   // "Hoy" no espera ni materializa nada: es el primer paso de todos los escenarios.
   pasos.paso('(que )hoy es {string}', (m: Mundo, texto: string) => {
     m.fijarHoy(texto)
@@ -113,5 +117,86 @@ export function pasosDeContexto(pasos: Pasos): void {
   // Sin pantallas todavía (plan 14): queda anotada para el botón que se toque en ella.
   accion(pasos, 'abro la pantalla {string}', (m: Mundo, pantalla: string) => {
     m.pantalla = pantalla
+  })
+}
+
+/** RN-AN-17: las tres respuestas de "¿Pagas alquiler por tu local?". */
+const FRECUENCIAS_DE_PAGO = {
+  'Una vez al mes': 'MENSUAL',
+  'Dos veces al mes': 'QUINCENAL',
+  'No pago (el local es mío)': 'NO_PAGA',
+} as const
+
+/** Un monto cualquiera válido para los pasos que solo dicen la frecuencia. */
+const MONTO_CUALQUIERA = '600.00'
+
+/**
+ * El costo del local como lo escribe el usuario (RN-AN-17). El monto pasa por el mismo
+ * convertidor que la pantalla (el error de más de dos decimales sale de ahí); lo demás lo
+ * valida `tienda.actualizarConfiguracion`.
+ */
+export function alquilerDeTextos(
+  frecuencia: string,
+  monto: string,
+  dias: string,
+): AlquilerDelLocal {
+  const tipo = FRECUENCIAS_DE_PAGO[frecuencia as keyof typeof FRECUENCIAS_DE_PAGO]
+  if (tipo === undefined) throw new Error(`Frecuencia de pago desconocida: "${frecuencia}"`)
+  if (tipo === 'NO_PAGA') return { tipo }
+  const montoCentimos = montoDelAlquilerDeTexto(monto).centimos
+  const numeros = lista(dias).map(Number)
+  return tipo === 'MENSUAL'
+    ? { tipo, montoCentimos, dias: [numeros[0] ?? Number.NaN] }
+    : { tipo, montoCentimos, dias: [numeros[0] ?? Number.NaN, numeros[1] ?? Number.NaN] }
+}
+
+/** Pasos del costo del local (RN-AN-17): los usan Control, Alertas y Respaldo. */
+export function pasosDelLocal(pasos: Pasos): void {
+  // Con el monto: "el local se paga "S/ 600.00" "Dos veces al mes" los días "5, 20"".
+  preparacion(
+    pasos,
+    '(que )el local se paga {string} {string} los días {string}',
+    async (m: Mundo, monto: string, frecuencia: string, dias: string) => {
+      await m.app.tienda.actualizarConfiguracion({
+        alquilerDelLocal: alquilerDeTextos(frecuencia, monto, dias),
+      })
+    },
+  )
+
+  // Solo la frecuencia: el monto no importa para la escena.
+  preparacion(
+    pasos,
+    '(que )el local se paga {string} los días {string}',
+    async (m: Mundo, frecuencia: string, dias: string) => {
+      await m.app.tienda.actualizarConfiguracion({
+        alquilerDelLocal: alquilerDeTextos(frecuencia, MONTO_CUALQUIERA, dias),
+      })
+    },
+  )
+
+  preparacion(
+    pasos,
+    '(que )el local está configurado como {string}',
+    async (m: Mundo, f: string) => {
+      await m.app.tienda.actualizarConfiguracion({ alquilerDelLocal: alquilerDeTextos(f, '', '') })
+    },
+  )
+
+  accion(
+    pasos,
+    'configuro el local con pago {string}, monto {string} y días {string}',
+    async (m: Mundo, frecuencia: string, monto: string, dias: string) => {
+      await m.app.tienda.actualizarConfiguracion({
+        alquilerDelLocal: alquilerDeTextos(frecuencia, monto, dias),
+      })
+      m.resultado = 'ok'
+    },
+  )
+
+  accion(pasos, 'configuro el local con {string}', async (m: Mundo, frecuencia: string) => {
+    await m.app.tienda.actualizarConfiguracion({
+      alquilerDelLocal: alquilerDeTextos(frecuencia, '', ''),
+    })
+    m.resultado = 'ok'
   })
 }

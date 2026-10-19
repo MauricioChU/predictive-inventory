@@ -62,10 +62,19 @@ export async function hacerPrimeraVezHastaCargar(
   await expect(h1(page)).toHaveText('¿Cómo quieres cargar tus productos?')
 }
 
-/** La primera vez completa, dejando los productos para después: termina en Inicio. */
-export async function hacerPrimeraVez(page: Page, nombre = 'Bodega Rosita'): Promise<void> {
-  await hacerPrimeraVezHastaCargar(page, nombre)
-  await page.getByRole('button', { name: 'Dejar para después' }).click()
+/**
+ * La primera vez completa, dejando los productos para después (RN-UX-16): paso 4 "Más tarde" →
+ * paso 5 "Terminar" → Inicio con el saludo.
+ */
+export async function hacerPrimeraVez(
+  page: Page,
+  nombre = 'Bodega Rosita',
+  letra: LetraDePantalla = 'Grande',
+): Promise<void> {
+  await hacerPrimeraVezHastaCargar(page, nombre, letra)
+  await page.getByRole('button', { name: 'Más tarde' }).click()
+  await expect(h1(page)).toHaveText('Ahora contemos lo que tienes')
+  await page.getByRole('button', { name: 'Terminar' }).click()
   await expect(h1(page)).toHaveText(new RegExp(`^Hola, ${nombre}`))
 }
 

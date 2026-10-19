@@ -85,7 +85,9 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
     de la barra lateral de 260 px: una letra por línea y los enlaces empujados fuera).
   -->
   <!-- data-app-montada: solo existe si la app arrancó de verdad (las E2E lo esperan). -->
-  <div class="layout-app" data-app-montada>
+  <!-- RN-UX-16: la primera vez no tiene navegación (no hay a dónde ir); sin ella, en PC el
+       contenido ocupa todo el ancho en vez de dejar vacía la columna de 260 px. -->
+  <div class="layout-app" :class="{ 'sin-navegacion': estadoGlobal.primeraVez }" data-app-montada>
     <main id="contenido" class="contenido" tabindex="-1">
       <RouterView />
     </main>
@@ -116,7 +118,11 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
           @cerrar="contextoAvisoDeshacer.cerrarResultado"
         />
       </div>
-      <BarraNavegacion class="navegacion" :contador-control="estadoGlobal.contadorDeAtencion" />
+      <BarraNavegacion
+        v-if="!estadoGlobal.primeraVez"
+        class="navegacion"
+        :contador-control="estadoGlobal.contadorDeAtencion"
+      />
     </div>
   </div>
 </template>
@@ -220,6 +226,13 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
     border-top: none;
     border-right: 1px solid var(--color-borde);
     padding: var(--espacio-4);
+  }
+  .layout-app.sin-navegacion {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .layout-app.sin-navegacion .contenido,
+  .layout-app.sin-navegacion .zona-aviso-deshacer {
+    grid-column: 1;
   }
   .zona-aviso-deshacer {
     --aviso-alto-maximo: calc(40dvh - var(--espacio-3) - var(--espacio-4));

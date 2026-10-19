@@ -13,6 +13,7 @@ const INICIO: InicioDeLaApp = {
   tamanoDeLetra: 'GRANDE',
   resumenDelDia: null,
   recordatorioDeCopia: null,
+  recordatorioDelLocal: null,
 }
 
 /** Pantallas falsas que anotan qué se montó y qué se desmontó, en orden. */

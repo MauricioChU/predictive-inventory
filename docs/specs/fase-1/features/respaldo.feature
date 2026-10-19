@@ -30,7 +30,7 @@ Característica: Respaldo, Excel e importación
   Escenario: Guardar una copia completa
     Cuando guardo una copia
     Entonces se genera el archivo "respaldo-bodega-rosita-2026-10-15-2030.json"
-    Y la copia tiene versión de formato "1"
+    Y la copia tiene versión de formato "2"
     Y el control de la copia indica "2" productos y "2" operaciones
     Y el control de la copia indica stock "12.5" para "Carbón"
     Y la copia no incluye existencias ni resúmenes diarios
@@ -69,7 +69,7 @@ Característica: Respaldo, Excel e importación
 
   @RN-RE-05
   Escenario: Una copia de una versión más nueva se rechaza
-    Dado una copia con versión de formato "2"
+    Dado una copia con versión de formato "3"
     Cuando restauro la copia
     Entonces el resultado es "error: Actualiza la app para abrir este respaldo"
 
@@ -138,3 +138,34 @@ Característica: Respaldo, Excel e importación
     Y que la última copia fue hace 3 días
     Cuando abro la app
     Entonces Inicio muestra "Hace 3 días que no guardas una copia"
+
+  @RN-RE-10
+  Escenario: Restaurar una copia desde la bienvenida completa la primera vez
+    Dado que la primera vez no está completada
+    Y una copia guardada con "152" productos y "3840" operaciones del "2026-10-01" al "2026-12-15"
+    Cuando elijo "Ya tengo una copia guardada" en la bienvenida
+    Y restauro la copia
+    Y confirmo las dos veces
+    Entonces la primera vez está completada
+    Y el catálogo tiene "152" productos
+
+  @RN-RE-10
+  Escenario: Cancelar la restauración vuelve a la bienvenida
+    Dado que la primera vez no está completada
+    Cuando elijo "Ya tengo una copia guardada" en la bienvenida
+    Y cancelo la restauración
+    Entonces la primera vez no está completada
+    Y se muestra la bienvenida
+
+  @RN-RE-11
+  Escenario: Una copia de la versión 1 se abre con el local sin configurar
+    Dado una copia con versión de formato "1"
+    Cuando restauro la copia
+    Y confirmo las dos veces
+    Entonces el costo del local está sin configurar
+
+  @RN-RE-11
+  Escenario: La copia guarda el costo del local
+    Dado el local se paga "S/ 600.00" "Dos veces al mes" los días "5, 20"
+    Cuando guardo una copia y la restauro
+    Entonces el costo del local guardado es "S/ 600.00" "Dos veces al mes" los días "5, 20"

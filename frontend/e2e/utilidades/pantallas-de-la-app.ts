@@ -6,6 +6,7 @@ import { expect, type Page } from '@playwright/test'
 import { prepararHistoriaDeDemostracion, type IdsDeDemostracion } from './historia-de-demostracion'
 import { abrir } from './navegacion'
 import { agregarAlCarrito, lineaDelCarrito } from './recorridos'
+import { crearProducto } from './tienda'
 
 export interface Pantalla {
   /** Cómo se llama en el informe de la prueba. */
@@ -28,6 +29,22 @@ export const PANTALLAS_DE_LA_PRIMERA_VEZ: readonly Pantalla[] = [
     },
   },
   { nombre: 'Primera vez: letra', ruta: './bienvenida?paso=letra' },
+  { nombre: 'Primera vez: cargar productos', ruta: './bienvenida?paso=productos' },
+  { nombre: 'Primera vez: contar (sin productos)', ruta: './bienvenida?paso=contar' },
+  { nombre: 'Primera vez: restaurar copia (desde la bienvenida)', ruta: './ajustes/restaurar?desde=primera-vez' },
+  { nombre: 'Primera vez: producto nuevo', ruta: './productos/nuevo?desde=primera-vez' },
+  { nombre: 'Primera vez: importar productos', ruta: './ajustes/importar?desde=primera-vez' },
+  {
+    // Con un producto cargado: "Contar ahora" y "Terminar" (RN-UX-16). Es la última: deja un producto cargado,
+    // así que los estados vacíos se revisan en otro perfil (otra prueba).
+    nombre: 'Primera vez: contar (con productos)',
+    ruta: './bienvenida?paso=contar',
+    preparar: async (page) => {
+      await crearProducto(page, { nombre: 'Lejía 1 L', compra: '2.40', venta: '3.50', stock: '10' })
+      await abrir(page, './bienvenida?paso=contar')
+      await expect(page.getByRole('button', { name: 'Contar ahora' })).toBeVisible()
+    },
+  },
 ]
 
 /** Con la primera vez hecha y todavía sin productos: los estados vacíos (RN-UX-10). */
@@ -229,6 +246,16 @@ export function pantallasDeLaTienda(ids: IdsDeDemostracion): Pantalla[] {
     // Ajustes
     { nombre: 'Ajustes', ruta: './ajustes' },
     { nombre: 'Datos de la tienda', ruta: './ajustes/tienda' },
+    { nombre: 'Alquiler del local', ruta: './control/alquiler' },
+    {
+      nombre: 'Alquiler del local: dos veces al mes (con errores)',
+      ruta: './control/alquiler',
+      preparar: async (page) => {
+        await page.getByRole('radio', { name: 'Dos veces al mes' }).click()
+        await page.getByRole('button', { name: 'Guardar' }).click()
+        await expect(page.getByRole('alert').first()).toBeVisible()
+      },
+    },
     { nombre: 'Avisos en tu celular', ruta: './ajustes/avisos' },
     { nombre: 'Guardar copia', ruta: './ajustes/copia' },
     { nombre: 'Restaurar copia', ruta: './ajustes/restaurar' },

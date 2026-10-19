@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { KeyRound } from 'lucide-vue-next'
 import { useAplicacion } from '@/app/proveer-aplicacion'
-import { RANGOS_DE_CONFIGURACION } from '@/shared/contratos/configuracion'
+import { RANGOS_DE_CONFIGURACION, type AlquilerDelLocal } from '@/shared/contratos/configuracion'
+import { Dinero } from '@/shared/domain/dinero'
 import { esErrorDeDominio } from '@/shared/domain/errores'
+import { formatearDinero } from '@/shared/domain/formato'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import CampoNumero from '@/shared/ui/componentes/CampoNumero.vue'
 import CampoTexto from '@/shared/ui/componentes/CampoTexto.vue'
@@ -11,6 +14,7 @@ import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import PantallaExito from '@/shared/ui/componentes/PantallaExito.vue'
 import { validarCambios } from '../domain/configuracion'
+import EnlaceDeAjuste from './EnlaceDeAjuste.vue'
 
 /**
  * Datos de la tienda (fase-1/README, "Configuración del negocio"): nombre (1–40), cada cuántos
@@ -30,6 +34,7 @@ const valores = reactive<Record<Campo, string>>({
   diasMaximosDeCompra: '',
 })
 const errores = reactive<Partial<Record<Campo, string>>>({})
+const alquilerDelLocal = ref<AlquilerDelLocal | null>(null)
 const leido = ref(false)
 const guardando = ref(false)
 const guardado = ref(false)
@@ -42,6 +47,7 @@ onMounted(async () => {
     valores.diasEntreCompras = String(configuracion.diasEntreCompras)
     valores.diasAnticipacion = String(configuracion.diasAnticipacion)
     valores.diasMaximosDeCompra = String(configuracion.diasMaximosDeCompra)
+    alquilerDelLocal.value = configuracion.alquilerDelLocal
     leido.value = true
   } catch (causa) {
     console.error('No se pudieron leer los datos de la tienda:', causa)
@@ -85,6 +91,17 @@ async function guardar(): Promise<void> {
     guardando.value = false
   }
 }
+
+/** RN-AN-17: lo que dice la fila "Alquiler del local" ("S/ 600.00 · días 5 y 20"). */
+const detalleDelAlquiler = computed(() => {
+  const alquiler = alquilerDelLocal.value
+  if (alquiler === null) return 'Sin configurar'
+  if (alquiler.tipo === 'NO_PAGA') return 'No pagas alquiler'
+  const monto = formatearDinero(Dinero.deCentimos(alquiler.montoCentimos))
+  const dias =
+    alquiler.dias.length === 1 ? `día ${alquiler.dias[0]}` : `días ${alquiler.dias.join(' y ')}`
+  return `${monto} · ${dias}`
+})
 
 const AYUDAS: Record<CampoDeDias, string> = {
   diasEntreCompras: 'Con esto calculamos cuánto te conviene comprar.',
@@ -137,6 +154,15 @@ const CAMPOS_DE_DIAS: readonly { campo: CampoDeDias; etiqueta: string }[] = [
         <BotonPrincipal texto="Guardar cambios" tipo="submit" :deshabilitado="guardando" />
       </div>
     </form>
+
+    <!-- Debajo del formulario: es otra pantalla, con su propio Guardar. -->
+    <EnlaceDeAjuste
+      v-if="leido"
+      :a="{ name: 'alquiler-del-local', query: { desde: 'ajustes' } }"
+      titulo="Alquiler del local"
+      :detalle="detalleDelAlquiler"
+      :icono="KeyRound"
+    />
   </div>
 </template>
 

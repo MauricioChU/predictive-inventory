@@ -1,7 +1,9 @@
 import process from 'node:process'
 import { defineConfig, devices } from '@playwright/test'
 
-const BASE = process.env.CI ? 'http://localhost:4173/predictive-inventory/' : 'http://localhost:5173/predictive-inventory/'
+// PUERTO_E2E: cada worktree corre su propio servidor de desarrollo sin pisar el de otro.
+const PUERTO = process.env.CI ? '4173' : (process.env.PUERTO_E2E ?? '5173')
+const BASE = `http://localhost:${PUERTO}/predictive-inventory/`
 
 export default defineConfig({
   testDir: './e2e',
@@ -17,7 +19,7 @@ export default defineConfig({
     { name: 'pc', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } },
   ],
   webServer: {
-    command: process.env.CI ? 'npm run preview' : 'npm run dev',
+    command: process.env.CI ? 'npm run preview' : `npm run dev -- --port ${PUERTO} --strictPort`,
     url: BASE,
     reuseExistingServer: !process.env.CI,
   },

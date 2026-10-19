@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { esperarSinDesplazamientoHorizontal } from './utilidades/calidad'
-import { abrir, usarLetra } from './utilidades/navegacion'
+import { usarLetra } from './utilidades/navegacion'
+import { abrirTiendaLista } from './utilidades/tienda'
 
 /**
  * Plan 13 (Ola 4): a 320 px con letra Muy grande,
@@ -41,7 +42,7 @@ async function palabrasPartidas(locator: Locator): Promise<string[]> {
 async function abrirAngosto(page: Page, ruta: string): Promise<void> {
   await usarLetra(page, 'MUY_GRANDE')
   await page.setViewportSize({ width: 320, height: 740 })
-  await abrir(page, ruta)
+  await abrirTiendaLista(page, ruta)
 }
 
 test.describe('Componentes base a 320 px con letra Muy grande', () => {

@@ -3,6 +3,7 @@ import { RelojFijo } from '../../../shared/domain/reloj'
 import { instanteLocal } from '../../../shared/domain/fecha'
 import { AlmacenEnMemoria } from '../../../shared/infrastructure/memoria/almacen-en-memoria'
 import { UnidadDeTrabajoEnMemoria } from '../../../shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'
+import type { AlquilerDelLocal } from '../../../shared/contratos/configuracion'
 import type { OperacionRegistro, ProductoRegistro } from '../../../shared/contratos/registros'
 import { AlmacenDeRespaldoEnMemoria } from '../infrastructure/memoria/almacen-de-respaldo'
 import {
@@ -307,6 +308,75 @@ describe('prepararRestauracion / restaurarCopia (RN-RE-03)', () => {
   })
 })
 
+// RN-RE-11: el costo del local viaja en la copia y una copia v1 lo deja sin configurar.
+describe('restaurarCopia y el costo del local (RN-RE-11)', () => {
+  const QUINCENAL: AlquilerDelLocal = { tipo: 'QUINCENAL', montoCentimos: 60000, dias: [5, 20] }
+  const NEGOCIO = {
+    clave: 'negocio',
+    nombreTienda: 'Bodega Rosita',
+    diasEntreCompras: 7,
+    diasAnticipacion: 3,
+    diasMaximosDeCompra: 30,
+    tamanoDeLetra: 'GRANDE',
+    notificacionesActivas: false,
+    alquilerDelLocal: null,
+  } as const
+
+  function local(almacenEnMemoria: AlmacenEnMemoria) {
+    return (almacenEnMemoria.obtener('configuracion', 'negocio') as { alquilerDelLocal?: unknown })
+      .alquilerDelLocal
+  }
+
+  it('ida y vuelta: guardar y restaurar conserva el QUINCENAL de 600 con días 5 y 20', async () => {
+    const { deps, almacenEnMemoria, seedProductosYOperaciones, reconstructor } = crearContexto()
+    seedProductosYOperaciones()
+    almacenEnMemoria.guardar('configuracion', { ...NEGOCIO, alquilerDelLocal: QUINCENAL })
+    await reconstructor.reconstruirTodo()
+    const texto = await (await guardarCopia(deps)).contenido.text()
+    expect(JSON.parse(texto).versionDeFormato).toBe(2)
+
+    almacenEnMemoria.guardar('configuracion', { ...NEGOCIO, alquilerDelLocal: null })
+    await restaurarCopia(deps, texto, { confirmaciones: 2 })
+
+    expect(local(almacenEnMemoria)).toEqual(QUINCENAL)
+  })
+
+  it('una copia v1 (sin la clave) se restaura con el local sin configurar, aunque hubiera uno', async () => {
+    const { deps, almacenEnMemoria, seedProductosYOperaciones, reconstructor } = crearContexto()
+    seedProductosYOperaciones()
+    await reconstructor.reconstruirTodo()
+    const { alquilerDelLocal: _sin, ...negocioV1 } = NEGOCIO
+    const copia = JSON.parse(await (await guardarCopia(deps)).contenido.text())
+    copia.versionDeFormato = 1
+    copia.datos.configuracion = negocioV1
+
+    almacenEnMemoria.guardar('configuracion', { ...NEGOCIO, alquilerDelLocal: QUINCENAL })
+    await restaurarCopia(deps, JSON.stringify(copia), { confirmaciones: 2 })
+
+    expect(local(almacenEnMemoria)).toBeNull()
+  })
+
+  it.each([
+    ['días repetidos', { tipo: 'QUINCENAL', montoCentimos: 60000, dias: [5, 5] }],
+    ['monto 0', { tipo: 'QUINCENAL', montoCentimos: 0, dias: [5, 20] }],
+  ])('una copia v2 con %s se rechaza sin tocar los datos', async (_nombre, alquiler) => {
+    const { deps, almacenEnMemoria, seedProductosYOperaciones, reconstructor } = crearContexto()
+    seedProductosYOperaciones()
+    almacenEnMemoria.guardar('configuracion', { ...NEGOCIO, alquilerDelLocal: QUINCENAL })
+    await reconstructor.reconstruirTodo()
+    const copia = JSON.parse(await (await guardarCopia(deps)).contenido.text())
+    copia.datos.configuracion.alquilerDelLocal = alquiler
+    almacenEnMemoria.guardar('productos', producto({ id: 'agregado-despues', nombre: 'Nuevo' }))
+
+    await expect(
+      restaurarCopia(deps, JSON.stringify(copia), { confirmaciones: 2 }),
+    ).rejects.toThrow('Este archivo no es una copia válida de la app')
+
+    expect(local(almacenEnMemoria)).toEqual(QUINCENAL)
+    expect(almacenEnMemoria.todos('productos')).toHaveLength(3)
+  })
+})
+
 // Ola 3, ruling 1: lo que la reconstrucción deja con alConfirmar (en la composición, lo que
 // publiquen Inventario o Análisis) sale solo si la restauración entera confirma.
 describe('restaurarCopia en una sola unidad de trabajo', () => {
@@ -344,6 +414,47 @@ describe('restaurarCopia en una sola unidad de trabajo', () => {
     await restaurarCopia(deps, JSON.stringify(respaldo), { confirmaciones: 2 })
 
     expect(pendientes).toEqual(['después de reconstruir'])
+  })
+})
+
+describe('restaurarCopia completa la primera vez (RN-RE-10)', () => {
+  it('tras restaurar, la primera vez queda completada aunque estuviera pendiente', async () => {
+    const { deps, tienda, seedProductosYOperaciones, reconstructor } = crearContexto()
+    seedProductosYOperaciones()
+    await reconstructor.reconstruirTodo()
+    const texto = await (await guardarCopia(deps)).contenido.text()
+    tienda.fijarEstado({ primeraVezCompletada: false })
+
+    await restaurarCopia(deps, texto, { confirmaciones: 2 })
+
+    expect((await tienda.estadoDelSistema()).primeraVezCompletada).toBe(true)
+  })
+
+  it('si la restauración falla (control que no cuadra), la primera vez sigue pendiente', async () => {
+    const { deps, tienda, seedProductosYOperaciones, reconstructor } = crearContexto()
+    seedProductosYOperaciones()
+    await reconstructor.reconstruirTodo()
+    const respaldo = JSON.parse(await (await guardarCopia(deps)).contenido.text())
+    respaldo.control.stockPorProducto.carbon = 99000
+    tienda.fijarEstado({ primeraVezCompletada: false })
+
+    await expect(
+      restaurarCopia(deps, JSON.stringify(respaldo), { confirmaciones: 2 }),
+    ).rejects.toThrow('La copia tiene datos que no cuadran')
+
+    expect((await tienda.estadoDelSistema()).primeraVezCompletada).toBe(false)
+  })
+
+  it('con menos de 2 confirmaciones tampoco se completa', async () => {
+    const { deps, tienda, seedProductosYOperaciones, reconstructor } = crearContexto()
+    seedProductosYOperaciones()
+    await reconstructor.reconstruirTodo()
+    const texto = await (await guardarCopia(deps)).contenido.text()
+    tienda.fijarEstado({ primeraVezCompletada: false })
+
+    await expect(restaurarCopia(deps, texto, { confirmaciones: 1 })).rejects.toThrow()
+
+    expect((await tienda.estadoDelSistema()).primeraVezCompletada).toBe(false)
   })
 })
 

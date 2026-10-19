@@ -18,6 +18,7 @@ function rutasDePrueba(conDetalleDeProducto: boolean): RouteRecordRaw[] {
     { path: '/control', name: 'control', component: OtraPantalla },
     { path: '/control/para-comprar', name: 'para-comprar', component: OtraPantalla },
     { path: '/control/necesito-comprar', name: 'necesito-comprar', component: OtraPantalla },
+    { path: '/control/alquiler', name: 'alquiler-del-local', component: OtraPantalla },
     { path: '/recibir', name: 'recibir', component: OtraPantalla },
   ]
   // El detalle es de la rama 11: mientras no llegue a develop la ruta no existe.

@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, shallowRef, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import {
   CalendarCheck,
   CalendarRange,
+  ChevronRight,
   CircleHelp,
   CircleX,
   Hourglass,
+  KeyRound,
   ShoppingBasket,
   Tag,
   TriangleAlert,
@@ -29,8 +31,10 @@ import GraficoBarras from '@/shared/ui/componentes/GraficoBarras.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import SelectorSegmentado from '@/shared/ui/componentes/SelectorSegmentado.vue'
 import TarjetaDeCifra from '@/shared/ui/componentes/TarjetaDeCifra.vue'
+import BarraDeProgreso from '@/shared/ui/componentes/BarraDeProgreso.vue'
 import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
 import type { TorreDeControl } from '../application/torre'
+import { BOTON_CONFIGURAR_ALQUILER, PREGUNTA_DEL_ALQUILER } from '../domain/alquiler'
 import { SUGERENCIA_PARA_PARADOS } from '../domain/observaciones'
 import type { Periodo } from '../domain/periodos'
 import EnlaceAProducto from './componentes/EnlaceAProducto.vue'
@@ -113,6 +117,19 @@ const resumen = computed(() => {
       },
     ],
     diferencias: formatearDinero(r.diferenciasDeConteo),
+  } as const
+})
+
+/** RN-AN-19: "No pago" no muestra la tarjeta; sin configurar pregunta; con pago, el avance. */
+const alquiler = computed(() => {
+  const a = mostrado.value?.torre.alquiler
+  if (!a || a.estado === 'NO_PAGA') return null
+  if (a.estado === 'SIN_CONFIGURAR')
+    return { configurado: false, lineas: [], porcentaje: 0 } as const
+  return {
+    configurado: true,
+    lineas: a.textos.map(pegarCifras),
+    porcentaje: a.avance.porcentaje,
   } as const
 })
 
@@ -218,7 +235,7 @@ const atencion = computed(() => {
   }
 })
 
-function irA(nombre: 'para-comprar' | 'necesito-comprar'): void {
+function irA(nombre: 'para-comprar' | 'necesito-comprar' | 'alquiler-del-local'): void {
   void router.push({ name: nombre })
 }
 </script>
@@ -271,6 +288,31 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar'): void {
               <FilaDeDato etiqueta="Diferencias de conteo" :texto-valor="resumen.diferencias" />
               <p class="nota">No cambia la ganancia: es lo que faltó o sobró al contar.</p>
             </div>
+          </template>
+        </SeccionDeControl>
+
+        <SeccionDeControl v-if="alquiler" titulo="Alquiler del local" :icono="KeyRound">
+          <template v-if="alquiler.configurado">
+            <p class="linea">{{ alquiler.lineas[0] }}</p>
+            <BarraDeProgreso
+              :actual="alquiler.porcentaje"
+              :total="100"
+              :texto="`${alquiler.porcentaje} %`"
+              etiqueta="Avance del alquiler del local"
+            />
+            <p class="linea">{{ alquiler.lineas[1] }}</p>
+            <RouterLink :to="{ name: 'alquiler-del-local' }" class="cambiar">
+              <span>Cambiar</span>
+              <ChevronRight aria-hidden="true" class="flecha" />
+            </RouterLink>
+          </template>
+          <template v-else>
+            <p class="pregunta">{{ PREGUNTA_DEL_ALQUILER }}</p>
+            <Boton
+              :texto="BOTON_CONFIGURAR_ALQUILER"
+              :icono="KeyRound"
+              @click="irA('alquiler-del-local')"
+            />
           </template>
         </SeccionDeControl>
 
@@ -495,6 +537,31 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar'): void {
 .mas {
   margin: var(--espacio-1) 0;
   color: var(--color-texto-suave);
+}
+
+/* Tarjeta Alquiler del local (RN-AN-19). */
+.linea,
+.pregunta {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: break-word;
+}
+.cambiar {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-end;
+  gap: var(--espacio-1);
+  min-block-size: var(--alto-toque);
+  padding-inline: var(--espacio-2);
+  color: var(--color-primario);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.flecha {
+  inline-size: 1.25em;
+  block-size: 1.25em;
+  flex: none;
 }
 
 h3 {

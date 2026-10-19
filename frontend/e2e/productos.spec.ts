@@ -7,6 +7,7 @@ import {
 } from './utilidades/calidad'
 import { caja } from './utilidades/escenarios'
 import { abrir } from './utilidades/navegacion'
+import { abrirTiendaLista } from './utilidades/tienda'
 import { crearConHistoria, crearProductos, FOTO_PNG, objetivosChicos } from './utilidades/productos'
 
 /**
@@ -56,7 +57,7 @@ async function nombresEnLaLista(page: Page): Promise<string[]> {
 
 test.describe('Productos: flujos críticos', () => {
   test('crear un producto con stock inicial y foto', async ({ page }) => {
-    await abrir(page, './productos')
+    await abrirTiendaLista(page, './productos')
     await expect(page.getByText('Aún no tienes productos')).toBeVisible()
     await page.getByRole('button', { name: 'Agregar el primero' }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'Producto nuevo' })).toBeVisible()
@@ -99,7 +100,7 @@ test.describe('Productos: flujos críticos', () => {
   })
 
   test('buscar sin tildes y en cualquier orden', async ({ page }) => {
-    await abrir(page, './productos')
+    await abrirTiendaLista(page, './productos')
     await crearProductos(page, LEJIAS)
     await abrir(page, './productos')
 
@@ -123,7 +124,7 @@ test.describe('Productos: flujos críticos', () => {
   })
 
   test('archivar un producto con stock confirma el retiro (RN-CAT-11)', async ({ page }) => {
-    await abrir(page, './productos')
+    await abrirTiendaLista(page, './productos')
     const { Escoba: id } = await crearProductos(page, [
       { nombre: 'Escoba', compra: '6.00', venta: '9.00', minimo: '2', stockInicial: '4' },
     ])
@@ -157,7 +158,7 @@ test.describe('Productos: flujos críticos', () => {
   })
 
   test('editar el precio con pérdida pide confirmar (RN-CAT-05)', async ({ page }) => {
-    await abrir(page, './productos')
+    await abrirTiendaLista(page, './productos')
     await crearProductos(page, [LEJIAS[0]!])
     await abrir(page, './productos')
     await page.getByRole('button', { name: /^Lejía Tradicional 1 L/ }).click()
@@ -188,7 +189,7 @@ test.describe('Productos: flujos críticos', () => {
   test('un producto que no existe: "No encontramos ese producto" con un camino de vuelta', async ({
     page,
   }) => {
-    await abrir(page, './productos/no-existe')
+    await abrirTiendaLista(page, './productos/no-existe')
     await expect(
       page.getByRole('heading', { level: 1, name: 'No encontramos ese producto' }),
     ).toBeVisible()
@@ -202,7 +203,7 @@ async function pantallas(
   page: Page,
   ahora: number,
 ): Promise<{ ruta: string; preparar?: () => Promise<void> }[]> {
-  await abrir(page, './productos')
+  await abrirTiendaLista(page, './productos')
   const ids = await crearProductos(page, [
     ...LEJIAS,
     {
@@ -305,7 +306,7 @@ test('un título largo pasa debajo de "Volver" sin aplastarlo ni partir palabras
 }) => {
   await usarLetra(page, 'MUY_GRANDE')
   await page.setViewportSize({ width: 320, height: 800 })
-  await abrir(page, './productos')
+  await abrirTiendaLista(page, './productos')
   const { 'Jabón Bolívar 190 g': id } = await crearProductos(page, [
     { nombre: 'Jabón Bolívar 190 g', compra: '1.80', venta: '2.50' },
   ])
@@ -341,7 +342,7 @@ test('celular: "Guardar producto" va fijo abajo y nunca tapa el campo con el foc
 }) => {
   await usarLetra(page, 'MUY_GRANDE')
   await page.setViewportSize({ width: 360, height: 800 })
-  await abrir(page, './productos/nuevo')
+  await abrirTiendaLista(page, './productos/nuevo')
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
   const boton = await caja(page, '.formulario-de-producto .accion-principal')
   const pie = await caja(page, '.pie')
@@ -366,7 +367,7 @@ test('Productos con 300 productos con foto, CPU x4 (medición opcional)', async 
   test.skip(!process.env.MEDIR_RENDIMIENTO, 'Solo con MEDIR_RENDIMIENTO=1')
   test.skip(info.project.name !== 'celular', 'Se mide una vez, en el perfil de celular')
   test.setTimeout(600_000)
-  await abrir(page, './')
+  await abrirTiendaLista(page, './')
   await page.evaluate(async (png) => {
     type App = {
       catalogo: {

@@ -4,6 +4,7 @@ import { rutasDeControl } from './rutas/control'
 import { rutasDeInicioYAjustes } from './rutas/inicio-y-ajustes'
 import { rutasDeOperaciones } from './rutas/operaciones'
 import { rutasDeProductos } from './rutas/productos'
+import { instalarGuardiaDeLaPrimeraVez } from './primera-vez'
 
 /**
  * Cada rama de pantallas de la Ola 4 edita SOLO su archivo en `./rutas/`, para que los merges
@@ -28,6 +29,9 @@ const router = createRouter({
     return posicionGuardada ?? { top: 0 }
   },
 })
+
+// RN-UX-16: mientras falte la primera vez, solo la bienvenida y lo que ella abre.
+instalarGuardiaDeLaPrimeraVez(router)
 
 router.afterEach((to, from) => {
   document.title = `${String(to.meta.titulo ?? 'Inventario')} · Inventario`

@@ -30,6 +30,8 @@ test.describe('RN-SIS-06 y RN-SIS-07: responsive y accesibilidad', () => {
     test(`sin desplazamiento horizontal a ${ancho}px con letra Muy grande`, async ({ page }) => {
       await usarLetra(page, 'MUY_GRANDE')
       await page.setViewportSize({ width: ancho, height: 800 })
+      // RN-UX-16: sin la primera vez hecha no hay navegación.
+      await abrirTiendaLista(page, './')
       for (const ruta of ['./', './vender', './recibir', './productos', './control', './ajustes', './historial']) {
         await abrir(page, ruta)
         await esperarSinDesplazamientoHorizontal(page)
@@ -39,7 +41,7 @@ test.describe('RN-SIS-06 y RN-SIS-07: responsive y accesibilidad', () => {
   }
 
   test('sin violaciones graves de accesibilidad', async ({ page }) => {
-    await abrir(page, './')
+    await abrirTiendaLista(page, './')
     await esperarSinViolacionesGraves(page)
   })
 })
@@ -65,7 +67,7 @@ test.describe('S1: enlaces de navegación completos y dentro del viewport', () =
         )
         await usarLetra(page, letra)
         await page.setViewportSize({ width: ancho, height: 800 })
-        await abrir(page, './')
+        await abrirTiendaLista(page, './')
 
         const datos = await page.evaluate(() => {
           const anchoVentana = document.documentElement.clientWidth
@@ -131,7 +133,7 @@ test.describe('Ronda 3: la barra de navegación queda al fondo del viewport tamb
         await usarLetra(page, letra)
         const altoViewport = 800
         await page.setViewportSize({ width: ancho, height: altoViewport })
-        await abrir(page, './ajustes')
+        await abrirTiendaLista(page, './ajustes')
 
         const cajaAntes = await page.getByRole('navigation').boundingBox()
         expect(cajaAntes, 'la barra de navegación debe tener una caja visible').not.toBeNull()

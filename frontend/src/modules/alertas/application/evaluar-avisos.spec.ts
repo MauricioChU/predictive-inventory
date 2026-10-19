@@ -272,4 +272,130 @@ describe('evaluarAvisos', () => {
 
     expect(notificador.mostradas).toEqual([{ texto: 'Se acabó: Lejía 1 L', url: '/productos/p1' }])
   })
+
+  describe('pago del local (RN-AL-11)', () => {
+    const DIA_18 = '2026-10-18T15:00:00.000Z'
+
+    function conAlquiler(dias: [number]) {
+      const contexto = prepararContexto(DIA_18)
+      contexto.tiendaFalsa.configuracionActual = {
+        ...contexto.tiendaFalsa.configuracionActual,
+        alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias },
+      }
+      return contexto
+    }
+
+    it('RN-AL-11: dentro de la ventana avisa del pago con su propia ruta (Control)', async () => {
+      const { dependencias, notificador, tiendaFalsa } = conAlquiler([20])
+
+      const notificaciones = await evaluarAvisos(dependencias)
+
+      expect(notificaciones).toEqual([
+        { texto: 'Pasado mañana pagas el local: S/ 1 200.00', url: '/control' },
+      ])
+      expect(notificador.mostradas).toEqual(notificaciones)
+      expect(tiendaFalsa.estadoActual.ultimoPagoDelLocalAvisado).toBe('2026-10-20')
+    })
+
+    it('RN-AL-11: una sola notificación por fecha de pago', async () => {
+      const { dependencias, notificador, reloj } = conAlquiler([20])
+      await evaluarAvisos(dependencias)
+
+      await evaluarAvisos(dependencias)
+      reloj.fijar('2026-10-19T15:00:00.000Z')
+      const alDiaSiguiente = await evaluarAvisos(dependencias)
+
+      expect(alDiaSiguiente).toEqual([])
+      expect(notificador.mostradas).toHaveLength(1)
+    })
+
+    it('RN-AL-11: si cambia la fecha de pago dentro de la ventana, la fecha nueva sí se avisa', async () => {
+      const { dependencias, notificador, tiendaFalsa } = conAlquiler([20])
+      await evaluarAvisos(dependencias)
+
+      tiendaFalsa.configuracionActual = {
+        ...tiendaFalsa.configuracionActual,
+        alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [19] },
+      }
+      await evaluarAvisos(dependencias)
+
+      expect(notificador.mostradas.map((n) => n.texto)).toEqual([
+        'Pasado mañana pagas el local: S/ 1 200.00',
+        'Mañana pagas el local: S/ 1 200.00',
+      ])
+    })
+
+    it('RN-AL-11: sin permiso no notifica ni lo marca como avisado; con permiso después, avisa', async () => {
+      const { dependencias, notificador, tiendaFalsa } = conAlquiler([20])
+      notificador.permiso = false
+
+      const sinPermiso = await evaluarAvisos(dependencias)
+
+      expect(sinPermiso).toEqual([])
+      expect(notificador.mostradas).toEqual([])
+      expect(tiendaFalsa.estadoActual.ultimoPagoDelLocalAvisado).toBeNull()
+
+      notificador.permiso = true
+      const conPermiso = await evaluarAvisos(dependencias)
+
+      expect(conPermiso.map((n) => n.texto)).toEqual(['Pasado mañana pagas el local: S/ 1 200.00'])
+    })
+
+    it('RN-AL-11: fuera de la ventana o sin alquiler no notifica', async () => {
+      const { dependencias, notificador, tiendaFalsa } = conAlquiler([25])
+      expect(await evaluarAvisos(dependencias)).toEqual([])
+
+      tiendaFalsa.configuracionActual = {
+        ...tiendaFalsa.configuracionActual,
+        alquilerDelLocal: { tipo: 'NO_PAGA' },
+      }
+      expect(await evaluarAvisos(dependencias)).toEqual([])
+      expect(notificador.mostradas).toEqual([])
+    })
+
+    it('RN-AL-11: va en su propia notificación, nunca agrupada con las de stock', async () => {
+      const { dependencias, analisisFalso, notificador } = conAlquiler([20])
+      analisisFalso.situacionesActuales = [
+        crearSituacion({
+          productoId: 'p1',
+          nombre: 'Lejía 1 L',
+          estado: 'AGOTADO',
+          stock: Cantidad.cero(),
+        }),
+        crearSituacion({
+          productoId: 'p2',
+          nombre: 'Carbón',
+          estado: 'AGOTADO',
+          stock: Cantidad.cero(),
+        }),
+      ]
+
+      await evaluarAvisos(dependencias)
+
+      expect(notificador.mostradas).toEqual([
+        { texto: '2 productos se están acabando', url: '/control/para-comprar' },
+        { texto: 'Pasado mañana pagas el local: S/ 1 200.00', url: '/control' },
+      ])
+    })
+
+    it('RN-AL-11: si la unidad de trabajo externa falla, no se notifica ni se marca', async () => {
+      const almacen = new AlmacenEnMemoria()
+      const uow = new UnidadDeTrabajoEnMemoria(almacen)
+      const { dependencias, notificador, tiendaFalsa } = crearContextoDePrueba(uow, almacen, DIA_18)
+      tiendaFalsa.configuracionActual = {
+        ...tiendaFalsa.configuracionActual,
+        alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [20] },
+      }
+
+      await expect(
+        uow.ejecutar(async () => {
+          await evaluarAvisos(dependencias)
+          throw new Error('falla después')
+        }),
+      ).rejects.toThrow('falla después')
+
+      expect(notificador.mostradas).toEqual([])
+      expect(tiendaFalsa.estadoActual.ultimoPagoDelLocalAvisado).toBeNull()
+    })
+  })
 })

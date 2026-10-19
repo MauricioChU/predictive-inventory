@@ -1,4 +1,5 @@
 import { RANGOS_DE_CONFIGURACION } from '../../../shared/contratos/configuracion'
+import { validarAlquilerDelLocal } from '../../../shared/domain/alquiler-del-local'
 import { UNIDADES } from '../../../shared/domain/cantidad'
 import { diaDe, type Dia, type Instante } from '../../../shared/domain/fecha'
 import { ErrorDeDominio } from '../../../shared/domain/errores'
@@ -11,7 +12,7 @@ import type {
   ProductoRegistro,
 } from '../../../shared/contratos/registros'
 
-export const VERSION_DE_FORMATO = 1
+export const VERSION_DE_FORMATO = 2
 export const NOMBRE_DE_APP = 'predictive-inventory'
 
 const MENSAJE_INVALIDA = 'Este archivo no es una copia válida de la app'
@@ -35,8 +36,8 @@ export interface ControlDeRespaldo {
   stockPorProducto: Record<string, number>
 }
 
-export interface RespaldoV1 {
-  versionDeFormato: 1
+export interface RespaldoV2 {
+  versionDeFormato: 2
   app: typeof NOMBRE_DE_APP
   creadoEn: Instante
   control: ControlDeRespaldo
@@ -68,10 +69,10 @@ export function stockDesdeElLibro(
 }
 
 /**
- * Arma un respaldo v1 (RN-RE-02). El control sale del mismo libro de operaciones que se
+ * Arma un respaldo de la versión vigente (RN-RE-02). El control sale del mismo libro de operaciones que se
  * guarda, no de la proyección de existencias: así la copia siempre cuadra consigo misma.
  */
-export function crearRespaldo(datos: DatosDelRespaldo, creadoEn: Instante): RespaldoV1 {
+export function crearRespaldo(datos: DatosDelRespaldo, creadoEn: Instante): RespaldoV2 {
   return {
     versionDeFormato: VERSION_DE_FORMATO,
     app: NOMBRE_DE_APP,
@@ -200,6 +201,27 @@ function fotoValida(f: unknown): boolean {
   )
 }
 
+const TIPOS_DE_ALQUILER = ['NO_PAGA', 'MENSUAL', 'QUINCENAL']
+
+/**
+ * La forma del costo del local (RN-RE-11), antes de mirar sus reglas: `validarAlquilerDelLocal`
+ * confía en el tipo de TypeScript y fallaría con un `dias` ausente o un `tipo` desconocido.
+ * Los días de un MENSUAL son 1 y los de un QUINCENAL 2; las reglas (rangos, distintos) las
+ * revisa `invariantesDelLibro`.
+ */
+function alquilerDelLocalValido(a: unknown): boolean {
+  if (a === null) return true
+  if (!esPlano(a) || !esUnoDe(TIPOS_DE_ALQUILER, a.tipo)) return false
+  if (a.tipo === 'NO_PAGA') return true
+  const cantidadDeDias = a.tipo === 'MENSUAL' ? 1 : 2
+  return (
+    esEntero(a.montoCentimos) &&
+    Array.isArray(a.dias) &&
+    a.dias.length === cantidadDeDias &&
+    a.dias.every(esEntero)
+  )
+}
+
 function configuracionValida(c: unknown): boolean {
   return (
     c === null ||
@@ -210,7 +232,8 @@ function configuracionValida(c: unknown): boolean {
       esEntero(c.diasAnticipacion) &&
       esEntero(c.diasMaximosDeCompra) &&
       esUnoDe(TAMANOS_DE_LETRA, c.tamanoDeLetra) &&
-      typeof c.notificacionesActivas === 'boolean')
+      typeof c.notificacionesActivas === 'boolean' &&
+      alquilerDelLocalValido(c.alquilerDelLocal))
   )
 }
 
@@ -281,7 +304,8 @@ function invariantesDelLibro(d: DatosDelRespaldo): boolean {
     (enRango(c.nombreTienda.length, nombreTienda) &&
       enRango(c.diasEntreCompras, RANGOS_DE_CONFIGURACION.diasEntreCompras) &&
       enRango(c.diasAnticipacion, RANGOS_DE_CONFIGURACION.diasAnticipacion) &&
-      enRango(c.diasMaximosDeCompra, RANGOS_DE_CONFIGURACION.diasMaximosDeCompra))
+      enRango(c.diasMaximosDeCompra, RANGOS_DE_CONFIGURACION.diasMaximosDeCompra) &&
+      validarAlquilerDelLocal(c.alquilerDelLocal) === null)
 
   const stockOk = Object.values(stockDesdeElLibro(d.productos, d.operaciones)).every((n) => n >= 0)
 
@@ -301,10 +325,26 @@ function datosValidos(d: unknown): boolean {
   )
 }
 
-/** Punto de extensión para versiones futuras: v1 es la única que existe hoy, así que
- * migrar() es la identidad (RN-RE-05). */
+/**
+ * Lleva una copia vieja a la versión vigente (RN-RE-05). Cada paso sube una versión; no
+ * modifica el objeto que recibe.
+ * - v1 -> v2 (RN-RE-11): la configuración gana `alquilerDelLocal: null` (local sin configurar).
+ */
 function migrar(bruto: Plano): Plano {
-  return bruto
+  let actual = bruto
+  if (actual.versionDeFormato === 1) {
+    const datos = actual.datos
+    const configuracion = esPlano(datos) ? datos.configuracion : undefined
+    actual = {
+      ...actual,
+      versionDeFormato: 2,
+      datos:
+        esPlano(datos) && esPlano(configuracion)
+          ? { ...datos, configuracion: { ...configuracion, alquilerDelLocal: null } }
+          : datos,
+    }
+  }
+  return actual
 }
 
 /**
@@ -312,7 +352,7 @@ function migrar(bruto: Plano): Plano {
  * ErrorDeDominio con el mensaje exacto de la spec. La versión se revisa justo después de
  * "app": un respaldo futuro puede tener otra estructura y debe pedir actualizar la app.
  */
-export function leerRespaldo(texto: string): RespaldoV1 {
+export function leerRespaldo(texto: string): RespaldoV2 {
   let bruto: unknown
   try {
     bruto = JSON.parse(texto)
@@ -340,7 +380,7 @@ export function leerRespaldo(texto: string): RespaldoV1 {
     throw new ErrorDeDominio('COPIA_INVALIDA', MENSAJE_INVALIDA)
   }
 
-  const respaldo = migrado as unknown as RespaldoV1
+  const respaldo = migrado as unknown as RespaldoV2
   if (
     respaldo.control.productos !== respaldo.datos.productos.length ||
     respaldo.control.operaciones !== respaldo.datos.operaciones.length

@@ -52,6 +52,7 @@ function respaldoValido() {
         diasMaximosDeCompra: 30,
         tamanoDeLetra: 'GRANDE',
         notificacionesActivas: false,
+        alquilerDelLocal: null,
       },
       categorias: [{ id: 'cat-1', nombre: 'Otros', nombreNormalizado: 'otros' }],
       productos: [producto()],
@@ -83,6 +84,12 @@ describe('leerRespaldo: versión', () => {
   it.each([0, -1, 0.5])('RN-RE-05: la versión %s no es un entero desde 1', (version) => {
     expect(() => leerRespaldo(JSON.stringify({ ...clon(), versionDeFormato: version }))).toThrow(
       INVALIDA,
+    )
+  })
+
+  it('RN-RE-05: la versión 3 es más nueva que la de la app y pide actualizar', () => {
+    expect(() => leerRespaldo(JSON.stringify({ ...clon(), versionDeFormato: 3 }))).toThrow(
+      'Actualiza la app para abrir este respaldo',
     )
   })
 })

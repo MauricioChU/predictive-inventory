@@ -13,6 +13,7 @@ export const NEGOCIO: ConfiguracionRegistro = {
   diasMaximosDeCompra: 30,
   tamanoDeLetra: 'GRANDE',
   notificacionesActivas: false,
+  alquilerDelLocal: null,
 }
 
 export const SISTEMA: EstadoDelSistemaRegistro = {
@@ -22,6 +23,8 @@ export const SISTEMA: EstadoDelSistemaRegistro = {
   ultimoRespaldoEn: null,
   almacenamientoPersistente: 'DESCONOCIDO',
   ultimoResumenDelDiaMostrado: null,
+  ultimoPagoDelLocalAvisado: null,
+  recordatorioDelLocalCerradoEl: null,
 }
 
 /**
@@ -39,6 +42,29 @@ export function probarRepositorioDeConfiguracion(crear: () => RepositorioDeConfi
     const repo = crear()
     await repo.guardarNegocio(NEGOCIO)
     expect(await repo.negocio()).toEqual(NEGOCIO)
+  })
+
+  it('guarda y recupera el alquiler del local con sus días en orden', async () => {
+    const repo = crear()
+    const alquilerDelLocal = {
+      tipo: 'QUINCENAL' as const,
+      montoCentimos: 60_000,
+      dias: [5, 20] as [number, number],
+    }
+    await repo.guardarNegocio({ ...NEGOCIO, alquilerDelLocal })
+    expect((await repo.negocio())?.alquilerDelLocal).toEqual(alquilerDelLocal)
+  })
+
+  it('guarda y recupera las fechas del aviso del local', async () => {
+    const repo = crear()
+    await repo.guardarSistema({
+      ...SISTEMA,
+      ultimoPagoDelLocalAvisado: '2026-10-05',
+      recordatorioDelLocalCerradoEl: '2026-10-18',
+    })
+    const guardado = await repo.sistema()
+    expect(guardado?.ultimoPagoDelLocalAvisado).toBe('2026-10-05')
+    expect(guardado?.recordatorioDelLocalCerradoEl).toBe('2026-10-18')
   })
 
   it('guarda y recupera el estado del sistema, sin mezclarse con el negocio', async () => {

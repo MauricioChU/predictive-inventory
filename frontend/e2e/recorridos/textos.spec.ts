@@ -17,17 +17,26 @@ import {
   irA,
   venderPorPantalla,
 } from '../utilidades/recorridos'
-import { anotarTextosVistos, esperarSinPalabrasQueEvitar } from '../utilidades/textos'
+import { anotarTextosVistos, esperarSinPalabrasQueEvitar, textosVistos } from '../utilidades/textos'
 import { abrirTiendaLista } from '../utilidades/tienda'
 
 test.describe('Auditoría de textos: la guía de palabras en todas las pantallas', () => {
   test.skip(({ isMobile }) => !isMobile, 'Los textos son los mismos en PC: se revisan en celular')
 
-  test('la primera vez y los estados vacíos', async ({ page }) => {
+  test('la primera vez', async ({ page }) => {
     await anotarTextosVistos(page)
     for (const pantalla of PANTALLAS_DE_LA_PRIMERA_VEZ) await mostrarPantalla(page, pantalla)
+    await esperarSinPalabrasQueEvitar(page)
+  })
+
+  // Perfil aparte: la primera vez deja un producto cargado y aquí cada estado vacío va vacío.
+  test('los estados vacíos', async ({ page }) => {
+    await anotarTextosVistos(page)
     await abrirTiendaLista(page, './')
     for (const pantalla of PANTALLAS_VACIAS) await mostrarPantalla(page, pantalla)
+    expect(await textosVistos(page), 'se vieron los textos de los estados vacíos').toEqual(
+      expect.arrayContaining(['Aún no tienes productos']),
+    )
     await esperarSinPalabrasQueEvitar(page)
   })
 

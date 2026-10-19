@@ -2,6 +2,7 @@ import type { SituacionDeProducto } from '@/shared/contratos/entre-modulos'
 import { diaDe, sumarDias } from '@/shared/domain/fecha'
 import { lineasDelResumenDelDia, textoDeAtencion } from '../domain/atencion'
 import type { DependenciasDeAlertas } from './modulo'
+import { recordatorioVigenteDelLocal } from './recordatorio-del-local'
 
 export interface ResumenDeAtencion {
   agotados: number
@@ -55,7 +56,10 @@ export async function resumenDelDia(
   const { agotados, porAcabarse } = contarPorEstado(await d.analisis().situaciones())
   const ayer = sumarDias(hoy, -1)
   const totalesDeAyer = await d.analisis().totalesDelDia(ayer)
-  return { lineas: lineasDelResumenDelDia(agotados, porAcabarse, totalesDeAyer) }
+  const lineas = lineasDelResumenDelDia(agotados, porAcabarse, totalesDeAyer)
+  // RN-AL-10: la frase del pago va al final y no depende de haber cerrado la tarjeta de Inicio.
+  const pago = await recordatorioVigenteDelLocal(d)
+  return { lineas: pago ? [...lineas, pago.texto] : lineas }
 }
 
 /** RN-AL-09: cierra la tarjeta; no vuelve a salir hasta el siguiente día de negocio. */

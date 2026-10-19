@@ -130,7 +130,7 @@ export async function prepararTienda(
   productos: ProductoParaPrueba[],
   nombreTienda = 'Bodega Rosita',
 ): Promise<Record<string, string>> {
-  return page.evaluate(
+  const ids = await page.evaluate(
     async ({ productos, nombreTienda }) => {
       interface App {
         tienda: {
@@ -174,6 +174,10 @@ export async function prepararTienda(
     },
     { productos, nombreTienda },
   )
+  // RN-UX-16: con la primera vez completa vuelve la navegación; recién entonces se puede ir a
+  // otra pantalla sin que la guardia mande a la bienvenida.
+  await expect(page.locator('[data-app-montada]:not(.sin-navegacion)')).toBeAttached()
+  return ids
 }
 
 /** "15/10/2026": el día de hoy en la tienda (America/Lima, UTC−5), como en la lista compartida. */

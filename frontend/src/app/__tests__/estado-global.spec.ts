@@ -103,7 +103,19 @@ describe('estado global (Pinia)', () => {
     expect(localStorage.getItem('pi.letra')).toBe('MUY_GRANDE')
   })
 
-  it('al completar la primera vez, primeraVez pasa a false', async () => {
+  it('RN-UX-16: guardar nombre y letra (pasos 2 y 3) no completa la primera vez: primeraVez sigue en true', async () => {
+    const estado = await conectar()
+
+    await app.tienda.actualizarConfiguracion({
+      nombreTienda: 'Bodega Rosita',
+      tamanoDeLetra: 'NORMAL',
+    })
+
+    await vi.waitFor(() => expect(estado.tamanoDeLetra).toBe('NORMAL'))
+    expect(estado.primeraVez).toBe(true)
+  })
+
+  it('RN-UX-16: al completar la primera vez (paso 5), primeraVez pasa a false', async () => {
     const estado = await conectar()
 
     await app.tienda.completarPrimeraVez({ nombreTienda: 'Bodega Rosita', tamanoDeLetra: 'NORMAL' })
@@ -143,6 +155,34 @@ describe('estado global (Pinia)', () => {
 
     expect(estado.resumenDelDia).toBeNull()
     expect(await app.alertas.resumenDelDia()).toBeNull()
+  })
+
+  it('RN-AL-10: cerrarRecordatorioDelLocal lo quita y no vuelve a salir hoy', async () => {
+    const estado = await conectar()
+    await app.tienda.actualizarConfiguracion({
+      alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [17] },
+    })
+    await vi.waitFor(() =>
+      expect(estado.recordatorioDelLocal).toBe('Pasado mañana pagas el local: S/ 1 200.00'),
+    )
+
+    await estado.cerrarRecordatorioDelLocal()
+
+    expect(estado.recordatorioDelLocal).toBeNull()
+    expect(await app.alertas.recordatorioDelLocal()).toBeNull()
+  })
+
+  it('RN-AL-10: al configurar el local se actualiza el recordatorio', async () => {
+    const estado = await conectar()
+    expect(estado.recordatorioDelLocal).toBeNull()
+
+    await app.tienda.actualizarConfiguracion({
+      alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [16] },
+    })
+
+    await vi.waitFor(() =>
+      expect(estado.recordatorioDelLocal).toBe('Mañana pagas el local: S/ 1 200.00'),
+    )
   })
 
   it('RN-RE-06: refrescarRecordatorioDeCopia, después de marcar la copia guardada', async () => {

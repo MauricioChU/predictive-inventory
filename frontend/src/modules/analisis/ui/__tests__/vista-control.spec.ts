@@ -44,9 +44,25 @@ async function elegir(s: DOMWrapper<Element>, opcion: string): Promise<void> {
 }
 
 describe('Control (Torre de control)', () => {
-  it('04-torre-de-control: muestra las siete secciones en el orden de la spec, con el título Control', async () => {
+  it('04-torre-de-control: muestra las ocho secciones en el orden de la spec (Alquiler del local, segunda), con el título Control', async () => {
     const { envoltura } = await abrirControl(new TiendaDePrueba())
     expect(texto(envoltura.get('h1'))).toBe('Control')
+    expect(envoltura.findAll('section h2').map(texto)).toEqual([
+      'Resumen',
+      'Alquiler del local',
+      'Atención',
+      'Para comprar',
+      'Más vendidos',
+      'Semana contra semana',
+      'Mejor día de la semana',
+      'Productos parados',
+    ])
+  })
+
+  it('RN-AN-19: con "No pago, el local es mío" la tarjeta no se muestra y quedan las siete secciones', async () => {
+    const tienda = new TiendaDePrueba()
+    await tienda.app.tienda.actualizarConfiguracion({ alquilerDelLocal: { tipo: 'NO_PAGA' } })
+    const { envoltura } = await abrirControl(tienda)
     expect(envoltura.findAll('section h2').map(texto)).toEqual([
       'Resumen',
       'Atención',
@@ -56,6 +72,65 @@ describe('Control (Torre de control)', () => {
       'Mejor día de la semana',
       'Productos parados',
     ])
+  })
+
+  describe('Alquiler del local', () => {
+    async function tiendaConAlquiler(montoCentimos: number) {
+      const tienda = new TiendaDePrueba()
+      await tienda.producto({ ...LEJIA, stockInicial: '20' }, '2026-08-01 08:00')
+      await tienda.vender('Lejía 1 L', '2', '2026-10-14 17:00')
+      await tienda.vender('Lejía 1 L', '4')
+      await tienda.app.tienda.actualizarConfiguracion({
+        alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos, dias: [20] },
+      })
+      return tienda
+    }
+
+    it('RN-AN-19: sin configurar pregunta "¿Pagas alquiler por tu local?" y "Configurar" abre la pantalla', async () => {
+      const { envoltura, router } = await abrirControl(new TiendaDePrueba())
+      const alquiler = seccion(envoltura, 'Alquiler del local')
+      expect(texto(alquiler.get('.pregunta'))).toBe('¿Pagas alquiler por tu local?')
+      expect(alquiler.find('[role="progressbar"]').exists()).toBe(false)
+      const configurar = alquiler.findAll('button').find((b) => texto(b) === 'Configurar')!
+      await configurar.trigger('click')
+      await esperarCarga()
+      expect(router.currentRoute.value.name).toBe('alquiler-del-local')
+    })
+
+    it('RN-AN-19: con el pago por cubrir muestra cuánto llevas, la barra con su porcentaje y cuánto falta', async () => {
+      const { envoltura } = await abrirControl(await tiendaConAlquiler(10000))
+      const alquiler = seccion(envoltura, 'Alquiler del local')
+      expect(alquiler.findAll('.linea').map(texto)).toEqual([
+        'Para el pago del 20/10 llevas S/ 6.60 de S/ 100.00',
+        'Te falta S/ 93.40',
+      ])
+      const barra = alquiler.get('[role="progressbar"]')
+      expect(barra.attributes('aria-valuenow')).toBe('6')
+      expect(barra.attributes('aria-valuemax')).toBe('100')
+      expect(texto(alquiler.get('.barra-de-progreso .texto'))).toBe('6 %')
+    })
+
+    it('RN-AN-19: con el pago cubierto lo dice y la barra queda al 100 %', async () => {
+      const { envoltura } = await abrirControl(await tiendaConAlquiler(500))
+      const alquiler = seccion(envoltura, 'Alquiler del local')
+      expect(alquiler.findAll('.linea').map(texto)).toEqual([
+        '✓ Ya cubriste el local del 20/10',
+        'Lo que ganes de más es tuyo: llevas S/ 1.60',
+      ])
+      expect(alquiler.get('[role="progressbar"]').attributes('aria-valuenow')).toBe('100')
+      expect(texto(alquiler.get('.barra-de-progreso .texto'))).toBe('100 %')
+    })
+
+    it('RN-AN-19: "Cambiar" es un enlace que abre la pantalla del alquiler', async () => {
+      const { envoltura, router } = await abrirControl(await tiendaConAlquiler(10000))
+      const cambiar = seccion(envoltura, 'Alquiler del local')
+        .findAll('a')
+        .find((a) => texto(a) === 'Cambiar')!
+      expect(cambiar.attributes('href')).toBe('/control/alquiler')
+      await cambiar.trigger('click')
+      await esperarCarga()
+      expect(router.currentRoute.value.name).toBe('alquiler-del-local')
+    })
   })
 
   describe('Resumen', () => {

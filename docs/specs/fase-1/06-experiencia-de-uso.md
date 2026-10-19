@@ -31,6 +31,7 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 | **RN-UX-13** | **Instalación guiada**: si la app se abre en el navegador sin instalar, Inicio muestra una tarjeta "Instala la app en tu celular" con el botón de instalar (o los pasos, si el navegador no lo ofrece). |
 | **RN-UX-14** | **Sin internet no hay diferencia**: ninguna pantalla muestra errores de conexión en la Fase 1, y la app abre y funciona completa en modo avión. |
 | **RN-UX-15** | **Accesible**: navegable con lector de pantalla (TalkBack): cada control tiene nombre, los avisos importantes se anuncian (`aria-live`), el orden de foco es lógico y se respeta "reducir movimiento" del sistema. |
+| **RN-UX-16** | **Primera vez obligatoria**: mientras no esté completada, la app **no deja navegar**. Cualquier dirección lleva a la bienvenida y la navegación fija (RN-UX-12) no se muestra. Las únicas pantallas que se abren desde ella, sin navegación fija, son las que ofrecen sus pasos: *Restaurar copia* (RN-RE-10), *Producto nuevo* e *Importar productos* (paso 4, al terminar vuelven al paso 5) y *Contar todo* (paso 5). La primera vez queda **completada al responder el paso 5**, con *Contar ahora* o *Terminar*. Los pasos 4 y 5 aceptan *Más tarde* como respuesta válida. Si la app se cierra a mitad, vuelve a empezar en la bienvenida con lo ya respondido (nombre y letra) prellenado. |
 
 ## Pantallas
 
@@ -76,14 +77,34 @@ Lista con buscador, filtros por categoría y por estado (Todos · Queda poco · 
 ### Control (Torre de control)
 Tarjetas apiladas en el orden de [04](04-torre-de-control.md); desde 768 px en dos columnas.
 
+La tarjeta **Alquiler del local** (RN-AN-19), en sus dos estados configurados:
+```
+┌─ Alquiler del local ─────────────┐   ┌─ Alquiler del local ─────────────┐
+│ Para el pago del 20/10 llevas    │   │ ✓ Ya cubriste el local del 20/10 │
+│ S/ 820.00 de S/ 1 200.00         │   │ Lo que ganes de más es tuyo:     │
+│ ████████████░░░░░░  68 %         │   │ llevas S/ 140.00                 │
+│ Te falta S/ 380.00               │   │ ██████████████████  100 %        │
+│                    Cambiar  ›    │   │                    Cambiar  ›    │
+└──────────────────────────────────┘   └──────────────────────────────────┘
+```
+*Configurar* y *Cambiar* abren la pantalla **Alquiler del local**: tres botones de opción (*Una vez al mes* · *Dos veces al mes* · *No pago, el local es mío*) y, si paga, el monto (con − / +, RN-UX-06) y uno o dos selectores del día del mes (1 al 31). Abajo, *Guardar*. La misma pantalla se abre desde *Ajustes → Datos de la tienda*.
+
 ### Historial
 Operaciones agrupadas por día ("Hoy", "Ayer", "Lunes 12"), con filtro por tipo. Tocar una muestra el detalle y el botón **Anular**.
 
 ### Ajustes
-Datos de la tienda, días entre compras, días de anticipación, aviso de sobrecompra, tamaño de letra, notificaciones, categorías, **Guardar copia**, **Restaurar copia**, **Exportar a Excel**, **Importar productos**, **Revisar datos** y *Acerca de* (versión).
+Datos de la tienda (incluye *Alquiler del local*), días entre compras, días de anticipación, aviso de sobrecompra, tamaño de letra, notificaciones, categorías, **Guardar copia**, **Restaurar copia**, **Exportar a Excel**, **Importar productos**, **Revisar datos** y *Acerca de* (versión).
 
 ### Primera vez
-1. Bienvenida → 2. Nombre de la tienda → 3. Tamaño de letra (con vista previa) → 4. "¿Cómo quieres cargar tus productos?": *Uno por uno* o *Desde Excel* → 5. "Ahora contemos lo que tienes" (conteo guiado; se puede dejar para después) → Inicio.
+Obligatoria (RN-UX-16), sin navegación fija:
+
+1. **Bienvenida**: *Empezar*, o *Ya tengo una copia guardada* (RN-RE-10).
+2. **Nombre de la tienda.**
+3. **Tamaño de letra** (con vista previa).
+4. **"¿Cómo quieres cargar tus productos?"**: *Uno por uno*, *Desde Excel* o *Más tarde*.
+5. **"Ahora contemos lo que tienes"**: *Contar ahora* (solo si ya hay productos) o *Terminar* (con productos sin contar dice "Puedes contarlos después desde Inicio"). Completa la primera vez y abre el conteo guiado o Inicio.
+
+El costo del local **no** es un paso: se configura desde su tarjeta en Control (RN-AN-19).
 
 ## Responsive
 

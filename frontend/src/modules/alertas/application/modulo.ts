@@ -5,11 +5,13 @@ import type {
 } from '@/shared/contratos/entre-modulos'
 import type { BusDeEventos, TipoDeEvento } from '@/shared/domain/eventos'
 import type { Reloj } from '@/shared/domain/reloj'
+import type { RecordatorioDelLocal } from '../domain/recordatorio-del-local'
 import type { UnidadDeTrabajo } from '@/shared/application/unidad-de-trabajo'
 import { evaluarAvisos } from './evaluar-avisos'
 import { notificacionesPermitidas } from './permiso'
 import type { Notificacion, Notificador, RepositorioDeAvisos } from './puertos'
 import { TareaEnRafaga, VENTANA_DE_REEVALUACION_MS } from './rafaga'
+import { cerrarRecordatorioDelLocal, recordatorioDelLocalDeHoy } from './recordatorio-del-local'
 import {
   cerrarResumenDelDia,
   resumenDeAtencion,
@@ -19,7 +21,7 @@ import {
   type ResumenDelDia,
 } from './resumen'
 
-export type { ResumenDeAtencion, ResumenDelDia }
+export type { RecordatorioDelLocal, ResumenDeAtencion, ResumenDelDia }
 export { VENTANA_DE_REEVALUACION_MS }
 
 /** Dependencias perezosas: los otros módulos se reciben como funciones para permitir
@@ -61,6 +63,10 @@ export interface ModuloAlertas {
   /** `null` si el resumen del día ya se mostró hoy. */
   resumenDelDia(): Promise<ResumenDelDia | null>
   cerrarResumenDelDia(): Promise<void>
+  /** RN-AL-10: `null` si no hay pago del local en los próximos 3 días o ya se cerró hoy. */
+  recordatorioDelLocal(): Promise<RecordatorioDelLocal | null>
+  /** RN-AL-10: *Entendido* oculta la tarjeta hasta el día siguiente. */
+  cerrarRecordatorioDelLocal(): Promise<void>
   /** RN-AL-08: solo se llama desde la pantalla que explica para qué sirven las notificaciones. */
   solicitarPermiso(): Promise<boolean>
   /** Permiso del navegador Y configuración de la tienda, ambos a la vez. */
@@ -95,7 +101,8 @@ export function crearModuloAlertas(d: DependenciasDeAlertas): ModuloAlertas {
   const programada = new TareaEnRafaga(
     d.ventanaDeReevaluacionMs ?? VENTANA_DE_REEVALUACION_MS,
     () => {
-      void encolarEvaluacion()
+      // RN-AL-11: la evaluación que piden los eventos no avisa del pago del local.
+      void encolarEvaluacion({ pagoDelLocal: false })
     },
   )
   const manejadoresDeAtencion = new Set<(resumen: ResumenDeAtencion) => void>()
@@ -126,10 +133,10 @@ export function crearModuloAlertas(d: DependenciasDeAlertas): ModuloAlertas {
     } while (ultima !== cola || programada.pendiente())
   }
 
-  function encolarEvaluacion(): Promise<Notificacion[]> {
+  function encolarEvaluacion(opciones?: { pagoDelLocal?: boolean }): Promise<Notificacion[]> {
     // Esta evaluación lee después de todo lo que pidió la programada: la cubre.
     programada.cancelar()
-    const turno = cola.then(() => evaluarAvisos(d, compartirAtencion))
+    const turno = cola.then(() => evaluarAvisos(d, compartirAtencion, opciones))
     cola = turno.then(
       (): void => undefined,
       (error: unknown): void => {
@@ -144,6 +151,8 @@ export function crearModuloAlertas(d: DependenciasDeAlertas): ModuloAlertas {
     resumenDeAtencion: () => resumenDeAtencion(d),
     resumenDelDia: () => resumenDelDia(d),
     cerrarResumenDelDia: () => cerrarResumenDelDia(d),
+    recordatorioDelLocal: () => recordatorioDelLocalDeHoy(d),
+    cerrarRecordatorioDelLocal: () => cerrarRecordatorioDelLocal(d),
     solicitarPermiso: () => d.notificador.solicitarPermiso(),
     notificacionesPermitidas: () => notificacionesPermitidas(d),
     escucharEventos: () => {
