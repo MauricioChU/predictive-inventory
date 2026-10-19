@@ -38,11 +38,17 @@ const idDetalle = useId()
 const refRaiz = ref<HTMLElement>()
 const refTitulo = ref<HTMLElement>()
 const refAlternar = ref<HTMLElement>()
+const refPie = ref<HTMLElement>()
+const refCabecera = ref<HTMLElement>()
 /** El alto del panel compacto: se reserva mientras la hoja abierta flota sobre la pantalla. */
 const reserva = ref(0)
 
 // El foco por teclado nunca queda debajo del panel (WCAG 2.4.11), como con BarraDeTotal.
 usarAltoObservado(refRaiz, { variable: '--alto-barra-de-total' })
+// Abierta, la hoja se desplaza y el total con Confirmar venta queda pegado abajo: lo enfocado
+// se desplaza por encima de ese pie (scroll-padding), nunca debajo.
+usarAltoObservado(refPie, { variable: '--alto-pie-del-panel' })
+usarAltoObservado(refCabecera, { variable: '--alto-cabecera-del-panel' })
 
 const titulo = computed(() => {
   const n = props.carrito.lineas.value.length
@@ -75,9 +81,12 @@ function cerrarConEscape(): void {
     <!-- Tocar fuera de la hoja también la cierra (comodidad: el botón Cerrar siempre está). -->
     <div v-if="expandido" class="velo" aria-hidden="true" @click="alternar" />
     <div class="hoja">
-      <div class="asa" aria-hidden="true" />
-      <div class="cabecera">
-        <h2 :id="idTitulo" ref="refTitulo" class="titulo-carrito" tabindex="-1">{{ titulo }}</h2>
+      <div ref="refCabecera" class="cabecera-del-panel">
+        <div class="asa" aria-hidden="true" />
+        <!-- Tocar el título también abre y cierra (comodidad: el botón es lo que lee el lector). -->
+        <h2 :id="idTitulo" ref="refTitulo" class="titulo-carrito" tabindex="-1" @click="alternar">
+          {{ titulo }}
+        </h2>
         <button
           ref="refAlternar"
           type="button"
@@ -103,12 +112,13 @@ function cerrarConEscape(): void {
 
       <div v-if="$slots.avisos" class="avisos-del-panel"><slot name="avisos" /></div>
 
-      <div class="pie-del-panel">
+      <div ref="refPie" class="pie-del-panel">
         <p class="total-del-panel">
           <span class="etiqueta">Total</span>
           <span class="total">{{ textoTotal }}</span>
         </p>
         <BotonPrincipal
+          class="confirmar"
           texto="Confirmar venta"
           :icono="Check"
           :deshabilitado="registrando"
@@ -128,10 +138,18 @@ function cerrarConEscape(): void {
   z-index: 5;
   margin: var(--espacio-4) calc(-1 * var(--espacio-4)) calc(-1 * var(--espacio-4));
 }
+/* La hoja es una cuadrícula: compacto = título · total y "Ver detalle" · Confirmar venta. */
 .hoja {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espacio-1);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'asa asa'
+    'titulo titulo'
+    'total alternar'
+    'avisos avisos'
+    'confirmar confirmar';
+  align-items: center;
+  gap: 0 var(--espacio-3);
   max-inline-size: var(--ancho-contenido);
   margin-inline: auto;
   padding: var(--espacio-2) var(--espacio-4) var(--espacio-3);
@@ -141,37 +159,39 @@ function cerrarConEscape(): void {
   background: var(--color-superficie);
   box-shadow: var(--sombra-flotante);
 }
+/* Compacto: asa, título y botón son celdas de la hoja (la cabecera no dibuja caja). */
+.cabecera-del-panel {
+  display: contents;
+}
 .asa {
-  align-self: center;
+  grid-area: asa;
+  justify-self: center;
   inline-size: 2.5rem;
   block-size: 4px;
+  margin-block-end: var(--espacio-2);
   border-radius: 999px;
   background: var(--color-borde);
   opacity: 0.55;
 }
-.cabecera {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--espacio-3);
-  min-block-size: var(--alto-toque);
-}
 .titulo-carrito {
+  grid-area: titulo;
   margin: 0;
   font-size: 1.05rem;
   line-height: 1.25;
+  overflow-wrap: break-word;
+  cursor: pointer;
 }
 .titulo-carrito:focus {
   outline: none;
 }
 .alternar {
+  grid-area: alternar;
   display: inline-flex;
-  flex: none;
   align-items: center;
   gap: var(--espacio-1);
   min-block-size: var(--alto-toque);
   padding: 0 var(--espacio-2);
+  margin-inline-end: calc(-1 * var(--espacio-2));
   border: none;
   border-radius: var(--radio-chico);
   background: none;
@@ -180,53 +200,43 @@ function cerrarConEscape(): void {
   font-weight: 700;
   cursor: pointer;
 }
-/* Toda la cabecera es el botón: se abre y se cierra tocándola en cualquier parte. */
-.alternar::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-}
-.alternar:focus-visible {
-  outline: none;
-}
-.alternar:focus-visible::after {
-  outline: 3px solid var(--color-foco);
-  outline-offset: -3px;
-  border-radius: var(--radio-chico);
-}
 .icono {
   inline-size: 1.25em;
   block-size: 1.25em;
   flex: none;
 }
 .detalle {
+  grid-area: detalle;
+  align-self: stretch;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--espacio-4);
-  min-block-size: 0;
-  overflow-y: auto;
-  /* Aire para el anillo de foco de los campos que tocan el borde de la zona que se desplaza. */
+  /* Aire para el anillo de foco de los campos que tocan el borde de la hoja. */
   padding: 4px;
-  margin: -4px;
-  overscroll-behavior: contain;
+  margin: 0 -4px var(--espacio-3);
 }
 .avisos-del-panel {
+  grid-area: avisos;
   min-inline-size: 0;
+  margin-block-end: var(--espacio-2);
 }
+/* Compacto: "Total" arriba del monto, para dejarle lugar a "Ver detalle" al lado. */
+/* Compacto: el total y Confirmar venta son celdas de la hoja (el pie no dibuja caja). */
 .pie-del-panel {
-  display: grid;
-  gap: var(--espacio-1);
+  display: contents;
 }
 .total-del-panel {
+  grid-area: total;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--espacio-3);
+  flex-direction: column;
+  align-items: flex-start;
   margin: 0;
+  line-height: 1.1;
 }
 .etiqueta {
   color: var(--color-texto-suave);
   font-weight: 700;
+  white-space: nowrap;
 }
 .total {
   /* Un monto nunca se parte. */
@@ -235,9 +245,28 @@ function cerrarConEscape(): void {
   line-height: 1.15;
   white-space: nowrap;
 }
+.confirmar {
+  grid-area: confirmar;
+}
+
+/* Pantalla baja (celular en horizontal): el compacto se achata a dos filas — título y Ver detalle,
+   total y Confirmar venta — para dejarle lugar a la grilla. */
+@media (max-height: 520px) {
+  .panel-de-venta:not(.panel-de-venta--abierto) .hoja {
+    grid-template-areas:
+      'titulo alternar'
+      'avisos avisos'
+      'total confirmar';
+  }
+  .panel-de-venta:not(.panel-de-venta--abierto) .asa {
+    display: none;
+  }
+}
 
 /* Expandido: la hoja cubre la pantalla salvo un margen arriba y deja la navegación a la vista.
-   El panel conserva su lugar en la página (min-block-size en línea), así nada salta al abrir. */
+   El panel conserva su lugar en la página (min-block-size en línea), así nada salta al abrir.
+   Título y "Cerrar" arriba, las líneas se desplazan en medio, y el total y Confirmar venta quedan
+   siempre a la vista abajo. */
 .panel-de-venta--abierto .hoja {
   position: fixed;
   inset-inline: 0;
@@ -245,8 +274,59 @@ function cerrarConEscape(): void {
   z-index: 8;
   box-sizing: border-box;
   inline-size: 100%;
-  max-block-size: calc(100dvh - var(--alto-pie, 0px) - var(--espacio-5));
+  block-size: calc(100dvh - var(--alto-pie, 0px) - var(--espacio-5));
+  /* La hoja entera se desplaza (también en celular horizontal o con letra Muy grande, donde las
+     líneas no entran); el total y Confirmar venta quedan pegados abajo, siempre a la vista. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block-start: var(--alto-cabecera-del-panel, 4.5rem);
+  scroll-padding-block-end: var(--alto-pie-del-panel, 8rem);
+  padding-block: 0;
+  grid-template-areas:
+    'cabecera'
+    'detalle'
+    'avisos'
+    'pie';
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto auto;
   animation: abrir-hoja 0.18s ease-out;
+}
+.panel-de-venta--abierto .cabecera-del-panel {
+  grid-area: cabecera;
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'asa asa'
+    'titulo alternar';
+  align-items: center;
+  gap: 0 var(--espacio-3);
+  margin-inline: calc(-1 * var(--espacio-4));
+  padding: var(--espacio-2) var(--espacio-4) 0;
+  background: var(--color-superficie);
+}
+.panel-de-venta--abierto .total-del-panel,
+.panel-de-venta--abierto .confirmar {
+  grid-area: auto;
+}
+.panel-de-venta--abierto .pie-del-panel {
+  grid-area: pie;
+  position: sticky;
+  inset-block-end: 0;
+  display: grid;
+  gap: var(--espacio-1);
+  margin-inline: calc(-1 * var(--espacio-4));
+  padding: var(--espacio-2) var(--espacio-4) var(--espacio-3);
+  border-block-start: 1px solid var(--color-borde-foto);
+  background: var(--color-superficie);
+}
+.panel-de-venta--abierto .total-del-panel {
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacio-3);
 }
 .velo {
   position: fixed;
@@ -254,9 +334,16 @@ function cerrarConEscape(): void {
   z-index: 7;
   background: rgb(18 26 24 / 0.45);
 }
-.panel-de-venta--abierto .pie-del-panel {
-  padding-block-start: var(--espacio-2);
-  border-block-start: 1px solid var(--color-borde-foto);
+/* Pantalla baja (celular en horizontal): no queda lugar para un título y un pie fijos; todo
+   se desplaza junto, con Confirmar venta al final. */
+@media (max-height: 520px) {
+  .panel-de-venta--abierto .cabecera-del-panel,
+  .panel-de-venta--abierto .pie-del-panel {
+    position: static;
+  }
+  .panel-de-venta--abierto .hoja {
+    scroll-padding-block: 0;
+  }
 }
 @keyframes abrir-hoja {
   from {

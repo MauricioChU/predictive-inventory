@@ -149,7 +149,7 @@ async function nuevaVenta(): Promise<void> {
 </script>
 
 <template>
-  <div class="vista-vender">
+  <div class="vista-vender" :class="{ 'vista-vender--con-panel': !esPC && paso === 'carrito' }">
     <PantallaExito v-if="paso === 'exito'" titulo="Venta registrada" :detalle="detalleDeExito">
       <BotonPrincipal
         class="accion-exito"
@@ -231,6 +231,16 @@ async function nuevaVenta(): Promise<void> {
 </template>
 
 <style scoped>
+/* Celular: la pantalla llena el alto libre y el panel de venta queda abajo, sobre la navegación
+   (--alto-pie, medido en vivo), aunque la grilla sea corta. */
+.vista-vender--con-panel {
+  display: flex;
+  flex-direction: column;
+  min-block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
+}
+.vista-vender--con-panel :deep(.panel-de-venta) {
+  margin-block-start: auto;
+}
 .avisos {
   display: grid;
   gap: var(--espacio-3);
