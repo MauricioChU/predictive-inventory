@@ -58,7 +58,7 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 │ Inicio Vender Recibir Prod. Control │
 └──────────────────────────────┘
 ```
-El encabezado es el **nombre de la tienda en mayúsculas**, sin saludo ni emoji (si no hay nombre, no se muestra nada), y a la derecha la tuerca de *Ajustes*. Debajo va la **fecha en mayúsculas**, sin hora (el celular ya la muestra); es la fecha de la tienda (Lima) y cambia sola si la medianoche pasa con la app abierta. Las acciones quedan **abajo, sobre la navegación**, al alcance del pulgar; si el contenido es más alto que la pantalla (letra Muy grande, 320 px), todo fluye hacia abajo sin taparse.
+El encabezado es el **nombre de la tienda en mayúsculas**, sin saludo ni emoji (si no hay nombre, el encabezado dice *Inicio*), y a la derecha la tuerca de *Ajustes*. Debajo va la **fecha en mayúsculas**, sin hora (el celular ya la muestra); es la fecha de la tienda (Lima) y, si la medianoche pasa con la app abierta, se pone al día al volver a la app. Las acciones quedan **abajo, sobre la navegación**, al alcance del pulgar; si el contenido es más alto que la pantalla (letra Muy grande, 320 px), todo fluye hacia abajo sin taparse.
 
 ### Vender
 ```
@@ -79,7 +79,7 @@ El encabezado es el **nombre de la tienda en mayúsculas**, sin saludo ni emoji 
 1. Buscar (campo grande arriba) → resultados con **foto grande**, nombre, precio y stock; los más vendidos primero. Debajo del buscador, accesos rápidos a los 8 productos más vendidos. No hay sección "En esta venta" mientras no se haya elegido nada.
 2. Tocar un producto lo agrega con cantidad 1 y **sube desde abajo el panel de venta** (RN-OP-22), que no tapa la grilla: la página deja espacio para seguir eligiendo.
 3. **Panel compacto** (por defecto): "En esta venta · N producto(s)" con una flecha y *Ver detalle*, el **total** en grande y **Confirmar venta** (ancho completo, 56 px). Confirmar desde aquí registra la venta con *Ahora*.
-4. **Panel expandido** (al tocar la cabecera o *Ver detalle*; se cierra con *Cerrar* o la misma cabecera, siempre con botón: RN-UX-05): cada línea con foto, nombre, − / +, precio de línea, *Quitar* y **"Quedan N unid."** (o "Se acaba"); *¿Cuándo fue la venta?* (*Ahora* / *Otro día*); el total y **Confirmar venta**. Si se quitan todas las líneas, el panel baja y desaparece.
+4. **Panel expandido** (al tocar la cabecera o *Ver detalle*; se cierra con *Cerrar* o la misma cabecera, siempre con botón: RN-UX-05): cada línea, compacta para ver dos o tres a la vez: foto, nombre y **"Quedan N unid."** (o "Se acaba"); − / + con el importe y el precio por unidad al lado; *Cambiar precio* y *Quitar* lado a lado (todo tocable de 48 px o más); *¿Cuándo fue la venta?* (*Ahora* / *Otro día*); el total y **Confirmar venta**. Si se quitan todas las líneas, el panel baja y desaparece.
 5. Pantalla de éxito con ✓, resumen y **Deshacer** (10 s) → vuelve a Vender vacío.
 
 En PC (desde 1024 px) no hay panel deslizable: el carrito queda a la derecha del buscador con el mismo contenido que el panel expandido y *Confirmar venta*. El panel es una región con nombre ("En esta venta"); al expandirse el foco pasa a su título y al cerrar vuelve al botón que lo abrió; la cabecera lleva `aria-expanded`; sin animación si el sistema pide reducir movimiento.

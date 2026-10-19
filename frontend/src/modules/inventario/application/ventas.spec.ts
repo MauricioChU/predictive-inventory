@@ -296,7 +296,7 @@ describe('registrarVenta', () => {
     expect((await operaciones.porId(operacionId))?.nota).toBe('Pagó con Yape')
   })
 
-  it('RN-OP-13: lo que arma el carrito se registra tal cual', async () => {
+  it('RN-OP-12: lo que arma el carrito se registra tal cual', async () => {
     const { modulo, catalogo, stock, operaciones } = await escenario()
     const carrito = new Carrito()
     const enCarrito = async (id: string) => {
