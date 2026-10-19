@@ -128,18 +128,28 @@ Característica: Operaciones de stock
     Cuando vendo "2" de "Lejía 1 L" a precio especial "0.00"
     Entonces el resultado es "error: El precio de venta debe ser mayor que S/ 0.00"
 
-  @RN-OP-13
-  Esquema del escenario: Calcular el vuelto
-    Dado un carrito con total "S/ 14.63"
-    Cuando el cliente paga "<pagado>"
-    Entonces se muestra "<mensaje>"
-    Y el cobro <puede> confirmarse
+  @RN-OP-22
+  Esquema del escenario: El panel de venta muestra cuántas unidades quedan tras la venta
+    Cuando pongo "<cantidad>" de "<producto>" en el panel de venta
+    Entonces el panel dice "<mensaje>"
 
     Ejemplos:
-      | pagado | mensaje          | puede   |
-      | 20.00  | Vuelto S/ 5.37   | puede   |
-      | 14.63  | Vuelto S/ 0.00   | puede   |
-      | 10.00  | Faltan S/ 4.63   | no puede |
+      | producto  | cantidad | mensaje        |
+      | Lejía 1 L | 3        | Quedan 7 unid. |
+      | Lejía 1 L | 9        | Queda 1 unid.  |
+      | Lejía 1 L | 10       | Se acaba       |
+      | Carbón    | 2.5      | Quedan 7.5 kg  |
+
+  @RN-OP-22
+  Escenario: Confirmar desde el panel registra la venta con Ahora
+    Cuando vendo "2" de "Lejía 1 L"
+    Entonces el stock de "Lejía 1 L" es "8"
+    Y la venta ocurrió el "2026-10-15 10:00"
+
+  @RN-OP-22
+  Escenario: Con Otro día el panel registra la venta en el día y la hora elegidos
+    Cuando vendo "1" de "Lejía 1 L" con fecha "2026-10-14 18:30"
+    Entonces la venta ocurrió el "2026-10-14 18:30"
 
   @RN-OP-14
   Escenario: Si el costo de la mercadería cambió, se ofrece actualizar el precio de compra

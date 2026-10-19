@@ -9,7 +9,7 @@ Criterios de aceptación ejecutables: [features/operaciones.feature](features/op
 | Id | Historia |
 |---|---|
 | HU-OP-01 | Como usuario principal quiero **vender uno o varios productos** y ver el **total a cobrar**, para no hacer cuentas a mano. |
-| HU-OP-02 | Como usuario principal quiero escribir **con cuánto me pagaron** y ver el **vuelto**. |
+| ~~HU-OP-02~~ | **Retirada** (2026-10-19): el dueño no usa el vuelto en la app. |
 | HU-OP-03 | Como usuario principal quiero registrar **la mercadería que llegó** con su precio de compra. |
 | HU-OP-04 | Como usuario principal quiero registrar **lo que se dañó, derramó o venció**, para que el stock sea real. |
 | HU-OP-05 | Como usuario principal quiero **contar lo que hay en el estante** y que la app corrija el stock. |
@@ -84,7 +84,8 @@ El inventario funciona como un **libro de operaciones**: cada hecho del negocio 
 | **RN-OP-10** | Cada línea de venta guarda el **precio de venta** y el **costo unitario** vigentes en ese momento. |
 | **RN-OP-11** | El precio de una línea puede cambiarse **solo para esa venta** (rebaja o precio especial). Debe ser mayor que S/ 0.00. El precio del producto no cambia. |
 | **RN-OP-12** | **Importe de línea** = precio × cantidad, redondeado al céntimo (mitad hacia arriba). **Total de la venta** = suma de importes de línea. **Ganancia de línea** = importe − (costo × cantidad redondeado al céntimo). |
-| **RN-OP-13** | **Vuelto** (opcional, no se guarda): vuelto = pagado − total. Si lo pagado es menor que el total, se muestra "Faltan S/ X" y no se puede confirmar el cobro con ese monto. Hay botones rápidos con billetes: S/ 10, 20, 50, 100 y "Exacto". |
+| ~~RN-OP-13~~ | **Retirada** (2026-10-19): el dueño no usa el vuelto en la app; ya no se pregunta con cuánto pagan. |
+| **RN-OP-22** | **Panel de venta**: al agregar el primer producto aparece el panel con el total y *Confirmar venta*; cada línea muestra cuántas unidades quedan tras la venta (stock − cantidad) en tiempo real ("Quedan 7 unid."; si no queda nada, "Se acaba"; si la cantidad pasa el stock, vale RN-OP-05); *¿Cuándo fue la venta?* está en el panel expandido; confirmar registra la venta con *Ahora* salvo que se haya elegido *Otro día* (RN-OP-09). |
 
 ### Llegada de mercadería (ingreso)
 
@@ -124,8 +125,6 @@ El inventario funciona como un **libro de operaciones**: cada hecho del negocio 
 | **Total** | | | | | **S/ 14.63** | **S/ 10.00** | **S/ 4.63** |
 
 Cálculos con redondeo al céntimo, mitad hacia arriba: 2.75 × 1.25 = 3.4375 → 3.44; 7.90 × 0.333 = 2.6307 → 2.63; 5.30 × 0.333 = 1.7649 → 1.76.
-
-Si pagan con S/ 20.00, el vuelto es S/ 5.37.
 
 ## Eventos de dominio
 
