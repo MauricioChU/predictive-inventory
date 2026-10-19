@@ -2,7 +2,7 @@ import process from 'node:process'
 import { expect, test, type Page } from '@playwright/test'
 import { esperarSinViolacionesGraves } from './utilidades/calidad'
 import { abrir } from './utilidades/navegacion'
-import { abrirTiendaLista } from './utilidades/tienda'
+import { abrirTiendaLista, completarPrimeraVez } from './utilidades/tienda'
 
 /** Lo que estas pruebas usan de la aplicación real (window.__aplicacion, ganchos de prueba). */
 interface AplicacionEnLaPagina {
@@ -200,7 +200,8 @@ test.describe('RN-SIS-08: sin conexión después de la primera carga (build de p
     page,
     context,
   }) => {
-    await abrir(page, './')
+    // RN-UX-16: sin la primera vez completa, toda ruta lleva a la bienvenida.
+    await completarPrimeraVez(page)
     await page.evaluate(async () => {
       await navigator.serviceWorker.ready
     })
