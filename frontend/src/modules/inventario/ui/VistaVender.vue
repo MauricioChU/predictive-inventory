@@ -1,26 +1,22 @@
 <script setup lang="ts">
-import { computed, ref, useId } from 'vue'
-import { Banknote, Check, ShoppingCart } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
+import { Check, ShoppingCart } from 'lucide-vue-next'
 import type { ProductoVista } from '@/modules/catalogo'
 import { useAplicacion } from '@/app/proveer-aplicacion'
-import { formatearCantidad, formatearDinero } from '@/shared/domain/formato'
+import { formatearDinero } from '@/shared/domain/formato'
 import { useAnunciador } from '@/shared/ui/anunciador'
+import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import BarraDeTotal from '@/shared/ui/componentes/BarraDeTotal.vue'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
-import FilaDeDato from '@/shared/ui/componentes/FilaDeDato.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import PantallaExito from '@/shared/ui/componentes/PantallaExito.vue'
-import SelectorDeBilletes from '@/shared/ui/componentes/SelectorDeBilletes.vue'
-import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
-import { BILLETES_DE_SOLES } from '@/shared/ui/tipos-de-productos'
-import { calcularVuelto } from '../domain/vuelto'
+import { usarPantallaAncha } from '@/shared/ui/usar-pantalla-ancha'
 import BuscadorDeProductos, { type OrigenDeLaEleccion } from './BuscadorDeProductos.vue'
-import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import CuandoFue from './CuandoFue.vue'
 import DisposicionDeCarrito from './DisposicionDeCarrito.vue'
 import ListaDelCarrito from './ListaDelCarrito.vue'
-import { textoDePrecio } from './carrito-de-pantalla'
+import PanelDeVenta from './PanelDeVenta.vue'
 import { useCarritos } from './carritos'
 import { errorDeFechaDelDominio, instanteDe, type ErrorDeFecha } from './cuando'
 import { enfocarLinea, enfocarPrimerError, enfocarTitulo, vibrar } from './foco-y-respuesta'
@@ -29,11 +25,12 @@ import { usarCarritoAlDia } from './usar-carrito-al-dia'
 import { usarDeshacer } from './usar-deshacer'
 
 /**
- * Vender (HU-OP-01, HU-OP-02; 06-experiencia-de-uso): buscar o tocar un más vendido → carrito
- * con − / + y precio especial → Cobrar con billetes y vuelto → Confirmar venta → pantalla de
- * éxito con Deshacer (10 s) → Nueva venta, vacía.
+ * Vender (HU-OP-01, RN-OP-22; 06-experiencia-de-uso): buscar o tocar un más vendido → al agregar
+ * el primer producto sube el panel de venta (total y Confirmar venta; abierto, las líneas con
+ * cuánto queda de cada una y ¿Cuándo fue la venta?) → Confirmar venta → pantalla de éxito con
+ * Deshacer (10 s) → Nueva venta, vacía. En PC (≥ 1024 px) el carrito va a la derecha, sin panel.
  */
-type Paso = 'carrito' | 'cobro' | 'exito'
+type Paso = 'carrito' | 'exito'
 
 const aplicacion = useAplicacion()
 const anunciador = useAnunciador()
@@ -43,54 +40,57 @@ const cuando = carrito.cuando
 // r2 #1: al volver con un carrito guardado, sus productos se ponen al día.
 const alDia = usarCarritoAlDia(carrito)
 const deshacer = usarDeshacer()
+const esPC = usarPantallaAncha()
 
-const idResumen = useId()
 const paso = ref<Paso>('carrito')
-const pagado = ref('')
+const expandido = ref(false)
 const registrando = ref(false)
 const error = ref<ErrorParaMostrar | null>(null)
 const detalleDeExito = ref('')
 const errorFecha = ref<ErrorDeFecha>()
 
 const textoTotal = computed(() => formatearDinero(carrito.total.value))
-/** RN-OP-13: "Vuelto S/ 5.37" / "Faltan S/ 4.63"; sin monto escrito se puede confirmar igual. */
-const vuelto = computed(() => calcularVuelto(carrito.total.value, pagado.value))
-const tonoDelVuelto = computed(() => {
-  if (vuelto.value.vuelto) return 'exito' as const
-  return vuelto.value.mensaje ? ('atencion' as const) : ('normal' as const)
+
+// Cada cambio del total (producto agregado, cantidad cambiada, línea quitada) se anuncia con el
+// mismo mecanismo aria-live que ya usa el carrito.
+watch(textoTotal, (nuevo) => {
+  if (!carrito.vacio.value) anunciador.anunciar(`Total ${nuevo}`)
+})
+
+// Sin líneas no hay panel que abrir.
+watch(carrito.vacio, (vacio) => {
+  if (vacio) expandido.value = false
 })
 
 function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): void {
   carrito.agregar(producto)
-  anunciador.anunciar(`Agregaste ${producto.nombre}. Total ${textoTotal.value}`)
-  if (origen === 'resultados') void enfocarLinea(producto.id)
+  anunciador.anunciar(`Agregaste ${producto.nombre}`)
+  // En celular el panel va compacto: no hay línea a la que llevar el foco.
+  if (origen === 'resultados' && esPC.value) void enfocarLinea(producto.id)
 }
 
-async function cobrar(): Promise<void> {
+async function abrirDetalle(): Promise<void> {
+  expandido.value = true
+  await enfocarPrimerError('.lista-del-carrito')
+}
+
+async function confirmar(): Promise<void> {
+  if (registrando.value) return
   carrito.marcarVacias()
   if (carrito.hayErrores.value) {
+    // Lo que falla se ve y se toca junto a su campo: el panel se abre y el foco va ahí.
+    expandido.value = true
     await enfocarPrimerError('.lista-del-carrito')
     anunciador.anunciar('Revisa lo que está marcado en el carrito.')
     return
   }
   error.value = null
-  errorFecha.value = undefined
-  pagado.value = ''
-  paso.value = 'cobro'
-  await enfocarTitulo()
-}
-
-async function volverAlCarrito(): Promise<void> {
-  paso.value = 'carrito'
-  await enfocarTitulo()
-}
-
-async function confirmar(): Promise<void> {
-  if (registrando.value || !vuelto.value.puedeConfirmar) return
-  error.value = null
   const fecha = instanteDe(cuando.value)
   errorFecha.value = fecha.error
-  if (fecha.error) return
+  if (fecha.error) {
+    expandido.value = true
+    return
+  }
   registrando.value = true
   try {
     // r2 #1: con los precios de ahora a la vista, se manda el precio que se vio si cambió.
@@ -103,24 +103,24 @@ async function confirmar(): Promise<void> {
     const mostrado = errorParaMostrar(causa, 'venta')
     registrando.value = false
     errorFecha.value = errorDeFechaDelDominio(mostrado.codigo, mostrado.mensaje)
-    if (errorFecha.value) return
+    if (errorFecha.value) {
+      await abrirDetalle()
+      return
+    }
     error.value = mostrado
     if (error.value.codigo === 'STOCK_INSUFICIENTE') {
       // RN-OP-05: con el stock al día, las líneas que ya no alcanzan se marcan junto a su campo.
       await alDia.refrescar()
-      paso.value = 'carrito'
+      await abrirDetalle()
     }
     return
   }
   registrando.value = false
   const copia = carrito.copia()
   const totalVendido = textoTotal.value
-  const cambio = vuelto.value.vuelto
-  detalleDeExito.value = cambio
-    ? `Total ${totalVendido} · Vuelto ${formatearDinero(cambio)}`
-    : `Total ${totalVendido}`
+  detalleDeExito.value = `Total ${totalVendido}`
   carrito.vaciar()
-  pagado.value = ''
+  expandido.value = false
   paso.value = 'exito'
   vibrar()
   deshacer.ofrecer({
@@ -146,22 +146,6 @@ async function nuevaVenta(): Promise<void> {
   paso.value = 'carrito'
   await enfocarTitulo()
 }
-
-/** "Exacto": paga justo el total. */
-function pagoExacto(): void {
-  pagado.value = textoDePrecio(carrito.total.value)
-}
-
-const resumenDelCobro = computed(() =>
-  carrito.lineas.value.map((l) => ({
-    id: l.producto.id,
-    // "× 1 kg" nunca se parte (la etiqueta de FilaDeDato no pasa por pegarCifras).
-    etiqueta: pegarCifras(
-      `${l.producto.nombre} × ${l.cantidadLeida ? formatearCantidad(l.cantidadLeida, l.producto.unidad) : l.cantidad}`,
-    ),
-    valor: l.importe ? formatearDinero(l.importe) : '—',
-  })),
-)
 </script>
 
 <template>
@@ -175,38 +159,6 @@ const resumenDelCobro = computed(() =>
       />
     </PantallaExito>
 
-    <div v-else-if="paso === 'cobro'" class="cobro">
-      <EncabezadoPagina titulo="Cobrar" volver @volver="volverAlCarrito" />
-      <SelectorDeBilletes
-        v-model="pagado"
-        :texto-total="textoTotal"
-        :billetes="BILLETES_DE_SOLES"
-        :mensaje="vuelto.mensaje"
-        :tono-mensaje="tonoDelVuelto"
-        @exacto="pagoExacto"
-      />
-      <CuandoFue v-model="cuando" pregunta="¿Cuándo fue la venta?" :error="errorFecha" />
-      <MensajeDeError v-if="error" :mensaje="error.mensaje" :ayuda="error.ayuda" />
-      <section class="resumen-del-cobro" :aria-labelledby="idResumen">
-        <h2 :id="idResumen" class="subtitulo">Lo que se vende</h2>
-        <FilaDeDato
-          v-for="fila in resumenDelCobro"
-          :key="fila.id"
-          :etiqueta="fila.etiqueta"
-          :texto-valor="fila.valor"
-        />
-      </section>
-      <!-- Principio 1: "Confirmar venta" siempre a la vista, abajo, con el vuelto al lado. -->
-      <BarraDeTotal
-        :etiqueta="vuelto.vuelto ? 'Vuelto' : 'Total'"
-        :texto-total="vuelto.vuelto ? formatearDinero(vuelto.vuelto) : textoTotal"
-        texto-accion="Confirmar venta"
-        :icono="Check"
-        :deshabilitado="!vuelto.puedeConfirmar || registrando"
-        @accion="confirmar"
-      />
-    </div>
-
     <template v-else>
       <EncabezadoPagina titulo="Vender" />
       <div class="avisos">
@@ -217,9 +169,11 @@ const resumenDelCobro = computed(() =>
           texto-cerrar="Cerrar"
           @cerrar="alDia.cerrarAviso"
         />
-        <MensajeDeError v-if="error" :mensaje="error.mensaje" :ayuda="error.ayuda" />
+        <MensajeDeError v-if="error && esPC" :mensaje="error.mensaje" :ayuda="error.ayuda" />
       </div>
-      <DisposicionDeCarrito titulo-carrito="En esta venta">
+
+      <!-- PC: el carrito a la derecha del buscador, con lo mismo que el panel abierto. -->
+      <DisposicionDeCarrito v-if="esPC" titulo-carrito="En esta venta">
         <template #buscador>
           <BuscadorDeProductos concepto="venta" @elegir="agregar" />
         </template>
@@ -229,18 +183,49 @@ const resumenDelCobro = computed(() =>
             concepto="venta"
             texto-vacio="Toca un producto para agregarlo."
           />
+          <CuandoFue
+            v-if="!carrito.vacio.value"
+            v-model="cuando"
+            pregunta="¿Cuándo fue la venta?"
+            :error="errorFecha"
+          />
         </template>
         <template #total>
           <BarraDeTotal
             v-if="!carrito.vacio.value"
             etiqueta="Total"
             :texto-total="textoTotal"
-            texto-accion="Cobrar"
-            :icono="Banknote"
-            @accion="cobrar"
+            texto-accion="Confirmar venta"
+            :icono="Check"
+            :deshabilitado="registrando"
+            @accion="confirmar"
           />
         </template>
       </DisposicionDeCarrito>
+
+      <!-- Celular: la grilla ocupa la pantalla y el panel sube cuando hay algo en la venta. -->
+      <template v-else>
+        <!-- Con la hoja abierta, lo de atrás no se alcanza (ni con Tab ni con el lector). -->
+        <div class="buscador" :inert="expandido ? true : undefined">
+          <BuscadorDeProductos concepto="venta" @elegir="agregar" />
+        </div>
+        <Transition name="panel">
+          <PanelDeVenta
+            v-if="!carrito.vacio.value"
+            v-model:cuando="cuando"
+            v-model:expandido="expandido"
+            :carrito="carrito"
+            :error-fecha="errorFecha"
+            :texto-total="textoTotal"
+            :registrando="registrando"
+            @confirmar="confirmar"
+          >
+            <template v-if="error" #avisos>
+              <MensajeDeError :mensaje="error.mensaje" :ayuda="error.ayuda" />
+            </template>
+          </PanelDeVenta>
+        </Transition>
+      </template>
     </template>
   </div>
 </template>
@@ -253,23 +238,26 @@ const resumenDelCobro = computed(() =>
 .avisos:not(:empty) {
   margin-bottom: var(--espacio-4);
 }
-.cobro {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--espacio-5);
-  max-inline-size: 40rem;
-  margin-inline: auto;
-}
-.resumen-del-cobro {
+.buscador {
   min-inline-size: 0;
-}
-.subtitulo {
-  margin: 0 0 var(--espacio-2);
-  font-size: 1.125rem;
 }
 .accion-exito {
   align-self: stretch;
   margin: var(--espacio-4) auto 0;
   max-inline-size: 28rem;
+}
+
+/* El panel sube desde abajo con una transición corta (sin movimiento si el sistema lo pide:
+   base.css baja todas las animaciones). */
+.panel-enter-active,
+.panel-leave-active {
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.2s ease-out;
+}
+.panel-enter-from,
+.panel-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
 }
 </style>

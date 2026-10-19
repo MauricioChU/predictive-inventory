@@ -1,5 +1,5 @@
 import { expect } from 'vitest'
-import { calcularVuelto, type OperacionVista } from '@/modules/inventario'
+import { mensajeDeLoQueQueda, type OperacionVista } from '@/modules/inventario'
 import { Cantidad } from '@/shared/domain/cantidad'
 import { Dinero } from '@/shared/domain/dinero'
 import { instanteLocal } from '@/shared/domain/fecha'
@@ -216,16 +216,22 @@ export function pasosDeOperaciones(pasos: Pasos): void {
     },
   )
 
-  // RN-OP-13: el total del carrito que se está cobrando.
-  preparacion(pasos, 'un carrito con total {string}', (m: Mundo, total: string) => {
-    m.total = Dinero.deTexto(total)
-  })
-
-  accion(pasos, 'el cliente paga {string}', (m: Mundo, pagado: string) => {
-    if (!m.total) throw new Error('No hay un carrito que cobrar')
-    m.vuelto = calcularVuelto(m.total, pagado)
-    m.visibles.push(m.vuelto.mensaje)
-  })
+  // RN-OP-22: lo que dice cada línea del panel de venta (cuánto queda tras la venta).
+  accion(
+    pasos,
+    'pongo {string} de {string} en el panel de venta',
+    async (m: Mundo, cantidad: string, nombre: string) => {
+      const producto = await m.producto(nombre)
+      const vista = await m.app.catalogo.obtenerProducto(producto.id)
+      if (!vista) throw new Error(`No existe ${nombre}`)
+      const mensaje = mensajeDeLoQueQueda(
+        vista.stock,
+        Cantidad.deTexto(cantidad, vista.unidad),
+        vista.unidad,
+      )
+      if (mensaje) m.visibles.push(mensaje)
+    },
+  )
 
   // RN-OP-21: el conteo guiado. Cada paso muestra su progreso ("Llevas 1 de 3").
   accion(pasos, 'empiezo a contar todo', async (m: Mundo) => {
@@ -359,12 +365,11 @@ export function pasosDeOperaciones(pasos: Pasos): void {
     expect(await m.textosVisibles()).toContain(texto)
   })
 
-  afirmacion(pasos, 'el cobro puede confirmarse', (m: Mundo) => {
-    expect(m.vuelto?.puedeConfirmar).toBe(true)
-  })
-
-  afirmacion(pasos, 'el cobro no puede confirmarse', (m: Mundo) => {
-    expect(m.vuelto?.puedeConfirmar).toBe(false)
+  // RN-OP-09 / RN-OP-22: cuándo quedó anotada la venta ("Ahora" es la hora del reloj).
+  afirmacion(pasos, 'la venta ocurrió el {string}', async (m: Mundo, fecha: string) => {
+    const { ocurridaEn } = await vistaDe(m, m.ultimaVenta)
+    // Al minuto: el reloj de la prueba avanza unos milisegundos entre pasos.
+    expect(ocurridaEn.slice(0, 16)).toBe(instanteLocal(fecha).slice(0, 16))
   })
 
   // RN-OP-18: el aviso de 10 s (`ServicioDeDeshacer.disponible()`, la fuente del botón).

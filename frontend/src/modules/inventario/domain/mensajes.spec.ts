@@ -6,6 +6,7 @@ import {
   mensajeCompraExcesiva,
   mensajeDeRevisionDeDatos,
   mensajeDeSobrecompra,
+  mensajeDeLoQueQueda,
   mensajeProductoParado,
   mensajeStockInsuficiente,
   progresoDelConteo,
@@ -14,6 +15,30 @@ import {
 
 const soles = (texto: string) => Dinero.deTexto(texto)
 const kilos = (texto: string) => Cantidad.deTexto(texto, 'KILO')
+
+describe('mensajeDeLoQueQueda', () => {
+  const unidades = (n: number) => Cantidad.deEntero(n)
+
+  it('RN-OP-22: cuántas unidades quedan tras la venta (stock − cantidad)', () => {
+    expect(mensajeDeLoQueQueda(unidades(10), unidades(3), 'UNIDAD')).toBe('Quedan 7 unid.')
+    expect(mensajeDeLoQueQueda(unidades(10), unidades(1), 'UNIDAD')).toBe('Quedan 9 unid.')
+  })
+
+  it('RN-OP-22: en singular cuando queda una, y con la unidad de medida', () => {
+    expect(mensajeDeLoQueQueda(unidades(10), unidades(9), 'UNIDAD')).toBe('Queda 1 unid.')
+    expect(mensajeDeLoQueQueda(kilos('10'), kilos('2.5'), 'KILO')).toBe('Quedan 7.5 kg')
+    expect(mensajeDeLoQueQueda(kilos('2'), kilos('1'), 'KILO')).toBe('Queda 1 kg')
+  })
+
+  it('RN-OP-22: si no queda nada dice "Se acaba"', () => {
+    expect(mensajeDeLoQueQueda(unidades(10), unidades(10), 'UNIDAD')).toBe('Se acaba')
+    expect(mensajeDeLoQueQueda(kilos('2.5'), kilos('2.5'), 'KILO')).toBe('Se acaba')
+  })
+
+  it('RN-OP-05: si la cantidad pasa el stock no dice cuánto queda (lo dice el error)', () => {
+    expect(mensajeDeLoQueQueda(unidades(10), unidades(11), 'UNIDAD')).toBeUndefined()
+  })
+})
 
 describe('mensajeStockInsuficiente', () => {
   it('RN-OP-05: plural, singular y sin stock', () => {

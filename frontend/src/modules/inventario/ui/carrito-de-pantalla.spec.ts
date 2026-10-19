@@ -26,6 +26,32 @@ const LEJIA = producto('lejia', 'Lejía 1 L')
 const CARBON = producto('carbon', 'Carbón')
 
 describe('carrito de pantalla', () => {
+  it('RN-OP-22: al vender, cada línea dice cuánto queda tras la venta y se actualiza al cambiar la cantidad', () => {
+    const carrito = usarCarrito('venta')
+    carrito.agregar(LEJIA)
+    expect(carrito.lineas.value[0]!.quedan).toBe('Quedan 9 unid.')
+    carrito.cambiarCantidad('lejia', '3')
+    expect(carrito.lineas.value[0]!.quedan).toBe('Quedan 7 unid.')
+    carrito.cambiarCantidad('lejia', '10')
+    expect(carrito.lineas.value[0]!.quedan).toBe('Se acaba')
+  })
+
+  it('RN-OP-22 / RN-OP-05: sin cantidad válida o pasando el stock no hay "quedan" y sigue el error', () => {
+    const carrito = usarCarrito('venta')
+    carrito.agregar(LEJIA)
+    carrito.cambiarCantidad('lejia', '11')
+    expect(carrito.lineas.value[0]!.quedan).toBeUndefined()
+    expect(carrito.lineas.value[0]!.errorCantidad).toContain('Solo quedan 10 unid. de Lejía 1 L')
+    carrito.cambiarCantidad('lejia', '')
+    expect(carrito.lineas.value[0]!.quedan).toBeUndefined()
+  })
+
+  it('RN-OP-22: Llegó mercadería no muestra "quedan"', () => {
+    const carrito = usarCarrito('ingreso')
+    carrito.agregar(LEJIA)
+    expect(carrito.lineas.value[0]!.quedan).toBeUndefined()
+  })
+
   it('r2 #4: agregarFaltantes no repite un producto que ya estaba ni uno repetido en la lista', () => {
     const carrito = usarCarrito('ingreso')
     carrito.agregar(LEJIA)

@@ -38,8 +38,8 @@ describe('plan 12: montos y cantidades que no se parten en avisos y diálogos', 
 
   it('PantallaExito: el detalle (el título no lleva cifras)', () => {
     const w = mount(PantallaExito, {
-      props: { titulo: 'Venta registrada', detalle: 'Total S/ 46.80 · Vuelto S/ 3.20' },
+      props: { titulo: 'Venta registrada', detalle: 'Total S/ 46.80 · 3 productos' },
     })
-    expect(w.get('.detalle').text()).toBe(`Total S/${NBSP}46.80 · Vuelto S/${NBSP}3.20`)
+    expect(w.get('.detalle').text()).toBe(`Total S/${NBSP}46.80 · 3 productos`)
   })
 })

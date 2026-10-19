@@ -137,7 +137,6 @@ describe('index', () => {
     const api = await import('../index')
     expect(Object.keys(api).sort()).toEqual(
       [
-        'BILLETES_RAPIDOS',
         'Carrito',
         'OPCIONES_DE_SOBRECOMPRA',
         'RepositorioDeConteoDexie',
@@ -148,9 +147,9 @@ describe('index', () => {
         'RepositorioDeOperacionesEnMemoria',
         'SEGUNDOS_PARA_DESHACER',
         'ServicioDeDeshacer',
-        'calcularVuelto',
         'crearModuloInventario',
         'etiquetaDeOperacion',
+        'mensajeDeLoQueQueda',
         // Plan 12: las pantallas, como cargadores diferidos para el router.
         'VistaContarStock',
         'VistaContarTodo',

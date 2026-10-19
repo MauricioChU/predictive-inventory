@@ -1,7 +1,7 @@
 import { nextTick } from 'vue'
 
 /**
- * RN-UX-15: al cambiar de paso dentro de una pantalla (Cobrar, éxito, volver al carrito) el foco
+ * RN-UX-15: al cambiar de paso dentro de una pantalla (éxito, nueva venta) el foco
  * va al título nuevo, como cuando el router cambia de pantalla: el lector de pantalla lo lee y
  * el Tab sigue desde ahí. Foco programático sin desplazar (el título ya está arriba).
  */

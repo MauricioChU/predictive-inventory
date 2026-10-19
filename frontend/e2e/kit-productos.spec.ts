@@ -62,11 +62,10 @@ async function abrirCatalogoConAviso(page: Page, ancho: number, conAviso: boolea
 }
 
 /** Deja a la vista los estados que aparecen al usar los componentes: "Borrar" en el buscador,
- * la edición de precio abierta y el mensaje del vuelto. */
+ * la edición de precio abierta y el error de cantidad. */
 async function abrirEstadosInteractivos(page: Page) {
   await page.getByLabel('Buscar producto').fill('l')
   await page.getByRole('button', { name: 'Cambiar precio de Lejía Clorox 1 L' }).click()
-  await page.getByRole('button', { name: 'S/ 20', exact: true }).click()
   // I2: el error de cantidad junto al campo (hay 2.5 kg de carbón).
   await page.getByRole('group', { name: 'Carbón vegetal' }).getByLabel('Cantidad (kg)').fill('3')
   await expect(page.getByRole('button', { name: 'Borrar' })).toBeVisible()
@@ -87,7 +86,7 @@ for (const ancho of ANCHOS) {
       await esperarSinViolacionesGraves(page)
     })
 
-    test('RN-UX-02: todo lo tocable mide ≥ 48 px; principales y billetes ≥ 56; tarjetas ≥ 64', async ({
+    test('RN-UX-02: todo lo tocable mide ≥ 48 px; principales ≥ 56; tarjetas ≥ 64', async ({
       page,
     }) => {
       await abrirCatalogo(page, ancho)
@@ -103,7 +102,7 @@ for (const ancho of ANCHOS) {
           chicos: visibles('button, input')
             .filter(({ r }) => r.width < 47.5 || r.height < 47.5)
             .map(describir),
-          principalesBajos: visibles('.boton-principal, .billete, .buscador-grande .caja')
+          principalesBajos: visibles('.boton-principal, .buscador-grande .caja')
             .filter(({ r }) => r.height < 55.5)
             .map(describir),
           tarjetasBajas: visibles('.tarjeta-de-producto')
@@ -327,21 +326,6 @@ test.describe('Comportamiento en el navegador (360 px, letra Muy grande)', () =>
     await expect(page.locator('.barra-de-total .total')).toHaveText('S/ 5.63')
   })
 
-  test('SelectorDeBilletes: billete, monto escrito y "Exacto" actualizan el mensaje anunciado', async ({
-    page,
-  }) => {
-    const mensaje = page.locator('.selector-de-billetes [aria-live="polite"]')
-    const monto = page.getByLabel('Paga con (S/)')
-    await page.getByRole('button', { name: 'S/ 20', exact: true }).click()
-    await expect(monto).toHaveValue('20')
-    await expect(mensaje).toHaveText('Vuelto S/ 5.37')
-    await monto.fill('10')
-    await expect(mensaje).toHaveText('Faltan S/ 4.63')
-    await page.getByRole('button', { name: 'Exacto' }).click()
-    await expect(monto).toHaveValue('14.63')
-    await expect(mensaje).toHaveText('Pago exacto: no hay vuelto')
-  })
-
   test('CampoFoto: elegir de la galería muestra la vista previa; "Quitar foto" la saca', async ({
     page,
   }) => {
@@ -393,11 +377,11 @@ test.describe('BarraDeTotal: pegada abajo de la columna, encima de lo que va fij
         )
         const barra = await caja(page, '.barra-de-total')
         const pie = await caja(page, '.pie')
-        const anterior = await caja(page, '[data-prueba="cobros"]')
+        const anterior = await caja(page, '[data-prueba="confirmaciones"]')
         expect(barra.bottom).toBeLessThanOrEqual(pie.top + 1)
         expect(anterior.bottom).toBeLessThanOrEqual(barra.top + 1)
-        await page.getByRole('button', { name: 'Cobrar' }).click()
-        await expect(page.getByText('Cobros: 1')).toBeVisible()
+        await page.getByRole('button', { name: 'Confirmar venta' }).click()
+        await expect(page.getByText('Confirmaciones: 1')).toBeVisible()
       })
     }
   }
@@ -410,9 +394,9 @@ test.describe('BarraDeTotal: pegada abajo de la columna, encima de lo que va fij
     await expect
       .poll(async () => Math.abs((await caja(page, '.barra-de-total')).bottom - ALTO))
       .toBeLessThanOrEqual(1)
-    // El total queda a la vista mientras se toca "Cobrar" (no lo tapa nada).
-    await page.getByRole('button', { name: 'Cobrar' }).click()
-    await expect(page.getByText('Cobros: 1')).toBeVisible()
+    // El total queda a la vista mientras se toca "Confirmar venta" (no lo tapa nada).
+    await page.getByRole('button', { name: 'Confirmar venta' }).click()
+    await expect(page.getByText('Confirmaciones: 1')).toBeVisible()
 
     await mostrarAvisoDeshacer(page)
     await expect

@@ -12,7 +12,7 @@ import { useId } from 'vue'
  * `display: contents`), no de la sección del carrito. Así su "sticky" puede subir todo lo que
  * haga falta para quedar entera ENCIMA del pie (navegación + aviso Deshacer): dentro de la
  * sección no podía subir más arriba del título del carrito y quedaba debajo del aviso, con
- * "Cobrar" tapado.
+ * "Confirmar venta" tapado.
  */
 defineProps<{ tituloCarrito: string }>()
 const idTitulo = useId()

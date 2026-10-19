@@ -4,6 +4,7 @@ import { formatearDinero } from '@/shared/domain/formato'
 import { useAnunciador } from '@/shared/ui/anunciador'
 import FilaDeCarrito from '@/shared/ui/componentes/FilaDeCarrito.vue'
 import { textoDePrecio, type CarritoDePantalla, type Concepto } from './carrito-de-pantalla'
+import { enfocarTitulo } from './foco-y-respuesta'
 import { usarFotos } from './usar-fotos'
 
 /**
@@ -22,12 +23,21 @@ const fotos = usarFotos()
 const anunciador = useAnunciador()
 const refRaiz = ref<HTMLElement>()
 
-/** El botón Quitar desaparece con su línea: el foco va al título del carrito (no se pierde). */
+/**
+ * El botón Quitar desaparece con su línea: el foco va al título del carrito (no se pierde). Si era
+ * la última línea del panel de venta, el panel baja y desaparece: el foco va al título de la
+ * pantalla.
+ */
 async function quitar(productoId: string, nombre: string): Promise<void> {
+  const contenedor = refRaiz.value?.closest<HTMLElement>('.columna-carrito, .panel-de-venta')
   props.carrito.quitar(productoId)
   anunciador.anunciar(`Quitaste ${nombre}`)
   await nextTick()
-  refRaiz.value?.closest('.columna-carrito')?.querySelector<HTMLElement>('.titulo-carrito')?.focus()
+  if (props.carrito.vacio.value && contenedor?.classList.contains('panel-de-venta')) {
+    await enfocarTitulo()
+    return
+  }
+  contenedor?.querySelector<HTMLElement>('.titulo-carrito')?.focus()
 }
 const lineas = computed(() => props.carrito.lineas.value)
 watch(
@@ -64,6 +74,7 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
           :cantidad="linea.cantidad"
           :texto-precio="textoPrecio(linea)"
           :texto-importe="linea.importe ? formatearDinero(linea.importe) : '—'"
+          :texto-quedan="linea.quedan"
           precio-editable
           :concepto="esVenta ? 'precio' : 'costo'"
           :texto-precio-especial="

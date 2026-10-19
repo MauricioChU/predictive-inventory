@@ -1,12 +1,12 @@
 <script setup lang="ts">
 /**
  * Catálogo SOLO PARA PRUEBAS del kit A (plan 09b): muestra cada componente de productos,
- * carrito y cobro con datos de ejemplo para que las E2E (e2e/kit-productos.spec.ts) midan su
+ * carrito y total con datos de ejemplo para que las E2E (e2e/kit-productos.spec.ts) midan su
  * geometría a 320/360/768/1280 px con letra Muy grande y pasen axe. Lo monta el gancho de
  * pruebas (`window.__pruebas.mostrarCatalogo('productos')`, src/app/ganchos-de-prueba.ts), que
  * solo existe en desarrollo o bajo un navegador automatizado: una persona nunca lo ve.
  *
- * Las cuentas de aquí (importes, vuelto) son de mentira, con números de JavaScript: en las
+ * Las cuentas de aquí (importes) son de mentira, con números de JavaScript: en las
  * pantallas reales las hace el dominio (Dinero/Cantidad) y llegan ya formateadas.
  */
 import { computed, ref } from 'vue'
@@ -19,9 +19,8 @@ import CampoFoto from '../componentes/CampoFoto.vue'
 import FilaDeCarrito from '../componentes/FilaDeCarrito.vue'
 import FotoDeProducto from '../componentes/FotoDeProducto.vue'
 import ListaDeProductos from '../componentes/ListaDeProductos.vue'
-import SelectorDeBilletes from '../componentes/SelectorDeBilletes.vue'
 import TarjetaDeProducto from '../componentes/TarjetaDeProducto.vue'
-import { BILLETES_DE_SOLES, type ProductoDeLista } from '../tipos-de-productos'
+import type { ProductoDeLista } from '../tipos-de-productos'
 
 /** Dibujo de un envase (SVG) como Blob, para probar la foto guardada en IndexedDB. */
 function envase(fondo: string, cuerpo: string, tapa: string): Blob {
@@ -168,17 +167,6 @@ function quitar(id: string) {
   lineas.value = lineas.value.filter((linea) => linea.id !== id)
 }
 
-// --- Cobro ------------------------------------------------------------------------------
-const TOTAL_A_COBRAR = 14.63
-const pagado = ref('')
-const mensajeDePago = computed(() => {
-  if (pagado.value.trim() === '') return { texto: '', tono: 'normal' as const }
-  const diferencia = Math.round((numero(pagado.value) - TOTAL_A_COBRAR) * 100) / 100
-  if (diferencia < 0) return { texto: `Faltan ${soles(-diferencia)}`, tono: 'atencion' as const }
-  if (diferencia === 0) return { texto: 'Pago exacto: no hay vuelto', tono: 'exito' as const }
-  return { texto: `Vuelto ${soles(diferencia)}`, tono: 'exito' as const }
-})
-
 // --- Foto -------------------------------------------------------------------------------
 const foto = ref<Blob | null>(null)
 const errorDeFoto = ref('')
@@ -187,7 +175,7 @@ function alCambiarFoto(nueva: Blob | null) {
   errorDeFoto.value = ''
 }
 
-const cobros = ref(0)
+const confirmaciones = ref(0)
 </script>
 
 <template>
@@ -287,18 +275,6 @@ const cobros = ref(0)
       </ul>
     </section>
 
-    <section class="muestra" aria-labelledby="muestra-billetes">
-      <h3 id="muestra-billetes">SelectorDeBilletes</h3>
-      <SelectorDeBilletes
-        v-model="pagado"
-        :texto-total="soles(TOTAL_A_COBRAR)"
-        :billetes="BILLETES_DE_SOLES"
-        :mensaje="mensajeDePago.texto"
-        :tono-mensaje="mensajeDePago.tono"
-        @exacto="pagado = String(TOTAL_A_COBRAR)"
-      />
-    </section>
-
     <section class="muestra" aria-labelledby="muestra-foto-campo">
       <h3 id="muestra-foto-campo">CampoFoto</h3>
       <CampoFoto
@@ -313,14 +289,14 @@ const cobros = ref(0)
     </section>
 
     <!-- Al final y directo en la columna: va pegada abajo mientras se recorre todo el catálogo. -->
-    <p class="eco" data-prueba="cobros">Cobros: {{ cobros }}</p>
+    <p class="eco" data-prueba="confirmaciones">Confirmaciones: {{ confirmaciones }}</p>
     <BarraDeTotal
       etiqueta="Total"
       :texto-total="soles(total)"
-      texto-accion="Cobrar"
+      texto-accion="Confirmar venta"
       :icono="ShoppingCart"
       :deshabilitado="lineas.length === 0"
-      @accion="cobros += 1"
+      @accion="confirmaciones += 1"
     />
   </section>
 </template>

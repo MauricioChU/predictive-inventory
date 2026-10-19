@@ -5,7 +5,6 @@ import BarraDeTotal from '../componentes/BarraDeTotal.vue'
 import BotonPrincipal from '../componentes/BotonPrincipal.vue'
 import CampoNumero from '../componentes/CampoNumero.vue'
 import FilaDeCarrito from '../componentes/FilaDeCarrito.vue'
-import SelectorDeBilletes from '../componentes/SelectorDeBilletes.vue'
 import { textoReferido } from './utilidades-kit-productos'
 
 const LINEA = {
@@ -34,6 +33,16 @@ describe('FilaDeCarrito', () => {
     expect(w.get('.importe').text()).toContain('S/ 9.00')
     const grupo = w.get('[role="group"]')
     expect(textoReferido(grupo.element, 'aria-labelledby')).toBe('Lejía Clorox 1 L')
+  })
+
+  it('plan 20 (RN-OP-22): con textoQuedan muestra cuánto queda tras la venta; sin él, no muestra nada', async () => {
+    const w = mount(FilaDeCarrito, { props: { ...LINEA, textoQuedan: 'Quedan 8 unid.' } })
+    expect(w.get('.quedan').text()).toBe('Quedan 8 unid.')
+    await w.setProps({ textoQuedan: 'Se acaba' })
+    expect(w.get('.quedan').text()).toBe('Se acaba')
+    expect(w.get('.quedan').classes()).toContain('quedan--acaba')
+    await w.setProps({ textoQuedan: undefined })
+    expect(w.find('.quedan').exists()).toBe(false)
   })
 
   // Plan 13: en Para comprar el monto de la línea es el "Costo estimado" (RN-AN-08).
@@ -276,12 +285,12 @@ describe('FilaDeCarrito', () => {
 describe('BarraDeTotal', () => {
   it('muestra la etiqueta y el total, y el botón principal emite accion', async () => {
     const w = mount(BarraDeTotal, {
-      props: { etiqueta: 'Total', textoTotal: 'S/ 14.63', textoAccion: 'Cobrar' },
+      props: { etiqueta: 'Total', textoTotal: 'S/ 14.63', textoAccion: 'Confirmar venta' },
     })
     expect(w.get('.etiqueta').text()).toBe('Total')
     expect(w.get('.total').text()).toBe('S/ 14.63')
     const principal = w.getComponent(BotonPrincipal)
-    expect(principal.text()).toBe('Cobrar')
+    expect(principal.text()).toBe('Confirmar venta')
     await principal.trigger('click')
     expect(w.emitted('accion')).toHaveLength(1)
   })
@@ -291,7 +300,7 @@ describe('BarraDeTotal', () => {
       props: {
         etiqueta: 'Total',
         textoTotal: 'S/ 0.00',
-        textoAccion: 'Cobrar',
+        textoAccion: 'Confirmar venta',
         deshabilitado: true,
       },
     })
@@ -328,7 +337,7 @@ describe('BarraDeTotal', () => {
 
     it('mientras está montada, --alto-barra-de-total vale su alto real; al desmontarse se quita', async () => {
       const w = mount(BarraDeTotal, {
-        props: { etiqueta: 'Total', textoTotal: 'S/ 14.63', textoAccion: 'Cobrar' },
+        props: { etiqueta: 'Total', textoTotal: 'S/ 14.63', textoAccion: 'Confirmar venta' },
         attachTo: document.body,
       })
       await flushPromises()
@@ -337,138 +346,5 @@ describe('BarraDeTotal', () => {
       w.unmount()
       expect(variable()).toBe('')
     })
-  })
-})
-
-describe('SelectorDeBilletes', () => {
-  const BILLETES = [
-    { etiqueta: 'S/ 10', valor: '10' },
-    { etiqueta: 'S/ 20', valor: '20' },
-    { etiqueta: 'S/ 50', valor: '50' },
-    { etiqueta: 'S/ 100', valor: '100' },
-  ]
-  const PROPS = { textoTotal: 'S/ 14.63', billetes: BILLETES, modelValue: '' }
-
-  it('muestra el total y un botón por billete, más "Exacto", en un grupo con nombre', () => {
-    const w = mount(SelectorDeBilletes, { props: PROPS })
-    expect(w.text()).toContain('S/ 14.63')
-    expect(w.findAll('.billete').map((b) => b.text())).toEqual([
-      'S/ 10',
-      'S/ 20',
-      'S/ 50',
-      'S/ 100',
-      'Exacto',
-    ])
-    const grupo = w.get('[role="group"]')
-    expect(textoReferido(grupo.element, 'aria-labelledby')).toBe('¿Con cuánto paga?')
-  })
-
-  it('tocar un billete emite update:modelValue con su valor; "Exacto" emite exacto', async () => {
-    const w = mount(SelectorDeBilletes, { props: PROPS })
-    await boton(w, 'S/ 20').trigger('click')
-    expect(w.emitted('update:modelValue')).toEqual([['20']])
-    await boton(w, 'Exacto').trigger('click')
-    expect(w.emitted('exacto')).toEqual([[]])
-  })
-
-  it('RN-UX-06: el monto se puede escribir con CampoNumero decimal', async () => {
-    const w = mount(SelectorDeBilletes, { props: { ...PROPS, modelValue: '20' } })
-    const campo = w.getComponent(CampoNumero)
-    expect(campo.props('decimales')).toBe(true)
-    expect(campo.props('etiqueta')).toBe('Paga con (S/)')
-    expect((w.get('input').element as HTMLInputElement).value).toBe('20')
-    await w.get('input').setValue('25,50')
-    expect(w.emitted('update:modelValue')?.at(-1)).toEqual(['25,50'])
-  })
-
-  describe('ronda 1: el mensaje anunciado (aria-live) no se repite en cada tecla', () => {
-    beforeEach(() => vi.useFakeTimers())
-    afterEach(() => vi.useRealTimers())
-
-    const TOTAL = 14.63
-    const calcular = (pagado: string): string => {
-      if (pagado.trim() === '') return ''
-      const diferencia = Math.round((Number(pagado.replace(',', '.')) - TOTAL) * 100) / 100
-      return diferencia < 0
-        ? `Faltan S/ ${(-diferencia).toFixed(2)}`
-        : `Vuelto S/ ${diferencia.toFixed(2)}`
-    }
-    /** Una pantalla de cobro que recalcula el mensaje en el acto con cada cambio del monto. */
-    function montarEnPantalla(esperaAnuncioMs?: number) {
-      const Pantalla = defineComponent({
-        setup() {
-          const pagado = ref('')
-          return () =>
-            h(SelectorDeBilletes, {
-              ...PROPS,
-              modelValue: pagado.value,
-              mensaje: calcular(pagado.value),
-              ...(esperaAnuncioMs === undefined ? {} : { esperaAnuncioMs }),
-              'onUpdate:modelValue': (valor: string) => {
-                pagado.value = valor
-              },
-              onExacto: () => {
-                pagado.value = String(TOTAL)
-              },
-            })
-        },
-      })
-      const w = mount(Pantalla)
-      const region = () => w.get('[aria-live="polite"]')
-      return { w, region }
-    }
-
-    it('la región viva existe desde el inicio y el mensaje visible no la duplica', () => {
-      const { w, region } = montarEnPantalla()
-      expect(region().text()).toBe('')
-      expect(region().classes()).toContain('solo-lector')
-      expect(w.get('.mensaje').attributes('aria-hidden')).toBe('true')
-    })
-
-    it('al escribir, se ve enseguida pero se anuncia recién tras una pausa de 600 ms', async () => {
-      const { w, region } = montarEnPantalla()
-      const input = w.get('input')
-      await input.setValue('1')
-      await input.setValue('10')
-      // Se ve al instante; "S/" y el monto van unidos (espacio duro): nunca "S/" | "4.63".
-      expect(w.get('.mensaje').text()).toBe('Faltan S/\u00a04.63')
-      await vi.advanceTimersByTimeAsync(599)
-      expect(region().text()).toBe('')
-      await vi.advanceTimersByTimeAsync(1)
-      expect(region().text()).toBe('Faltan S/ 4.63')
-    })
-
-    it('la pausa se puede cambiar (esperaAnuncioMs)', async () => {
-      const { w, region } = montarEnPantalla(100)
-      await w.get('input').setValue('20')
-      await vi.advanceTimersByTimeAsync(100)
-      expect(region().text()).toBe('Vuelto S/ 5.37')
-    })
-
-    it('al tocar un billete o "Exacto" se anuncia en el acto', async () => {
-      const { w, region } = montarEnPantalla()
-      await boton(w, 'S/ 20').trigger('click')
-      expect(region().text()).toBe('Vuelto S/ 5.37')
-      await boton(w, 'Exacto').trigger('click')
-      expect(region().text()).toBe('Vuelto S/ 0.00')
-    })
-
-    it('un toque anula el anuncio pendiente de lo que se estaba escribiendo', async () => {
-      const { w, region } = montarEnPantalla()
-      await w.get('input').setValue('10')
-      await boton(w, 'S/ 50').trigger('click')
-      expect(region().text()).toBe('Vuelto S/ 35.37')
-      await vi.advanceTimersByTimeAsync(600)
-      expect(region().text()).toBe('Vuelto S/ 35.37')
-    })
-  })
-
-  it('RN-UX-04: "Faltan…" lleva ícono además del color (el texto lo dice)', async () => {
-    const w = mount(SelectorDeBilletes, {
-      props: { ...PROPS, mensaje: 'Faltan S/ 4.63', tonoMensaje: 'atencion' },
-    })
-    const mensaje = w.get('.mensaje')
-    expect(mensaje.classes()).toContain('mensaje--atencion')
-    expect(mensaje.get('svg').attributes('aria-hidden')).toBe('true')
   })
 })

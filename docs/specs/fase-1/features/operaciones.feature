@@ -131,7 +131,7 @@ Característica: Operaciones de stock
   @RN-OP-22
   Esquema del escenario: El panel de venta muestra cuántas unidades quedan tras la venta
     Cuando pongo "<cantidad>" de "<producto>" en el panel de venta
-    Entonces el panel dice "<mensaje>"
+    Entonces se muestra "<mensaje>"
 
     Ejemplos:
       | producto  | cantidad | mensaje        |

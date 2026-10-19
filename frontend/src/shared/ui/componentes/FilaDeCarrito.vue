@@ -19,6 +19,8 @@ const props = withDefaults(
     textoPrecio: string
     /** "S/ 9.00" */
     textoImporte: string
+    /** RN-OP-22 (solo Vender): "Quedan 7 unid." o "Se acaba" tras la venta. */
+    textoQuedan?: string
     /** Nombre del monto de la línea: "Importe" (Vender), "Costo estimado" (Para comprar). */
     etiquetaImporte?: string
     precioEditable?: boolean
@@ -50,6 +52,7 @@ const props = withDefaults(
     valorPrecio: undefined,
     concepto: 'precio',
     etiquetaImporte: 'Importe',
+    textoQuedan: undefined,
     errorCantidad: undefined,
     errorPrecio: undefined,
   },
@@ -155,6 +158,13 @@ function alPresionarEnter(evento: KeyboardEvent) {
             <span>{{ textoPrecioEspecial }}</span>
           </span>
         </p>
+        <p
+          v-if="textoQuedan"
+          class="quedan"
+          :class="{ 'quedan--acaba': textoQuedan === 'Se acaba' }"
+        >
+          {{ textoQuedan }}
+        </p>
       </div>
     </div>
 
@@ -257,6 +267,16 @@ function alPresionarEnter(evento: KeyboardEvent) {
   gap: var(--espacio-1) var(--espacio-2);
   margin: var(--espacio-1) 0 0;
   color: var(--color-texto-suave);
+}
+.quedan {
+  margin: var(--espacio-1) 0 0;
+  color: var(--color-texto-suave);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+/* "Se acaba" también va en negrita y con el texto: el color no es la única señal. */
+.quedan--acaba {
+  color: var(--color-advertencia);
 }
 .precio-especial {
   display: inline-flex;

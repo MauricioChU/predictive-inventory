@@ -5,7 +5,7 @@ import { Dinero } from '@/shared/domain/dinero'
 import { esErrorDeDominio } from '@/shared/domain/errores'
 import { formatearDinero, formatearNumero } from '@/shared/domain/formato'
 import type { DatosDeVenta } from '../domain/carrito'
-import { mensajeStockInsuficiente } from '../domain/mensajes'
+import { mensajeDeLoQueQueda, mensajeStockInsuficiente } from '../domain/mensajes'
 import { leerCantidad, leerCosto, leerPrecioDeVenta } from '../domain/reglas'
 import type { DatosDeIngreso } from '../application/ingresos'
 import { cuandoInicial, type Cuando } from './cuando'
@@ -36,6 +36,8 @@ export interface LineaCalculada extends LineaDePantalla {
   cantidadLeida: Cantidad | null
   /** Qué pasó con la cantidad y qué hacer (RN-UX-07), o undefined si está bien. */
   errorCantidad?: string
+  /** RN-OP-22 (solo al vender): "Quedan 7 unid." / "Se acaba" tras la venta. */
+  quedan?: string
   importe: Dinero | null
   /** El precio no es el de siempre (precio especial o costo nuevo). */
   precioCambiado: boolean
@@ -97,6 +99,10 @@ export function usarCarrito(concepto: Concepto) {
       cantidadLeida: cantidad,
       importe: linea.precio.multiplicarPor(cantidad),
       errorCantidad,
+      quedan:
+        concepto === 'venta'
+          ? mensajeDeLoQueQueda(producto.stock, cantidad, producto.unidad)
+          : undefined,
     }
   }
 
