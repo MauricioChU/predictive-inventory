@@ -123,6 +123,27 @@ test.describe('Productos: flujos críticos', () => {
     await expect.poll(() => nombresEnLaLista(page)).toEqual(['Lejía Tradicional 2 L'])
   })
 
+  test('el aviso de Inicio abre Productos filtrado por "Se acaban" (RN-AL-06, RN-CAT-16)', async ({ page }) => {
+    await abrirTiendaLista(page, './productos')
+    await crearProductos(page, [
+      ...LEJIAS,
+      { nombre: 'Escoba', compra: '6.00', venta: '9.00', minimo: '2', stockInicial: '0' },
+    ])
+    await abrir(page, './')
+
+    await expect(page.getByText('2 productos se acaban')).toBeVisible()
+    await page.getByRole('button', { name: 'Ver productos' }).click()
+
+    await expect(page.getByRole('heading', { level: 1, name: 'Productos' })).toBeVisible()
+    await expect(page).toHaveURL(/\/productos\?estado=se-acaban$/)
+    await expect(page.getByRole('radio', { name: 'Se acaban' })).toBeChecked()
+    // Solo lo agotado y lo que queda poco; lo que tiene stock no sale.
+    await expect.poll(async () => (await nombresEnLaLista(page)).sort()).toEqual(['Escoba', 'Lejía Tradicional 2 L'])
+
+    await page.getByRole('radio', { name: 'Todos' }).click()
+    await expect.poll(async () => (await nombresEnLaLista(page)).length).toBe(4)
+  })
+
   test('archivar un producto con stock confirma el retiro (RN-CAT-11)', async ({ page }) => {
     await abrirTiendaLista(page, './productos')
     const { Escoba: id } = await crearProductos(page, [

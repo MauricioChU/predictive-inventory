@@ -17,7 +17,7 @@ const VENTANA_EN_DIAS = 2
 const ANTICIPOS = ['Hoy', 'Mañana', 'Pasado mañana'] as const
 
 /**
- * RN-AL-10: `null` si no hay pago configurado o la siguiente fecha de pago (igual o posterior
+ * a hoy) está a más de 2 días; si no, la frase de la tarjeta de Control y de la notificación.
  * a hoy) está a más de 2 días; si no, la frase de Inicio, del resumen del día y de la notificación.
  */
 export function recordatorioDelLocal(

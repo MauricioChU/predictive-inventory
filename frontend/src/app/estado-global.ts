@@ -37,7 +37,7 @@ function deAUna(nombre: string, tarea: () => Promise<void>): () => Promise<void>
 /**
  * Estado que comparte toda la app: el contador de atención del botón Control
  * (`BarraNavegacion.contadorControl`, RN-AL-06b), el tamaño de letra de la configuración, si
- * falta la primera vez, el resumen del día y el recordatorio de copia.
+ * falta la primera vez.
  *
  * El contador sale de cada re-evaluación de Alertas (`alertas.alCalcularLaAtencion`, RN-SIS-09):
  * después de una operación, avisos y contador usan UN solo cálculo de situaciones, y una ráfaga
