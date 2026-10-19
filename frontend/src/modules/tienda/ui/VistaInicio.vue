@@ -153,7 +153,9 @@ function verLoQueSeAcaba(): void {
       </div>
 
       <div class="acciones">
-        <BotonPrincipal texto="Vender" :icono="ShoppingCart" @click="ir('vender')" />
+        <div class="vender-fijo">
+          <BotonPrincipal texto="Vender" :icono="ShoppingCart" @click="ir('vender')" />
+        </div>
         <BotonPrincipal
           texto="Llegó mercadería"
           variante="secundario"
@@ -231,13 +233,32 @@ h1 {
   flex-direction: column;
   gap: var(--espacio-4);
 }
-/* Celular: las acciones quedan al fondo del área de contenido (arriba de la navegación), al
-   alcance del pulgar. Si el contenido es más alto, simplemente fluye. */
+/* Celular: sin caja propia, así "Vender" se pega abajo dentro de todo el cuerpo de Inicio (un
+   elemento pegajoso no sale de la caja de su padre). */
 .acciones {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--espacio-3);
+  display: contents;
+}
+/* Celular: "Vender" queda pegado sobre la navegación (--alto-pie, medido en vivo) mientras su
+   lugar está más abajo; al llegar a él, sigue en su sitio. El primero de las acciones lleva
+   `margin-top: auto`: todo el bloque queda al fondo del área de contenido. */
+.vender-fijo {
+  position: sticky;
+  bottom: var(--alto-pie, 0px);
+  z-index: 5;
+  /* De borde a borde del contenido (cubre el relleno de <main>): el navegador dibuja la franja
+     pegada aparte y sus bordes laterales dejaban una línea fina junto al botón; así quedan en el
+     borde de la pantalla. */
+  margin: auto calc(-1 * var(--espacio-4)) calc(-1 * var(--espacio-2));
+  padding: var(--espacio-2) var(--espacio-4);
+  background: var(--color-fondo);
+}
+/* Lo enfocado con el teclado no queda debajo de "Vender" pegado (WCAG 2.4.11)... */
+.vista-inicio :is(a, button) {
+  scroll-margin-bottom: calc(var(--alto-boton-principal) + 2 * var(--espacio-2));
+}
+/* ...salvo el propio "Vender": ya está a la vista, enfocarlo no mueve la página. */
+.vender-fijo button {
+  scroll-margin-bottom: 0;
 }
 
 /* PC, en el mismo orden que el código (WCAG 1.3.2 / 2.4.3): las cifras y el aviso a la izquierda
@@ -265,12 +286,23 @@ h1 {
   }
   .acciones {
     grid-area: acciones;
-    margin-top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-3);
   }
   .cifra,
   .atencion,
   .acciones {
     margin-bottom: var(--espacio-4);
+  }
+  .vender-fijo {
+    position: static;
+    margin: 0;
+    padding: 0;
+    background: none;
+  }
+  .vista-inicio :is(a, button) {
+    scroll-margin-bottom: 0;
   }
 }
 </style>
