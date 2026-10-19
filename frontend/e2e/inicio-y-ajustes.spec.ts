@@ -297,11 +297,13 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     [360, 740],
   ] as const) {
     for (const letra of ['MUY_GRANDE', 'GRANDE'] as const) {
-      test(`${ancho}×${alto}, letra ${letra}: "Vender" entero dentro de la pantalla y sobre la navegación`, async ({
+      test(`${ancho}×${alto}, letra ${letra}: al final de Inicio, "Vender" queda entero sobre la navegación`, async ({
         page,
       }, testInfo) => {
         test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
         await abrirInicioCompleto(page, letra, ancho, alto)
+        // Con todo lo que Inicio puede mostrar el contenido es más alto que la pantalla: fluye.
+        await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
 
         const vender = await page.getByRole('button', { name: 'Vender' }).boundingBox()
         const navegacion = await page.getByRole('navigation').boundingBox()
@@ -323,6 +325,34 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
 
     await expect(page.locator('.vender-fijo button')).toBeFocused()
     expect(await page.evaluate(() => window.scrollY)).toBe(antes)
+  })
+
+  test('360×740: las acciones quedan abajo, justo sobre la navegación, y debajo de fecha, cifras y aviso', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
+    await abrirInicioCompleto(page, 'GRANDE', 360, 740)
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+
+    const caja = async (selector: string) => {
+      const medida = await page.locator(selector).first().boundingBox()
+      expect(medida, `${selector} tiene caja`).not.toBeNull()
+      return medida!
+    }
+    const fecha = await caja('.fecha-y-hora')
+    const cifra = await caja('.cifra')
+    const aviso = await caja('.atencion')
+    const vender = await caja('.vender-fijo')
+    const historial = await caja('.enlace-historial')
+    const acciones = { y: vender.y, height: historial.y + historial.height - vender.y }
+    const navegacion = await page.getByRole('navigation').boundingBox()
+    expect(cifra.y).toBeGreaterThanOrEqual(fecha.y + fecha.height - 1)
+    expect(aviso.y).toBeGreaterThanOrEqual(cifra.y + cifra.height - 1)
+    expect(acciones.y).toBeGreaterThanOrEqual(aviso.y + aviso.height - 1)
+    expect(acciones.y + acciones.height, 'dentro de la pantalla').toBeLessThanOrEqual(740)
+    expect(navegacion!.y - (acciones.y + acciones.height), 'justo sobre la navegación').toBeLessThanOrEqual(40)
+    expect(navegacion!.y - (acciones.y + acciones.height)).toBeGreaterThanOrEqual(-1)
+    await esperarSinDesplazamientoHorizontal(page)
   })
 
   test('320×700 Muy grande: al recorrer con Tab, nada enfocado queda tapado por "Vender" ni por la navegación', async ({

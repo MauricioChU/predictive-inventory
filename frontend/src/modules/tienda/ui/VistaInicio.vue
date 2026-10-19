@@ -19,6 +19,7 @@ import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import EstadoVacio from '@/shared/ui/componentes/EstadoVacio.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import TarjetaDeCifra from '@/shared/ui/componentes/TarjetaDeCifra.vue'
+import FechaYHora from './FechaYHora.vue'
 import { haciaPantalla, type PantallaDeOtraRama } from './pantallas-de-otras-ramas'
 
 const aplicacion = useAplicacion()
@@ -108,6 +109,8 @@ function verLoQueSeAcaba(): void {
       </RouterLink>
     </header>
 
+    <FechaYHora />
+
     <MensajeDeError
       v-if="fallo"
       mensaje="No pudimos leer tus datos de hoy"
@@ -115,10 +118,10 @@ function verLoQueSeAcaba(): void {
     />
 
     <!--
-      Inicio es para vender (plan 19). Celular: lo de hoy (cifras y lo que se acaba) → las
-      acciones. "Vender" queda pegado sobre la navegación mientras su lugar está más abajo:
-      siempre a la vista. PC: lo que hay que saber a la izquierda y lo que hay que hacer a la
-      derecha.
+      Inicio es para vender (plan 19). Celular: encabezado → fecha y hora → lo de hoy (cifras y lo
+      que se acaba) → espacio libre → las acciones, pegadas abajo, al alcance del pulgar (si el
+      contenido es más alto que la pantalla, todo fluye sin taparse). PC: lo que hay que saber a
+      la izquierda y lo que hay que hacer a la derecha.
     -->
     <div class="cuerpo">
       <TarjetaDeCifra
@@ -180,6 +183,8 @@ function verLoQueSeAcaba(): void {
   display: flex;
   flex-direction: column;
   gap: var(--espacio-4);
+  /* Ocupa el alto que deja libre la navegación (medida en vivo en --alto-pie). */
+  min-height: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
 }
 .saludo {
   display: flex;
@@ -224,6 +229,7 @@ h1 {
 
 .cuerpo {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--espacio-4);
 }
@@ -233,7 +239,8 @@ h1 {
   display: contents;
 }
 /* Celular: "Vender" queda pegado sobre la navegación (--alto-pie, medido en vivo) mientras su
-   lugar está más abajo; al llegar a él, sigue en su sitio. */
+   lugar está más abajo; al llegar a él, sigue en su sitio. El primero de las acciones lleva
+   `margin-top: auto`: todo el bloque queda al fondo del área de contenido. */
 .vender-fijo {
   position: sticky;
   bottom: var(--alto-pie, 0px);
@@ -241,7 +248,7 @@ h1 {
   /* De borde a borde del contenido (cubre el relleno de <main>): el navegador dibuja la franja
      pegada aparte y sus bordes laterales dejaban una línea fina junto al botón; así quedan en el
      borde de la pantalla. */
-  margin: calc(-1 * var(--espacio-2)) calc(-1 * var(--espacio-4));
+  margin: auto calc(-1 * var(--espacio-4)) calc(-1 * var(--espacio-2));
   padding: var(--espacio-2) var(--espacio-4);
   background: var(--color-fondo);
 }
@@ -258,6 +265,9 @@ h1 {
    y las acciones a la derecha. Sin filas vacías: la separación es el margen de cada bloque, no
    el espacio entre filas. */
 @media (min-width: 1024px) {
+  .vista-inicio {
+    min-height: auto;
+  }
   .cuerpo {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
