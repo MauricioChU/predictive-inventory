@@ -207,7 +207,22 @@ function ir(nombre: PantallaDeOtraRama): void {
         />
       </section>
 
-      <div v-if="estadoGlobal.recordatorioDeCopia || instalacion.mostrar.value" class="extras">
+      <div
+        v-if="
+          estadoGlobal.recordatorioDelLocal ||
+          estadoGlobal.recordatorioDeCopia ||
+          instalacion.mostrar.value
+        "
+        class="extras"
+      >
+        <!-- RN-AL-10: el pago del local dentro de 2 días; Entendido lo cierra hasta mañana. -->
+        <AvisoEnPagina
+          v-if="estadoGlobal.recordatorioDelLocal"
+          tono="info"
+          :titulo="estadoGlobal.recordatorioDelLocal"
+          texto-cerrar="Entendido"
+          @cerrar="despuesDeCerrar(estadoGlobal.cerrarRecordatorioDelLocal)"
+        />
         <!-- RN-RE-06 -->
         <AvisoEnPagina
           v-if="estadoGlobal.recordatorioDeCopia"

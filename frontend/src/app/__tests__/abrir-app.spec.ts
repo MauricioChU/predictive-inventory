@@ -51,6 +51,7 @@ describe.each(ALMACENES)('abrirApp (%s)', (almacen) => {
       tamanoDeLetra: 'GRANDE',
       resumenDelDia: { lineas: ['Nada agotado', 'Nada por acabarse', 'Ayer no hubo ventas'] },
       recordatorioDeCopia: 'Todavía no guardas una copia de tus datos',
+      recordatorioDelLocal: null,
     })
     const estado = await app.tienda.consultable.estadoDelSistema()
     expect(estado.dispositivoId).toBe('id-1')
@@ -108,6 +109,10 @@ describe.each(ALMACENES)('abrirApp (%s)', (almacen) => {
       'el recordatorio de copia',
       (a: AplicacionDePrueba) => vi.spyOn(a.respaldo, 'recordatorioDeCopia'),
     ],
+    [
+      'el recordatorio del pago del local',
+      (a: AplicacionDePrueba) => vi.spyOn(a.alertas, 'recordatorioDelLocal'),
+    ],
   ])('si falla %s, lo registra y la app abre igual', async (_paso, espiar) => {
     nuevaApp()
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
@@ -118,6 +123,18 @@ describe.each(ALMACENES)('abrirApp (%s)', (almacen) => {
     expect(inicio.primeraVez).toBe(true)
     expect(inicio.tamanoDeLetra).toBe('GRANDE')
     expect(error).toHaveBeenCalledWith(expect.stringMatching(/^No se pudo /), expect.any(Error))
+  })
+
+  it('RN-AL-10: con el pago del local a la vista, entrega el recordatorio; sin él, null', async () => {
+    nuevaApp()
+    expect((await abrirApp(app, { aplicarTamanoDeLetra })).recordatorioDelLocal).toBeNull()
+
+    await app.tienda.actualizarConfiguracion({
+      alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [17] },
+    })
+    const inicio = await abrirApp(app, { aplicarTamanoDeLetra })
+
+    expect(inicio.recordatorioDelLocal).toBe('Pasado mañana pagas el local: S/ 1 200.00')
   })
 
   it('si fallan las lecturas de Análisis (resumen y avisos), la app abre igual sin resumen del día', async () => {

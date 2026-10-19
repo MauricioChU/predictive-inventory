@@ -43,7 +43,7 @@ Criterios de aceptación ejecutables: [features/alertas.feature](features/alerta
 | Id | Regla |
 |---|---|
 | **RN-AL-10** | **Recordatorio en Inicio**: si el local tiene pago configurado (RN-AN-17) y la siguiente fecha de pago **igual o posterior a hoy** (RN-AN-18) cae **hoy, mañana o pasado mañana**, Inicio muestra una tarjeta con el texto de la tabla de abajo y el botón *Entendido*, que la cierra **hasta el día siguiente**. El resumen del día (RN-AL-09) incluye la misma frase. Sin configurar o con *No pago*, no hay recordatorio. |
-| **RN-AL-11** | **Notificación del pago**: con permiso de notificaciones (RN-AL-08), se envía **una sola notificación por cada fecha de pago**, la primera vez que se evalúan los avisos (RN-AL-02) dentro de esa ventana de 3 días. Tocarla abre **Control**. Se guarda la última fecha de pago avisada para no repetirla; si cambia la configuración del local, una fecha nueva sí se avisa. Tiene la misma limitación de la Fase 1 que los avisos de stock (ver abajo). |
+| **RN-AL-11** | **Notificación del pago**: con permiso de notificaciones (RN-AL-08), se envía **una sola notificación por cada fecha de pago**, la primera vez que se abre la app dentro de esa ventana de 3 días. Tocarla abre **Control**. Se guarda la última fecha de pago avisada para no repetirla; si cambia la configuración del local, una fecha nueva sí se avisa. Tiene la misma limitación de la Fase 1 que los avisos de stock (ver abajo). |
 
 ## Textos de los avisos
 

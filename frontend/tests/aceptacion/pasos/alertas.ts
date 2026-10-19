@@ -1,14 +1,17 @@
 import { createPinia } from 'pinia'
 import { expect } from 'vitest'
 import { useEstadoGlobal } from '@/app/estado-global'
-import { RUTA_PARA_COMPRAR } from '@/modules/alertas'
+import { RUTA_DEL_ALQUILER, RUTA_PARA_COMPRAR } from '@/modules/alertas'
 import { sumarDias } from '@/shared/domain/fecha'
 import { PRESENTACION_DE_ESTADO, type EstadoVisual } from '@/shared/ui/presentacion-estado'
 import type { Mundo } from './mundo'
 import { accion, afirmacion, preparacion, type Pasos } from './registro'
 
 /** Adónde lleva tocar una notificación, por el nombre de la pantalla (M5: rutas del plan 13). */
-const RUTAS_DE_PANTALLA: Record<string, string> = { 'Para comprar': RUTA_PARA_COMPRAR }
+const RUTAS_DE_PANTALLA: Record<string, string> = {
+  'Para comprar': RUTA_PARA_COMPRAR,
+  Control: RUTA_DEL_ALQUILER,
+}
 
 /**
  * "El estado guardado / el último aviso de X fue Y" (RN-AL-02/03/04): el dato que guarda
@@ -95,6 +98,7 @@ export function pasosDeAlertas(pasos: Pasos): void {
         tamanoDeLetra: 'GRANDE',
         resumenDelDia: null,
         recordatorioDeCopia: null,
+        recordatorioDelLocal: null,
       })
       try {
         await estado.refrescarAtencion()
@@ -148,6 +152,30 @@ export function pasosDeAlertas(pasos: Pasos): void {
       expect(m.inicio?.resumenDelDia?.lineas).toEqual([primera, segunda, tercera])
     },
   )
+
+  // RN-AL-10 / RN-AL-11 (plan 18): el pago del local. "Inicio muestra" ya mira estas líneas.
+  afirmacion(pasos, 'Inicio no muestra el recordatorio del local', (m: Mundo) => {
+    expect(m.inicio, 'Hay que abrir la app antes').not.toBeNull()
+    expect(m.inicio?.recordatorioDelLocal).toBeNull()
+  })
+
+  afirmacion(pasos, 'el resumen del día incluye {string}', (m: Mundo, linea: string) => {
+    expect(m.inicio?.resumenDelDia?.lineas).toContain(linea)
+  })
+
+  accion(pasos, 'toco "Entendido" en el recordatorio del local', async (m: Mundo) => {
+    await m.app.alertas.cerrarRecordatorioDelLocal()
+  })
+
+  accion(pasos, 'pasa un día', (m: Mundo) => {
+    m.app.reloj.avanzarSegundos(24 * 60 * 60)
+    m.dia = sumarDias(m.dia, 1)
+  })
+
+  afirmacion(pasos, 'no se envía la notificación del local', (m: Mundo) => {
+    const enviadas = m.app.notificador.mostradas.slice(m.notificacionesAntes)
+    expect(enviadas.filter((n) => n.url === RUTA_DEL_ALQUILER)).toEqual([])
+  })
 
   accion(pasos, 'cierro el resumen', async (m: Mundo) => {
     await m.app.alertas.cerrarResumenDelDia()

@@ -30,7 +30,7 @@ Característica: Respaldo, Excel e importación
   Escenario: Guardar una copia completa
     Cuando guardo una copia
     Entonces se genera el archivo "respaldo-bodega-rosita-2026-10-15-2030.json"
-    Y la copia tiene versión de formato "1"
+    Y la copia tiene versión de formato "2"
     Y el control de la copia indica "2" productos y "2" operaciones
     Y el control de la copia indica stock "12.5" para "Carbón"
     Y la copia no incluye existencias ni resúmenes diarios

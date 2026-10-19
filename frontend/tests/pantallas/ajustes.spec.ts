@@ -235,6 +235,56 @@ describe('Datos de la tienda', () => {
     expect(pantalla.wrapper.get('h1').text()).toBe('Cambios guardados')
   })
 
+  describe('Alquiler del local (RN-AN-17)', () => {
+    const SIN_CORTES = new RegExp(String.fromCharCode(0xa0), 'g')
+
+    function enlaceDelAlquiler() {
+      const enlace = pantalla!.wrapper
+        .findAll('a')
+        .find((a) => a.find('.titulo').exists() && a.get('.titulo').text() === 'Alquiler del local')
+      if (!enlace) throw new Error(`No hay el enlace en: ${pantalla!.wrapper.text()}`)
+      return enlace
+    }
+    const detalle = () => enlaceDelAlquiler().get('.detalle').text().replace(SIN_CORTES, ' ')
+
+    it('sin configurar dice "Sin configurar"', async () => {
+      pantalla = await montarPantalla(app, '/ajustes/tienda')
+      expect(detalle()).toBe('Sin configurar')
+    })
+
+    it('dos veces al mes resume el monto y los dos días', async () => {
+      await app.tienda.actualizarConfiguracion({
+        alquilerDelLocal: { tipo: 'QUINCENAL', montoCentimos: 60000, dias: [20, 5] },
+      })
+      pantalla = await montarPantalla(app, '/ajustes/tienda')
+      expect(detalle()).toBe('S/ 600.00 · días 5 y 20')
+    })
+
+    it('una vez al mes resume el monto y el día', async () => {
+      await app.tienda.actualizarConfiguracion({
+        alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120050, dias: [5] },
+      })
+      pantalla = await montarPantalla(app, '/ajustes/tienda')
+      expect(detalle()).toBe('S/ 1 200.50 · día 5')
+    })
+
+    it('"No pago" dice "No pagas alquiler"', async () => {
+      await app.tienda.actualizarConfiguracion({ alquilerDelLocal: { tipo: 'NO_PAGA' } })
+      pantalla = await montarPantalla(app, '/ajustes/tienda')
+      expect(detalle()).toBe('No pagas alquiler')
+    })
+
+    it('abre la pantalla del alquiler sabiendo que viene de Ajustes', async () => {
+      pantalla = await montarPantalla(app, '/ajustes/tienda')
+      await enlaceDelAlquiler().trigger('click')
+      await esperarPantalla()
+      const ruta = pantalla.router.currentRoute.value
+      expect(ruta.name).toBe('alquiler-del-local')
+      expect(ruta.query.desde).toBe('ajustes')
+      expect(pantalla.wrapper.get('h1').text()).toBe('Alquiler del local')
+    })
+  })
+
   it('los rangos de la configuración se explican junto a cada campo y no se guarda nada', async () => {
     pantalla = await montarPantalla(app, '/ajustes/tienda')
 

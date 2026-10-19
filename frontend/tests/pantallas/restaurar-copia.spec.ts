@@ -125,7 +125,7 @@ describe('Restaurar copia', () => {
   })
 
   it('RN-RE-05: una copia de una versión más nueva se rechaza', async () => {
-    await elegir(JSON.stringify({ ...JSON.parse(copia), versionDeFormato: 2 }))
+    await elegir(JSON.stringify({ ...JSON.parse(copia), versionDeFormato: 3 }))
 
     expect(pantalla!.wrapper.text()).toContain('Actualiza la app para abrir este respaldo')
   })

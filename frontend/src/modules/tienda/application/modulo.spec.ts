@@ -39,6 +39,8 @@ describe('ModuloTienda', () => {
       ultimoRespaldoEn: null,
       almacenamientoPersistente: 'DESCONOCIDO',
       ultimoResumenDelDiaMostrado: null,
+      ultimoPagoDelLocalAvisado: null,
+      recordatorioDelLocalCerradoEl: null,
     })
 
     const segundo = await modulo.consultable.estadoDelSistema()
@@ -58,6 +60,71 @@ describe('ModuloTienda', () => {
     const configuracion = await moduloConBus.obtenerConfiguracion()
     expect(configuracion.nombreTienda).toBe('Bodega Rosita')
     expect(configuracion.diasEntreCompras).toBe(CONFIGURACION_INICIAL.diasEntreCompras)
+  })
+
+  it('un registro guardado sin alquilerDelLocal se lee con alquilerDelLocal null', async () => {
+    const { modulo: m, deps } = crearModulo()
+    // Registro de una versión anterior: no trae el campo del alquiler.
+    await deps.repositorio.guardarNegocio({
+      clave: 'negocio',
+      nombreTienda: 'Bodega Vieja',
+      diasEntreCompras: 5,
+      diasAnticipacion: 2,
+      diasMaximosDeCompra: 20,
+      tamanoDeLetra: 'NORMAL',
+      notificacionesActivas: true,
+    } as never)
+    expect(await m.obtenerConfiguracion()).toEqual({
+      nombreTienda: 'Bodega Vieja',
+      diasEntreCompras: 5,
+      diasAnticipacion: 2,
+      diasMaximosDeCompra: 20,
+      tamanoDeLetra: 'NORMAL',
+      notificacionesActivas: true,
+      alquilerDelLocal: null,
+    })
+  })
+
+  it('un estado del sistema guardado sin los campos del local los lee en null', async () => {
+    const { modulo: m, deps } = crearModulo()
+    await deps.repositorio.guardarSistema({
+      clave: 'sistema',
+      dispositivoId: 'viejo-1',
+      primeraVezCompletada: true,
+      ultimoRespaldoEn: null,
+      almacenamientoPersistente: 'CONCEDIDO',
+      ultimoResumenDelDiaMostrado: null,
+    } as never)
+    const estado = await m.consultable.estadoDelSistema()
+    expect(estado.dispositivoId).toBe('viejo-1')
+    expect(estado.ultimoPagoDelLocalAvisado).toBeNull()
+    expect(estado.recordatorioDelLocalCerradoEl).toBeNull()
+  })
+
+  it('guarda el alquiler del local y ordena los dos días de pago', async () => {
+    await modulo.actualizarConfiguracion({
+      alquilerDelLocal: { tipo: 'QUINCENAL', montoCentimos: 60_000, dias: [20, 5] },
+    })
+    expect((await modulo.obtenerConfiguracion()).alquilerDelLocal).toEqual({
+      tipo: 'QUINCENAL',
+      montoCentimos: 60_000,
+      dias: [5, 20],
+    })
+  })
+
+  it('rechaza un alquiler inválido y no guarda nada', async () => {
+    await expect(
+      modulo.actualizarConfiguracion({
+        alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 0, dias: [5] },
+      }),
+    ).rejects.toThrow('El monto debe ser mayor que S/ 0.00')
+    expect((await modulo.obtenerConfiguracion()).alquilerDelLocal).toBeNull()
+  })
+
+  it('volver a null deja el local sin configurar', async () => {
+    await modulo.actualizarConfiguracion({ alquilerDelLocal: { tipo: 'NO_PAGA' } })
+    await modulo.actualizarConfiguracion({ alquilerDelLocal: null })
+    expect((await modulo.obtenerConfiguracion()).alquilerDelLocal).toBeNull()
   })
 
   it('actualizarConfiguracion rechaza un nombre vacío y no publica el evento', async () => {

@@ -157,6 +157,34 @@ describe('estado global (Pinia)', () => {
     expect(await app.alertas.resumenDelDia()).toBeNull()
   })
 
+  it('RN-AL-10: cerrarRecordatorioDelLocal lo quita y no vuelve a salir hoy', async () => {
+    const estado = await conectar()
+    await app.tienda.actualizarConfiguracion({
+      alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [17] },
+    })
+    await vi.waitFor(() =>
+      expect(estado.recordatorioDelLocal).toBe('Pasado mañana pagas el local: S/ 1 200.00'),
+    )
+
+    await estado.cerrarRecordatorioDelLocal()
+
+    expect(estado.recordatorioDelLocal).toBeNull()
+    expect(await app.alertas.recordatorioDelLocal()).toBeNull()
+  })
+
+  it('RN-AL-10: al configurar el local se actualiza el recordatorio', async () => {
+    const estado = await conectar()
+    expect(estado.recordatorioDelLocal).toBeNull()
+
+    await app.tienda.actualizarConfiguracion({
+      alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [16] },
+    })
+
+    await vi.waitFor(() =>
+      expect(estado.recordatorioDelLocal).toBe('Mañana pagas el local: S/ 1 200.00'),
+    )
+  })
+
   it('RN-RE-06: refrescarRecordatorioDeCopia, después de marcar la copia guardada', async () => {
     const estado = await conectar()
     await app.respaldo.marcarCopiaGuardada()

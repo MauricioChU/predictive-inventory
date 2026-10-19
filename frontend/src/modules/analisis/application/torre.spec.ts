@@ -60,6 +60,7 @@ describe('Torre de control', () => {
     const torre = await entorno([]).modulo.consultarTorre()
     expect(Object.keys(torre)).toEqual([
       'resumen',
+      'alquiler',
       'atencion',
       'productosEnAtencion',
       'paraComprar',
@@ -231,5 +232,54 @@ describe('Torre de control', () => {
     const entre = vi.spyOn(e.resumenes, 'entre')
     await e.modulo.consultarTorre()
     expect(entre).toHaveBeenCalledTimes(1)
+  })
+
+  describe('Alquiler del local (RN-AN-17 a RN-AN-19)', () => {
+    it('sin configurar, la Torre lo avisa para que Control pregunte', async () => {
+      const torre = await entorno([LEJIA]).modulo.consultarTorre()
+      expect(torre.alquiler).toEqual({ estado: 'SIN_CONFIGURAR' })
+    })
+
+    it('con No pago, no hay avance que mostrar', async () => {
+      const e = entorno([LEJIA])
+      e.tienda.config = { ...e.tienda.config, alquilerDelLocal: { tipo: 'NO_PAGA' } }
+      expect((await e.modulo.consultarTorre()).alquiler).toEqual({ estado: 'NO_PAGA' })
+    })
+
+    it('con pago, cuenta la ganancia neta desde el último pago (las ventas anteriores no cuentan)', async () => {
+      const e = entorno([LEJIA])
+      e.tienda.config = {
+        ...e.tienda.config,
+        alquilerDelLocal: { tipo: 'QUINCENAL', montoCentimos: 60000, dias: [5, 20] },
+      }
+      // Hoy es 15/10: último pago 05/10, próximo pago 20/10.
+      await e.registrar(
+        stockInicial('500'),
+        vender('2026-10-04 12:00', '10'),
+        vender('2026-10-05 08:00', '1'),
+        vender('2026-10-06 12:00', '100'),
+      )
+      const { alquiler } = await e.modulo.consultarTorre()
+      if (alquiler.estado !== 'CON_PAGO') throw new Error(`estado inesperado: ${alquiler.estado}`)
+      expect(formatearDinero(alquiler.avance.llevas)).toBe('S/ 111.10')
+      expect(alquiler.avance.proximoPago).toBe('2026-10-20')
+      expect(alquiler.avance.porcentaje).toBe(18)
+      expect(alquiler.textos).toEqual([
+        'Para el pago del 20/10 llevas S/ 111.10 de S/ 600.00',
+        'Te falta S/ 488.90',
+      ])
+    })
+
+    it('no depende del periodo elegido en el Resumen', async () => {
+      const e = entorno([LEJIA])
+      e.tienda.config = {
+        ...e.tienda.config,
+        alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 60000, dias: [5] },
+      }
+      await e.registrar(stockInicial('500'), vender('2026-10-06 12:00', '100'))
+      const hoy = await e.modulo.consultarTorre({ periodo: 'HOY' })
+      const mes = await e.modulo.consultarTorre({ periodo: '30_DIAS' })
+      expect(hoy.alquiler).toEqual(mes.alquiler)
+    })
   })
 })

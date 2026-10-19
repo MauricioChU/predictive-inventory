@@ -346,8 +346,8 @@ export class Mundo {
 
   /**
    * Las líneas de Inicio (M12: todavía no hay pantalla): el aviso de atención (RN-AL-06a), el
-   * recordatorio de copia (RN-RE-06; el de la última apertura, si la hubo) y el resumen del día
-   * (RN-AL-09).
+   * recordatorio de copia (RN-RE-06; el de la última apertura, si la hubo), el recordatorio del
+   * pago del local (RN-AL-10) y el resumen del día (RN-AL-09, que repite esa frase).
    */
   async lineasDeInicio(): Promise<string[]> {
     const atencion = await this.app.alertas.resumenDeAtencion()
@@ -357,6 +357,7 @@ export class Mundo {
     return [
       atencion.texto,
       ...(recordatorio === null ? [] : [recordatorio]),
+      ...(this.inicio?.recordatorioDelLocal ? [this.inicio.recordatorioDelLocal] : []),
       ...(this.inicio?.resumenDelDia?.lineas ?? []),
     ]
   }

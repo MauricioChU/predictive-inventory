@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { instanteLocal } from '@/shared/domain/fecha'
 import { olvidarInstalacionParaPruebas } from '@/modules/tienda'
+import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
 import { crearAplicacionDePrueba, type AplicacionDePrueba } from '../soporte/aplicacion-de-prueba'
 import { esperarPantalla, montarPantalla, type PantallaMontada } from '../soporte/montar-pantalla'
 import { crearProductoDePrueba } from '../soporte/productos-de-prueba'
@@ -148,6 +149,62 @@ describe('Inicio', () => {
     const { wrapper } = await abrirInicio()
 
     expect(wrapper.text()).not.toContain('guardas una copia')
+  })
+
+  describe('RN-AL-10: recordatorio del pago del local', () => {
+    async function localSePagaElDia(dia: number): Promise<void> {
+      await app.tienda.actualizarConfiguracion({
+        alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [dia] },
+      })
+    }
+
+    it('dentro de la ventana muestra la tarjeta con el texto y Entendido', async () => {
+      await tiendaLista()
+      await localSePagaElDia(17)
+      const { wrapper } = await abrirInicio()
+
+      expect(wrapper.text()).toContain(pegarCifras('Pasado mañana pagas el local: S/ 1 200.00'))
+      expect(wrapper.findAll('button').some((b) => b.text() === 'Entendido')).toBe(true)
+    })
+
+    it('fuera de la ventana o sin alquiler no muestra nada', async () => {
+      await tiendaLista()
+      await localSePagaElDia(25)
+      const { wrapper } = await abrirInicio()
+
+      expect(wrapper.text()).not.toContain('pagas el local')
+    })
+
+    it('Entendido la cierra, no vuelve ese día y el foco va al saludo', async () => {
+      await tiendaLista()
+      await localSePagaElDia(17)
+      const { wrapper } = await abrirInicio()
+
+      await botonCon('Entendido').trigger('click')
+      await esperarPantalla()
+
+      expect(wrapper.text()).not.toContain('Pasado mañana pagas el local')
+      expect(document.activeElement).toBe(wrapper.get('h1').element)
+      expect(await app.alertas.recordatorioDelLocal()).toBeNull()
+    })
+
+    it('se muestra aunque todavía no haya productos', async () => {
+      await tiendaLista()
+      await localSePagaElDia(15)
+      const { wrapper } = await abrirInicio()
+
+      expect(wrapper.text()).toContain('Aún no tienes productos')
+      expect(wrapper.text()).toContain(pegarCifras('Hoy pagas el local: S/ 1 200.00'))
+    })
+
+    it('aparece también si se configura el local con Inicio ya abierto', async () => {
+      await tiendaLista()
+      const { wrapper } = await abrirInicio()
+      expect(wrapper.text()).not.toContain('pagas el local')
+
+      await localSePagaElDia(16)
+      await vi.waitFor(() => expect(wrapper.text()).toContain('Mañana pagas el local'))
+    })
   })
 
   it('RN-AL-09: el resumen del día se cierra con un toque y no vuelve ese día', async () => {

@@ -1,3 +1,8 @@
+import type { AlquilerDelLocal } from '@/shared/contratos/configuracion'
+import { Dinero } from '@/shared/domain/dinero'
+import type { Dia } from '@/shared/domain/fecha'
+import { proximoPago, ultimoPago } from '@/shared/domain/fechas-de-pago'
+import { avanceDelAlquiler, textosDelAlquiler, type AvanceDelAlquiler } from '../domain/alquiler'
 import { aplicarCambiosALista, type ListaParaComprar } from '../domain/compras'
 import {
   masVendidos,
@@ -25,9 +30,17 @@ import { cambiosDelDia, listaSugerida } from './lista-de-compras'
 import type { DependenciasDeAnalisis } from './puertos'
 import { cargarDatos, evaluarProductos, hoyDe } from './situaciones'
 
+/** RN-AN-19: la tarjeta Alquiler del local de Control, en sus tres casos. */
+export type AlquilerEnControl =
+  | { estado: 'SIN_CONFIGURAR' }
+  | { estado: 'NO_PAGA' }
+  | { estado: 'CON_PAGO'; avance: AvanceDelAlquiler; textos: [string, string] }
+
 /** Secciones de la vista Control, en el orden de 04-torre-de-control. */
 export interface TorreDeControl {
   resumen: ResumenDePeriodo
+  /** No depende del periodo elegido para el Resumen. */
+  alquiler: AlquilerEnControl
   atencion: { agotados: number; porAcabarse: number; preciosParaRevisar: number }
   /** Lo que abre cada fila de Atención (los precios para revisar van en `preciosParaRevisar`). */
   productosEnAtencion: ProductosEnAtencion
@@ -56,13 +69,34 @@ export async function consultarResumen(
   return resumenDePeriodo(registros.map(ResumenDiario.desdeRegistro), rango)
 }
 
+/**
+ * RN-AN-17 a RN-AN-19: lo que lleva ganado el periodo actual (del último pago a hoy) contra el
+ * monto del próximo pago. Usa las filas ya leídas: el periodo cabe siempre en la ventana.
+ */
+export function alquilerEnControl(
+  alquiler: AlquilerDelLocal | null,
+  filas: readonly ResumenDiario[],
+  hoy: Dia,
+): AlquilerEnControl {
+  if (alquiler === null) return { estado: 'SIN_CONFIGURAR' }
+  if (alquiler.tipo === 'NO_PAGA') return { estado: 'NO_PAGA' }
+  const desde = ultimoPago(alquiler.dias, hoy)
+  const { gananciaNeta } = resumenDePeriodo(filas, { desde, hasta: hoy })
+  const avance = avanceDelAlquiler(
+    Dinero.deCentimos(alquiler.montoCentimos),
+    gananciaNeta,
+    proximoPago(alquiler.dias, hoy),
+  )
+  return { estado: 'CON_PAGO', avance, textos: textosDelAlquiler(avance) }
+}
+
 /** Todo lo de la Torre de control con una sola lectura de la proyección (RN-SIS-09, RN-AN-15). */
 export async function consultarTorre(
   d: DependenciasDeAnalisis,
   opciones: OpcionesDeTorre = {},
 ): Promise<TorreDeControl> {
   const datos = await cargarDatos(d)
-  const { hoy, filas, productos } = datos
+  const { hoy, filas, productos, configuracion } = datos
   const [evaluaciones, cambios, primerDiaDeLaTienda] = await Promise.all([
     evaluarProductos(d, datos),
     cambiosDelDia(d, hoy),
@@ -72,6 +106,7 @@ export async function consultarTorre(
   const precios = preciosParaRevisar(productos)
   return {
     resumen: resumenDePeriodo(filas, rangoDePeriodo(opciones.periodo ?? 'HOY', hoy)),
+    alquiler: alquilerEnControl(configuracion.alquilerDelLocal, filas, hoy),
     atencion: {
       agotados: situaciones.filter((s) => s.estado === 'AGOTADO').length,
       porAcabarse: situaciones.filter((s) => s.estado === 'POR_ACABARSE').length,

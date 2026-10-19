@@ -41,6 +41,7 @@ function registroDeNegocio(c: ConfiguracionRegistro): ConfiguracionRegistro {
     diasMaximosDeCompra: c.diasMaximosDeCompra,
     tamanoDeLetra: c.tamanoDeLetra,
     notificacionesActivas: c.notificacionesActivas,
+    alquilerDelLocal: c.alquilerDelLocal ?? null,
   }
 }
 
@@ -76,7 +77,13 @@ export class AlmacenDeRespaldoDexie implements AlmacenDeRespaldo {
       ])
       return {
         registros: {
-          configuracion: (negocio as ConfiguracionRegistro | undefined) ?? null,
+          // Una fila guardada antes del costo del local lo trae sin definir: en la copia es `null`.
+          configuracion: negocio
+            ? {
+                ...(negocio as ConfiguracionRegistro),
+                alquilerDelLocal: (negocio as ConfiguracionRegistro).alquilerDelLocal ?? null,
+              }
+            : null,
           categorias,
           productos,
           operaciones,
