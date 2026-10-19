@@ -171,7 +171,7 @@ describe('arrancar', () => {
     expect(p.mostrarError).not.toHaveBeenCalled()
     expect(p.montar).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ resumenDelDia: null }),
+      expect.objectContaining({ tamanoDeLetra: 'GRANDE' }),
     )
   })
 

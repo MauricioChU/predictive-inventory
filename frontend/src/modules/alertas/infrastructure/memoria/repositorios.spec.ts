@@ -20,11 +20,11 @@ describe('NotificadorEnMemoria', () => {
     await notificador.mostrar({ texto: 'Se acabó: Lejía 1 L', url: '/productos/p1' })
     await notificador.mostrar({
       texto: '3 productos se están acabando',
-      url: '/control/para-comprar',
+      url: '/productos?estado=se-acaban',
     })
     expect(notificador.mostradas).toEqual([
       { texto: 'Se acabó: Lejía 1 L', url: '/productos/p1' },
-      { texto: '3 productos se están acabando', url: '/control/para-comprar' },
+      { texto: '3 productos se están acabando', url: '/productos?estado=se-acaban' },
     ])
   })
 

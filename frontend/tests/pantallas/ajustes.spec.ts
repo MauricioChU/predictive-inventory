@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Cantidad } from '@/shared/domain/cantidad'
 import { instanteLocal } from '@/shared/domain/fecha'
+import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
 import { crearAplicacionDePrueba, type AplicacionDePrueba } from '../soporte/aplicacion-de-prueba'
 import { capturarDescargas, type Descarga } from '../soporte/archivos-en-pantalla'
 import { esperarPantalla, montarPantalla, type PantallaMontada } from '../soporte/montar-pantalla'
@@ -72,6 +73,26 @@ describe('Ajustes', () => {
     const texto = pantalla.wrapper.text().replaceAll(' ', ' ')
     expect(texto).toContain('Bodega Rosita · compras cada 7 días')
     expect(texto).toContain('Todavía no guardas una copia de tus datos')
+  })
+
+  it('RN-RE-06: con una copia reciente muestra la fecha, sin recordatorio', async () => {
+    await app.respaldo.marcarCopiaGuardada()
+    app.reloj.avanzarSegundos(6 * 24 * 60 * 60)
+    pantalla = await montarPantalla(app, '/ajustes')
+
+    const texto = pantalla.wrapper.text()
+    expect(texto).toContain('Tu última copia es del')
+    expect(texto).not.toContain('que no guardas una copia')
+  })
+
+  it('RN-RE-06: con 7 días sin copia, el enlace Guardar copia lo recuerda', async () => {
+    await app.respaldo.marcarCopiaGuardada()
+    app.reloj.avanzarSegundos(7 * 24 * 60 * 60)
+    pantalla = await montarPantalla(app, '/ajustes')
+
+    expect(control('Guardar copia').text()).toContain(
+      pegarCifras('Hace 7 días que no guardas una copia'),
+    )
   })
 
   it('si compra todos los días, lo dice en singular', async () => {

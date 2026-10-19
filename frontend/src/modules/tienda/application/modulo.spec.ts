@@ -38,9 +38,7 @@ describe('ModuloTienda', () => {
       primeraVezCompletada: false,
       ultimoRespaldoEn: null,
       almacenamientoPersistente: 'DESCONOCIDO',
-      ultimoResumenDelDiaMostrado: null,
       ultimoPagoDelLocalAvisado: null,
-      recordatorioDelLocalCerradoEl: null,
     })
 
     const segundo = await modulo.consultable.estadoDelSistema()
@@ -85,7 +83,7 @@ describe('ModuloTienda', () => {
     })
   })
 
-  it('un estado del sistema guardado sin los campos del local los lee en null', async () => {
+  it('un estado del sistema guardado sin el campo del local lo lee en null', async () => {
     const { modulo: m, deps } = crearModulo()
     await deps.repositorio.guardarSistema({
       clave: 'sistema',
@@ -93,12 +91,10 @@ describe('ModuloTienda', () => {
       primeraVezCompletada: true,
       ultimoRespaldoEn: null,
       almacenamientoPersistente: 'CONCEDIDO',
-      ultimoResumenDelDiaMostrado: null,
     } as never)
     const estado = await m.consultable.estadoDelSistema()
     expect(estado.dispositivoId).toBe('viejo-1')
     expect(estado.ultimoPagoDelLocalAvisado).toBeNull()
-    expect(estado.recordatorioDelLocalCerradoEl).toBeNull()
   })
 
   it('guarda el alquiler del local y ordena los dos días de pago', async () => {

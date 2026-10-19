@@ -59,7 +59,6 @@ describe('Guardar copia', () => {
     expect(resumen.texto).toBe('1 producto, 1 movimiento, del 15/10/2026 al 15/10/2026')
     expect((await app.tienda.consultable.estadoDelSistema()).ultimoRespaldoEn).not.toBeNull()
     expect(await app.respaldo.recordatorioDeCopia()).toBeNull()
-    expect(pantalla.estadoGlobal.recordatorioDeCopia).toBeNull()
     expect(pantalla.wrapper.get('h1').text()).toBe('Copia guardada')
     expect(pantalla.wrapper.text()).toContain('respaldo-bodega-rosita-2026-10-15-2030.json')
   })

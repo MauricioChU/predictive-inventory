@@ -19,13 +19,9 @@ function sinClave<T extends { clave: string }>(registro: T): Omit<T, 'clave'> {
   return copia as Omit<T, 'clave'>
 }
 
-/** Campos del aviso del local: nacen en `null` y los registros anteriores no los traen. */
-const SISTEMA_SIN_AVISOS_DEL_LOCAL: Pick<
-  EstadoDelSistema,
-  'ultimoPagoDelLocalAvisado' | 'recordatorioDelLocalCerradoEl'
-> = {
+/** Campo del aviso del local: nace en `null` y los registros anteriores no lo traen. */
+const SISTEMA_SIN_AVISOS_DEL_LOCAL: Pick<EstadoDelSistema, 'ultimoPagoDelLocalAvisado'> = {
   ultimoPagoDelLocalAvisado: null,
-  recordatorioDelLocalCerradoEl: null,
 }
 
 /** Ola 3, ruling 1: el evento sale tras el commit de la unidad de trabajo MÁS EXTERNA. */
@@ -62,7 +58,6 @@ export async function estadoDelSistema(deps: DependenciasDeTienda): Promise<Esta
       primeraVezCompletada: false,
       ultimoRespaldoEn: null,
       almacenamientoPersistente: 'DESCONOCIDO',
-      ultimoResumenDelDiaMostrado: null,
       ...SISTEMA_SIN_AVISOS_DEL_LOCAL,
     }
     await deps.repositorio.guardarSistema(nuevo)

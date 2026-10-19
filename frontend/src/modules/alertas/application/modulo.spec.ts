@@ -29,7 +29,7 @@ describe('crearModuloAlertas', () => {
     expect(notificador.mostradas).toEqual(notificaciones)
   })
 
-  it('RN-AL-09: resumenDeAtencion y resumenDelDia/cerrarResumenDelDia delegan correctamente', async () => {
+  it('RN-AL-06: resumenDeAtencion delega correctamente', async () => {
     const { dependencias, analisisFalso } = prepararContexto()
     analisisFalso.situacionesActuales = [
       crearSituacion({
@@ -43,12 +43,6 @@ describe('crearModuloAlertas', () => {
 
     const atencion = await modulo.resumenDeAtencion()
     expect(atencion.contador).toBe(1)
-
-    const resumen = await modulo.resumenDelDia()
-    expect(resumen).not.toBeNull()
-
-    await modulo.cerrarResumenDelDia()
-    expect(await modulo.resumenDelDia()).toBeNull()
   })
 
   it('RN-AL-08: solicitarPermiso delega en el notificador y cuenta como una solicitud', async () => {
@@ -306,15 +300,13 @@ describe('crearModuloAlertas', () => {
       return contexto
     }
 
-    it('RN-AL-10: recordatorioDelLocal y cerrarRecordatorioDelLocal delegan correctamente', async () => {
+    it('RN-AL-10: recordatorioDelLocal delega correctamente', async () => {
       const { dependencias } = conAlquiler()
       const modulo = crearModuloAlertas(dependencias)
 
       expect((await modulo.recordatorioDelLocal())?.texto).toBe(
         'Pasado mañana pagas el local: S/ 1 200.00',
       )
-      await modulo.cerrarRecordatorioDelLocal()
-      expect(await modulo.recordatorioDelLocal()).toBeNull()
     })
 
     it('RN-AL-11: evaluarAvisos avisa del pago, pero la re-evaluación de los eventos no', async () => {

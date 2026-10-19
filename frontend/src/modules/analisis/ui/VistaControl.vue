@@ -66,6 +66,8 @@ const periodoMasVendidos = ref<PeriodoDeMasVendidos>(7)
 /** Lo que se ve: la torre con los periodos con los que se calculó (no los recién elegidos). */
 interface Mostrado {
   torre: TorreDeControl
+  /** RN-AL-10: la frase del pago del local si cae hoy, mañana o pasado mañana. */
+  recordatorioDelLocal: string | null
   periodo: Periodo
   periodoMasVendidos: PeriodoDeMasVendidos
 }
@@ -82,9 +84,12 @@ async function cargar(): Promise<void> {
   const opciones = { periodo: periodo.value, periodoMasVendidos: periodoMasVendidos.value }
   actualizando.value = true
   try {
-    const torre = await aplicacion.analisis.consultarTorre(opciones)
+    const [torre, recordatorio] = await Promise.all([
+      aplicacion.analisis.consultarTorre(opciones),
+      aplicacion.alertas.recordatorioDelLocal(),
+    ])
     if (pedido !== ultimoPedido) return
-    mostrado.value = { torre, ...opciones }
+    mostrado.value = { torre, recordatorioDelLocal: recordatorio?.texto ?? null, ...opciones }
     fallo.value = false
   } catch (error) {
     if (pedido !== ultimoPedido) return
@@ -128,6 +133,9 @@ const alquiler = computed(() => {
     return { configurado: false, lineas: [], porcentaje: 0 } as const
   return {
     configurado: true,
+    recordatorio: mostrado.value?.recordatorioDelLocal
+      ? pegarCifras(mostrado.value.recordatorioDelLocal)
+      : null,
     lineas: a.textos.map(pegarCifras),
     porcentaje: a.avance.porcentaje,
   } as const
@@ -293,6 +301,9 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar' | 'alquiler-del-local')
 
         <SeccionDeControl v-if="alquiler" titulo="Alquiler del local" :icono="KeyRound">
           <template v-if="alquiler.configurado">
+            <p v-if="alquiler.recordatorio" class="recordatorio" data-recordatorio-del-local>
+              {{ alquiler.recordatorio }}
+            </p>
             <p class="linea">{{ alquiler.lineas[0] }}</p>
             <BarraDeProgreso
               :actual="alquiler.porcentaje"
@@ -540,6 +551,15 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar' | 'alquiler-del-local')
 }
 
 /* Tarjeta Alquiler del local (RN-AN-19). */
+.recordatorio {
+  margin: 0;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-left: 6px solid var(--color-primario);
+  border-radius: var(--radio-chico);
+  background: var(--color-primario-suave);
+  font-weight: 700;
+  overflow-wrap: break-word;
+}
 .linea,
 .pregunta {
   margin: 0;

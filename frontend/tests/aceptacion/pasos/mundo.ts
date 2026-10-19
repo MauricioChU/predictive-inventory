@@ -1,5 +1,5 @@
 import { vi, type MockInstance } from 'vitest'
-import { abrirApp, pedirAlmacenamientoPersistente, type InicioDeLaApp } from '@/app/abrir-app'
+import { abrirApp, pedirAlmacenamientoPersistente } from '@/app/abrir-app'
 import type { Notificacion } from '@/modules/alertas'
 import { ProcesadorDeFotosCanvas } from '@/modules/catalogo'
 import {
@@ -96,7 +96,6 @@ export class Mundo {
   /** Notificaciones que ya se habían enviado al empezar la última acción. */
   notificacionesAntes = 0
   ultimaNotificacion: Notificacion | null = null
-  inicio: InicioDeLaApp | null = null
   pantalla: string | null = null
   abierta: PantallaAbierta | null = null
 
@@ -337,29 +336,25 @@ export class Mundo {
    * determinista.
    */
   async abrirLaApp(): Promise<void> {
-    this.inicio = await abrirApp(this.app, { aplicarTamanoDeLetra: () => undefined })
+    await abrirApp(this.app, { aplicarTamanoDeLetra: () => undefined })
     this.pantalla = 'Inicio'
     await pedirAlmacenamientoPersistente(this.app)
   }
 
   // ───────────── Lo que muestran las pantallas ─────────────
 
-  /**
-   * Las líneas de Inicio (M12: todavía no hay pantalla): el aviso de atención (RN-AL-06a), el
-   * recordatorio de copia (RN-RE-06; el de la última apertura, si la hubo), el recordatorio del
-   * pago del local (RN-AL-10) y el resumen del día (RN-AL-09, que repite esa frase).
-   */
+  /** Las líneas de Inicio (M12: todavía no hay pantalla): solo el aviso de atención (RN-AL-06a). */
   async lineasDeInicio(): Promise<string[]> {
-    const atencion = await this.app.alertas.resumenDeAtencion()
-    const recordatorio = this.inicio
-      ? this.inicio.recordatorioDeCopia
-      : await this.app.respaldo.recordatorioDeCopia()
-    return [
-      atencion.texto,
-      ...(recordatorio === null ? [] : [recordatorio]),
-      ...(this.inicio?.recordatorioDelLocal ? [this.inicio.recordatorioDelLocal] : []),
-      ...(this.inicio?.resumenDelDia?.lineas ?? []),
-    ]
+    return [(await this.app.alertas.resumenDeAtencion()).texto]
+  }
+
+  /**
+   * Las líneas de Ajustes (plan 19): el recordatorio de copia, que va en el enlace *Guardar
+   * copia* (RN-RE-06).
+   */
+  async lineasDeAjustes(): Promise<string[]> {
+    const recordatorio = await this.app.respaldo.recordatorioDeCopia()
+    return recordatorio === null ? [] : [recordatorio]
   }
 
   /**

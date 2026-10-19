@@ -167,7 +167,7 @@ Característica: Catálogo de productos
       | Carbón    | Otros     | KILO   | 2.75   | 4.00  | 3      | 2     |
       | Bolsas    | Otros     | UNIDAD | 0.05   | 0.10  | 50     | 200   |
     Cuando filtro los productos por "Se acaban"
-    Entonces los resultados son "Lejía 1 L, Carbón"
+    Entonces los resultados son "Carbón, Lejía 1 L"
 
   @RN-CAT-14
   Escenario: La foto se reduce y se comprime

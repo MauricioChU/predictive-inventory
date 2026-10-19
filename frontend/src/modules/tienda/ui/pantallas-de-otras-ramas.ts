@@ -12,7 +12,6 @@ const CAMINOS = {
   'contar-todo': '/contar',
   'producto-nuevo': '/productos/nuevo',
   categorias: '/productos/categorias',
-  'para-comprar': '/control/para-comprar',
   'necesito-comprar': '/control/necesito-comprar',
 } as const
 

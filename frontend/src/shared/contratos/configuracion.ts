@@ -45,9 +45,6 @@ export interface EstadoDelSistema {
   primeraVezCompletada: boolean
   ultimoRespaldoEn: string | null
   almacenamientoPersistente: EstadoDeAlmacenamiento
-  ultimoResumenDelDiaMostrado: string | null
   /** Dia del último pago del local ya avisado (RN-AL-11). */
   ultimoPagoDelLocalAvisado: string | null
-  /** Dia en que se cerró el recordatorio del pago del local (RN-AL-10). */
-  recordatorioDelLocalCerradoEl: string | null
 }

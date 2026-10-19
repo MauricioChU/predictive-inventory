@@ -15,7 +15,7 @@ export const rutasDeControl: RouteRecordRaw[] = [
     meta: { titulo: 'Control', enNavegacion: true, icono: 'gauge' },
   },
   {
-    // Lo abren las notificaciones (RUTA_PARA_COMPRAR de Alertas, M5).
+    // Se abre desde Control (ya no la enlazan Inicio ni las notificaciones, RN-AL-07).
     path: '/control/para-comprar',
     name: 'para-comprar',
     component: VistaParaComprar,

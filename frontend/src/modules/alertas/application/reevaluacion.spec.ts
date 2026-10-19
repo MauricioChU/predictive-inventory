@@ -4,7 +4,7 @@ import type { EventoDeDominio } from '@/shared/domain/eventos'
 import { AlmacenEnMemoria } from '@/shared/infrastructure/memoria/almacen-en-memoria'
 import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'
 import { crearContextoDePrueba, crearSituacion } from '../__pruebas__/dobles'
-import { RUTA_PARA_COMPRAR } from '../domain/avisos'
+import { RUTA_SE_ACABAN } from '../domain/avisos'
 import { crearModuloAlertas, type ResumenDeAtencion } from './modulo'
 
 const VENTANA = 300
@@ -129,7 +129,7 @@ describe('RN-SIS-09: las re-evaluaciones que piden los eventos en ráfaga se jun
     await modulo.esperarEvaluacionesPendientes()
 
     expect(notificador.mostradas).toEqual([
-      { texto: '2 productos se están acabando', url: RUTA_PARA_COMPRAR },
+      { texto: '2 productos se están acabando', url: RUTA_SE_ACABAN },
     ])
   })
 
