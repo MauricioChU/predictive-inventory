@@ -1,5 +1,6 @@
 import type { DOMWrapper, VueWrapper } from '@vue/test-utils'
 import { afterEach, describe, expect, it } from 'vitest'
+import { instanteLocal } from '@/shared/domain/fecha'
 import VistaControl from '../VistaControl.vue'
 import { esperarCarga, montarVista } from '../__pruebas__/montar-vista'
 import { textoLeido } from '../__pruebas__/texto-leido'
@@ -119,6 +120,27 @@ describe('Control (Torre de control)', () => {
       ])
       expect(alquiler.get('[role="progressbar"]').attributes('aria-valuenow')).toBe('100')
       expect(texto(alquiler.get('.barra-de-progreso .texto'))).toBe('100 %')
+    })
+
+    it.each([
+      ['2026-10-18 10:00', 'Pasado mañana pagas el local: S/ 1 200.00'],
+      ['2026-10-19 10:00', 'Mañana pagas el local: S/ 1 200.00'],
+      ['2026-10-20 10:00', 'Hoy pagas el local: S/ 1 200.00'],
+    ])('RN-AL-10: el %s la tarjeta suma la línea del pago del local', async (cuando, frase) => {
+      const tienda = await tiendaConAlquiler(120000)
+      tienda.app.reloj.fijar(instanteLocal(cuando))
+      const { envoltura } = await abrirControl(tienda)
+      const linea = seccion(envoltura, 'Alquiler del local').get('[data-recordatorio-del-local]')
+      expect(texto(linea)).toBe(frase)
+      // Sin botón para cerrarla (ya no hay "Entendido").
+      expect(seccion(envoltura, 'Alquiler del local').findAll('button')).toHaveLength(0)
+    })
+
+    it('RN-AL-10: fuera de la ventana la tarjeta no suma la línea', async () => {
+      const { envoltura } = await abrirControl(await tiendaConAlquiler(120000))
+      expect(
+        seccion(envoltura, 'Alquiler del local').find('[data-recordatorio-del-local]').exists(),
+      ).toBe(false)
     })
 
     it('RN-AN-19: "Cambiar" es un enlace que abre la pantalla del alquiler', async () => {

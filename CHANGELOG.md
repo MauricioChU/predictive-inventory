@@ -4,6 +4,19 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+## [0.3.0] · 2026-10-19
+
+### Nuevo
+
+- En Productos puedes filtrar por «Se acaban».
+- El aviso de copia ahora está en Ajustes.
+- El recordatorio del pago del local se ve en la tarjeta de Control.
+
+### Cambiado
+
+- Inicio queda solo para vender: se quitaron el resumen del día, el recordatorio del local, el aviso de copia y el de instalar la app.
+- Cuando algo se acaba, el aviso te lleva a Productos ya filtrado.
+
 ## [0.2.0] · 2026-10-18
 
 ### Nuevo
@@ -26,5 +39,6 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 - Control: cuánto ganas, qué comprar y cuánto dinero necesitas, lo que más se vende, productos parados y "¿Necesito comprar?".
 - Guardar y restaurar copias, exportar a Excel e importar productos desde una plantilla.
 
+[0.3.0]: https://github.com/MauricioChU/predictive-inventory/releases/tag/v0.3.0
 [0.2.0]: https://github.com/MauricioChU/predictive-inventory/releases/tag/v0.2.0
 [0.1.0]: https://github.com/MauricioChU/predictive-inventory/releases/tag/v0.1.0

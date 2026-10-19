@@ -73,8 +73,8 @@ test.describe('Los textos de la spec, exactos', () => {
     }
     await expect(page.getByRole('link', { name: /^Historial/ })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Ajustes' })).toBeVisible()
-    // RN-UX-13.
-    await expect(page.getByText('Instala la app en tu celular')).toBeVisible()
+    // Plan 19: Inicio es solo para vender (RN-UX-13 retirada).
+    await expect(page.getByText('Instala la app en tu celular')).toHaveCount(0)
 
     // Control sin historia (04: "cada sección con poca información muestra un mensaje claro").
     const lejia = await crearProducto(page, {

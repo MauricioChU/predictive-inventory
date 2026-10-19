@@ -41,8 +41,6 @@ describe('estado global (Pinia)', () => {
 
     expect(estado.primeraVez).toBe(true)
     expect(estado.tamanoDeLetra).toBe('GRANDE')
-    expect(estado.resumenDelDia?.lineas).toHaveLength(3)
-    expect(estado.recordatorioDeCopia).toBe('Todavía no guardas una copia de tus datos')
     expect(estado.contadorDeAtencion).toBe(0)
   })
 
@@ -146,52 +144,6 @@ describe('estado global (Pinia)', () => {
       expect(estado.contadorDeAtencion).toBe(1)
     })
     expect(document.documentElement.dataset.letra).toBe('GRANDE')
-  })
-
-  it('RN-AL-09: cerrarResumenDelDia lo quita y no vuelve a salir hoy', async () => {
-    const estado = await conectar()
-
-    await estado.cerrarResumenDelDia()
-
-    expect(estado.resumenDelDia).toBeNull()
-    expect(await app.alertas.resumenDelDia()).toBeNull()
-  })
-
-  it('RN-AL-10: cerrarRecordatorioDelLocal lo quita y no vuelve a salir hoy', async () => {
-    const estado = await conectar()
-    await app.tienda.actualizarConfiguracion({
-      alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [17] },
-    })
-    await vi.waitFor(() =>
-      expect(estado.recordatorioDelLocal).toBe('Pasado mañana pagas el local: S/ 1 200.00'),
-    )
-
-    await estado.cerrarRecordatorioDelLocal()
-
-    expect(estado.recordatorioDelLocal).toBeNull()
-    expect(await app.alertas.recordatorioDelLocal()).toBeNull()
-  })
-
-  it('RN-AL-10: al configurar el local se actualiza el recordatorio', async () => {
-    const estado = await conectar()
-    expect(estado.recordatorioDelLocal).toBeNull()
-
-    await app.tienda.actualizarConfiguracion({
-      alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [16] },
-    })
-
-    await vi.waitFor(() =>
-      expect(estado.recordatorioDelLocal).toBe('Mañana pagas el local: S/ 1 200.00'),
-    )
-  })
-
-  it('RN-RE-06: refrescarRecordatorioDeCopia, después de marcar la copia guardada', async () => {
-    const estado = await conectar()
-    await app.respaldo.marcarCopiaGuardada()
-
-    await estado.refrescarRecordatorioDeCopia()
-
-    expect(estado.recordatorioDeCopia).toBeNull()
   })
 
   it('desconectar deja de escuchar los eventos y los resúmenes de Alertas', async () => {

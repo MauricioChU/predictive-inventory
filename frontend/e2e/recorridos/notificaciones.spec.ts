@@ -63,7 +63,7 @@ test.describe('Recorrido: los avisos en el celular', () => {
     )
     await expect.poll(() => notificacionesMostradas(page)).toHaveLength(2)
     const deVarios = (await notificacionesMostradas(page))[1]!
-    expect(deVarios).toMatchObject({ texto: '2 productos se están acabando', url: '/control/para-comprar' })
+    expect(deVarios).toMatchObject({ texto: '2 productos se están acabando', url: '/productos?estado=se-acaban' })
 
     // Con la app abierta (en Inicio): el aviso de Lejía abre su detalle, sin recargar.
     await irA(page, 'Inicio')
@@ -73,12 +73,13 @@ test.describe('Recorrido: los avisos en el celular', () => {
     await expect(page).toHaveURL(new RegExp(`${deUno!.url}$`))
     await expect(page.getByText(comoSeLee('Tienes 2 unid.'))).toBeVisible()
 
-    // El aviso de varios abre Para comprar con los tres que se acaban.
+    // El aviso de varios abre Productos filtrado por "Se acaban", con los tres que se acaban.
     await tocarNotificacion(page, deVarios.url)
-    await expect(h1(page)).toHaveText('Para comprar')
-    await expect(page).toHaveURL(/\/control\/para-comprar$/)
+    await expect(h1(page)).toHaveText('Productos')
+    await expect(page).toHaveURL(/\/productos\?estado=se-acaban$/)
+    await expect(page.getByRole('radio', { name: 'Se acaban' })).toBeChecked()
     for (const nombre of [LEJIA, 'Jabón Bolívar', 'Bolsas de basura x10']) {
-      await expect(page.locator('#contenido').getByRole('group', { name: nombre })).toBeVisible()
+      await expect(page.locator('#contenido').getByText(nombre, { exact: true })).toBeVisible()
     }
     await expect(page.locator('html')).toHaveAttribute('data-sin-recargar', 'si')
 

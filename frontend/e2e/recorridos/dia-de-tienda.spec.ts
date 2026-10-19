@@ -113,8 +113,14 @@ test.describe('Recorrido: un día de tienda', () => {
     })
 
     await test.step('4. Para comprar → Registrar llegada, con un precio nuevo (RN-AN-08, RN-OP-14)', async () => {
+      // El aviso de Inicio lleva a Productos ya filtrado (RN-AL-06, RN-CAT-16); Para comprar
+      // se abre desde Control.
       await expect(page.getByText('1 producto se acaba')).toBeVisible()
-      await page.getByRole('button', { name: 'Ver qué comprar' }).click()
+      await page.getByRole('button', { name: 'Ver productos' }).click()
+      await expect(h1(page)).toHaveText('Productos')
+      await expect(page).toHaveURL(/\/productos\?estado=se-acaban$/)
+      await irA(page, 'Control')
+      await page.getByRole('button', { name: 'Ver la lista para comprar' }).click()
       await expect(h1(page)).toHaveText('Para comprar')
       const linea = page.locator('#contenido').getByRole('group', { name: JABON })
       await expect(linea.getByLabel(/^Cantidad/)).toHaveValue('5')

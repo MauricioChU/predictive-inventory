@@ -54,12 +54,12 @@ async function tocarNotificacion(datos: unknown, ventanas: VentanaFalsa[] = []) 
 
 describe('Service Worker: tocar una notificación (ruling 5)', () => {
   it('RN-AL-07: sin ventana abierta, abre la pantalla resuelta contra el alcance de la app', async () => {
-    const { clients, cerrar } = await tocarNotificacion({ url: '/control/para-comprar' })
+    const { clients, cerrar } = await tocarNotificacion({ url: '/productos?estado=se-acaban' })
 
     expect(cerrar).toHaveBeenCalledOnce()
     expect(clients.matchAll).toHaveBeenCalledWith({ type: 'window' })
     expect(clients.openWindow).toHaveBeenCalledWith(
-      'https://tienda.example/predictive-inventory/control/para-comprar',
+      'https://tienda.example/predictive-inventory/productos?estado=se-acaban',
     )
   })
 

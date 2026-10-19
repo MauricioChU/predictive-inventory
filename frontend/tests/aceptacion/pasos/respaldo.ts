@@ -437,8 +437,12 @@ export function pasosDeRespaldo(pasos: Pasos): void {
     expect(estado.almacenamientoPersistente).toBe('CONCEDIDO')
   })
 
-  afirmacion(pasos, 'Inicio no muestra recordatorio de copia', async (m: Mundo) => {
-    expect(m.inicio?.recordatorioDeCopia ?? null).toBeNull()
-    expect(await m.app.respaldo.recordatorioDeCopia()).toBeNull()
+  // RN-RE-06 (plan 19): el recordatorio se muestra en Ajustes, en el enlace Guardar copia.
+  afirmacion(pasos, 'Ajustes muestra {string}', async (m: Mundo, texto: string) => {
+    expect(await m.lineasDeAjustes()).toContain(texto)
+  })
+
+  afirmacion(pasos, 'Ajustes no muestra recordatorio de copia', async (m: Mundo) => {
+    expect(await m.lineasDeAjustes()).toEqual([])
   })
 }

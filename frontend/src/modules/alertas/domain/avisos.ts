@@ -2,8 +2,8 @@ import type { SituacionDeProducto } from '@/shared/contratos/entre-modulos'
 import { GRAVEDAD_DE_ESTADO, type EstadoDeStock } from '@/shared/contratos/estado-de-stock'
 import { formatearCantidad } from '@/shared/domain/formato'
 
-/** Ruta de la lista "Para comprar" (RN-AL-07). */
-export const RUTA_PARA_COMPRAR = '/control/para-comprar'
+/** Ruta de Productos ya filtrado por "Se acaban" (RN-AL-06, RN-AL-07, RN-CAT-16). */
+export const RUTA_SE_ACABAN = '/productos?estado=se-acaban'
 
 /** Ruta de la pantalla de un producto (adonde apunta un aviso individual). */
 export function rutaDeProducto(productoId: string): string {
@@ -55,7 +55,7 @@ export function agruparAvisos(situaciones: readonly SituacionDeProducto[]): Avis
   const [primera, ...resto] = situaciones
   if (primera === undefined) return []
   if (resto.length > 0) {
-    return [{ texto: `${situaciones.length} productos se están acabando`, url: RUTA_PARA_COMPRAR }]
+    return [{ texto: `${situaciones.length} productos se están acabando`, url: RUTA_SE_ACABAN }]
   }
   return [{ texto: textoDeAviso(primera), url: rutaDeProducto(primera.productoId) }]
 }

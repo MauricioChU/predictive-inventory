@@ -1,5 +1,5 @@
 import { expect } from 'vitest'
-import type { DatosDeEdicion } from '@/modules/catalogo'
+import { filtrarProductos, type DatosDeEdicion } from '@/modules/catalogo'
 import type { DatosDeProductoNuevo } from '@/shared/contratos/entre-modulos'
 import type { Unidad } from '@/shared/domain/cantidad'
 import { Dinero } from '@/shared/domain/dinero'
@@ -266,6 +266,17 @@ export function pasosDeCatalogo(pasos: Pasos): void {
     },
     { revisa: true },
   )
+
+  // RN-CAT-16: el filtro de estado de la lista de Productos, con los estados de Análisis.
+  accion(pasos, 'filtro los productos por {string}', async (m: Mundo, filtro: string) => {
+    expect(filtro).toBe('Se acaban')
+    const situaciones = await m.app.analisis.consultable.situaciones()
+    m.busqueda = filtrarProductos(await m.app.catalogo.buscarProductos({ texto: '' }), {
+      estado: 'SE_ACABAN',
+      categoriaId: '',
+      estados: new Map(situaciones.map((s) => [s.productoId, s.estado])),
+    }).map((p) => p.nombre)
+  })
 
   afirmacion(pasos, 'los resultados son {string}', (m: Mundo, resultados: string) => {
     expect(m.busqueda).toEqual(lista(resultados))

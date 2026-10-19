@@ -1,7 +1,7 @@
 import { createPinia } from 'pinia'
 import { expect } from 'vitest'
 import { useEstadoGlobal } from '@/app/estado-global'
-import { RUTA_DE_CONTROL, RUTA_PARA_COMPRAR } from '@/modules/alertas'
+import { RUTA_DE_CONTROL, RUTA_SE_ACABAN } from '@/modules/alertas'
 import { sumarDias } from '@/shared/domain/fecha'
 import { PRESENTACION_DE_ESTADO, type EstadoVisual } from '@/shared/ui/presentacion-estado'
 import type { Mundo } from './mundo'
@@ -9,7 +9,7 @@ import { accion, afirmacion, preparacion, type Pasos } from './registro'
 
 /** Adónde lleva tocar una notificación, por el nombre de la pantalla (M5: rutas del plan 13). */
 const RUTAS_DE_PANTALLA: Record<string, string> = {
-  'Para comprar': RUTA_PARA_COMPRAR,
+  'Productos filtrado por Se acaban': RUTA_SE_ACABAN,
   Control: RUTA_DE_CONTROL,
 }
 
@@ -96,9 +96,6 @@ export function pasosDeAlertas(pasos: Pasos): void {
       const desconectar = estado.conectar(m.app, {
         primeraVez: false,
         tamanoDeLetra: 'GRANDE',
-        resumenDelDia: null,
-        recordatorioDeCopia: null,
-        recordatorioDelLocal: null,
       })
       try {
         await estado.refrescarAtencion()
@@ -138,34 +135,36 @@ export function pasosDeAlertas(pasos: Pasos): void {
     expect(m.app.notificador.solicitudes - m.solicitudesDePermisoAntes).toBe(0)
   })
 
-  // RN-AL-09 (M13): la ganancia de ayer es de la tienda, no de un producto; se fabrica con
-  // una venta real de ayer de un producto auxiliar (costo 0, precio = la ganancia).
-  preparacion(pasos, 'ayer la ganancia neta fue {string}', async (m: Mundo, monto: string) => {
-    const ayer = sumarDias(m.dia, -1)
-    await m.historia.ventaDeLaTienda(ayer, ayer, monto, monto)
-  })
-
+  // RN-AL-06a (plan 19): el botón "Ver productos" del aviso de Inicio solo aparece si hay algo
+  // que se acaba, y abre la ruta que comparten la notificación y Productos (RN-CAT-16).
   afirmacion(
     pasos,
-    'se muestra el resumen del día con {string}, {string} y {string}',
-    (m: Mundo, primera: string, segunda: string, tercera: string) => {
-      expect(m.inicio?.resumenDelDia?.lineas).toEqual([primera, segunda, tercera])
+    'el botón del aviso de Inicio abre {string}',
+    async (m: Mundo, pantalla: string) => {
+      expect(
+        (await m.app.alertas.resumenDeAtencion()).contador,
+        'No hay aviso en Inicio',
+      ).toBeGreaterThan(0)
+      expect(RUTAS_DE_PANTALLA[pantalla]).toBe(RUTA_SE_ACABAN)
     },
   )
 
-  // RN-AL-10 / RN-AL-11 (plan 18): el pago del local. "Inicio muestra" ya mira estas líneas.
-  afirmacion(pasos, 'Inicio no muestra el recordatorio del local', (m: Mundo) => {
-    expect(m.inicio, 'Hay que abrir la app antes').not.toBeNull()
-    expect(m.inicio?.recordatorioDelLocal).toBeNull()
-  })
+  // RN-AL-10 / RN-AL-11 (plan 18, 19): el pago del local, en la tarjeta Alquiler del local.
+  afirmacion(
+    pasos,
+    'la tarjeta Alquiler del local muestra {string}',
+    async (m: Mundo, frase: string) => {
+      expect((await m.app.alertas.recordatorioDelLocal())?.texto).toBe(frase)
+    },
+  )
 
-  afirmacion(pasos, 'el resumen del día incluye {string}', (m: Mundo, linea: string) => {
-    expect(m.inicio?.resumenDelDia?.lineas).toContain(linea)
-  })
-
-  accion(pasos, 'toco "Entendido" en el recordatorio del local', async (m: Mundo) => {
-    await m.app.alertas.cerrarRecordatorioDelLocal()
-  })
+  afirmacion(
+    pasos,
+    'la tarjeta Alquiler del local no muestra el recordatorio',
+    async (m: Mundo) => {
+      expect(await m.app.alertas.recordatorioDelLocal()).toBeNull()
+    },
+  )
 
   accion(pasos, 'pasa un día', (m: Mundo) => {
     m.app.reloj.avanzarSegundos(24 * 60 * 60)
@@ -175,14 +174,5 @@ export function pasosDeAlertas(pasos: Pasos): void {
   afirmacion(pasos, 'no se envía la notificación del local', (m: Mundo) => {
     const enviadas = m.app.notificador.mostradas.slice(m.notificacionesAntes)
     expect(enviadas.filter((n) => n.url === RUTA_DE_CONTROL)).toEqual([])
-  })
-
-  accion(pasos, 'cierro el resumen', async (m: Mundo) => {
-    await m.app.alertas.cerrarResumenDelDia()
-  })
-
-  afirmacion(pasos, 'no se muestra el resumen del día', (m: Mundo) => {
-    expect(m.inicio).not.toBeNull()
-    expect(m.inicio?.resumenDelDia).toBeNull()
   })
 }

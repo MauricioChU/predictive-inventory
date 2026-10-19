@@ -119,6 +119,14 @@ Característica: Alertas de stock
     Y el botón "Control" muestra el número "2"
 
   @RN-AL-06
+  Escenario: El aviso de Inicio lleva a Productos ya filtrado
+    Dado los productos:
+      | nombre    | categoría | unidad | compra | venta | mínimo | stock |
+      | Lejía 1 L | Otros     | UNIDAD | 2.40   | 3.50  | 3      | 0     |
+    Cuando abro la app
+    Entonces el botón del aviso de Inicio abre "Productos filtrado por Se acaban"
+
+  @RN-AL-06
   Escenario: Sin permiso, los avisos quedan dentro de la app
     Dado que las notificaciones del sistema no están permitidas
     Y los productos:
@@ -139,7 +147,7 @@ Característica: Alertas de stock
     Cuando abro la app
     Entonces se envía la notificación "3 productos se están acabando"
     Y se enviaron "1" notificaciones en total
-    Y al tocar la notificación se abre "Para comprar"
+    Y al tocar la notificación se abre "Productos filtrado por Se acaban"
 
   @RN-AL-08
   Escenario: El permiso no se pide al abrir la app por primera vez
@@ -153,27 +161,14 @@ Característica: Alertas de stock
     Y toco "Sí, avísame"
     Entonces se pide permiso de notificaciones
 
-  @RN-AL-09
-  Escenario: Resumen del día al abrir la app por primera vez en el día
-    Dado los productos:
-      | nombre    | categoría | unidad | compra | venta | mínimo | stock |
-      | Lejía 1 L | Otros     | UNIDAD | 2.40   | 3.50  | 3      | 0     |
-      | Carbón    | Otros     | KILO   | 2.75   | 4.00  | 3      | 2     |
-    Y ayer la ganancia neta fue "S/ 48.20"
-    Cuando abro la app
-    Entonces se muestra el resumen del día con "1 agotado", "1 por acabarse" y "Ayer ganaste S/ 48.20"
-    Cuando cierro el resumen
-    Y abro la app
-    Entonces no se muestra el resumen del día
-
   # ---------- Recordatorio de pago del local ----------
 
   @RN-AL-10
-  Esquema del escenario: Recordatorio del pago del local en Inicio
+  Esquema del escenario: Recordatorio del pago del local en la tarjeta de Control
     Dado que hoy es "<hoy> 10:00"
     Y el local se paga "S/ 1200.00" "Una vez al mes" los días "20"
     Cuando abro la app
-    Entonces Inicio muestra "<recordatorio>"
+    Entonces la tarjeta Alquiler del local muestra "<recordatorio>"
 
     Ejemplos:
       | hoy        | recordatorio                                   |
@@ -186,33 +181,14 @@ Característica: Alertas de stock
     Dado que hoy es "2026-10-17 10:00"
     Y el local se paga "S/ 1200.00" "Una vez al mes" los días "20"
     Cuando abro la app
-    Entonces Inicio no muestra el recordatorio del local
-
-  @RN-AL-10
-  Escenario: "Entendido" cierra el recordatorio hasta el día siguiente
-    Dado que hoy es "2026-10-18 10:00"
-    Y el local se paga "S/ 1200.00" "Una vez al mes" los días "20"
-    Cuando abro la app
-    Y toco "Entendido" en el recordatorio del local
-    Y abro la app
-    Entonces Inicio no muestra el recordatorio del local
-    Cuando pasa un día
-    Y abro la app
-    Entonces Inicio muestra "Mañana pagas el local: S/ 1 200.00"
+    Entonces la tarjeta Alquiler del local no muestra el recordatorio
 
   @RN-AL-10
   Escenario: Sin alquiler no hay recordatorio
     Dado que hoy es "2026-10-20 10:00"
     Y el local está configurado como "No pago (el local es mío)"
     Cuando abro la app
-    Entonces Inicio no muestra el recordatorio del local
-
-  @RN-AL-10
-  Escenario: El resumen del día incluye el recordatorio
-    Dado que hoy es "2026-10-19 10:00"
-    Y el local se paga "S/ 1200.00" "Una vez al mes" los días "20"
-    Cuando abro la app
-    Entonces el resumen del día incluye "Mañana pagas el local: S/ 1 200.00"
+    Entonces la tarjeta Alquiler del local no muestra el recordatorio
 
   @RN-AL-11
   Escenario: Una sola notificación por fecha de pago

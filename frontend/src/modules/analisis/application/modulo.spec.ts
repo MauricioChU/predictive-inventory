@@ -84,30 +84,6 @@ describe('AnalisisConsultable para otros módulos', () => {
     )
   })
 
-  it('RN-AN-02: totales del día (para la ganancia de ayer del resumen del día)', async () => {
-    const e = await conMovimientos()
-    const ayer = await e.modulo.consultable.totalesDelDia('2026-10-14')
-    expect(ayer.dia).toBe('2026-10-14')
-    expect({
-      ventas: formatearDinero(ayer.ventas),
-      costoVendido: formatearDinero(ayer.costoVendido),
-      gananciaBruta: formatearDinero(ayer.gananciaBruta),
-      mermas: formatearDinero(ayer.mermas),
-      gananciaNeta: formatearDinero(ayer.gananciaNeta),
-      diferenciasDeConteo: formatearDinero(ayer.diferenciasDeConteo),
-    }).toEqual({
-      ventas: 'S/ 7.00',
-      costoVendido: 'S/ 4.80',
-      gananciaBruta: 'S/ 2.20',
-      mermas: 'S/ 1.38',
-      gananciaNeta: 'S/ 0.82',
-      diferenciasDeConteo: 'S/ 0.00',
-    })
-    const sinNada = await e.modulo.consultable.totalesDelDia('2026-10-15')
-    expect(sinNada.dia).toBe('2026-10-15')
-    expect(sinNada.ventas.esCero()).toBe(true)
-  })
-
   it('RN-AN-02: resúmenes de la tienda por día, solo los días con ventas, mermas o ajustes', async () => {
     const e = await conMovimientos()
     const dias = await e.modulo.consultable.resumenesDeTienda('2026-10-01', '2026-10-15')

@@ -11,17 +11,10 @@ import { evaluarAvisos } from './evaluar-avisos'
 import { notificacionesPermitidas } from './permiso'
 import type { Notificacion, Notificador, RepositorioDeAvisos } from './puertos'
 import { TareaEnRafaga, VENTANA_DE_REEVALUACION_MS } from './rafaga'
-import { cerrarRecordatorioDelLocal, recordatorioDelLocalDeHoy } from './recordatorio-del-local'
-import {
-  cerrarResumenDelDia,
-  resumenDeAtencion,
-  resumenDelDia,
-  resumenDeSituaciones,
-  type ResumenDeAtencion,
-  type ResumenDelDia,
-} from './resumen'
+import { recordatorioVigenteDelLocal } from './recordatorio-del-local'
+import { resumenDeAtencion, resumenDeSituaciones, type ResumenDeAtencion } from './resumen'
 
-export type { RecordatorioDelLocal, ResumenDeAtencion, ResumenDelDia }
+export type { RecordatorioDelLocal, ResumenDeAtencion }
 export { VENTANA_DE_REEVALUACION_MS }
 
 /** Dependencias perezosas: los otros módulos se reciben como funciones para permitir
@@ -32,7 +25,7 @@ export interface DependenciasDeAlertas {
   uow: UnidadDeTrabajo
   reloj: Reloj
   bus: BusDeEventos
-  analisis: () => Pick<AnalisisConsultable, 'situaciones' | 'totalesDelDia'>
+  analisis: () => Pick<AnalisisConsultable, 'situaciones'>
   tienda: () => TiendaConsultable
   /**
    * RN-SIS-09: ventana para juntar en una sola las re-evaluaciones que piden los eventos en
@@ -60,13 +53,8 @@ export interface ModuloAlertas {
    */
   evaluarAvisos(): Promise<Notificacion[]>
   resumenDeAtencion(): Promise<ResumenDeAtencion>
-  /** `null` si el resumen del día ya se mostró hoy. */
-  resumenDelDia(): Promise<ResumenDelDia | null>
-  cerrarResumenDelDia(): Promise<void>
-  /** RN-AL-10: `null` si no hay pago del local en los próximos 3 días o ya se cerró hoy. */
+  /** RN-AL-10: `null` si no hay pago del local hoy, mañana ni pasado mañana. */
   recordatorioDelLocal(): Promise<RecordatorioDelLocal | null>
-  /** RN-AL-10: *Entendido* oculta la tarjeta hasta el día siguiente. */
-  cerrarRecordatorioDelLocal(): Promise<void>
   /** RN-AL-08: solo se llama desde la pantalla que explica para qué sirven las notificaciones. */
   solicitarPermiso(): Promise<boolean>
   /** Permiso del navegador Y configuración de la tienda, ambos a la vez. */
@@ -149,10 +137,7 @@ export function crearModuloAlertas(d: DependenciasDeAlertas): ModuloAlertas {
   return {
     evaluarAvisos: () => encolarEvaluacion(),
     resumenDeAtencion: () => resumenDeAtencion(d),
-    resumenDelDia: () => resumenDelDia(d),
-    cerrarResumenDelDia: () => cerrarResumenDelDia(d),
-    recordatorioDelLocal: () => recordatorioDelLocalDeHoy(d),
-    cerrarRecordatorioDelLocal: () => cerrarRecordatorioDelLocal(d),
+    recordatorioDelLocal: () => recordatorioVigenteDelLocal(d),
     solicitarPermiso: () => d.notificador.solicitarPermiso(),
     notificacionesPermitidas: () => notificacionesPermitidas(d),
     escucharEventos: () => {

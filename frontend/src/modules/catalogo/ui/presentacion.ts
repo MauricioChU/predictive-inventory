@@ -15,10 +15,16 @@ import type { EstadoVacioDeLista, ProductoDeLista } from '@/shared/ui/tipos-de-p
 import type { ProductoVista } from '../application/modulo'
 
 /** Los filtros por estado de la lista de Productos (06-experiencia-de-uso). */
-export type FiltroDeEstado = 'TODOS' | 'POR_ACABARSE' | 'AGOTADO' | 'ARCHIVADOS'
+export type FiltroDeEstado = 'TODOS' | 'SE_ACABAN' | 'POR_ACABARSE' | 'AGOTADO' | 'ARCHIVADOS'
+
+/** RN-CAT-16: lo que dice `?estado=` en la dirección de Productos para abrirla ya filtrada. */
+export function estadoDeLaDireccion(pedido: unknown): FiltroDeEstado | undefined {
+  return pedido === 'se-acaban' ? 'SE_ACABAN' : undefined
+}
 
 export const OPCIONES_DE_ESTADO: readonly { valor: FiltroDeEstado; etiqueta: string }[] = [
   { valor: 'TODOS', etiqueta: 'Todos' },
+  { valor: 'SE_ACABAN', etiqueta: 'Se acaban' },
   { valor: 'POR_ACABARSE', etiqueta: 'Queda poco' },
   { valor: 'AGOTADO', etiqueta: 'Agotados' },
   { valor: 'ARCHIVADOS', etiqueta: 'Archivados' },
@@ -54,8 +60,11 @@ export function filtrarProductos(
 ): ProductoVista[] {
   return productos.filter((p) => {
     if (filtro.categoriaId !== '' && p.categoriaId !== filtro.categoriaId) return false
+    const estado = filtro.estados.get(p.id)
+    // RN-CAT-16: "Se acaban" suma agotados y los que quedan poco.
+    if (filtro.estado === 'SE_ACABAN') return estado === 'AGOTADO' || estado === 'POR_ACABARSE'
     if (filtro.estado === 'POR_ACABARSE' || filtro.estado === 'AGOTADO') {
-      return filtro.estados.get(p.id) === filtro.estado
+      return estado === filtro.estado
     }
     return true
   })
@@ -75,6 +84,10 @@ const VACIO_POR_ESTADO: Record<
   Exclude<FiltroDeEstado, 'TODOS'>,
   { titulo: string; descripcion: string }
 > = {
+  SE_ACABAN: {
+    titulo: 'No se acaba ningún producto',
+    descripcion: 'Por ahora todos tienen stock suficiente.',
+  },
   POR_ACABARSE: {
     titulo: 'Ningún producto queda poco',
     descripcion: 'Por ahora ninguno se está acabando.',

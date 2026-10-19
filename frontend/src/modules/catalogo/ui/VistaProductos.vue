@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, shallowRef, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Plus, Tags } from 'lucide-vue-next'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import type { EstadoDeStock } from '@/shared/contratos/estado-de-stock'
@@ -17,6 +17,7 @@ import FiltroDeCategoria from './FiltroDeCategoria.vue'
 import { useFiltrosDeProductos, vuelveAtrasDelDetalle } from './filtros-de-productos'
 import {
   aFilaDeLista,
+  estadoDeLaDireccion,
   filtrarProductos,
   OPCIONES_DE_ESTADO,
   textoDeConteo,
@@ -25,8 +26,14 @@ import {
 
 const app = useAplicacion()
 const router = useRouter()
+const route = useRoute()
 const filtros = useFiltrosDeProductos()
-if (!vuelveAtrasDelDetalle(router)) filtros.olvidar()
+if (!vuelveAtrasDelDetalle(router)) {
+  filtros.olvidar()
+  // RN-CAT-16: `?estado=se-acaban` abre la lista ya filtrada (el aviso de Inicio, la notificación).
+  const pedido = estadoDeLaDireccion(route.query.estado)
+  if (pedido) filtros.estado = pedido
+}
 
 const cargando = ref(true)
 /** ¿Hay algún producto (activo o archivado)? Sin ninguno no hay nada que buscar ni filtrar. */
@@ -120,6 +127,15 @@ async function cargar() {
 }
 
 onMounted(() => cargar().catch(fallo))
+
+// Tocar la notificación con Productos ya abierta cambia la dirección sin volver a montar la lista.
+watch(
+  () => route.query.estado,
+  (nuevo) => {
+    const pedido = estadoDeLaDireccion(nuevo)
+    if (pedido) filtros.estado = pedido
+  },
+)
 
 // Se vuelve a buscar solo si cambia lo que el catálogo filtra (el texto, o activos ↔
 // archivados); los demás filtros se aplican sobre lo ya encontrado.

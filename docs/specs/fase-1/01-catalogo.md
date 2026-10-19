@@ -61,6 +61,7 @@ Lejías y desinfectantes · Detergentes y jabones · Lavavajillas · Limpiadores
 | ~~RN-CAT-13~~ | **Retirada** (2026-10-15): sin códigos de barras no hay escáner. |
 | **RN-CAT-14** | La **foto** es opcional. Se reduce a un máximo de 512 px en su lado mayor y se guarda comprimida (≤ 100 KB). Sin foto, se muestra un ícono de su categoría. Si la imagen no se puede leer: "No pudimos leer la foto. Prueba con otra." |
 | **RN-CAT-15** | Una **categoría** con productos (activos o archivados) no se puede eliminar; se puede renombrar. El nombre de categoría es único con la misma comparación que RN-CAT-01. |
+| **RN-CAT-16** | La lista de *Productos* se puede filtrar por estado: **Todos · Se acaban · Queda poco · Agotados · Archivados**. *Se acaban* muestra los productos **agotados y los que quedan poco** (los mismos que cuenta el aviso de Inicio, RN-AL-06). Se puede elegir al abrir la pantalla con `/productos?estado=se-acaban`. El orden de la lista no cambia. |
 
 ## Eventos de dominio
 

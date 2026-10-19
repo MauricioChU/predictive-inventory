@@ -6,6 +6,7 @@ export type {
   ModuloCatalogo,
   ProductoVista,
 } from './application/modulo'
+export { filtrarProductos, type FiltroDeEstado } from './ui/presentacion'
 export type {
   ProcesadorDeFotos,
   RepositorioDeCategorias,

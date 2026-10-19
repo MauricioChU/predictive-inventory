@@ -120,7 +120,6 @@ export interface AnalisisConsultable {
   /** Solo productos activos. */
   situaciones(): Promise<SituacionDeProducto[]>
   vecesVendido(desde: Dia, hasta: Dia): Promise<Map<string, number>>
-  totalesDelDia(dia: Dia): Promise<TotalesDeDia>
   /** Días con alguna venta, merma o ajuste, en orden ascendente. */
   resumenesDeTienda(desde: Dia, hasta: Dia): Promise<TotalesDeDia[]>
 }
