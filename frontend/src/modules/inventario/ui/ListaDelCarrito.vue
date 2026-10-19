@@ -17,6 +17,8 @@ const props = defineProps<{
   concepto: Concepto
   /** "Toca un producto para agregarlo.": lo que se ve sin líneas (RN-UX-10). */
   textoVacio: string
+  /** RN-OP-22: líneas compactas (el panel de venta en celular, ver FilaDeCarrito). */
+  compacta?: boolean
 }>()
 
 const fotos = usarFotos()
@@ -58,7 +60,7 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
 <template>
   <div ref="refRaiz" class="lista-del-carrito">
     <p v-if="lineas.length === 0" class="vacio">{{ textoVacio }}</p>
-    <ul v-else role="list" class="lineas">
+    <ul v-else role="list" class="lineas" :class="{ 'lineas--compactas': compacta }">
       <li
         v-for="linea in lineas"
         :key="linea.producto.id"
@@ -83,6 +85,7 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
           :valor-precio="textoDePrecio(linea.precio)"
           :error-cantidad="linea.errorCantidad"
           :error-precio="linea.errorPrecio"
+          :compacta="compacta"
           @update:cantidad="carrito.cambiarCantidad(linea.producto.id, $event)"
           @cambiar-precio="carrito.cambiarPrecio(linea.producto.id, $event)"
           @cancelar-precio="carrito.cancelarPrecio(linea.producto.id)"
@@ -113,6 +116,14 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
 .linea {
   min-inline-size: 0;
   border-radius: var(--radio);
+}
+/* RN-OP-22: las líneas compactas no llevan caja; una raya entre una y otra las separa. */
+.lineas--compactas {
+  gap: 0;
+}
+.lineas--compactas .linea + .linea {
+  border-block-start: 1px solid var(--color-borde);
+  border-radius: 0;
 }
 /* r2 #2: la línea recién agregada recibe el foco (tabindex -1, no entra en el orden de Tab). */
 .linea:focus-visible {

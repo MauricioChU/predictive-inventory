@@ -43,6 +43,13 @@ const props = withDefaults(
      * borra el error para que no aparezca viejo la próxima vez.
      */
     errorPrecio?: string
+    /**
+     * RN-OP-22: la forma compacta del panel de venta en celular, para ver 2–3 líneas a la vez:
+     * nombre y cuánto queda arriba; − / + con el importe (y el precio por unidad) al lado; y
+     * Cambiar precio y Quitar en una sola fila. Las etiquetas "Cantidad (unid.)" e "Importe"
+     * quedan para el lector de pantalla. Los toques siguen de 48 px o más.
+     */
+    compacta?: boolean
   }>(),
   {
     imagen: undefined,
@@ -55,6 +62,7 @@ const props = withDefaults(
     textoQuedan: undefined,
     errorCantidad: undefined,
     errorPrecio: undefined,
+    compacta: false,
   },
 )
 const emit = defineEmits<{
@@ -140,7 +148,12 @@ function alPresionarEnter(evento: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="fila-de-carrito" role="group" :aria-labelledby="idNombre">
+  <div
+    class="fila-de-carrito"
+    :class="{ 'fila-de-carrito--compacta': compacta }"
+    role="group"
+    :aria-labelledby="idNombre"
+  >
     <div class="cabecera">
       <FotoDeProducto
         :imagen="imagen"
@@ -151,8 +164,9 @@ function alPresionarEnter(evento: KeyboardEvent) {
       />
       <div class="titulo">
         <p :id="idNombre" class="nombre">{{ nombre }}</p>
-        <p class="precio">
-          <span>{{ textoPrecio }}</span>
+        <!-- Compacta: el precio por unidad va debajo del importe; aquí solo la marca. -->
+        <p v-if="!compacta || textoPrecioEspecial" class="precio">
+          <span v-if="!compacta">{{ textoPrecio }}</span>
           <span v-if="textoPrecioEspecial" class="precio-especial">
             <Tag aria-hidden="true" class="icono-especial" />
             <span>{{ textoPrecioEspecial }}</span>
@@ -178,11 +192,15 @@ function alPresionarEnter(evento: KeyboardEvent) {
         :decimales="!porUnidades"
         :minimo="minimo"
         :error="errorCantidad"
+        :etiqueta-oculta="compacta"
         @update:model-value="emit('update:cantidad', $event)"
       />
       <p class="importe">
-        <span class="etiqueta-importe">{{ etiquetaImporte }}</span>
+        <span class="etiqueta-importe" :class="{ 'solo-lector': compacta }">{{
+          etiquetaImporte
+        }}</span>
         <span class="valor-importe">{{ textoImporte }}</span>
+        <span v-if="compacta" class="precio-unitario">{{ textoPrecio }}</span>
       </p>
     </div>
 
@@ -210,12 +228,14 @@ function alPresionarEnter(evento: KeyboardEvent) {
       />
     </div>
 
+    <!-- Escape cierra solo esta edición (.stop): no llega al panel de venta, que con Escape se
+         cerraría entero. -->
     <div
       v-if="editando"
       :id="idEdicion"
       ref="refEdicion"
       class="edicion-precio"
-      @keydown.esc="cancelar"
+      @keydown.esc.stop="cancelar"
       @keydown.enter="alPresionarEnter"
     >
       <CampoNumero v-model="precioNuevo" :etiqueta="textos.nuevo" decimales :error="errorPrecio" />
@@ -349,5 +369,64 @@ function alPresionarEnter(evento: KeyboardEvent) {
     padding-inline: var(--espacio-2);
     margin-inline: calc(-1 * var(--espacio-1));
   }
+}
+
+/* RN-OP-22 — forma compacta (panel de venta en celular). Tres filas: foto, nombre y cuánto
+   queda; − / + con el importe y el precio por unidad a la derecha (si no entra, el importe baja
+   a su propia fila); Cambiar precio y Quitar lado a lado. Sin caja propia (la lista las separa
+   con una raya): todo el ancho de la hoja es para la línea. Toques de 48 px o más (RN-UX-02). */
+.fila-de-carrito--compacta {
+  gap: var(--espacio-2);
+  padding: var(--espacio-3) 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+}
+.fila-de-carrito--compacta .quedan {
+  margin-block-start: 2px;
+  font-size: 1rem;
+}
+.fila-de-carrito--compacta .cantidad-e-importe {
+  align-items: center;
+  gap: var(--espacio-2) var(--espacio-3);
+}
+/* El campo se reparte en la fila: − / cantidad / + a la izquierda y su error, si hay, debajo a
+   todo el ancho (no en una columna angosta junto al importe). */
+.fila-de-carrito--compacta .cantidad {
+  display: contents;
+}
+.fila-de-carrito--compacta .cantidad :deep(.fila) {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+}
+.fila-de-carrito--compacta .cantidad :deep(input) {
+  flex: 0 1 3.5rem;
+  inline-size: 3.5rem;
+  min-inline-size: 2.75rem;
+}
+.fila-de-carrito--compacta .cantidad :deep(.error) {
+  order: 1;
+  flex: 1 0 100%;
+  margin: 0;
+}
+.fila-de-carrito--compacta .importe {
+  line-height: 1.2;
+}
+.fila-de-carrito--compacta .valor-importe {
+  font-size: 1.2rem;
+}
+.precio-unitario {
+  color: var(--color-texto-suave);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+.fila-de-carrito--compacta .acciones {
+  justify-content: space-between;
+}
+.fila-de-carrito--compacta .acciones .accion {
+  flex: 0 1 auto;
+  gap: var(--espacio-1);
+  padding-inline: var(--espacio-2);
+  font-size: 0.9rem;
 }
 </style>

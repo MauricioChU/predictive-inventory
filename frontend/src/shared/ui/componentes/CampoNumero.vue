@@ -11,8 +11,18 @@ const props = withDefaults(
     decimales?: boolean
     error?: string
     sufijo?: string
+    /** La etiqueta solo para el lector de pantalla (la línea compacta del panel de venta, donde
+     * el nombre del producto y su precio ya dicen qué se cuenta). Sigue siendo el <label>. */
+    etiquetaOculta?: boolean
   }>(),
-  { paso: 1, minimo: 0, decimales: false, error: undefined, sufijo: undefined },
+  {
+    paso: 1,
+    minimo: 0,
+    decimales: false,
+    error: undefined,
+    sufijo: undefined,
+    etiquetaOculta: false,
+  },
 )
 const emit = defineEmits<{ 'update:modelValue': [valor: string] }>()
 const id = useId()
@@ -61,7 +71,7 @@ function cambiar(delta: number) {
 
 <template>
   <div class="campo-numero">
-    <label :for="id" class="etiqueta">{{ etiqueta }}</label>
+    <label :for="id" :class="etiquetaOculta ? 'solo-lector' : 'etiqueta'">{{ etiqueta }}</label>
     <div class="fila">
       <button
         ref="refBotonMenos"

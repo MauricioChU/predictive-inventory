@@ -74,6 +74,12 @@ async function abrirDetalle(): Promise<void> {
   await enfocarPrimerError('.lista-del-carrito')
 }
 
+/** La fecha de "Otro día" falta o no vale: el panel se abre y el foco va a ese campo. */
+async function revisarFecha(): Promise<void> {
+  expandido.value = true
+  await enfocarPrimerError('.vista-vender .cuando-fue')
+}
+
 async function confirmar(): Promise<void> {
   if (registrando.value) return
   carrito.marcarVacias()
@@ -88,7 +94,7 @@ async function confirmar(): Promise<void> {
   const fecha = instanteDe(cuando.value)
   errorFecha.value = fecha.error
   if (fecha.error) {
-    expandido.value = true
+    await revisarFecha()
     return
   }
   registrando.value = true
@@ -104,7 +110,7 @@ async function confirmar(): Promise<void> {
     registrando.value = false
     errorFecha.value = errorDeFechaDelDominio(mostrado.codigo, mostrado.mensaje)
     if (errorFecha.value) {
-      await abrirDetalle()
+      await revisarFecha()
       return
     }
     error.value = mostrado
@@ -161,7 +167,8 @@ async function nuevaVenta(): Promise<void> {
 
     <template v-else>
       <EncabezadoPagina titulo="Vender" />
-      <div class="avisos">
+      <!-- Con la hoja abierta (celular), los avisos de atrás tampoco se alcanzan. -->
+      <div class="avisos" :inert="!esPC && expandido ? true : undefined">
         <AvisoEnPagina
           v-if="alDia.quitados.value.length > 0"
           tono="atencion"

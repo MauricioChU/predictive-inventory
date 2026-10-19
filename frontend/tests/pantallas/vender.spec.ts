@@ -204,6 +204,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       expect(lineas(p)).toHaveLength(1)
       // Lo de atrás (el buscador) no se alcanza mientras la hoja está abierta.
       expect(p.w.get('.buscador').attributes('inert')).toBeDefined()
+      expect(p.w.get('.avisos').attributes('inert')).toBeDefined()
       expect(
         panel(p)
           .findAll('[role="radio"]')
@@ -228,6 +229,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       expect(alternar().attributes('aria-expanded')).toBe('false')
       expect(lineas(p)).toHaveLength(0)
       expect(p.w.get('.buscador').attributes('inert')).toBeUndefined()
+      expect(p.w.get('.avisos').attributes('inert')).toBeUndefined()
       expect(document.activeElement).toBe(alternar().element)
     })
 
@@ -293,6 +295,49 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       await esperarDatos(app)
       expect(p.w.find('.panel-de-venta').exists()).toBe(false)
       expect(document.activeElement).toBe(p.w.get('#contenido h1').element)
+    })
+
+    it('Escape en la edición del precio cierra solo esa edición, no el panel', async () => {
+      const { app } = await tiendaDePrueba()
+      const p = await abrirVender(app)
+      await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+      await detalle(p)
+      await boton(lineas(p)[0]!, 'Cambiar precio').trigger('click')
+      await esperarDatos(app)
+      await lineas(p)[0]!.get('.edicion-precio input').trigger('keydown', { key: 'Escape' })
+      await esperarDatos(app)
+      expect(lineas(p)[0]!.find('.edicion-precio').exists()).toBe(false)
+      expect(panel(p).get('.alternar').attributes('aria-expanded')).toBe('true')
+      // Escape fuera de la edición sí cierra la hoja, y el foco vuelve al botón.
+      await panel(p).get('.titulo-carrito').trigger('keydown', { key: 'Escape' })
+      await esperarDatos(app)
+      expect(panel(p).get('.alternar').attributes('aria-expanded')).toBe('false')
+      expect(document.activeElement).toBe(panel(p).get('.alternar').element)
+    })
+
+    it('cada línea del panel es compacta: el nombre, cuánto queda, − / + con el importe al lado, y Cambiar precio y Quitar en una fila', async () => {
+      const { app } = await tiendaDePrueba()
+      const p = await abrirVender(app)
+      await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+      await detalle(p)
+      const linea = lineas(p)[0]!
+      expect(linea.classes()).toContain('fila-de-carrito--compacta')
+      // Las etiquetas "Cantidad (unid.)" e "Importe" siguen para el lector de pantalla.
+      const etiqueta = linea.get('.cantidad label')
+      expect(etiqueta.text()).toBe('Cantidad (unid.)')
+      expect(etiqueta.classes()).toContain('solo-lector')
+      expect(etiqueta.attributes('for')).toBe(linea.get('.cantidad input').attributes('id'))
+      expect(linea.get('.etiqueta-importe').classes()).toContain('solo-lector')
+      expect(linea.get('.valor-importe').text()).toBe('S/ 3.50')
+      expect(
+        linea
+          .get('.acciones')
+          .findAll('button')
+          .map((b) => b.text().trim()),
+      ).toEqual(['Cambiar precio', 'Quitar'])
+      // La cabecera: el título con la cuenta aparte (no se parte a la mitad junto a "Cerrar").
+      expect(panel(p).get('.titulo-carrito .cuenta').text()).toContain('1 producto')
+      expect(panel(p).get('.titulo-carrito').text()).toBe('En esta venta · 1 producto')
     })
 
     it('el panel no tapa la grilla: va en el flujo de la pantalla, que le deja su lugar', async () => {
@@ -377,6 +422,8 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       expect(p.w.find('.panel-de-venta').exists()).toBe(false)
       expect(p.w.find('.columna-carrito').exists()).toBe(true)
       expect(lineas(p)).toHaveLength(1)
+      // En PC hay lugar: la línea va con sus etiquetas a la vista (no la forma compacta).
+      expect(lineas(p)[0]!.classes()).not.toContain('fila-de-carrito--compacta')
       expect(lineas(p)[0]!.get('.quedan').text()).toBe('Quedan 9 unid.')
       expect(p.w.findAll('.columna-carrito [role="radio"]').map((r) => r.text())).toEqual([
         'Ahora',
@@ -623,7 +670,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       await app.catalogo.editarProducto({ productoId: ids.lejia, precioVenta: '5.00' })
       await p.ir('/vender')
       await detalle(p)
-      expect(leer(lineas(p)[0]!.get('.precio'))).toBe('S/ 5.00 c/u')
+      expect(leer(lineas(p)[0]!.get('.precio-unitario'))).toBe('S/ 5.00 c/u')
       expect(total(p)).toBe('S/ 5.00')
       await confirmarVenta(p)
       const [venta] = await app.inventario.historial({ tipo: 'VENTA' })
@@ -786,6 +833,8 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       await confirmarVenta(p)
       expect(panel(p).get('.alternar').attributes('aria-expanded')).toBe('true')
       expect(p.w.text()).toContain('Elige la fecha y la hora')
+      // El foco va al campo que falta (no se queda en Confirmar venta, lejos del error).
+      expect(document.activeElement).toBe(p.w.get('input[type="time"]').element)
       expect(await app.inventario.historial({ tipo: 'VENTA' })).toEqual([])
     })
 

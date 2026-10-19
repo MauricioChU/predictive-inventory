@@ -50,9 +50,11 @@ usarAltoObservado(refRaiz, { variable: '--alto-barra-de-total' })
 usarAltoObservado(refPie, { variable: '--alto-pie-del-panel' })
 usarAltoObservado(refCabecera, { variable: '--alto-cabecera-del-panel' })
 
-const titulo = computed(() => {
+/** "1 producto" / "3 productos": va aparte del título para que, abierta la hoja junto a
+ * "Cerrar", baje entera a su renglón en vez de partirse a la mitad. */
+const cuenta = computed(() => {
   const n = props.carrito.lineas.value.length
-  return `En esta venta · ${formatearEntero(n)} ${plural(n, 'producto', 'productos')}`
+  return `${formatearEntero(n)} ${plural(n, 'producto', 'productos')}`
 })
 
 async function alternar(): Promise<void> {
@@ -84,8 +86,10 @@ function cerrarConEscape(): void {
       <div ref="refCabecera" class="cabecera-del-panel">
         <div class="asa" aria-hidden="true" />
         <!-- Tocar el título también abre y cierra (comodidad: el botón es lo que lee el lector). -->
+        <!-- Se lee "En esta venta · 3 productos" (el separador queda para el lector cuando la
+             cuenta baja a su renglón). -->
         <h2 :id="idTitulo" ref="refTitulo" class="titulo-carrito" tabindex="-1" @click="alternar">
-          {{ titulo }}
+          En esta venta<span class="cuenta"><span class="separador"> · </span>{{ cuenta }}</span>
         </h2>
         <button
           ref="refAlternar"
@@ -101,7 +105,7 @@ function cerrarConEscape(): void {
       </div>
 
       <div v-if="expandido" :id="idDetalle" class="detalle">
-        <ListaDelCarrito :carrito="carrito" concepto="venta" texto-vacio="" />
+        <ListaDelCarrito :carrito="carrito" concepto="venta" texto-vacio="" compacta />
         <CuandoFue
           :model-value="cuando"
           pregunta="¿Cuándo fue la venta?"
@@ -184,6 +188,24 @@ function cerrarConEscape(): void {
 .titulo-carrito:focus {
   outline: none;
 }
+.cuenta {
+  white-space: nowrap;
+}
+/* Abierta, "Cerrar" va al lado: la cuenta baja a su propio renglón, más chica. El separador
+   " · " queda solo para el lector (sigue diciendo "En esta venta · 3 productos"). */
+.panel-de-venta--abierto .cuenta {
+  display: block;
+  color: var(--color-texto-suave);
+  font-size: 0.95rem;
+}
+.panel-de-venta--abierto .separador {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
 .alternar {
   grid-area: alternar;
   display: inline-flex;
@@ -220,8 +242,8 @@ function cerrarConEscape(): void {
   min-inline-size: 0;
   margin-block-end: var(--espacio-2);
 }
-/* Compacto: "Total" arriba del monto, para dejarle lugar a "Ver detalle" al lado. */
-/* Compacto: el total y Confirmar venta son celdas de la hoja (el pie no dibuja caja). */
+/* Compacto: el total y Confirmar venta son celdas de la hoja (el pie no dibuja caja); "Total"
+   va arriba del monto, para dejarle lugar a "Ver detalle" al lado. */
 .pie-del-panel {
   display: contents;
 }

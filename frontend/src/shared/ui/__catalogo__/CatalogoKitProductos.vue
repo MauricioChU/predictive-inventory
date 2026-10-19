@@ -142,6 +142,8 @@ const lineas = ref<LineaDeEjemplo[]>([
     especial: false,
   },
 ])
+/** RN-OP-22: la línea compacta del panel de venta (celular), con precio especial y "quedan". */
+const cantidadCompacta = ref('3')
 const numero = (texto: string) => Number(texto.replace(',', '.')) || 0
 const soles = (valor: number) => `S/ ${valor.toFixed(2)}`
 const importe = (linea: LineaDeEjemplo) => numero(linea.cantidad) * numero(linea.precio)
@@ -273,6 +275,22 @@ const confirmaciones = ref(0)
           />
         </li>
       </ul>
+    </section>
+
+    <section class="muestra" aria-labelledby="muestra-carrito-compacto">
+      <h3 id="muestra-carrito-compacto">FilaDeCarrito compacta (panel de venta)</h3>
+      <FilaDeCarrito
+        v-model:cantidad="cantidadCompacta"
+        nombre="Jabón Bolívar con un nombre largo de ejemplo"
+        unidad="UNIDAD"
+        texto-precio="S/ 120.50 c/u"
+        :texto-importe="soles(numero(cantidadCompacta) * 120.5)"
+        texto-quedan="Quedan 1,250 unid."
+        texto-precio-especial="Precio especial"
+        valor-precio="120.50"
+        precio-editable
+        compacta
+      />
     </section>
 
     <section class="muestra" aria-labelledby="muestra-foto-campo">

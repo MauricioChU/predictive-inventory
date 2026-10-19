@@ -479,6 +479,7 @@ const TEXTOS_SIN_CORTES = [
   '.panel-de-venta .titulo-carrito',
   '.fila-de-carrito .precio',
   '.fila-de-carrito .quedan',
+  '.fila-de-carrito .precio-unitario',
 ].join(', ')
 
 /**
