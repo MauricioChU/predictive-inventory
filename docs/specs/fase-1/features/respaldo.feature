@@ -78,7 +78,7 @@ Característica: Respaldo, Excel e importación
     Dado que el almacenamiento persistente está concedido
     Y que la última copia fue <cuándo>
     Cuando abro la app
-    Entonces Inicio <muestra>
+    Entonces Ajustes <muestra>
 
     Ejemplos:
       | cuándo           | muestra                                              |
@@ -137,7 +137,7 @@ Característica: Respaldo, Excel e importación
     Dado que el almacenamiento persistente fue rechazado
     Y que la última copia fue hace 3 días
     Cuando abro la app
-    Entonces Inicio muestra "Hace 3 días que no guardas una copia"
+    Entonces Ajustes muestra "Hace 3 días que no guardas una copia"
 
   @RN-RE-10
   Escenario: Restaurar una copia desde la bienvenida completa la primera vez

@@ -10,7 +10,7 @@ Que la tienda pueda llevar **todo su inventario desde el celular, sin internet**
 |---|---|---|
 | Catálogo | Productos con precios, unidad (unid./kg/L), categoría, stock mínimo y foto. Búsqueda por nombre. Archivar. | [01](01-catalogo.md) |
 | Inventario | Venta con carrito, total y vuelto. Llegada de mercadería con **aviso de sobrecompra**. Mermas. Conteo de stock y **conteo guiado** de toda la tienda. Historial. Deshacer y anular. | [02](02-operaciones.md) |
-| Alertas | Estados *Agotado* / *Por acabarse* / *Normal*, avisos en la app, notificaciones del sistema y resumen del día. | [03](03-alertas.md) |
+| Alertas | Estados *Agotado* / *Por acabarse* / *Normal*, avisos en la app y notificaciones del sistema. | [03](03-alertas.md) |
 | Análisis | Torre de control: ganancia, "se acaba en ~N días", lista para comprar, más vendidos, productos parados, precios para revisar, semana contra semana, mejor día. Consulta **"¿Necesito comprar?"**. | [04](04-torre-de-control.md) |
 | Respaldo | Exportar a Excel, respaldo completo, restaurar, importar productos desde Excel, recordatorio de respaldo. | [05](05-respaldo-e-importacion.md) |
 | Experiencia | Diseño para persona mayor, tamaño de letra configurable, responsive de 320 px a escritorio, accesibilidad, instalación. | [06](06-experiencia-de-uso.md) |

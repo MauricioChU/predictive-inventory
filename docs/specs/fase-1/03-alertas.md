@@ -33,16 +33,16 @@ Criterios de aceptación ejecutables: [features/alertas.feature](features/alerta
 | **RN-AL-03** | Se genera un **aviso** solo cuando el estado **empeora**: `NORMAL → POR_ACABARSE`, `NORMAL → AGOTADO` o `POR_ACABARSE → AGOTADO`. Mientras el estado no mejore, no se repite el aviso del mismo producto. |
 | **RN-AL-04** | Cuando el estado de un producto **vuelve a `NORMAL`** (por ejemplo, llegó mercadería), el aviso se **rearma**: si vuelve a empeorar, se avisa de nuevo. |
 | **RN-AL-05** | El color **nunca es la única señal**: cada estado se muestra con color, ícono y texto. |
-| **RN-AL-06** | **Canales en Fase 1**: (a) aviso en Inicio con la cantidad de productos agotados y por acabarse; (b) número en el botón *Control* de la navegación; (c) **notificación del sistema** del celular, si el usuario dio permiso. |
-| **RN-AL-07** | Si varios avisos nacen a la vez (por ejemplo, al abrir la app), se agrupan en **una sola notificación**: "3 productos se están acabando". Tocarla abre la lista *Para comprar*. |
+| **RN-AL-06** | **Canales en Fase 1**: (a) aviso en Inicio con la cantidad de productos agotados y por acabarse ("N productos se acaban", con el detalle "1 agotado y 3 por acabarse") y el botón *Ver productos*, que abre *Productos* ya filtrado por *Se acaban* (RN-CAT-16); (b) número en el botón *Control* de la navegación; (c) **notificación del sistema** del celular, si el usuario dio permiso. |
+| **RN-AL-07** | Si varios avisos nacen a la vez (por ejemplo, al abrir la app), se agrupan en **una sola notificación**: "3 productos se están acabando". Tocarla abre *Productos* filtrado por *Se acaban* (RN-CAT-16); la notificación de un solo producto abre su detalle. |
 | **RN-AL-08** | El **permiso de notificaciones** nunca se pide al abrir la app por primera vez. Se pide desde una pantalla que explica para qué sirve, con botón "Sí, avísame". Si se rechaza, la app funciona igual con avisos internos, y Ajustes explica cómo activarlas. |
-| **RN-AL-09** | **Resumen del día**: la primera vez que se abre la app cada día se muestra una tarjeta con productos agotados, productos por acabarse y la ganancia de ayer. Se cierra con un toque y no vuelve a salir ese día. |
+| ~~RN-AL-09~~ | **Retirada** (2026-10-19): el dueño quiere Inicio solo para vender; la ganancia de ayer ya se ve en *Control*. |
 
 ### Recordatorio de pago del local
 
 | Id | Regla |
 |---|---|
-| **RN-AL-10** | **Recordatorio en Inicio**: si el local tiene pago configurado (RN-AN-17) y la siguiente fecha de pago **igual o posterior a hoy** (RN-AN-18) cae **hoy, mañana o pasado mañana**, Inicio muestra una tarjeta con el texto de la tabla de abajo y el botón *Entendido*, que la cierra **hasta el día siguiente**. El resumen del día (RN-AL-09) incluye la misma frase. Sin configurar o con *No pago*, no hay recordatorio. |
+| **RN-AL-10** | **Recordatorio en *Control***: si el local tiene pago configurado (RN-AN-17) y la siguiente fecha de pago **igual o posterior a hoy** (RN-AN-18) cae **hoy, mañana o pasado mañana**, la tarjeta *Alquiler del local* (RN-AN-19) muestra **una línea** con el texto de la tabla de abajo. No hay botón para cerrarla: desaparece sola al pasar la fecha. Sin configurar o con *No pago*, no hay recordatorio. Ya no se muestra en Inicio. |
 | **RN-AL-11** | **Notificación del pago**: con permiso de notificaciones (RN-AL-08), se envía **una sola notificación por cada fecha de pago**, la primera vez que se abre la app dentro de esa ventana de 3 días. Tocarla abre **Control**. Se guarda la última fecha de pago avisada para no repetirla; si cambia la configuración del local, una fecha nueva sí se avisa. Tiene la misma limitación de la Fase 1 que los avisos de stock (ver abajo). |
 
 ## Textos de los avisos
