@@ -309,6 +309,35 @@ export function pasosDeRespaldo(pasos: Pasos): void {
     expect(await m.app.catalogo.consultable.productos()).toHaveLength(Number(total))
   })
 
+  // RN-RE-10: la bienvenida y su "Ya tengo una copia guardada", al nivel de la aplicación: lo que
+  // decide es `primeraVezCompletada` del estado del sistema, no las pantallas (las cubren los
+  // tests de pantalla y el E2E). Una instalación nueva ya parte sin completar: se comprueba. El
+  // mismo texto sirve de "Dado" y de "Entonces" (Gherkin no distingue la palabra clave).
+  afirmacion(pasos, '(que )la primera vez no está completada', async (m: Mundo) => {
+    expect((await m.app.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(false)
+  })
+
+  afirmacion(pasos, 'la primera vez está completada', async (m: Mundo) => {
+    expect((await m.app.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(true)
+  })
+
+  accion(pasos, 'elijo {string} en la bienvenida', async (m: Mundo, opcion: string) => {
+    expect((await m.app.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(false)
+    expect(opcion).toBe('Ya tengo una copia guardada')
+    m.pantalla = 'Restaurar copia'
+  })
+
+  // Cancelar (o fallar) la restauración: no se restaura nada y se vuelve a la bienvenida.
+  accion(pasos, 'cancelo la restauración', (m: Mundo) => {
+    expect(m.pantalla).toBe('Restaurar copia')
+    m.confirmaciones = []
+    m.pantalla = 'Bienvenida'
+  })
+
+  afirmacion(pasos, 'se muestra la bienvenida', (m: Mundo) => {
+    expect(m.pantalla).toBe('Bienvenida')
+  })
+
   // RN-RE-07: el Excel que elige el usuario (el lector en memoria devuelve estas filas). La
   // columna "fila" del escenario es el número de fila de Excel (la 1 son los encabezados).
   preparacion(pasos, 'un Excel de productos con las filas:', (m: Mundo, extra: ArgumentoExtra) => {

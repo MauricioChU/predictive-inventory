@@ -234,6 +234,39 @@ describe('Formulario de producto: crear (/productos/nuevo)', () => {
     expect(w.findAll('button').some((b) => b.text().trim() === 'Seguir')).toBe(true)
   })
 
+  it('RN-UX-16: desde Primera vez, al guardar solo ofrece "Agregar otro producto" y "Seguir" (sin "Ver producto")', async () => {
+    const w = await abrir('/productos/nuevo?desde=primera-vez')
+    await llenar(w)
+    await guardar(w)
+
+    expect(w.findAll('button').map((b) => b.text().trim())).toEqual([
+      'Agregar otro producto',
+      'Seguir',
+    ])
+  })
+
+  it('RN-UX-16: desde Primera vez, si la foto falla no ofrece "Agregar foto" (esa pantalla no se puede abrir)', async () => {
+    vi.spyOn(app.procesadorDeFotos, 'reducir').mockRejectedValue(
+      new ErrorDeDominio('FOTO_INVALIDA', 'No pudimos leer la foto. Prueba con otra.'),
+    )
+    const w = await abrir('/productos/nuevo?desde=primera-vez')
+    await llenar(w)
+    const galeria = campo(w, 'Foto del producto').get<HTMLInputElement>(
+      'input[type="file"]:not([capture])',
+    )
+    elegirArchivo(galeria.element, new File(['x'], 'rara.heic', { type: '' }))
+    await galeria.trigger('change')
+    await guardar(w)
+
+    expect(w.get('[role="alert"]').text()).toContain('No pudimos leer la foto. Prueba con otra.')
+    expect(w.get('[role="alert"]').text()).toContain('El producto quedó guardado sin foto')
+    expect(w.get('[role="alert"]').text()).not.toContain('Puedes agregarle otra')
+    expect(w.findAll('button').map((b) => b.text().trim())).toEqual([
+      'Agregar otro producto',
+      'Seguir',
+    ])
+  })
+
   it('sin venir de Primera vez no hay "Seguir"', async () => {
     const w = await abrir()
     await llenar(w)

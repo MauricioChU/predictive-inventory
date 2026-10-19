@@ -34,7 +34,7 @@ async function elegirArchivo(page: Page, boton: string, archivo: { name: string;
 const h1 = (page: Page) => page.getByRole('heading', { level: 1 })
 
 test.describe('RN-SIS-05: primera vez', () => {
-  test('completa por Excel: bienvenida → nombre → letra → importar → contar después → Inicio', async ({ page }) => {
+  test('completa por Excel: bienvenida → nombre → letra → importar → Terminar → Inicio', async ({ page }) => {
     await notificacionesQueSeAceptan(page)
     await abrir(page, './')
     await expect(h1(page)).toHaveText('Te damos la bienvenida')
@@ -66,7 +66,7 @@ test.describe('RN-SIS-05: primera vez', () => {
 
     await page.getByRole('button', { name: 'Seguir' }).click()
     await expect(h1(page)).toHaveText('Ahora contemos lo que tienes')
-    await page.getByRole('button', { name: 'Dejar para después' }).click()
+    await page.getByRole('button', { name: 'Terminar' }).click()
 
     await expect(h1(page)).toHaveText(/^Hola, Bodega Rosita/)
     expect(await nombresDelCatalogo(page)).toEqual(['Jabón Bolívar', 'Lejía 1 L'])
@@ -93,15 +93,12 @@ test.describe('RN-SIS-05: primera vez', () => {
   })
 
   test('"Uno por uno" abre Producto nuevo (plan 11)', async ({ page }) => {
-    await abrir(page, './productos/nuevo')
-    test.skip(
-      !new URL(page.url()).pathname.endsWith('/productos/nuevo'),
-      'La pantalla Producto nuevo (plan 11) todavía no está en esta rama: el comodín lleva a Inicio',
-    )
-    await abrirTiendaLista(page, './bienvenida?paso=productos')
+    // RN-UX-16: con la primera vez pendiente, la bienvenida y Producto nuevo se pueden abrir.
+    await abrir(page, './bienvenida?paso=productos')
     await page.getByRole('button', { name: 'Uno por uno' }).click()
     // Contrato de rutas: Producto nuevo ofrece "Seguir" → primera-vez?paso=contar.
     await expect(page).toHaveURL(/\/productos\/nuevo\?desde=primera-vez$/)
+    await expect(h1(page)).toHaveText('Producto nuevo')
   })
 })
 

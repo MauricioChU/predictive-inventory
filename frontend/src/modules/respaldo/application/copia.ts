@@ -86,5 +86,10 @@ export async function restaurarCopia(
         'La copia tiene datos que no cuadran. No se cambió nada',
       )
     }
+
+    // RN-RE-10: el almacén nunca pisa el estado del sistema, y quien restaura ya no es de
+    // "primera vez": con una copia entera, la bienvenida no tiene nada más que preguntar.
+    // Dentro de la misma unidad de trabajo: si algo falla antes, tampoco se marca.
+    await deps.tienda().actualizarEstadoDelSistema({ primeraVezCompletada: true })
   })
 }

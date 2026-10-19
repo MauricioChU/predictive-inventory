@@ -8,6 +8,7 @@ import { CLAVE_AVISO_DESHACER, crearContextoAvisoDeshacer } from '@/app/aviso-de
 import { useEstadoGlobal } from '@/app/estado-global'
 import { proveerAplicacion } from '@/app/proveer-aplicacion'
 import { rutas } from '@/router'
+import { instalarGuardiaDeLaPrimeraVez } from '@/router/primera-vez'
 import { CLAVE_ANUNCIADOR, crearAnunciador, type Anunciador } from '@/shared/ui/anunciador'
 import type { AplicacionDePrueba } from './aplicacion-de-prueba'
 
@@ -40,6 +41,8 @@ let navegaciones: Promise<unknown>[] = []
  */
 export function crearRouterDePrueba(): Router {
   const router = createRouter({ history: createMemoryHistory(), routes: rutas })
+  // Como el router de la app: la primera vez es obligatoria (RN-UX-16).
+  instalarGuardiaDeLaPrimeraVez(router)
   for (const [name, path] of Object.entries(PANTALLAS_DE_OTRAS_RAMAS)) {
     if (!router.hasRoute(name)) router.addRoute({ path, name, component: Vacia })
   }

@@ -406,11 +406,18 @@ function verProducto(productoId: string) {
            texto de los botones entra por palabras enteras (320 px con letra Muy grande). -->
       <div class="despues">
         <template v-if="exito.tipo === 'creado' && exito.errorFoto">
+          <!-- RN-UX-16: en la primera vez no hay a dónde ir (el detalle y la edición del producto
+               vuelven a la bienvenida): sin "Agregar foto" ni "Ver producto". -->
           <MensajeDeError
             :mensaje="exito.errorFoto"
-            ayuda="El producto quedó guardado sin foto. Puedes agregarle otra."
+            :ayuda="
+              desdePrimeraVez
+                ? 'El producto quedó guardado sin foto. Puedes agregársela después, desde Productos.'
+                : 'El producto quedó guardado sin foto. Puedes agregarle otra.'
+            "
           />
           <Boton
+            v-if="!desdePrimeraVez"
             texto="Agregar foto"
             :icono="Camera"
             @click="router.replace({ name: 'producto-editar', params: { id: exito.productoId } })"
@@ -433,7 +440,11 @@ function verProducto(productoId: string) {
             :icono="ArrowRight"
             @click="router.push(aPantalla(router, 'primera-vez', {}, { paso: 'contar' }))"
           />
-          <Boton texto="Ver producto" @click="verProducto(exito.productoId)" />
+          <Boton
+            v-if="!desdePrimeraVez"
+            texto="Ver producto"
+            @click="verProducto(exito.productoId)"
+          />
         </template>
       </div>
     </template>

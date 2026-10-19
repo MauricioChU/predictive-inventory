@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, shallowRef } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, shallowRef } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ArchiveRestore, FolderOpen } from 'lucide-vue-next'
+import { useEstadoGlobal } from '@/app/estado-global'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import { esErrorDeDominio } from '@/shared/domain/errores'
 import { useAnunciador } from '@/shared/ui/anunciador'
@@ -18,9 +19,15 @@ import { leerComoTexto } from './leer-como-texto'
  * RN-RE-03/04/05: restaurar reemplaza TODOS los datos del celular. Antes de tocar nada se valida
  * la copia y se muestra qué contiene; después se piden las dos confirmaciones del módulo
  * (`prepararRestauracion`). Si algo falla, los datos actuales quedan como estaban.
+ *
+ * Con `?desde=primera-vez` (RN-RE-10) viene de la bienvenida: *Volver* y cancelar regresan a ella
+ * (no hay otra pantalla a la que ir), y al restaurar bien la primera vez queda completada.
  */
 const aplicacion = useAplicacion()
+const estadoGlobal = useEstadoGlobal()
+const route = useRoute()
 const router = useRouter()
+const desdePrimeraVez = computed(() => route.query.desde === 'primera-vez')
 const anunciador = useAnunciador()
 
 const selector = ref<HTMLInputElement>()
@@ -64,6 +71,17 @@ async function alElegir(evento: Event): Promise<void> {
   }
 }
 
+/** Desde la bienvenida no hay "atrás" que valga: se vuelve a ella sin dejar esta pantalla atrás. */
+function volverALaBienvenida(): void {
+  void router.replace({ name: 'primera-vez' })
+}
+
+/** Cancelar una confirmación: desde la bienvenida, también se deja la restauración. */
+function cancelarConfirmacion(): void {
+  confirmando.value = 0
+  if (desdePrimeraVez.value) volverALaBienvenida()
+}
+
 async function restaurar(): Promise<void> {
   const copia = elegida.value
   confirmando.value = 0
@@ -71,6 +89,9 @@ async function restaurar(): Promise<void> {
   restaurando.value = true
   try {
     await aplicacion.respaldo.restaurarCopia(copia.texto, { confirmaciones: 2 })
+    // La restauración ya marcó la primera vez como completada (RN-RE-10); el estado global la
+    // recarga solo, pero "Ir al inicio" decide con él: que ya lo sepa al mostrar el éxito.
+    await estadoGlobal.recargarConfiguracion()
     restaurada.value = copia.resumen
   } catch (causa) {
     error.value = {
@@ -93,7 +114,14 @@ async function restaurar(): Promise<void> {
   </PantallaExito>
 
   <div v-else class="vista-restaurar-copia">
-    <EncabezadoPagina titulo="Restaurar copia" volver />
+    <!-- Dos encabezados: EncabezadoPagina solo deja el "Volver" al padre si este escucha @volver. -->
+    <EncabezadoPagina
+      v-if="desdePrimeraVez"
+      titulo="Restaurar copia"
+      volver
+      @volver="volverALaBienvenida"
+    />
+    <EncabezadoPagina v-else titulo="Restaurar copia" volver />
 
     <p class="destacado">
       Restaurar cambia todos los datos de este celular por los de una copia que guardaste antes.
@@ -142,7 +170,7 @@ async function restaurar(): Promise<void> {
       texto-confirmar="Sí, continuar"
       texto-cancelar="No, cancelar"
       @confirmar="confirmando = 2"
-      @cancelar="confirmando = 0"
+      @cancelar="cancelarConfirmacion"
     />
     <DialogoConfirmacion
       v-if="elegida"
@@ -153,7 +181,7 @@ async function restaurar(): Promise<void> {
       texto-cancelar="No, mejor no"
       peligro
       @confirmar="restaurar"
-      @cancelar="confirmando = 0"
+      @cancelar="cancelarConfirmacion"
     />
   </div>
 </template>

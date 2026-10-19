@@ -8,11 +8,11 @@ import {
   empezarElDia,
   h1,
   hacerPrimeraVez,
-  hacerPrimeraVezHastaCargar,
   irA,
   textoVisible,
   venderPorPantalla,
 } from '../utilidades/recorridos'
+import { abrir } from '../utilidades/navegacion'
 import { sinMenuDeCompartir } from '../utilidades/tienda'
 
 const LEJIA = 'Lejía Tradicional 1 L'
@@ -50,15 +50,14 @@ async function loQueSeVe(page: Page): Promise<LoQueSeVe> {
 }
 
 test.describe('Recorrido: guardar y restaurar una copia', () => {
-  test('la copia de un celular se restaura en otro sin datos y todo vuelve igual', async ({
+  test('la copia de un celular se restaura desde la bienvenida de otro, sin recorrer la primera vez, y todo vuelve igual', async ({
     page,
     browser,
   }, testInfo) => {
     test.setTimeout(90_000)
     await sinMenuDeCompartir(page)
     await empezarElDia(page)
-    await hacerPrimeraVezHastaCargar(page, 'Bodega Rosita', 'Muy grande')
-    await page.getByRole('button', { name: 'Dejar para después' }).click()
+    await hacerPrimeraVez(page, 'Bodega Rosita', 'Muy grande')
     await crearProductoPorPantalla(page, {
       nombre: LEJIA,
       categoria: 'Lejías y desinfectantes',
@@ -114,11 +113,12 @@ test.describe('Recorrido: guardar y restaurar una copia', () => {
     })
     const nuevo = await otroCelular.newPage()
     await empezarElDia(nuevo)
-    await hacerPrimeraVez(nuevo, 'Mi tienda')
-    await expect(nuevo.getByText('Aún no tienes productos')).toBeVisible()
-
-    await nuevo.getByRole('link', { name: 'Ajustes' }).click()
-    await nuevo.getByRole('link', { name: /^Restaurar copia/ }).click()
+    // RN-RE-10: sin pasar por el recorrido de la primera vez, la copia se trae desde la bienvenida.
+    await abrir(nuevo, './')
+    await expect(h1(nuevo)).toHaveText('Te damos la bienvenida')
+    await expect(nuevo.getByRole('navigation')).toHaveCount(0)
+    await nuevo.getByRole('button', { name: 'Ya tengo una copia guardada' }).click()
+    await expect(h1(nuevo)).toHaveText('Restaurar copia')
     const selector = nuevo.waitForEvent('filechooser')
     await nuevo.getByRole('button', { name: 'Elegir la copia' }).click()
     await (await selector).setFiles({
@@ -135,6 +135,7 @@ test.describe('Recorrido: guardar y restaurar una copia', () => {
     await expect(h1(nuevo)).toHaveText('Copia restaurada')
     await nuevo.getByRole('button', { name: 'Ir al inicio' }).click()
     await expect(h1(nuevo)).toHaveText(/^Hola, Bodega Rosita/)
+    await expect(nuevo.getByRole('navigation')).toBeVisible()
 
     expect(await loQueSeVe(nuevo)).toEqual(antes)
     await otroCelular.close()

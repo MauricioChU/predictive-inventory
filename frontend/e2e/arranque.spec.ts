@@ -70,7 +70,8 @@ test.describe('Ola 3: la app arranca con los datos guardados en el celular', () 
   test('siembra las categorías, crea el dispositivo y el botón Control muestra el contador real', async ({
     page,
   }) => {
-    await abrir(page, './')
+    // RN-UX-16: la navegación (y su contador) solo existe con la primera vez hecha.
+    await abrirTiendaLista(page, './')
 
     const base = await leerBaseLocal(page)
     expect(base.categorias, 'las 10 categorías iniciales quedaron en IndexedDB').toBe(10)
