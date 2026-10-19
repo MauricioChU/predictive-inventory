@@ -297,11 +297,13 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     [360, 740],
   ] as const) {
     for (const letra of ['MUY_GRANDE', 'GRANDE'] as const) {
-      test(`${ancho}×${alto}, letra ${letra}: "Vender" entero dentro de la pantalla y sobre la navegación`, async ({
+      test(`${ancho}×${alto}, letra ${letra}: al final de Inicio, "Vender" queda entero sobre la navegación`, async ({
         page,
       }, testInfo) => {
         test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
         await abrirInicioCompleto(page, letra, ancho, alto)
+        // Con todo lo que Inicio puede mostrar el contenido es más alto que la pantalla: fluye.
+        await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
 
         const vender = await page.getByRole('button', { name: 'Vender' }).boundingBox()
         const navegacion = await page.getByRole('navigation').boundingBox()
@@ -314,18 +316,33 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     }
   }
 
-  test('320×700 Muy grande: enfocar "Vender" pegado no mueve la página', async ({ page }, testInfo) => {
+  test('360×740: las acciones quedan abajo, justo sobre la navegación, y debajo de fecha, cifras y aviso', async ({
+    page,
+  }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
-    await abrirInicioCompleto(page, 'MUY_GRANDE', 320, 700)
-    const antes = await page.evaluate(() => window.scrollY)
+    await abrirInicioCompleto(page, 'GRANDE', 360, 740)
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
 
-    await page.locator('.vender-fijo button').focus()
-
-    await expect(page.locator('.vender-fijo button')).toBeFocused()
-    expect(await page.evaluate(() => window.scrollY)).toBe(antes)
+    const caja = async (selector: string) => {
+      const medida = await page.locator(selector).first().boundingBox()
+      expect(medida, `${selector} tiene caja`).not.toBeNull()
+      return medida!
+    }
+    const fecha = await caja('.fecha-y-hora')
+    const cifra = await caja('.cifra')
+    const aviso = await caja('.atencion')
+    const acciones = await caja('#contenido .cuerpo > .acciones')
+    const navegacion = await page.getByRole('navigation').boundingBox()
+    expect(cifra.y).toBeGreaterThanOrEqual(fecha.y + fecha.height - 1)
+    expect(aviso.y).toBeGreaterThanOrEqual(cifra.y + cifra.height - 1)
+    expect(acciones.y).toBeGreaterThanOrEqual(aviso.y + aviso.height - 1)
+    expect(acciones.y + acciones.height, 'dentro de la pantalla').toBeLessThanOrEqual(740)
+    expect(navegacion!.y - (acciones.y + acciones.height), 'justo sobre la navegación').toBeLessThanOrEqual(40)
+    expect(navegacion!.y - (acciones.y + acciones.height)).toBeGreaterThanOrEqual(-1)
+    await esperarSinDesplazamientoHorizontal(page)
   })
 
-  test('320×700 Muy grande: al recorrer con Tab, nada enfocado queda tapado por "Vender" ni por la navegación', async ({
+  test('320×700 Muy grande: al recorrer con Tab, nada enfocado queda tapado por la navegación', async ({
     page,
   }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
@@ -339,8 +356,8 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
           const activo = document.activeElement
           const enContenido = Boolean(activo?.closest('#contenido'))
           const caja = activo?.getBoundingClientRect()
-          const encima = [document.querySelector('nav'), document.querySelector('.vender-fijo')]
-            .filter((el): el is Element => el !== null && activo !== null && !el.contains(activo))
+          const encima = Array.from(document.querySelectorAll('nav'))
+            .filter((el) => activo !== null && !el.contains(activo))
             .map((el) => el.getBoundingClientRect())
             .some((otra) => caja !== undefined && caja.bottom > otra.top + 1 && caja.top < otra.bottom - 1)
           return { enContenido, texto: activo?.textContent?.trim() ?? '', encima: enContenido && encima }
@@ -350,7 +367,7 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     const revisados = medidas.filter((m) => m.enContenido)
     const tapados = revisados.filter((m) => m.encima).map((m) => m.texto)
     expect(revisados.length, 'se recorrió Inicio con Tab').toBeGreaterThanOrEqual(8)
-    expect(tapados, 'nada enfocado queda debajo de lo que está pegado abajo').toEqual([])
+    expect(tapados, 'nada enfocado queda debajo de la navegación').toEqual([])
   })
 })
 

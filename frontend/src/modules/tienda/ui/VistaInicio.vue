@@ -19,6 +19,7 @@ import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import EstadoVacio from '@/shared/ui/componentes/EstadoVacio.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import TarjetaDeCifra from '@/shared/ui/componentes/TarjetaDeCifra.vue'
+import FechaYHora from './FechaYHora.vue'
 import { haciaPantalla, type PantallaDeOtraRama } from './pantallas-de-otras-ramas'
 
 const aplicacion = useAplicacion()
@@ -108,6 +109,8 @@ function verLoQueSeAcaba(): void {
       </RouterLink>
     </header>
 
+    <FechaYHora />
+
     <MensajeDeError
       v-if="fallo"
       mensaje="No pudimos leer tus datos de hoy"
@@ -115,10 +118,10 @@ function verLoQueSeAcaba(): void {
     />
 
     <!--
-      Inicio es para vender (plan 19). Celular: lo de hoy (cifras y lo que se acaba) → las
-      acciones. "Vender" queda pegado sobre la navegación mientras su lugar está más abajo:
-      siempre a la vista. PC: lo que hay que saber a la izquierda y lo que hay que hacer a la
-      derecha.
+      Inicio es para vender (plan 19). Celular: encabezado → fecha y hora → lo de hoy (cifras y lo
+      que se acaba) → espacio libre → las acciones, pegadas abajo, al alcance del pulgar (si el
+      contenido es más alto que la pantalla, todo fluye sin taparse). PC: lo que hay que saber a
+      la izquierda y lo que hay que hacer a la derecha.
     -->
     <div class="cuerpo">
       <TarjetaDeCifra
@@ -150,9 +153,7 @@ function verLoQueSeAcaba(): void {
       </div>
 
       <div class="acciones">
-        <div class="vender-fijo">
-          <BotonPrincipal texto="Vender" :icono="ShoppingCart" @click="ir('vender')" />
-        </div>
+        <BotonPrincipal texto="Vender" :icono="ShoppingCart" @click="ir('vender')" />
         <BotonPrincipal
           texto="Llegó mercadería"
           variante="secundario"
@@ -180,6 +181,8 @@ function verLoQueSeAcaba(): void {
   display: flex;
   flex-direction: column;
   gap: var(--espacio-4);
+  /* Ocupa el alto que deja libre la navegación (medida en vivo en --alto-pie). */
+  min-height: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
 }
 .saludo {
   display: flex;
@@ -224,40 +227,26 @@ h1 {
 
 .cuerpo {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--espacio-4);
 }
-/* Celular: sin caja propia, así "Vender" se pega abajo dentro de todo el cuerpo de Inicio (un
-   elemento pegajoso no sale de la caja de su padre). */
+/* Celular: las acciones quedan al fondo del área de contenido (arriba de la navegación), al
+   alcance del pulgar. Si el contenido es más alto, simplemente fluye. */
 .acciones {
-  display: contents;
-}
-/* Celular: "Vender" queda pegado sobre la navegación (--alto-pie, medido en vivo) mientras su
-   lugar está más abajo; al llegar a él, sigue en su sitio. */
-.vender-fijo {
-  position: sticky;
-  bottom: var(--alto-pie, 0px);
-  z-index: 5;
-  /* De borde a borde del contenido (cubre el relleno de <main>): el navegador dibuja la franja
-     pegada aparte y sus bordes laterales dejaban una línea fina junto al botón; así quedan en el
-     borde de la pantalla. */
-  margin: calc(-1 * var(--espacio-2)) calc(-1 * var(--espacio-4));
-  padding: var(--espacio-2) var(--espacio-4);
-  background: var(--color-fondo);
-}
-/* Lo enfocado con el teclado no queda debajo de "Vender" pegado (WCAG 2.4.11)... */
-.vista-inicio :is(a, button) {
-  scroll-margin-bottom: calc(var(--alto-boton-principal) + 2 * var(--espacio-2));
-}
-/* ...salvo el propio "Vender": ya está a la vista, enfocarlo no mueve la página. */
-.vender-fijo button {
-  scroll-margin-bottom: 0;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
 }
 
 /* PC, en el mismo orden que el código (WCAG 1.3.2 / 2.4.3): las cifras y el aviso a la izquierda
    y las acciones a la derecha. Sin filas vacías: la separación es el margen de cada bloque, no
    el espacio entre filas. */
 @media (min-width: 1024px) {
+  .vista-inicio {
+    min-height: auto;
+  }
   .cuerpo {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -276,23 +265,12 @@ h1 {
   }
   .acciones {
     grid-area: acciones;
-    display: flex;
-    flex-direction: column;
-    gap: var(--espacio-3);
+    margin-top: 0;
   }
   .cifra,
   .atencion,
   .acciones {
     margin-bottom: var(--espacio-4);
-  }
-  .vender-fijo {
-    position: static;
-    margin: 0;
-    padding: 0;
-    background: none;
-  }
-  .vista-inicio :is(a, button) {
-    scroll-margin-bottom: 0;
   }
 }
 </style>
