@@ -1,7 +1,7 @@
 // Tocar una notificación abre su pantalla (spec 03 · RN-AL-07; Ola 3, ruling 5). Workbox lo
 // carga con importScripts desde el Service Worker que genera vite-plugin-pwa (vite.config.ts).
 //
-// `data.url` es una ruta de la app ("/control/para-comprar", "/productos/<id>"): se resuelve
+// `data.url` es una ruta de la app ("/productos?estado=se-acaban", "/productos/<id>"): se resuelve
 // contra el alcance del Service Worker (la base /predictive-inventory/), nunca contra la raíz
 // del dominio. Si ya hay una ventana de la app abierta, se enfoca y se le pide que navegue (sin
 // recargar: no se pierde lo que estaba haciendo); si no, se abre una nueva.
