@@ -4,6 +4,7 @@ import { Dinero } from '@/shared/domain/dinero'
 import { AlmacenEnMemoria } from '@/shared/infrastructure/memoria/almacen-en-memoria'
 import { UnidadDeTrabajoEnMemoria } from '@/shared/infrastructure/memoria/unidad-de-trabajo-en-memoria'
 import { crearContextoDePrueba, crearSituacion } from '../__pruebas__/dobles'
+import { cerrarRecordatorioDelLocal } from './recordatorio-del-local'
 import { cerrarResumenDelDia, resumenDeAtencion, resumenDelDia } from './resumen'
 
 function prepararContexto(ahora?: string) {
@@ -127,6 +128,44 @@ describe('resumenDelDia y cerrarResumenDelDia (RN-AL-09)', () => {
 
     reloj.fijar('2026-10-16T05:00:00.000Z') // 00:00 del 16 en Lima
     expect(await resumenDelDia(dependencias)).not.toBeNull()
+  })
+
+  it('RN-AL-10: el resumen del día termina con la frase del pago del local', async () => {
+    const { dependencias, tiendaFalsa } = prepararContexto('2026-10-19T15:00:00.000Z')
+    tiendaFalsa.configuracionActual = {
+      ...tiendaFalsa.configuracionActual,
+      alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [20] },
+    }
+
+    const resumen = await resumenDelDia(dependencias)
+
+    expect(resumen?.lineas).toEqual([
+      'Nada agotado',
+      'Nada por acabarse',
+      'Ayer no hubo ventas',
+      'Mañana pagas el local: S/ 1 200.00',
+    ])
+  })
+
+  it('RN-AL-10: el resumen del día no depende de haber cerrado el recordatorio de Inicio', async () => {
+    const { dependencias, tiendaFalsa } = prepararContexto('2026-10-19T15:00:00.000Z')
+    tiendaFalsa.configuracionActual = {
+      ...tiendaFalsa.configuracionActual,
+      alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [20] },
+    }
+    await cerrarRecordatorioDelLocal(dependencias)
+
+    const resumen = await resumenDelDia(dependencias)
+
+    expect(resumen?.lineas.at(-1)).toBe('Mañana pagas el local: S/ 1 200.00')
+  })
+
+  it('RN-AL-10: sin pago a la vista, el resumen del día no agrega nada', async () => {
+    const { dependencias } = prepararContexto('2026-10-19T15:00:00.000Z')
+
+    const resumen = await resumenDelDia(dependencias)
+
+    expect(resumen?.lineas).toHaveLength(3)
   })
 
   it('RN-AL-08: resumenDelDia y resumenDeAtencion nunca piden permiso', async () => {

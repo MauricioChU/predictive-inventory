@@ -10,6 +10,7 @@ import { diasEntre, instanteLocal, sumarDias, sumarSegundos } from '@/shared/dom
 import { normalizar } from '@/shared/domain/texto'
 import type { ArgumentoExtra } from '../../gherkin/registro-de-pasos'
 import { crearAplicacionDePrueba } from '../../soporte/aplicacion-de-prueba'
+import { alquilerDeTextos } from './contexto'
 import type { Mundo } from './mundo'
 import { accion, afirmacion, celda, filasDe, lista, preparacion, type Pasos } from './registro'
 
@@ -260,13 +261,50 @@ export function pasosDeRespaldo(pasos: Pasos): void {
     m.textoCopia = await guardarCopiaDeEstaTienda(m)
   })
 
-  // RN-RE-05: una copia hecha por una versión futura de la app.
+  // RN-RE-05 / RN-RE-11: una copia hecha por otra versión de la app. La "1" es de antes del costo
+  // del local (su configuración no trae `alquilerDelLocal`) y la "3" de una versión futura.
   preparacion(
     pasos,
     'una copia con versión de formato {string}',
     async (m: Mundo, version: string) => {
-      const respaldo = JSON.parse(await guardarCopiaDeEstaTienda(m)) as Record<string, unknown>
+      const respaldo = JSON.parse(await guardarCopiaDeEstaTienda(m)) as {
+        datos: { configuracion: Record<string, unknown> | null }
+      } & Record<string, unknown>
+      if (Number(version) === 1 && respaldo.datos.configuracion) {
+        delete respaldo.datos.configuracion.alquilerDelLocal
+        // Esta tienda ya paga un local: al abrir la copia vieja, eso debe quedar sin configurar.
+        await m.app.tienda.actualizarConfiguracion({
+          alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 10000, dias: [1] },
+        })
+      }
       m.textoCopia = JSON.stringify({ ...respaldo, versionDeFormato: Number(version) })
+    },
+  )
+
+  // RN-RE-11: la copia guarda el costo del local. Antes de restaurar se deja el local sin
+  // configurar, y el paso comprueba que volvió igual que cuando se guardó la copia.
+  accion(pasos, 'guardo una copia y la restauro', async (m: Mundo) => {
+    const { alquilerDelLocal: guardado } = await m.app.tienda.consultable.configuracion()
+    m.textoCopia = await guardarCopiaDeEstaTienda(m)
+    await m.app.tienda.actualizarConfiguracion({ alquilerDelLocal: null })
+    await restaurar(m, m.textoCopia)
+    const { alquilerDelLocal: restaurado } = await m.app.tienda.consultable.configuracion()
+    expect(restaurado).toEqual(guardado)
+  })
+
+  afirmacion(pasos, 'el costo del local está sin configurar', async (m: Mundo) => {
+    const { alquilerDelLocal } = await m.app.tienda.consultable.configuracion()
+    expect(alquilerDelLocal).toBeNull()
+  })
+
+  // RN-RE-11: el costo guardado en la configuración tiene el tipo, el monto en centavos y los días
+  // que describe el escenario (el texto pasa por el mismo convertidor que la pantalla).
+  afirmacion(
+    pasos,
+    'el costo del local guardado es {string} {string} los días {string}',
+    async (m: Mundo, monto: string, frecuencia: string, dias: string) => {
+      const { alquilerDelLocal } = await m.app.tienda.consultable.configuracion()
+      expect(alquilerDelLocal).toEqual(alquilerDeTextos(frecuencia, monto, dias))
     },
   )
 
@@ -307,6 +345,35 @@ export function pasosDeRespaldo(pasos: Pasos): void {
 
   afirmacion(pasos, 'el catálogo tiene {string} productos', async (m: Mundo, total: string) => {
     expect(await m.app.catalogo.consultable.productos()).toHaveLength(Number(total))
+  })
+
+  // RN-RE-10: la bienvenida y su "Ya tengo una copia guardada", al nivel de la aplicación: lo que
+  // decide es `primeraVezCompletada` del estado del sistema, no las pantallas (las cubren los
+  // tests de pantalla y el E2E). Una instalación nueva ya parte sin completar: se comprueba. El
+  // mismo texto sirve de "Dado" y de "Entonces" (Gherkin no distingue la palabra clave).
+  afirmacion(pasos, '(que )la primera vez no está completada', async (m: Mundo) => {
+    expect((await m.app.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(false)
+  })
+
+  afirmacion(pasos, 'la primera vez está completada', async (m: Mundo) => {
+    expect((await m.app.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(true)
+  })
+
+  accion(pasos, 'elijo {string} en la bienvenida', async (m: Mundo, opcion: string) => {
+    expect((await m.app.tienda.consultable.estadoDelSistema()).primeraVezCompletada).toBe(false)
+    expect(opcion).toBe('Ya tengo una copia guardada')
+    m.pantalla = 'Restaurar copia'
+  })
+
+  // Cancelar (o fallar) la restauración: no se restaura nada y se vuelve a la bienvenida.
+  accion(pasos, 'cancelo la restauración', (m: Mundo) => {
+    expect(m.pantalla).toBe('Restaurar copia')
+    m.confirmaciones = []
+    m.pantalla = 'Bienvenida'
+  })
+
+  afirmacion(pasos, 'se muestra la bienvenida', (m: Mundo) => {
+    expect(m.pantalla).toBe('Bienvenida')
   })
 
   // RN-RE-07: el Excel que elige el usuario (el lector en memoria devuelve estas filas). La

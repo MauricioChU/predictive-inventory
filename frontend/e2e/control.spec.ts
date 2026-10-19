@@ -11,6 +11,7 @@ import { usarLetra } from './utilidades/navegacion'
 
 const SECCIONES = [
   'Resumen',
+  'Alquiler del local',
   'Atención',
   'Para comprar',
   'Más vendidos',
@@ -75,7 +76,7 @@ function seccion(page: Page, titulo: string) {
 test.describe('Torre de control con datos de demostración', () => {
   test.setTimeout(90_000)
 
-  test('04-torre-de-control: las siete secciones, en orden, muestran lo que calculan los casos de uso', async ({
+  test('04-torre-de-control: las ocho secciones (con Alquiler del local sin configurar), en orden, muestran lo que calculan los casos de uso', async ({
     page,
   }) => {
     await abrirControlConHistoria(page)

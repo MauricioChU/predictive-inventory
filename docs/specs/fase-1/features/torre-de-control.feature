@@ -315,3 +315,74 @@ Característica: Torre de control
       | 2026-08-31 10:00 | Escoba   | 1        |
     Cuando pregunto si necesito comprar "Escoba"
     Entonces la respuesta es "No compres: no se vende hace 45 días y tienes 4 unid."
+
+  # ---------- Alquiler del local ----------
+
+  @RN-AN-17
+  Escenario: El costo del local empieza sin configurar
+    Entonces la tarjeta del alquiler pregunta "¿Pagas alquiler por tu local?" con el botón "Configurar"
+
+  @RN-AN-17
+  Esquema del escenario: Validación del costo del local
+    Cuando configuro el local con pago "<frecuencia>", monto "<monto>" y días "<días>"
+    Entonces el resultado es "<resultado>"
+
+    Ejemplos:
+      | frecuencia       | monto    | días  | resultado                                      |
+      | Una vez al mes   | 1200.00  | 5     | ok                                             |
+      | Dos veces al mes | 600.00   | 20, 5 | ok                                             |
+      | Una vez al mes   | 0.00     | 5     | error: El monto debe ser mayor que S/ 0.00     |
+      | Una vez al mes   | 12.345   | 5     | error: El monto puede tener hasta 2 decimales  |
+      | Una vez al mes   | 1200.00  | 32    | error: El día de pago va del 1 al 31           |
+      | Dos veces al mes | 600.00   | 5, 5  | error: Elige dos días distintos                |
+
+  @RN-AN-17
+  Escenario: Sin alquiler no se muestra la tarjeta
+    Cuando configuro el local con "No pago (el local es mío)"
+    Entonces no se muestra la tarjeta del alquiler
+
+  @RN-AN-18
+  Esquema del escenario: Último y próximo pago
+    Dado que hoy es "<hoy> 10:00"
+    Y el local se paga "<frecuencia>" los días "<días>"
+    Entonces el último pago es "<último>" y el próximo pago es "<próximo>"
+
+    Ejemplos:
+      | hoy        | frecuencia       | días  | último     | próximo    |
+      | 2026-10-15 | Dos veces al mes | 5, 20 | 2026-10-05 | 2026-10-20 |
+      | 2026-10-20 | Dos veces al mes | 5, 20 | 2026-10-20 | 2026-11-05 |
+      | 2026-11-03 | Dos veces al mes | 5, 20 | 2026-10-20 | 2026-11-05 |
+      | 2027-02-15 | Una vez al mes   | 31    | 2027-01-31 | 2027-02-28 |
+      | 2027-03-01 | Una vez al mes   | 31    | 2027-02-28 | 2027-03-31 |
+
+  @RN-AN-19
+  Escenario: La tarjeta muestra cuánto falta para cubrir el local
+    Dado que "Lejía 1 L" tiene stock inicial "500" desde "2026-08-01"
+    Y el local se paga "S/ 600.00" "Dos veces al mes" los días "5, 20"
+    Y el historial de ventas:
+      | fecha            | producto  | cantidad |
+      | 2026-10-04 12:00 | Lejía 1 L | 10       |
+      | 2026-10-06 12:00 | Lejía 1 L | 100      |
+    Entonces la tarjeta del alquiler dice "Para el pago del 20/10 llevas S/ 110.00 de S/ 600.00"
+    Y la tarjeta del alquiler dice "Te falta S/ 490.00"
+    Y la barra del alquiler está en "18" %
+
+  @RN-AN-19
+  Escenario: La tarjeta avisa cuando el local ya está cubierto
+    Dado que "Lejía 1 L" tiene stock inicial "500" desde "2026-08-01"
+    Y el local se paga "S/ 100.00" "Dos veces al mes" los días "5, 20"
+    Y el historial de ventas:
+      | fecha            | producto  | cantidad |
+      | 2026-10-06 12:00 | Lejía 1 L | 100      |
+    Entonces la tarjeta del alquiler dice "✓ Ya cubriste el local del 20/10"
+    Y la tarjeta del alquiler dice "Lo que ganes de más es tuyo: llevas S/ 10.00"
+    Y la barra del alquiler está en "100" %
+
+  @RN-AN-19
+  Escenario: Con pérdidas en el periodo la barra queda en cero
+    Dado que "Lejía 1 L" tiene stock inicial "500" desde "2026-08-01"
+    Y el local se paga "S/ 600.00" "Una vez al mes" los días "5"
+    Y registro una merma de "10" de "Lejía 1 L" con motivo "Se derramó"
+    Entonces la tarjeta del alquiler dice "Para el pago del 05/11 llevas -S/ 24.00 de S/ 600.00"
+    Y la tarjeta del alquiler dice "Te falta S/ 624.00"
+    Y la barra del alquiler está en "0" %

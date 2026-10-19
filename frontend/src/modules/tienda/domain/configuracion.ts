@@ -2,6 +2,7 @@ import {
   RANGOS_DE_CONFIGURACION,
   type ConfiguracionDeNegocio,
 } from '../../../shared/contratos/configuracion'
+import { validarAlquilerDelLocal } from '../../../shared/domain/alquiler-del-local'
 
 type CampoDeDias = 'diasEntreCompras' | 'diasAnticipacion' | 'diasMaximosDeCompra'
 
@@ -32,6 +33,10 @@ export function validarCambios(cambios: Partial<ConfiguracionDeNegocio>): string
     if (!Number.isInteger(valor) || valor < min || valor > max) {
       return `Elige un número entre ${min} y ${max}`
     }
+  }
+
+  if (cambios.alquilerDelLocal !== undefined) {
+    return validarAlquilerDelLocal(cambios.alquilerDelLocal)
   }
 
   return null

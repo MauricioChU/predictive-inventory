@@ -74,7 +74,7 @@ describe('crearRespaldo (RN-RE-02)', () => {
 
     const respaldo = crearRespaldo(datos, '2026-10-15T20:30:00-05:00')
 
-    expect(respaldo.versionDeFormato).toBe(1)
+    expect(respaldo.versionDeFormato).toBe(2)
     expect(respaldo.app).toBe('predictive-inventory')
     expect(respaldo.creadoEn).toBe('2026-10-15T20:30:00-05:00')
     expect(respaldo.control).toEqual({
@@ -109,6 +109,7 @@ function respaldoValido() {
         diasMaximosDeCompra: 30,
         tamanoDeLetra: 'GRANDE',
         notificacionesActivas: false,
+        alquilerDelLocal: null,
       },
       categorias: [{ id: 'cat-1', nombre: 'Otros', nombreNormalizado: 'otros' }],
       productos: [producto({})],
@@ -184,14 +185,14 @@ describe('leerRespaldo', () => {
   })
 
   it('RN-RE-05: una versión de formato más nueva se rechaza', () => {
-    const futuro = { ...respaldoValido(), versionDeFormato: 2 }
+    const futuro = { ...respaldoValido(), versionDeFormato: 3 }
     expect(() => leerRespaldo(JSON.stringify(futuro))).toThrow(
       'Actualiza la app para abrir este respaldo',
     )
   })
 
-  it('RN-RE-05: una versión 2 con otra estructura (sin control) también pide actualizar', () => {
-    const futuro = { versionDeFormato: 2, app: 'predictive-inventory', cosas: [] }
+  it('RN-RE-05: una versión 3 con otra estructura (sin control) también pide actualizar', () => {
+    const futuro = { versionDeFormato: 3, app: 'predictive-inventory', cosas: [] }
     expect(() => leerRespaldo(JSON.stringify(futuro))).toThrow(
       'Actualiza la app para abrir este respaldo',
     )
@@ -201,6 +202,10 @@ describe('leerRespaldo', () => {
     expect(() =>
       leerRespaldo(JSON.stringify({ ...respaldoValido(), versionDeFormato: 'uno' })),
     ).toThrow(INVALIDA)
+  })
+
+  it('RN-RE-05: la versión 2 (la de esta app) se lee tal cual', () => {
+    expect(leerRespaldo(JSON.stringify(respaldoValido())).versionDeFormato).toBe(2)
   })
 
   it('acepta configuracion null', () => {
@@ -244,5 +249,104 @@ describe('resumenDeCopia (RN-RE-03)', () => {
     expect(resumenDeCopia({ productos: 1, operaciones: 0 }, []).texto).toBe(
       '1 producto, sin movimientos',
     )
+  })
+})
+
+type AlquilerPlano = Record<string, unknown>
+
+function conAlquiler(alquiler: unknown): string {
+  const r = JSON.parse(JSON.stringify(respaldoValido())) as Plano
+  r.datos.configuracion.alquilerDelLocal = alquiler
+  return JSON.stringify(r)
+}
+
+function copiaV1(): Plano {
+  const r = JSON.parse(JSON.stringify(respaldoValido())) as Plano
+  r.versionDeFormato = 1
+  delete r.datos.configuracion.alquilerDelLocal
+  return r
+}
+
+describe('leerRespaldo: costo del local (RN-RE-11)', () => {
+  it('una copia de la versión 1 se migra con el local sin configurar (null) y queda en la 2', () => {
+    const leida = leerRespaldo(JSON.stringify(copiaV1()))
+    expect(leida.versionDeFormato).toBe(2)
+    expect(leida.datos.configuracion?.alquilerDelLocal).toBeNull()
+  })
+
+  it('una copia de la versión 1 sin configuración también se lee', () => {
+    const r = copiaV1()
+    r.datos.configuracion = null
+    const leida = leerRespaldo(JSON.stringify(r))
+    expect(leida.versionDeFormato).toBe(2)
+    expect(leida.datos.configuracion).toBeNull()
+  })
+
+  it('una copia de la versión 1 con otra cosa dañada sigue siendo inválida', () => {
+    const r = copiaV1()
+    r.datos.productos = 'no son productos'
+    expect(() => leerRespaldo(JSON.stringify(r))).toThrow(INVALIDA)
+  })
+
+  it.each<[string, AlquilerPlano | null]>([
+    ['sin configurar (null)', null],
+    ['NO_PAGA', { tipo: 'NO_PAGA' }],
+    ['MENSUAL', { tipo: 'MENSUAL', montoCentimos: 120000, dias: [31] }],
+    ['QUINCENAL', { tipo: 'QUINCENAL', montoCentimos: 60000, dias: [5, 20] }],
+    ['el monto máximo', { tipo: 'MENSUAL', montoCentimos: 9_999_999, dias: [1] }],
+  ])('acepta el local %s y lo conserva', (_nombre, alquiler) => {
+    const leida = leerRespaldo(conAlquiler(alquiler))
+    expect(leida.datos.configuracion?.alquilerDelLocal).toEqual(alquiler)
+  })
+
+  it('ida y vuelta: crear y leer conserva el QUINCENAL de S/ 600.00 con días 5 y 20', () => {
+    const original = respaldoValido()
+    const datos = {
+      ...original.datos,
+      configuracion: {
+        ...original.datos.configuracion!,
+        alquilerDelLocal: { tipo: 'QUINCENAL', montoCentimos: 60000, dias: [5, 20] },
+      },
+    } as DatosDelRespaldo
+    const texto = JSON.stringify(crearRespaldo(datos, '2026-10-15T20:30:00-05:00'))
+    expect(leerRespaldo(texto).datos.configuracion?.alquilerDelLocal).toEqual({
+      tipo: 'QUINCENAL',
+      montoCentimos: 60000,
+      dias: [5, 20],
+    })
+  })
+
+  it.each<[string, unknown]>([
+    ['la clave falta en una copia 2', undefined],
+    ['no es un objeto', 5],
+    ['es un texto', 'QUINCENAL'],
+    ['es una lista', []],
+    ['el tipo no existe', { tipo: 'SEMANAL', montoCentimos: 100, dias: [1] }],
+    ['no trae tipo', { montoCentimos: 100, dias: [1] }],
+    ['el monto es 0', { tipo: 'MENSUAL', montoCentimos: 0, dias: [5] }],
+    ['el monto es negativo', { tipo: 'MENSUAL', montoCentimos: -1, dias: [5] }],
+    ['el monto pasa del máximo', { tipo: 'MENSUAL', montoCentimos: 10_000_000, dias: [5] }],
+    ['el monto tiene decimales', { tipo: 'MENSUAL', montoCentimos: 100.5, dias: [5] }],
+    ['el monto es texto', { tipo: 'MENSUAL', montoCentimos: '600', dias: [5] }],
+    ['el monto falta', { tipo: 'MENSUAL', dias: [5] }],
+    ['los días faltan', { tipo: 'MENSUAL', montoCentimos: 100 }],
+    ['los días no son una lista', { tipo: 'MENSUAL', montoCentimos: 100, dias: 5 }],
+    ['los días están vacíos', { tipo: 'MENSUAL', montoCentimos: 100, dias: [] }],
+    ['los días de un MENSUAL son dos', { tipo: 'MENSUAL', montoCentimos: 100, dias: [5, 20] }],
+    ['los días de un QUINCENAL son uno', { tipo: 'QUINCENAL', montoCentimos: 100, dias: [5] }],
+    [
+      'los días de un QUINCENAL son iguales',
+      { tipo: 'QUINCENAL', montoCentimos: 100, dias: [5, 5] },
+    ],
+    ['un día es 0', { tipo: 'MENSUAL', montoCentimos: 100, dias: [0] }],
+    ['un día es 32', { tipo: 'MENSUAL', montoCentimos: 100, dias: [32] }],
+    ['un día es decimal', { tipo: 'MENSUAL', montoCentimos: 100, dias: [5.5] }],
+    ['un día es texto', { tipo: 'MENSUAL', montoCentimos: 100, dias: ['5'] }],
+    ['un día es nulo', { tipo: 'QUINCENAL', montoCentimos: 100, dias: [5, null] }],
+  ])('rechaza una copia 2 cuando %s', (_nombre, alquiler) => {
+    const r = JSON.parse(JSON.stringify(respaldoValido())) as Plano
+    if (alquiler === undefined) delete r.datos.configuracion.alquilerDelLocal
+    else r.datos.configuracion.alquilerDelLocal = alquiler
+    expect(() => leerRespaldo(JSON.stringify(r))).toThrow(INVALIDA)
   })
 })

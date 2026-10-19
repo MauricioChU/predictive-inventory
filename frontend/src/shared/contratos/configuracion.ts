@@ -1,5 +1,14 @@
 export type TamanoDeLetra = 'NORMAL' | 'GRANDE' | 'MUY_GRANDE'
 
+/** Costo del local (RN-AN-17). Los días de QUINCENAL van ordenados y son distintos. */
+export type AlquilerDelLocal =
+  | { tipo: 'NO_PAGA' }
+  | { tipo: 'MENSUAL'; montoCentimos: number; dias: [number] }
+  | { tipo: 'QUINCENAL'; montoCentimos: number; dias: [number, number] }
+
+/** Tope del monto de cada pago del alquiler: S/ 99 999.99. */
+export const MONTO_MAXIMO_DEL_ALQUILER_CENTIMOS = 9_999_999
+
 export interface ConfiguracionDeNegocio {
   nombreTienda: string
   diasEntreCompras: number
@@ -7,6 +16,8 @@ export interface ConfiguracionDeNegocio {
   diasMaximosDeCompra: number
   tamanoDeLetra: TamanoDeLetra
   notificacionesActivas: boolean
+  /** `null` = sin configurar. */
+  alquilerDelLocal: AlquilerDelLocal | null
 }
 
 export const CONFIGURACION_INICIAL: ConfiguracionDeNegocio = {
@@ -16,6 +27,7 @@ export const CONFIGURACION_INICIAL: ConfiguracionDeNegocio = {
   diasMaximosDeCompra: 30,
   tamanoDeLetra: 'GRANDE',
   notificacionesActivas: false,
+  alquilerDelLocal: null,
 }
 
 export const RANGOS_DE_CONFIGURACION = {
@@ -34,4 +46,8 @@ export interface EstadoDelSistema {
   ultimoRespaldoEn: string | null
   almacenamientoPersistente: EstadoDeAlmacenamiento
   ultimoResumenDelDiaMostrado: string | null
+  /** Dia del último pago del local ya avisado (RN-AL-11). */
+  ultimoPagoDelLocalAvisado: string | null
+  /** Dia en que se cerró el recordatorio del pago del local (RN-AL-10). */
+  recordatorioDelLocalCerradoEl: string | null
 }

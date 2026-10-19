@@ -11,3 +11,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Espacio de trabajo de los agentes (ledgers SDD)
+.superpowers/

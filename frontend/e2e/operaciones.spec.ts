@@ -49,7 +49,7 @@ test.describe('BarraDeTotal fuera de la forma compacta', () => {
     }) => {
       await usarLetra(page, 'GRANDE')
       await page.setViewportSize({ width: ancho, height: 800 })
-      await abrir(page, './')
+      await abrirTiendaLista(page, './')
       await crearProducto(page, LEJIA)
       await abrir(page, './vender')
       await agregarBuscando(page, 'lejia', 'Lejía 1 L')
@@ -118,7 +118,7 @@ test.describe('Vender (HU-OP-01, HU-OP-02)', () => {
     page,
   }) => {
     await usarLetra(page, 'MUY_GRANDE')
-    await abrir(page, './')
+    await abrirTiendaLista(page, './')
     await crearProducto(page, LEJIA)
     await crearProducto(page, CARBON)
     await abrir(page, './vender')
@@ -142,7 +142,7 @@ test.describe('Vender (HU-OP-01, HU-OP-02)', () => {
   test('RN-OP-05 / RN-UX-07: vender más de lo que hay se marca junto a la cantidad', async ({
     page,
   }) => {
-    await abrir(page, './')
+    await abrirTiendaLista(page, './')
     await crearProducto(page, LEJIA)
     await abrir(page, './vender')
     await agregarBuscando(page, 'lejia', 'Lejía 1 L')
@@ -157,7 +157,7 @@ test.describe('Llegó mercadería (HU-OP-03, HU-OP-09)', () => {
   test('RN-OP-14: con un costo nuevo pregunta si se actualiza el precio de compra (por defecto sí)', async ({
     page,
   }) => {
-    await abrir(page, './')
+    await abrirTiendaLista(page, './')
     const lejia = await crearProducto(page, LEJIA)
     await abrir(page, './recibir')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Llegó mercadería')
@@ -190,7 +190,7 @@ test.describe('Llegó mercadería (HU-OP-03, HU-OP-09)', () => {
     const ahora = Date.now()
     const DIA = 24 * 60 * 60 * 1000
     await page.clock.install({ time: new Date(ahora - 45 * DIA) })
-    await abrir(page, './')
+    await abrirTiendaLista(page, './')
     const escoba = await crearProducto(page, {
       nombre: 'Escoba',
       compra: '6.00',
@@ -223,7 +223,7 @@ test.describe('Llegó mercadería (HU-OP-03, HU-OP-09)', () => {
   test('RN-AN-08: abierta desde Para comprar se prellena con la lista de hoy (con los cambios del día)', async ({
     page,
   }) => {
-    await abrir(page, './')
+    await abrirTiendaLista(page, './')
     const lejia = await crearProducto(page, { ...LEJIA, stock: '2' }) // queda poco: en la lista
     await crearProducto(page, CARBON) // está bien: no va
     await cambiarCantidadEnLista(page, lejia, '5')
@@ -248,7 +248,7 @@ test.describe('Contar todo (HU-OP-10, RN-OP-21)', () => {
   test('el conteo guiado se interrumpe con "Seguir después" y al volver sigue donde quedó', async ({
     page,
   }) => {
-    await abrir(page, './')
+    await abrirTiendaLista(page, './')
     await crearProducto(page, LEJIA)
     await crearProducto(page, CARBON)
     await crearProducto(page, DETERGENTE)
@@ -285,7 +285,7 @@ test.describe('Historial (HU-OP-08, RN-OP-17)', () => {
   test('anular una venta desde el Historial devuelve el stock y la marca como anulada', async ({
     page,
   }) => {
-    await abrir(page, './')
+    await abrirTiendaLista(page, './')
     const lejia = await crearProducto(page, LEJIA)
     await venderPorCasoDeUso(page, lejia, '2')
     await abrir(page, './historial')
@@ -307,7 +307,7 @@ test.describe('Historial (HU-OP-08, RN-OP-17)', () => {
   test('el diálogo de anular: mensaje como descripción, foco adentro, Escape no anula y el foco vuelve a "Anular"', async ({
     page,
   }) => {
-    await abrir(page, './')
+    await abrirTiendaLista(page, './')
     const lejia = await crearProducto(page, LEJIA)
     await venderPorCasoDeUso(page, lejia, '2')
     await abrir(page, './historial')
@@ -357,7 +357,7 @@ test.describe('WCAG 2.4.11: el foco nunca queda tapado por la BarraDeTotal', () 
     page,
   }) => {
     await usarLetra(page, 'MUY_GRANDE')
-    await abrir(page, './')
+    await abrirTiendaLista(page, './')
     for (const nombre of ['Lejía 1 L', 'Lejía 2 L', 'Lejía 5 L', 'Lejía 10 L']) {
       await crearProducto(page, { ...LEJIA, nombre })
     }
@@ -406,7 +406,7 @@ test.describe('Pantallas de operaciones: responsive, accesibles y tocables (letr
       test.setTimeout(90_000)
       await usarLetra(page, 'MUY_GRANDE')
       await page.setViewportSize({ width: ancho, height: 800 })
-      await abrir(page, './')
+      await abrirTiendaLista(page, './')
       const lejia = await crearProducto(page, LEJIA)
       await crearProducto(page, CARBON)
       await venderPorCasoDeUso(page, lejia, '1')

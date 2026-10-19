@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { esperarSinDesplazamientoHorizontal, usarLetra } from './utilidades/calidad'
-import { abrir } from './utilidades/navegacion'
+import { abrirTiendaLista } from './utilidades/tienda'
 
 type VentanaConGanchos = Window & {
   __pruebas?: {
@@ -68,7 +68,7 @@ async function medirFilas(page: Page, titulo: string) {
 async function abrirControl(page: Page, ancho: number): Promise<void> {
   await usarLetra(page, 'MUY_GRANDE')
   await page.setViewportSize({ width: ancho, height: 800 })
-  await abrir(page, './control')
+  await abrirTiendaLista(page, './control')
   await page.evaluate(() => document.fonts.ready)
 }
 

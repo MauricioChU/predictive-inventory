@@ -295,4 +295,41 @@ describe('crearModuloAlertas', () => {
 
     expect(notificador.mostradas).toEqual([])
   })
+
+  describe('pago del local (RN-AL-10 y RN-AL-11)', () => {
+    function conAlquiler() {
+      const contexto = prepararContexto('2026-10-18T15:00:00.000Z')
+      contexto.tiendaFalsa.configuracionActual = {
+        ...contexto.tiendaFalsa.configuracionActual,
+        alquilerDelLocal: { tipo: 'MENSUAL', montoCentimos: 120000, dias: [20] },
+      }
+      return contexto
+    }
+
+    it('RN-AL-10: recordatorioDelLocal y cerrarRecordatorioDelLocal delegan correctamente', async () => {
+      const { dependencias } = conAlquiler()
+      const modulo = crearModuloAlertas(dependencias)
+
+      expect((await modulo.recordatorioDelLocal())?.texto).toBe(
+        'Pasado mañana pagas el local: S/ 1 200.00',
+      )
+      await modulo.cerrarRecordatorioDelLocal()
+      expect(await modulo.recordatorioDelLocal()).toBeNull()
+    })
+
+    it('RN-AL-11: evaluarAvisos avisa del pago, pero la re-evaluación de los eventos no', async () => {
+      const { dependencias, bus, notificador } = conAlquiler()
+      const modulo = crearModuloAlertas({ ...dependencias, ventanaDeReevaluacionMs: 0 })
+      modulo.escucharEventos()
+
+      await bus.publicar({ tipo: 'ConfiguracionActualizada' })
+      await modulo.esperarEvaluacionesPendientes()
+      expect(notificador.mostradas).toEqual([])
+
+      await modulo.evaluarAvisos()
+      expect(notificador.mostradas.map((n) => n.texto)).toEqual([
+        'Pasado mañana pagas el local: S/ 1 200.00',
+      ])
+    })
+  })
 })

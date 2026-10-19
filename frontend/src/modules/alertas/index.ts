@@ -2,11 +2,13 @@
 // (@/modules/alertas), nunca un archivo interno (ADR-0005).
 
 export { RUTA_PARA_COMPRAR, rutaDeProducto } from './domain/avisos'
+export { RUTA_DE_CONTROL } from './domain/recordatorio-del-local'
 
 export { crearModuloAlertas } from './application/modulo'
 export type {
   DependenciasDeAlertas,
   ModuloAlertas,
+  RecordatorioDelLocal,
   ResumenDeAtencion,
   ResumenDelDia,
 } from './application/modulo'

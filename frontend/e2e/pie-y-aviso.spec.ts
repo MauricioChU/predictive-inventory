@@ -10,7 +10,7 @@ import {
   esperarAvisoTodaviaVisible,
   mostrarAvisoDeshacer,
 } from './utilidades/escenarios'
-import { abrir } from './utilidades/navegacion'
+import { abrirTiendaLista } from './utilidades/tienda'
 
 const ALTO = 800
 /** Por debajo de 1024 px la navegación es una barra abajo; desde ahí, una columna lateral. */
@@ -29,7 +29,7 @@ async function desplazarA(page: Page, posicion: (typeof POSICIONES)[number]): Pr
 async function abrirPaginaLarga(page: Page, ancho: number, conAviso: boolean): Promise<void> {
   await usarLetra(page, 'MUY_GRANDE')
   await page.setViewportSize({ width: ancho, height: ALTO })
-  await abrir(page, './productos')
+  await abrirTiendaLista(page, './productos')
   await agregarContenidoLargo(page)
   if (conAviso) await mostrarAvisoDeshacer(page)
 }
@@ -118,7 +118,7 @@ const MENSAJES = [
 async function abrirConAviso(page: Page, ancho: number, mensaje: string): Promise<void> {
   await usarLetra(page, 'MUY_GRANDE')
   await page.setViewportSize({ width: ancho, height: ALTO })
-  await abrir(page, './')
+  await abrirTiendaLista(page, './')
   await page.evaluate(() => document.fonts.ready)
   await mostrarAvisoDeshacer(page, mensaje)
 }
@@ -206,7 +206,7 @@ test.describe('N1/N5: aviso Deshacer legible, con botón grande y sin tapar la n
 test('RN-SIS-07: sin violaciones graves de accesibilidad con el aviso Deshacer visible', async ({
   page,
 }) => {
-  await abrir(page, './')
+  await abrirTiendaLista(page, './')
   await mostrarAvisoDeshacer(page)
   await expect(page.getByRole('button', { name: 'Deshacer' })).toBeVisible()
   await esperarSinViolacionesGraves(page)
@@ -247,7 +247,7 @@ test.describe('m5: el foco por teclado nunca queda tapado por lo que está pegad
     test(`${ancho}px, letra Muy grande, con aviso Deshacer`, async ({ page }) => {
       await usarLetra(page, 'MUY_GRANDE')
       await page.setViewportSize({ width: ancho, height: ALTO })
-      await abrir(page, './productos')
+      await abrirTiendaLista(page, './productos')
       await agregarContenidoLargo(page, 30, true)
       await mostrarAvisoDeshacer(page)
       await page.locator('#contenido h1').focus()

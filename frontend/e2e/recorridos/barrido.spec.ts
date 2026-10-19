@@ -59,10 +59,11 @@ const TAMANOS: Record<string, readonly Tamano[]> = {
 
 /** Lo que nunca se parte a media palabra: todo lo que se lee (montos con espacios duros). */
 async function esperarSinPalabrasPartidas(page: Page): Promise<void> {
-  const partidas = [
-    ...(await palabrasPartidas(page.locator('#contenido'))),
-    ...(await palabrasPartidas(page.locator('nav'))),
-  ]
+  const partidas = [...(await palabrasPartidas(page.locator('#contenido')))]
+  // RN-UX-16: durante la primera vez no hay navegación.
+  if ((await page.locator('nav').count()) > 0) {
+    partidas.push(...(await palabrasPartidas(page.locator('nav'))))
+  }
   for (const dialogo of await page.locator('dialog[open]').all()) {
     partidas.push(...(await palabrasPartidas(dialogo)))
   }
@@ -109,11 +110,17 @@ async function esperarPantallasDeCalidad(
 }
 
 test.describe('Barrido de todas las pantallas con letra Muy grande', () => {
-  test('la primera vez y los estados vacíos', async ({ page }, testInfo) => {
-    test.setTimeout(120_000)
+  test('la primera vez (sin navegación, RN-UX-16)', async ({ page }, testInfo) => {
+    test.setTimeout(150_000)
     const tamanos = TAMANOS[testInfo.project.name]!
     await usarLetra(page, 'MUY_GRANDE')
     await esperarPantallasDeCalidad(page, PANTALLAS_DE_LA_PRIMERA_VEZ, tamanos)
+  })
+
+  test('los estados vacíos', async ({ page }, testInfo) => {
+    test.setTimeout(120_000)
+    const tamanos = TAMANOS[testInfo.project.name]!
+    await usarLetra(page, 'MUY_GRANDE')
     await abrirTiendaLista(page, './')
     await esperarPantallasDeCalidad(page, PANTALLAS_VACIAS, tamanos)
   })
