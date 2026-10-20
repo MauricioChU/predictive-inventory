@@ -102,7 +102,7 @@ test.describe('Primera vez obligatoria (RN-UX-16)', () => {
     await expect(navegacion(page)).toHaveCount(0)
 
     await page.getByRole('button', { name: 'Terminar' }).click()
-    await expect(h1(page)).toHaveText(/^Hola, Bodega Rosita/)
+    await expect(h1(page)).toHaveText(/^BODEGA ROSITA/)
     await expect(navegacion(page)).toBeVisible()
     await page.getByRole('navigation').getByRole('link', { name: /^Vender/ }).click()
     await expect(h1(page)).toHaveText('Vender')

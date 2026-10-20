@@ -31,6 +31,49 @@ textarea {
   outline: 3px solid var(--color-foco);
   outline-offset: 2px;
 }
+/*
+ * Hojas que suben desde abajo (uso: el elemento de la hoja con la clase `hoja-entra` al
+ * aparecer y `hoja-sale` antes de quitarla; su velo con `velo-entra` / `velo-sale`). Para
+ * cerrar, animarSalidaDeHoja() (shared/ui/animar-salida-de-hoja.ts) espera a que termine.
+ */
+@keyframes hoja-subir {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes hoja-bajar {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes velo-aparecer {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes velo-desaparecer {
+  to {
+    opacity: 0;
+  }
+}
+.hoja-entra {
+  animation: hoja-subir var(--duracion-hoja) var(--curva-hoja-entrar) both;
+}
+.hoja-sale {
+  animation: hoja-bajar var(--duracion-hoja) var(--curva-hoja-salir) both;
+}
+.velo-entra {
+  animation: velo-aparecer var(--duracion-hoja) ease-out both;
+}
+.velo-sale {
+  animation: velo-desaparecer var(--duracion-hoja) ease-in both;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -28,7 +28,9 @@ describe('Inicio', () => {
   }
 
   function botonCon(texto: string) {
-    const boton = pantalla!.wrapper.findAll('button, a').find((b) => b.text().includes(texto))
+    const boton = pantalla!.wrapper
+      .findAll('button, a')
+      .find((b) => b.text().includes(texto) || b.attributes('aria-label') === texto)
     if (!boton) throw new Error(`No hay un botón o enlace "${texto}"`)
     return boton
   }
@@ -49,11 +51,38 @@ describe('Inicio', () => {
     expect(router.currentRoute.value.name).toBe('primera-vez')
   })
 
-  it('saluda con el nombre de la tienda', async () => {
+  it('plan 20: el encabezado es el nombre de la tienda en mayúsculas, sin saludo ni emoji', async () => {
     await tiendaLista('Bodega Rosita')
     const { wrapper } = await abrirInicio()
 
-    expect(wrapper.get('h1').text()).toContain('Hola, Bodega Rosita')
+    expect(wrapper.get('h1').text()).toBe('BODEGA ROSITA')
+    expect(wrapper.text()).not.toContain('Hola')
+    expect(wrapper.text()).not.toContain('👋')
+  })
+
+  it('plan 20: el nombre guardado no cambia (solo se muestra en mayúsculas)', async () => {
+    await tiendaLista('Bodega Rosita')
+    await abrirInicio()
+
+    expect((await app.tienda.obtenerConfiguracion()).nombreTienda).toBe('Bodega Rosita')
+  })
+
+  it('plan 20: Ajustes es solo la tuerca, con su nombre accesible y sin texto', async () => {
+    await tiendaLista()
+    const { wrapper } = await abrirInicio()
+
+    const ajustes = wrapper.get('a.enlace-ajustes')
+    expect(ajustes.attributes('aria-label')).toBe('Ajustes')
+    expect(ajustes.text()).toBe('')
+    expect(ajustes.find('svg').exists()).toBe(true)
+  })
+
+  it('plan 20: la fecha va en mayúsculas y sin hora', async () => {
+    await tiendaLista()
+    const { wrapper } = await abrirInicio()
+
+    expect(wrapper.get('.fecha-de-hoy').text()).toMatch(/^[A-ZÁÉÍÓÚÑ]+ \d{1,2} DE [A-ZÁÉÍÓÚÑ]+$/)
+    expect(wrapper.find('.hora').exists()).toBe(false)
   })
 
   it('RN-AN-03: muestra la ganancia neta y las ventas de hoy', async () => {
@@ -149,7 +178,7 @@ describe('Inicio', () => {
     }
   })
 
-  it('orden: encabezado, fecha y hora, cifras, aviso y al final las acciones', async () => {
+  it('orden: encabezado, fecha, cifras, aviso y al final las acciones', async () => {
     await tiendaLista()
     await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '0' })
     const { wrapper } = await abrirInicio()
@@ -162,7 +191,7 @@ describe('Inicio', () => {
     }
     const orden = [
       posicion('class="saludo"'),
-      posicion('class="fecha-y-hora"'),
+      posicion('class="fecha-de-hoy"'),
       posicion('tarjeta-de-cifra'),
       posicion('aviso-en-pagina--atencion'),
       posicion('class="acciones"'),

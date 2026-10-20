@@ -106,18 +106,31 @@ describe('registrarVenta', () => {
     ).rejects.toThrow('Solo quedan 10 unid. de Lejía 1 L')
   })
 
-  it('RN-OP-07 / RN-OP-11: el mismo producto con distinto precio en dos líneas se rechaza', async () => {
+  it('RN-OP-11: parte de las unidades a otro precio queda en su propia línea y el stock suma ambas', async () => {
+    const { modulo, operaciones, stock } = await escenario()
+    const venta = await modulo.registrarVenta({
+      lineas: [
+        { productoId: 'lejia', cantidad: '4' },
+        { productoId: 'lejia', cantidad: '1', precioEspecial: '3.00' },
+      ],
+    })
+    expect((await operaciones.porId(venta.operacionId))?.movimientos).toEqual([
+      { productoId: 'lejia', cantidad: -4000, costoUnitario: 240, precioUnitario: 350 },
+      { productoId: 'lejia', cantidad: -1000, costoUnitario: 240, precioUnitario: 300 },
+    ])
+    expect(await stock('lejia')).toEqual(unidades(5))
+  })
+
+  it('RN-OP-05 / RN-OP-11: las dos líneas juntas no pueden pasar el stock', async () => {
     const { modulo, stock } = await escenario()
     await expect(
       modulo.registrarVenta({
         lineas: [
-          { productoId: 'lejia', cantidad: '1' },
-          { productoId: 'lejia', cantidad: '1', precioEspecial: '3.00' },
+          { productoId: 'lejia', cantidad: '8' },
+          { productoId: 'lejia', cantidad: '3', precioEspecial: '3.00' },
         ],
       }),
-    ).rejects.toThrow(
-      'Pusiste el mismo producto dos veces con distinto precio. Déjalo en una sola línea.',
-    )
+    ).rejects.toThrow('Solo quedan 10 unid. de Lejía 1 L')
     expect(await stock('lejia')).toEqual(unidades(10))
   })
 
@@ -296,7 +309,7 @@ describe('registrarVenta', () => {
     expect((await operaciones.porId(operacionId))?.nota).toBe('Pagó con Yape')
   })
 
-  it('RN-OP-13: lo que arma el carrito se registra tal cual', async () => {
+  it('RN-OP-12: lo que arma el carrito se registra tal cual', async () => {
     const { modulo, catalogo, stock, operaciones } = await escenario()
     const carrito = new Carrito()
     const enCarrito = async (id: string) => {

@@ -166,6 +166,28 @@ describe('validarStock', () => {
     expect(resultantes.get('carbon')).toEqual(Cantidad.deEntero(15))
   })
 
+  it('RN-OP-05 / RN-OP-11: dos líneas del mismo producto se acumulan', () => {
+    const resultantes = validarStock(
+      [
+        { productoId: 'lejia', cantidad: Cantidad.deEntero(-4) },
+        { productoId: 'lejia', cantidad: Cantidad.deEntero(-1) },
+      ],
+      stock,
+      productos,
+    )
+    expect(resultantes.get('lejia')).toEqual(Cantidad.deEntero(5))
+    expect(() =>
+      validarStock(
+        [
+          { productoId: 'lejia', cantidad: Cantidad.deEntero(-8) },
+          { productoId: 'lejia', cantidad: Cantidad.deEntero(-3) },
+        ],
+        stock,
+        productos,
+      ),
+    ).toThrow('Solo quedan 10 unid. de Lejía 1 L')
+  })
+
   it('RN-OP-05: dejar el stock exactamente en 0 está permitido', () => {
     const resultantes = validarStock(
       [{ productoId: 'lejia', cantidad: Cantidad.deEntero(-10) }],
@@ -247,6 +269,22 @@ describe('fusionarLineas', () => {
         precioDe,
       ),
     ).toThrow('Pusiste el mismo producto dos veces con distinto precio. Déjalo en una sola línea.')
+  })
+
+  it('RN-OP-11: en una venta, cada precio del mismo producto queda en su línea', () => {
+    const lineas = fusionarLineas(
+      [
+        { productoId: 'lejia', cantidad: Cantidad.deEntero(3), precio: soles('3.50') },
+        { productoId: 'lejia', cantidad: Cantidad.deEntero(1), precio: soles('3.00') },
+        { productoId: 'lejia', cantidad: Cantidad.deEntero(1), precio: soles('3.50') },
+      ],
+      precioDe,
+      'separar',
+    )
+    expect(lineas).toEqual([
+      { productoId: 'lejia', cantidad: Cantidad.deEntero(4), precio: soles('3.50') },
+      { productoId: 'lejia', cantidad: Cantidad.deEntero(1), precio: soles('3.00') },
+    ])
   })
 })
 

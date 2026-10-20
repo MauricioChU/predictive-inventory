@@ -11,7 +11,6 @@ const COMPONENTES_DEL_KIT_A = [
   'AccesosRapidos',
   'FilaDeCarrito',
   'BarraDeTotal',
-  'SelectorDeBilletes',
   'CampoFoto',
 ]
 const leer = (ruta: string) => readFileSync(new URL(ruta, import.meta.url), 'utf8')

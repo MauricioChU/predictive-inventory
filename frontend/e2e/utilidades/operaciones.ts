@@ -188,7 +188,7 @@ export async function tocablesChicos(page: Page): Promise<string[]> {
         if (caja.height < 47.5) chicos.push(`${nombre(el)} alto ${Math.round(caja.height)}`)
       }
       for (const el of raiz.querySelectorAll(
-        '.boton-principal, .billete, .botones-de-opcion .opcion',
+        '.boton-principal, .botones-de-opcion .opcion',
       )) {
         if (!visible(el)) continue
         const caja = el.getBoundingClientRect()

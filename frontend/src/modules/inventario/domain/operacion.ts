@@ -116,13 +116,17 @@ export class Operacion {
     if (campos.movimientos.length === 0) {
       throw new ErrorDeDominio('SIN_LINEAS', 'Agrega al menos un producto')
     }
+    // RN-OP-07: un producto va una sola vez, salvo en una venta con precios distintos (RN-OP-11:
+    // parte de las unidades a otro precio); solo las ventas llevan precio. Una anulación copia
+    // los movimientos de la original (ya válidos) sin precio: puede repetir el producto.
     const vistos = new Set<string>()
     for (const movimiento of campos.movimientos) {
-      if (vistos.has(movimiento.productoId)) {
+      const clave = `${movimiento.productoId}|${movimiento.precioUnitario?.centimos ?? ''}`
+      if (campos.tipo !== 'ANULACION' && vistos.has(clave)) {
         throw new Error(`La operación repite el producto ${movimiento.productoId}`)
       }
       if (movimiento.cantidad.esCero()) throw new Error('Un movimiento no puede tener cantidad 0')
-      vistos.add(movimiento.productoId)
+      vistos.add(clave)
     }
     const movimientos = Object.freeze(campos.movimientos.map((m) => Object.freeze({ ...m })))
     return new Operacion(Object.freeze({ ...campos, movimientos }))
@@ -249,7 +253,8 @@ export class Operacion {
   }
 
   get productoIds(): string[] {
-    return this.movimientos.map((m) => m.productoId)
+    // Sin repetir: una venta puede tener el mismo producto a dos precios (RN-OP-11).
+    return [...new Set(this.movimientos.map((m) => m.productoId))]
   }
 
   get ocurridaEn(): Instante {

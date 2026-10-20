@@ -82,9 +82,9 @@ const tituloDePrecios = computed(() => {
 })
 
 function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): void {
-  carrito.agregar(producto)
+  const lineaId = carrito.agregar(producto)
   anunciador.anunciar(`Agregaste ${producto.nombre}. Costo total ${textoTotal.value}`)
-  if (origen === 'resultados') void enfocarLinea(producto.id)
+  if (origen === 'resultados') void enfocarLinea(lineaId)
 }
 
 async function registrarLlegada(): Promise<void> {

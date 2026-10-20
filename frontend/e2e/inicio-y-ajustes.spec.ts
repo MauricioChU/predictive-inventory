@@ -68,14 +68,14 @@ test.describe('RN-SIS-05: primera vez', () => {
     await expect(h1(page)).toHaveText('Ahora contemos lo que tienes')
     await page.getByRole('button', { name: 'Terminar' }).click()
 
-    await expect(h1(page)).toHaveText(/^Hola, Bodega Rosita/)
+    await expect(h1(page)).toHaveText(/^BODEGA ROSITA/)
     expect(await nombresDelCatalogo(page)).toEqual(['Jabón Bolívar', 'Lejía 1 L'])
     // RN-AL-08: en toda la primera vez nunca se pidió el permiso de notificaciones.
     await expect(page.locator('html')).not.toHaveAttribute('data-pedidos-de-permiso', /.*/)
 
     // Al volver a abrir la app: ya no hay bienvenida y la letra elegida sigue.
     await abrir(page, './')
-    await expect(h1(page)).toHaveText(/^Hola, Bodega Rosita/)
+    await expect(h1(page)).toHaveText(/^BODEGA ROSITA/)
     await expect(page.locator('html')).toHaveAttribute('data-letra', 'MUY_GRANDE')
   })
 
@@ -122,7 +122,7 @@ test.describe('RN-SIS-05: guardar y restaurar una copia', () => {
     await archivo.saveAs(ruta)
     await expect(h1(page)).toHaveText('Copia guardada')
     await page.getByRole('button', { name: 'Volver al inicio' }).click()
-    await expect(h1(page)).toHaveText(/^Hola/)
+    await expect(h1(page)).toHaveText(/^BODEGA ROSITA/)
     await expect(page.getByText('guardas una copia')).toHaveCount(0)
     await page.getByRole('link', { name: 'Ajustes' }).click()
     await expect(page.getByRole('link', { name: /^Guardar copia/ })).toContainText('Tu última copia es del')
@@ -228,7 +228,7 @@ test.describe('RN-UX-01: tamaño de letra', () => {
 
     // Al volver a abrir la app, sigue igual (sale de la configuración de la tienda).
     await page.reload()
-    await expect(h1(page)).toHaveText(/^Hola/)
+    await expect(h1(page)).toHaveText(/^BODEGA ROSITA/)
     await expect(page.locator('html')).toHaveAttribute('data-letra', 'MUY_GRANDE')
     expect((await configuracionYAvisos(page)).tamanoDeLetra).toBe('MUY_GRANDE')
   })
@@ -339,7 +339,7 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
       expect(medida, `${selector} tiene caja`).not.toBeNull()
       return medida!
     }
-    const fecha = await caja('.fecha-y-hora')
+    const fecha = await caja('.fecha-de-hoy')
     const cifra = await caja('.cifra')
     const aviso = await caja('.atencion')
     const vender = await caja('.vender-fijo')

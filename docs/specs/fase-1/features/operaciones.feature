@@ -123,23 +123,45 @@ Característica: Operaciones de stock
     Y la ganancia de la venta es "S/ 1.20"
     Y el producto "Lejía 1 L" tiene precio de venta "3.50"
 
+  @RN-OP-11 @RN-OP-07
+  Escenario: Parte de las unidades a otro precio quedan en su propia línea
+    Cuando vendo "4" de "Lejía 1 L" y "1" más a precio especial "3.00"
+    Entonces el total de la venta es "S/ 17.00"
+    Y el stock de "Lejía 1 L" es "5"
+
+  @RN-OP-11 @RN-OP-05
+  Escenario: Las dos líneas del mismo producto juntas no pueden pasar el stock
+    Cuando vendo "8" de "Lejía 1 L" y "3" más a precio especial "3.00"
+    Entonces el resultado es "error: Solo quedan 10 unid. de Lejía 1 L"
+    Y el stock de "Lejía 1 L" es "10"
+
   @RN-OP-11
   Escenario: El precio especial debe ser mayor que cero
     Cuando vendo "2" de "Lejía 1 L" a precio especial "0.00"
     Entonces el resultado es "error: El precio de venta debe ser mayor que S/ 0.00"
 
-  @RN-OP-13
-  Esquema del escenario: Calcular el vuelto
-    Dado un carrito con total "S/ 14.63"
-    Cuando el cliente paga "<pagado>"
+  @RN-OP-22
+  Esquema del escenario: El panel de venta muestra cuántas unidades quedan tras la venta
+    Cuando pongo "<cantidad>" de "<producto>" en el panel de venta
     Entonces se muestra "<mensaje>"
-    Y el cobro <puede> confirmarse
 
     Ejemplos:
-      | pagado | mensaje          | puede   |
-      | 20.00  | Vuelto S/ 5.37   | puede   |
-      | 14.63  | Vuelto S/ 0.00   | puede   |
-      | 10.00  | Faltan S/ 4.63   | no puede |
+      | producto  | cantidad | mensaje        |
+      | Lejía 1 L | 3        | Quedan 7 unid. |
+      | Lejía 1 L | 9        | Queda 1 unid.  |
+      | Lejía 1 L | 10       | Se acaba       |
+      | Carbón    | 2.5      | Quedan 7.5 kg  |
+
+  @RN-OP-22
+  Escenario: Confirmar desde el panel registra la venta con Ahora
+    Cuando vendo "2" de "Lejía 1 L"
+    Entonces el stock de "Lejía 1 L" es "8"
+    Y la venta ocurrió el "2026-10-15 10:00"
+
+  @RN-OP-22
+  Escenario: Con Otro día el panel registra la venta en el día y la hora elegidos
+    Cuando vendo "1" de "Lejía 1 L" con fecha "2026-10-14 18:30"
+    Entonces la venta ocurrió el "2026-10-14 18:30"
 
   @RN-OP-14
   Escenario: Si el costo de la mercadería cambió, se ofrece actualizar el precio de compra

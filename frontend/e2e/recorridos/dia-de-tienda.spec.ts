@@ -1,8 +1,8 @@
 // Plan 16, ítem 1: un día de tienda entero, tocando la pantalla (RN-SIS-05). Las cuentas:
 //   Lejía Tradicional 1 L  compra 2.40 · venta 3.50 · mínimo 3 · stock 10
 //   Jabón Bolívar          compra 1.20 · venta 2.00 · mínimo 4 · stock 6
-//   1. Venta: 2 Lejía = S/ 7.00 (gana 2.20), paga con S/ 10 → vuelto S/ 3.00.
-//   2. Venta: 3 Jabón + 1 Lejía = S/ 9.50 (gana 3.50), paga con S/ 20 → vuelto S/ 10.50.
+//   1. Venta: 2 Lejía = S/ 7.00 (gana 2.20).
+//   2. Venta: 3 Jabón + 1 Lejía = S/ 9.50 (gana 3.50).
 //   3. Venta: 1 Lejía, y se deshace (no cuenta).
 //   4. Para comprar sugiere 5 Jabón (sin historia: 2 × 4 − 3); llegan a S/ 1.30 (precio nuevo).
 //   5. Se derrama 1 Lejía: pérdida S/ 2.40.  6. Se cuentan 7 Jabón (había 8): −S/ 1.30 aparte. Al final quedan 7 Lejía y 9 Jabón.
@@ -10,6 +10,7 @@
 //   Hoy: vendiste S/ 18.50, ganaste 6.40 − 2.40 = S/ 4.00. Anular la venta 2: S/ 9.00 y S/ 0.50.
 import { expect, test, type Page } from '@playwright/test'
 import {
+  abrirDetalleDeVenta,
   abrirProducto,
   comoSeLee,
   crearProductoPorPantalla,
@@ -52,7 +53,7 @@ async function esperarStockEnElDetalle(
 }
 
 test.describe('Recorrido: un día de tienda', () => {
-  test('ventas con vuelto y Deshacer, llegada desde Para comprar, pérdida, conteo; Inicio, Control e Historial cuadran', async ({
+  test('ventas con panel de venta y Deshacer, llegada desde Para comprar, pérdida, conteo; Inicio, Control e Historial cuadran', async ({
     page,
   }) => {
     test.setTimeout(90_000)
@@ -76,15 +77,13 @@ test.describe('Recorrido: un día de tienda', () => {
       stock: '6',
     })
 
-    await test.step('1–2. Dos ventas con vuelto', async () => {
+    await test.step('1–2. Dos ventas con el panel de venta', async () => {
       await irA(page, 'Inicio')
       await page.getByRole('button', { name: 'Vender' }).click()
       await venderPorPantalla(
         page,
         [{ buscado: 'lejia', nombre: LEJIA, cantidad: 2 }],
-        'S/ 10',
         'S/ 7.00',
-        'Vuelto S/ 3.00',
       )
       await nuevaVenta(page)
       await venderPorPantalla(
@@ -93,20 +92,19 @@ test.describe('Recorrido: un día de tienda', () => {
           { buscado: 'jabon', nombre: JABON, cantidad: 3 },
           { buscado: 'lejia', nombre: LEJIA, cantidad: 1 },
         ],
-        'S/ 20',
         'S/ 9.50',
-        'Vuelto S/ 10.50',
       )
       await nuevaVenta(page)
     })
 
     await test.step('3. Una venta que se deshace (RN-OP-18)', async () => {
-      await venderPorPantalla(page, [{ buscado: 'lejia', nombre: LEJIA, cantidad: 1 }], 'Exacto', 'S/ 3.50')
+      await venderPorPantalla(page, [{ buscado: 'lejia', nombre: LEJIA, cantidad: 1 }], 'S/ 3.50')
       await page.getByRole('button', { name: /^Deshacer/ }).click()
       await expect(page.locator('.resultado-de-deshacer')).toContainText(
         comoSeLee('Deshiciste la venta de S/ 3.50. Tus productos volvieron al carrito.'),
       )
       // Vuelve al carrito para corregirla; aquí no se vende.
+      await abrirDetalleDeVenta(page)
       await page.getByRole('button', { name: `Quitar ${LEJIA}` }).click()
       await expect(lineaDelCarrito(page, LEJIA)).toHaveCount(0)
       await esperarCifrasDeInicio(page, 'Hoy ganaste S/ 5.70 Vendiste S/ 16.50')
@@ -166,7 +164,7 @@ test.describe('Recorrido: un día de tienda', () => {
 
     await test.step('7. Una venta con el costo nuevo; Inicio y Control cuadran (RN-AN-02/03)', async () => {
       await irA(page, 'Vender')
-      await venderPorPantalla(page, [{ buscado: 'jabon', nombre: JABON, cantidad: 1 }], 'Exacto', 'S/ 2.00')
+      await venderPorPantalla(page, [{ buscado: 'jabon', nombre: JABON, cantidad: 1 }], 'S/ 2.00')
       await esperarCifrasDeInicio(page, 'Hoy ganaste S/ 4.00 Vendiste S/ 18.50')
 
       await esperarCifrasDeControl(page, 'Hoy ganaste S/ 4.00 Vendiste S/ 18.50')

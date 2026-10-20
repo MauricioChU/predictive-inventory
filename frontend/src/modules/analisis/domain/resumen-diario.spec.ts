@@ -82,6 +82,16 @@ describe('ResumenDiario', () => {
 })
 
 describe('aportes de una operación a la proyección', () => {
+  it('RN-OP-11: el mismo producto en dos líneas cuenta una sola "vez vendido" y suma todo', () => {
+    const venta = nuevaOperacion('VENTA', '2026-10-15 10:00', [
+      { ...LEJIA, cantidad: '4' },
+      { ...LEJIA, cantidad: '1' },
+    ])
+    const aportes = aportesDeOperacion(venta).filter((a) => a.productoId === 'lejia')
+    expect(aportes.reduce((suma, a) => suma + a.lineasVendidas, 0)).toBe(1)
+    expect(aportes.reduce((suma, a) => suma + a.cantidadVendida.milesimas, 0)).toBe(5000)
+  })
+
   it('RN-AN-02: una venta de tres líneas suma bien por producto y día', () => {
     const venta = nuevaOperacion('VENTA', '2026-10-15 10:00', [
       { ...LEJIA, cantidad: '2' },

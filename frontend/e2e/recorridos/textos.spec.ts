@@ -110,7 +110,6 @@ test.describe('Los textos de la spec, exactos', () => {
     await venderPorPantalla(
       page,
       [{ buscado: 'lejia', nombre: 'Lejía Tradicional 1 L', cantidad: 1 }],
-      'Exacto',
       'S/ 3.50',
     )
     // El reloj salta 13 s (pasados los 10 s y los 2 s de margen para un toque justo al cerrar)

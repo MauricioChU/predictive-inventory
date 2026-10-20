@@ -17,7 +17,7 @@ function enumerar(nombres: readonly string[]): string {
  * pantalla con un carrito no vacío, cada línea se vuelve a leer con los casos de uso y se pone
  * al día (stock, precio de siempre, archivados fuera, ver `CarritoDePantalla.refrescar`); lo que
  * se quitó se dice con un aviso visible y anunciado. `preciosActuales()` es lo que se lee al
- * confirmar una venta, para cobrar exactamente lo que se ve.
+ * confirmar una venta, para confirmar exactamente lo que se ve.
  */
 export function usarCarritoAlDia(carrito: CarritoDePantalla) {
   const aplicacion = useAplicacion()
