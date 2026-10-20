@@ -51,7 +51,7 @@ export async function esperarSinDesplazamientoHorizontal(page: Page): Promise<vo
 /** RN-SIS-07 */
 export async function esperarSinViolacionesGraves(page: Page): Promise<void> {
   // Lo que está apareciendo (semitransparente) se mide ya quieto: si no, el contraste da mal.
-  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+  await page.evaluate(() => Promise.allSettled(document.getAnimations().map((a) => a.finished)))
   const resultado = await new AxeBuilder({ page }).analyze()
   const graves = resultado.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
   expect(graves.map((v) => `${v.id}: ${v.help}`)).toEqual([])

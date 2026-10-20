@@ -11,6 +11,7 @@ import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import PantallaExito from '@/shared/ui/componentes/PantallaExito.vue'
+import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
 import { usarPantallaAncha } from '@/shared/ui/usar-pantalla-ancha'
 import BuscadorDeProductos, { type OrigenDeLaEleccion } from './BuscadorDeProductos.vue'
 import CuandoFue from './CuandoFue.vue'
@@ -189,13 +190,19 @@ async function nuevaVenta(): Promise<void> {
 
 <template>
   <div class="vista-vender" :class="{ 'vista-vender--con-panel': !esPC && paso === 'carrito' }">
-    <PantallaExito v-if="paso === 'exito'" titulo="Venta registrada" :detalle="detalleDeExito">
+    <PantallaExito
+      v-if="paso === 'exito'"
+      titulo="Venta registrada"
+      :detalle="detalleDeExito"
+      al-centro
+    >
       <ul v-if="vendido.length > 0" class="vendido" aria-label="Lo que vendiste">
         <li v-for="linea in vendido" :key="linea.id" class="linea-vendida">
           <span class="nombre-vendido">{{ linea.nombre }}</span>
           <span class="importe-vendido">{{ linea.importe }}</span>
           <span class="detalle-vendido">
-            {{ linea.detalle }}<template v-if="linea.especial"> · Precio especial</template>
+            {{ pegarCifras(linea.detalle)
+            }}<template v-if="linea.especial"> · Precio especial</template>
           </span>
         </li>
       </ul>

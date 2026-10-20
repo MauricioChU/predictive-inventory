@@ -303,7 +303,10 @@ function alPresionarEnter(evento: KeyboardEvent) {
           etiqueta-oculta
           @update:model-value="emit('update:cantidad', $event)"
         />
+        <!-- Mientras se edita un precio se oculta: su "Cancelar" no se confunde con el del
+             formulario (uno saca el producto, el otro solo cierra la edición). -->
         <button
+          v-if="!algunaEdicion"
           type="button"
           class="accion-liviana accion-liviana--quitar"
           :aria-label="`${textoQuitar} ${nombre}`"

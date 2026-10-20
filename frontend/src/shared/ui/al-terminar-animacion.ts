@@ -9,19 +9,20 @@ export function alTerminarAnimacion(
   elemento: HTMLElement | undefined,
   alTerminar: () => void,
 ): void {
+  const animaciones =
+    elemento && typeof elemento.getAnimations === 'function' ? elemento.getAnimations() : []
+  if (animaciones.length === 0) {
+    alTerminar()
+    return
+  }
   let terminado = false
   const terminar = (): void => {
     if (terminado) return
     terminado = true
+    clearTimeout(respaldo)
     alTerminar()
   }
-  const animaciones =
-    elemento && typeof elemento.getAnimations === 'function' ? elemento.getAnimations() : []
-  if (animaciones.length === 0) {
-    terminar()
-    return
-  }
-  void Promise.all(animaciones.map((a) => a.finished)).then(terminar, terminar)
-  // Respaldo: nunca queda a medio cerrar.
-  setTimeout(terminar, 1000)
+  // Respaldo: nunca queda a medio cerrar (se limpia si las animaciones terminan antes).
+  const respaldo = setTimeout(terminar, 1000)
+  void Promise.allSettled(animaciones.map((a) => a.finished)).then(terminar)
 }
