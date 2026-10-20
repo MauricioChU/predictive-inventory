@@ -534,6 +534,9 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     const linea = () => lineas(p)[0]!
 
     await boton(linea(), '¿Vendiste alguno a otro precio?').trigger('click')
+    // Con el formulario abierto no se confirma: primero guardar o cancelar.
+    expect(confirmar(p).attributes('disabled')).toBeDefined()
+    expect(panel(p).get('.aviso-bloqueo').text()).toBe('Guarda o cancela el precio para confirmar.')
     const [cuantos, precio] = linea().findAll('.separar input')
     expect(linea().get('.separar').text()).toContain('¿Cuántos? (de 2)')
     expect((cuantos!.element as HTMLInputElement).value).toBe('1')
@@ -559,6 +562,12 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     expect(lineas(p)[1]!.text()).toContain('Precio especial')
     expect(lineas(p)[1]!.text()).toContain('Quedan 8 unid.')
     expect(total(p)).toBe('S/ 6.50')
+    expect(confirmar(p).attributes('disabled')).toBeUndefined()
+    expect(panel(p).find('.aviso-bloqueo').exists()).toBe(false)
+    // El enlace va solo en la línea con el precio de siempre, nunca en la de precio especial.
+    await cambiarCantidad(p, 1, '2')
+    expect(lineas(p)[1]!.find('.otro-precio').exists()).toBe(false)
+    await cambiarCantidad(p, 1, '1')
 
     await confirmarVenta(p)
     const [venta] = await app.inventario.historial({ tipo: 'VENTA' })

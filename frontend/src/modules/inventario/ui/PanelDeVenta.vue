@@ -3,6 +3,7 @@ import { computed, nextTick, ref, useId } from 'vue'
 import { Check, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import { formatearEntero, plural } from '@/shared/domain/formato'
 import { usarAltoObservado } from '@/shared/ui/alto-observado'
+import { animarSalidaDeHoja } from '@/shared/ui/animar-salida-de-hoja'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import type { CarritoDePantalla } from './carrito-de-pantalla'
 import CuandoFue from './CuandoFue.vue'
@@ -41,6 +42,11 @@ const refTitulo = ref<HTMLElement>()
 const refAlternar = ref<HTMLElement>()
 const refPie = ref<HTMLElement>()
 const refCabecera = ref<HTMLElement>()
+const refHoja = ref<HTMLElement>()
+/** Mientras la hoja baja (animación compartida de base.css), antes de quedar oculta. */
+const cerrando = ref(false)
+/** RN-OP-11: con un formulario de precio abierto no se confirma: primero guardar o cancelar. */
+const bloqueado = computed(() => props.carrito.hayEdicionAbierta.value)
 
 // El foco por teclado nunca queda debajo del panel (WCAG 2.4.11), como con BarraDeTotal.
 usarAltoObservado(refRaiz, { variable: '--alto-barra-de-total' })
@@ -54,10 +60,20 @@ const cuenta = computed(() => {
 })
 
 async function alternar(): Promise<void> {
-  const abrir = !props.expandido
-  emit('update:expandido', abrir)
-  await nextTick()
-  ;(abrir ? refTitulo.value : refAlternar.value)?.focus()
+  if (cerrando.value) return
+  if (!props.expandido) {
+    emit('update:expandido', true)
+    await nextTick()
+    refTitulo.value?.focus()
+    return
+  }
+  // Baja despacio y recién después queda oculta.
+  cerrando.value = true
+  animarSalidaDeHoja(refHoja.value, () => {
+    cerrando.value = false
+    emit('update:expandido', false)
+    void nextTick(() => refAlternar.value?.focus())
+  })
 }
 
 /** Escape oculta el detalle (además de su botón). */
@@ -75,8 +91,14 @@ function ocultarConEscape(): void {
     @keydown.esc="ocultarConEscape"
   >
     <!-- Tocar fuera de la hoja también la oculta (comodidad: el botón siempre está). -->
-    <div v-if="expandido" class="velo" aria-hidden="true" @click="alternar" />
-    <div class="hoja">
+    <div
+      v-if="expandido"
+      class="velo"
+      :class="cerrando ? 'velo-sale' : 'velo-entra'"
+      aria-hidden="true"
+      @click="alternar"
+    />
+    <div ref="refHoja" class="hoja" :class="{ 'hoja-entra': expandido && !cerrando }">
       <div ref="refCabecera" class="cabecera-del-panel">
         <div class="asa" aria-hidden="true" />
         <!-- Tocar el título también abre y oculta (comodidad: el botón es lo que lee el lector). -->
@@ -116,11 +138,14 @@ function ocultarConEscape(): void {
           >
           <span class="total">{{ textoTotal }}</span>
         </p>
+        <p v-if="bloqueado" class="aviso-bloqueo" role="status">
+          Guarda o cancela el precio para confirmar.
+        </p>
         <BotonPrincipal
           class="confirmar"
           texto="Confirmar venta"
           :icono="Check"
-          :deshabilitado="registrando"
+          :deshabilitado="registrando || bloqueado"
           @click="emit('confirmar')"
         />
       </div>
@@ -266,7 +291,6 @@ function ocultarConEscape(): void {
   overscroll-behavior: contain;
   scroll-padding-block-start: var(--alto-cabecera-del-panel, 4.5rem);
   scroll-padding-block-end: var(--alto-pie-del-panel, 8rem);
-  animation: abrir-hoja 0.18s ease-out;
 }
 .panel-de-venta--abierto .cabecera-del-panel {
   position: sticky;
@@ -323,14 +347,9 @@ function ocultarConEscape(): void {
     scroll-padding-block: 0;
   }
 }
-@keyframes abrir-hoja {
-  from {
-    transform: translateY(1.5rem);
-    opacity: 0.6;
-  }
-  to {
-    transform: none;
-    opacity: 1;
-  }
+.aviso-bloqueo {
+  margin: 0;
+  color: var(--color-advertencia);
+  font-weight: 700;
 }
 </style>

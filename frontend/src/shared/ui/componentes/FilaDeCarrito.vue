@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, useId } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
 import { Check, Pencil, Tag, Trash2 } from 'lucide-vue-next'
 import type { Unidad } from '@/shared/domain/cantidad'
 import { SIMBOLO_DE_UNIDAD } from '@/shared/domain/formato'
@@ -85,6 +85,8 @@ const emit = defineEmits<{
   cambiarPrecio: [precio: string]
   /** RN-OP-11: esas unidades (sin validar) a ese precio (sin validar), en otra línea. */
   separar: [unidades: string, precio: string]
+  /** Se abrió o cerró un formulario de precio (para no confirmar con algo sin guardar). */
+  edicionAbierta: [abierta: boolean]
   /** Se cerró la edición sin guardar (Cancelar, Escape o "Cambiar precio" otra vez). */
   cancelarPrecio: []
   quitar: []
@@ -159,6 +161,12 @@ async function guardar() {
 
 // RN-OP-11: "¿Vendiste alguno a otro precio?"
 const separando = ref(false)
+const algunaEdicion = computed(() => editando.value || separando.value)
+watch(algunaEdicion, (abierta) => emit('edicionAbierta', abierta))
+// La línea puede desaparecer con el formulario abierto (se juntó con otra o se quitó).
+onBeforeUnmount(() => {
+  if (algunaEdicion.value) emit('edicionAbierta', false)
+})
 const cuantos = ref('1')
 const precioSeparado = ref('')
 const refSeparar = ref<HTMLElement>()

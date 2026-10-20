@@ -75,6 +75,9 @@ export function usarCarrito(concepto: Concepto) {
   const marcarVacias = ref(false)
   /** RN-OP-09 / HU-OP-07: ahora u otro día (hasta 7 días atrás). Va con el carrito (r1 M3). */
   const cuando = ref<Cuando>(cuandoInicial(hoyEnLaTienda(new Date())))
+  /** Líneas con un formulario de precio abierto: mientras haya, no se confirma (lo escrito sin
+   * guardar sería un error de registro involuntario). */
+  const ediciones = ref(new Set<string>())
 
   const precioBase = (producto: ProductoVista): Dinero =>
     concepto === 'venta' ? producto.precioVenta : producto.precioCompra
@@ -182,6 +185,15 @@ export function usarCarrito(concepto: Concepto) {
     total,
     hayErrores,
     vacio: computed(() => lineas.value.length === 0),
+    hayEdicionAbierta: computed(() => lineas.value.some((linea) => ediciones.value.has(linea.id))),
+
+    /** La fila avisa si abrió o cerró un formulario de precio (cambiar u otro precio). */
+    marcarEdicion(id: string, abierta: boolean): void {
+      const nuevas = new Set(ediciones.value)
+      if (abierta) nuevas.add(id)
+      else nuevas.delete(id)
+      ediciones.value = nuevas
+    },
 
     /**
      * RN-OP-07: si el producto ya está con su precio de siempre, suma 1 a esa línea; si no, lo
@@ -291,6 +303,7 @@ export function usarCarrito(concepto: Concepto) {
     /** Después de registrar: vacío y "ahora" otra vez. */
     vaciar(): void {
       lineas.value = []
+      ediciones.value = new Set()
       marcarVacias.value = false
       cuando.value = cuandoInicial(hoyEnLaTienda(new Date()))
     },

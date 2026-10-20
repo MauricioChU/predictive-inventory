@@ -140,6 +140,11 @@ function esVenderEnCelular(page: Page): boolean {
 
 const alternarDelPanel = (page: Page) => page.locator('.panel-de-venta .alternar')
 
+/** La hoja sube y baja despacio (--duracion-hoja): se sigue con ella ya quieta. */
+export async function esperarAnimaciones(page: Page): Promise<void> {
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+}
+
 /** Celular: abre el detalle del panel de venta (líneas, "quedan", ¿Cuándo fue?). Si ya está abierto, nada. */
 export async function abrirDetalleDeVenta(page: Page): Promise<void> {
   if ((page.viewportSize()?.width ?? 0) >= 1024) return // PC: el carrito ya está a la vista
@@ -147,6 +152,7 @@ export async function abrirDetalleDeVenta(page: Page): Promise<void> {
   await expect(alternar).toBeVisible()
   if ((await alternar.getAttribute('aria-expanded')) === 'false') await alternar.click()
   await expect(alternar).toHaveAttribute('aria-expanded', 'true')
+  await esperarAnimaciones(page)
 }
 
 /** Celular: cierra el detalle del panel de venta si estaba abierto (vuelve al compacto). */
@@ -155,6 +161,7 @@ export async function cerrarDetalleDeVenta(page: Page): Promise<void> {
   if ((await alternar.count()) === 0) return
   if ((await alternar.getAttribute('aria-expanded')) === 'true') await alternar.click()
   await expect(alternar).toHaveAttribute('aria-expanded', 'false')
+  await esperarAnimaciones(page)
 }
 
 /**

@@ -50,9 +50,10 @@ watch(
 )
 
 const UNA = Cantidad.deEntero(1)
-/** RN-OP-11: al vender más de una, se puede vender alguna a otro precio. */
+/** RN-OP-11: al vender más de una, se puede vender alguna a otro precio. Solo desde la línea
+ * con el precio de siempre (las de precio especial ya son la parte separada). */
 function sePuedePartir(linea: (typeof lineas.value)[number]): boolean {
-  return esVenta.value && (linea.cantidadLeida?.mayorQue(UNA) ?? false)
+  return esVenta.value && !linea.precioCambiado && (linea.cantidadLeida?.mayorQue(UNA) ?? false)
 }
 
 const POR_UNIDAD = { UNIDAD: 'c/u', KILO: 'el kg', LITRO: 'el L' } as const
@@ -100,6 +101,7 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
           @update:cantidad="carrito.cambiarCantidad(linea.id, $event)"
           @cambiar-precio="carrito.cambiarPrecio(linea.id, $event)"
           @separar="(unidades, precio) => carrito.cambiarPrecio(linea.id, precio, unidades)"
+          @edicion-abierta="carrito.marcarEdicion(linea.id, $event)"
           @cancelar-precio="carrito.cancelarPrecio(linea.id)"
           @quitar="quitar(linea.id, linea.producto.nombre)"
         />

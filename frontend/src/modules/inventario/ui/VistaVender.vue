@@ -92,6 +92,11 @@ async function revisarFecha(): Promise<void> {
 
 async function confirmar(): Promise<void> {
   if (registrando.value) return
+  if (carrito.hayEdicionAbierta.value) {
+    // RN-OP-11: un precio escrito sin guardar no se registra por error.
+    anunciador.anunciar('Guarda o cancela el precio para confirmar.')
+    return
+  }
   carrito.marcarVacias()
   if (carrito.hayErrores.value) {
     // Lo que falla se ve y se toca junto a su campo: el panel se abre y el foco va ahí.
@@ -214,7 +219,7 @@ async function nuevaVenta(): Promise<void> {
             :texto-total="textoTotal"
             texto-accion="Confirmar venta"
             :icono="Check"
-            :deshabilitado="registrando"
+            :deshabilitado="registrando || carrito.hayEdicionAbierta.value"
             @accion="confirmar"
           />
         </template>
@@ -279,8 +284,8 @@ async function nuevaVenta(): Promise<void> {
 .panel-enter-active,
 .panel-leave-active {
   transition:
-    transform 0.2s ease-out,
-    opacity 0.2s ease-out;
+    transform var(--duracion-hoja) var(--curva-hoja-salir),
+    opacity var(--duracion-hoja) ease-out;
 }
 /* Al entrar, solo un fundido: un transform en la sección haría que la hoja abierta (fixed) se
    ubique respecto a ella y no a la pantalla mientras dura. La hoja sube con su propia animación. */
