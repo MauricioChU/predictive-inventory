@@ -534,6 +534,23 @@ function alPresionarEnter(evento: KeyboardEvent) {
 .precio-tocable:hover {
   text-decoration-thickness: 2px;
 }
+/* Línea angosta (320–360 px con letra Muy grande): el importe baja bajo el nombre, para que
+   el nombre tenga todo el ancho y ninguna palabra se parta. */
+@container (max-width: 14rem) {
+  .arriba :deep(.foto-de-producto) {
+    grid-row: 1 / span 4;
+  }
+  .arriba .nombre {
+    grid-column: 2 / span 2;
+  }
+  .arriba .importe {
+    grid-column: 2 / span 2;
+    grid-row: auto;
+    justify-self: start;
+    text-align: start;
+    align-items: flex-start;
+  }
+}
 .precio-tocable--especial {
   color: var(--color-advertencia);
 }

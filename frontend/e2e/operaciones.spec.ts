@@ -193,7 +193,7 @@ test.describe('Panel de venta (RN-OP-22)', () => {
     // Nada se escapa del recorte del panel: al final de la página, la navegación queda pegada
     // al borde de abajo (sin un hueco en blanco debajo).
     const hueco = await page.evaluate(() => {
-      window.scrollTo(0, document.documentElement.scrollHeight)
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' })
       return innerHeight - document.querySelector('nav')!.getBoundingClientRect().bottom
     })
     expect(Math.abs(hueco)).toBeLessThan(2)

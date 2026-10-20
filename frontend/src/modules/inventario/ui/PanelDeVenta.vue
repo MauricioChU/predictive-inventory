@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, useId } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, useId, type Ref } from 'vue'
 import { Check, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import { formatearEntero, plural } from '@/shared/domain/formato'
 import { usarAltoObservado } from '@/shared/ui/alto-observado'
@@ -8,6 +8,19 @@ import type { CarritoDePantalla } from './carrito-de-pantalla'
 import CuandoFue from './CuandoFue.vue'
 import type { Cuando, ErrorDeFecha } from './cuando'
 import ListaDelCarrito from './ListaDelCarrito.vue'
+
+function usarPantallaBaja(): Ref<boolean> {
+  const baja = ref(false)
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return baja
+  const consulta = window.matchMedia('(max-height: 520px)')
+  baja.value = consulta.matches
+  const alCambiar = (evento: { matches: boolean }): void => {
+    baja.value = evento.matches
+  }
+  consulta.addEventListener('change', alCambiar)
+  onBeforeUnmount(() => consulta.removeEventListener('change', alCambiar))
+  return baja
+}
 
 /**
  * RN-OP-22 — el panel de venta (celular, < 1024 px): una hoja pegada abajo, sobre la
@@ -41,8 +54,14 @@ const refTitulo = ref<HTMLElement>()
 const refAlternar = ref<HTMLElement>()
 const refPie = ref<HTMLElement>()
 
-// El foco por teclado nunca queda debajo del panel (WCAG 2.4.11), como con BarraDeTotal.
-usarAltoObservado(refRaiz, { variable: '--alto-barra-de-total' })
+/** Pantalla baja (celular en horizontal): el panel va en el flujo, no pegado abajo (ver CSS). */
+const pantallaBaja = usarPantallaBaja()
+// El foco por teclado nunca queda debajo del panel (WCAG 2.4.11), como con BarraDeTotal. Si no
+// está pegado abajo, no tapa nada: no reserva lugar.
+usarAltoObservado(
+  computed(() => (pantallaBaja.value ? undefined : refRaiz.value)),
+  { variable: '--alto-barra-de-total' },
+)
 // Dentro de la hoja, lo enfocado se desplaza por encima del pie (total y Confirmar venta).
 usarAltoObservado(refPie, { variable: '--alto-pie-del-panel' })
 
@@ -260,10 +279,18 @@ function ocultarConEscape(): void {
   gap: var(--espacio-1);
   padding-block-start: 0;
 }
-/* Pantalla baja (celular en horizontal): más alto para las líneas y sin asa. */
+/* Pantalla baja (celular en horizontal): una hoja pegada abajo taparía casi todo (la grilla y
+   las líneas quedarían fuera de la vista al recibir el foco). Va en el flujo, al final de la
+   página, sin alto máximo: todo se alcanza desplazando la página. */
 @media (max-height: 520px) {
+  .panel-de-venta {
+    position: static;
+  }
   .hoja {
-    max-block-size: calc(100dvh - var(--alto-pie, 0px) - var(--espacio-5));
+    max-block-size: none;
+  }
+  .detalle {
+    overflow: visible;
   }
   .asa {
     display: none;
