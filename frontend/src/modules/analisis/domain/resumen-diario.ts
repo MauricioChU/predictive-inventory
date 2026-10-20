@@ -175,7 +175,12 @@ export class ResumenDiario implements DatosDeResumen {
  */
 export function aportesDeOperacion(op: OperacionRegistro): ResumenDiario[] {
   const dia = diaDe(op.ocurridaEn)
+  // "Veces vendido" cuenta una por producto y venta, aunque el producto vaya en dos líneas con
+  // precios distintos (RN-OP-11).
+  const yaContados = new Set<string>()
   return op.movimientos.map((m) => {
+    const primeraVez = !yaContados.has(m.productoId)
+    yaContados.add(m.productoId)
     const cantidad = Cantidad.deMilesimas(m.cantidad)
     const absoluta = cantidad.abs()
     const costo = Dinero.deCentimos(m.costoUnitario)
@@ -184,7 +189,7 @@ export function aportesDeOperacion(op: OperacionRegistro): ResumenDiario[] {
       case 'VENTA':
         return ResumenDiario.crear({
           ...base,
-          lineasVendidas: 1,
+          lineasVendidas: primeraVez ? 1 : 0,
           cantidadVendida: absoluta,
           ventas: Dinero.deCentimos(m.precioUnitario ?? 0).multiplicarPor(absoluta),
           costoVendido: costo.multiplicarPor(absoluta),

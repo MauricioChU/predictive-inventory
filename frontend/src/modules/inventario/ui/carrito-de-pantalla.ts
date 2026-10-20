@@ -200,7 +200,9 @@ export function usarCarrito(concepto: Concepto) {
      * agrega con cantidad 1. Devuelve el id de la línea.
      */
     agregar(producto: ProductoVista): string {
-      const existente = conPrecioDeSiempre(producto.id)
+      // En Llegó mercadería una línea por producto (los costos distintos no se separan).
+      const existente =
+        concepto === 'venta' ? conPrecioDeSiempre(producto.id) : delProducto(producto.id)
       if (!existente) {
         const id = nuevoId()
         lineas.value.push({ id, producto, cantidad: '1', precio: precioBase(producto) })
@@ -235,6 +237,10 @@ export function usarCarrito(concepto: Concepto) {
       }
       const todas = leerSinError(linea)
       let parte: Cantidad | null = null
+      if (concepto === 'venta' && unidades !== undefined && !todas) {
+        linea.errorUnidades = 'Escribe primero la cantidad'
+        return
+      }
       if (concepto === 'venta' && unidades !== undefined && todas) {
         try {
           parte = leerCantidad(unidades, linea.producto.unidad)

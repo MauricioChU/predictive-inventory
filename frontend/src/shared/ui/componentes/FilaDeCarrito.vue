@@ -183,6 +183,7 @@ const errorCuantosLocal = computed(() => {
 const errorCuantos = computed(() => errorCuantosLocal.value ?? props.errorUnidades)
 
 function abrirSeparar() {
+  if (editando.value) emit('cancelarPrecio')
   editando.value = false
   cuantos.value = '1'
   precioSeparado.value = props.valorPrecio ?? ''

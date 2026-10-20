@@ -117,11 +117,12 @@ export class Operacion {
       throw new ErrorDeDominio('SIN_LINEAS', 'Agrega al menos un producto')
     }
     // RN-OP-07: un producto va una sola vez, salvo en una venta con precios distintos (RN-OP-11:
-    // parte de las unidades a otro precio); solo las ventas llevan precio.
+    // parte de las unidades a otro precio); solo las ventas llevan precio. Una anulación copia
+    // los movimientos de la original (ya válidos) sin precio: puede repetir el producto.
     const vistos = new Set<string>()
     for (const movimiento of campos.movimientos) {
       const clave = `${movimiento.productoId}|${movimiento.precioUnitario?.centimos ?? ''}`
-      if (vistos.has(clave)) {
+      if (campos.tipo !== 'ANULACION' && vistos.has(clave)) {
         throw new Error(`La operación repite el producto ${movimiento.productoId}`)
       }
       if (movimiento.cantidad.esCero()) throw new Error('Un movimiento no puede tener cantidad 0')

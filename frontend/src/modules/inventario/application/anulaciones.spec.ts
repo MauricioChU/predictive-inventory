@@ -16,6 +16,19 @@ async function conVentaDe2Lejias() {
 }
 
 describe('anularOperacion', () => {
+  it('RN-OP-11 / RN-OP-17: una venta con el mismo producto a dos precios se anula entera', async () => {
+    const { modulo, stock } = await escenario()
+    const { operacionId } = await modulo.registrarVenta({
+      lineas: [
+        { productoId: 'lejia', cantidad: '4' },
+        { productoId: 'lejia', cantidad: '1', precioEspecial: '3.00' },
+      ],
+    })
+    expect(await stock('lejia')).toEqual(unidades(5))
+    await modulo.anularOperacion({ operacionId })
+    expect(await stock('lejia')).toEqual(unidades(10))
+  })
+
   it('RN-OP-02 / RN-OP-17: corregir una venta no la borra: se anula y el stock vuelve', async () => {
     const { modulo, ventaId, stock, tipos, operaciones } = await conVentaDe2Lejias()
     const { anulacionId } = await modulo.anularOperacion({ operacionId: ventaId })

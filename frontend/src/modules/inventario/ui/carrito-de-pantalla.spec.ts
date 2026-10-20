@@ -52,6 +52,14 @@ describe('carrito de pantalla', () => {
     expect(carrito.lineas.value[0]!.quedan).toBeUndefined()
   })
 
+  it('Llegó mercadería: tocar otra vez un producto con el costo cambiado suma a su línea', () => {
+    const carrito = usarCarrito('ingreso')
+    const id = carrito.agregar(LEJIA)
+    carrito.cambiarPrecio(id, '2.10')
+    expect(carrito.agregar(LEJIA)).toBe(id)
+    expect(carrito.lineas.value.map((l) => [l.cantidad, l.precio.centimos])).toEqual([['2', 210]])
+  })
+
   it('r2 #4: agregarFaltantes no repite un producto que ya estaba ni uno repetido en la lista', () => {
     const carrito = usarCarrito('ingreso')
     carrito.agregar(LEJIA)
