@@ -17,12 +17,16 @@ export type Concepto = 'venta' | 'ingreso'
 
 /** Una línea tal como está en pantalla: la cantidad es lo que la persona escribió. */
 export interface LineaDePantalla {
+  /** Propio de la línea: el mismo producto puede ir en dos líneas con distinto precio (RN-OP-11). */
+  id: string
   producto: ProductoVista
   cantidad: string
   /** El precio aplicado (venta) o el costo (ingreso). */
   precio: Dinero
   /** Error del último precio escrito en la edición en línea (FilaDeCarrito.errorPrecio). */
   errorPrecio?: string
+  /** Error de "¿Para cuántas?" en la misma edición (solo al vender). */
+  errorUnidades?: string
 }
 
 /** Lo que había en el carrito al registrar: Deshacer lo devuelve tal cual (fecha incluida). */
@@ -44,6 +48,9 @@ export interface LineaCalculada extends LineaDePantalla {
 }
 
 const UNA = Cantidad.deEntero(1)
+
+let ultimoId = 0
+const nuevoId = (): string => `linea-${(ultimoId += 1)}`
 
 function mensajeDe(error: unknown): string {
   if (esErrorDeDominio(error)) return error.message
@@ -72,7 +79,30 @@ export function usarCarrito(concepto: Concepto) {
   const precioBase = (producto: ProductoVista): Dinero =>
     concepto === 'venta' ? producto.precioVenta : producto.precioCompra
 
-  function calcular(linea: LineaDePantalla): LineaCalculada {
+  function leerSinError(linea: LineaDePantalla): Cantidad | null {
+    try {
+      return leerCantidad(linea.cantidad, linea.producto.unidad)
+    } catch {
+      return null
+    }
+  }
+
+  /** Lo que lleva cada producto entre todas sus líneas (RN-OP-05 vale por producto). */
+  function totalesPorProducto(): Map<string, Cantidad> {
+    const totales = new Map<string, Cantidad>()
+    for (const linea of lineas.value) {
+      const cantidad = leerSinError(linea)
+      if (!cantidad) continue
+      const previo = totales.get(linea.producto.id) ?? Cantidad.cero()
+      totales.set(linea.producto.id, previo.sumar(cantidad))
+    }
+    return totales
+  }
+
+  function calcular(
+    linea: LineaDePantalla,
+    totales: ReadonlyMap<string, Cantidad> = totalesPorProducto(),
+  ): LineaCalculada {
     const precioCambiado = !linea.precio.igualA(precioBase(linea.producto))
     const base = { ...linea, precioCambiado }
     if (linea.cantidad.trim() === '') {
@@ -90,8 +120,9 @@ export function usarCarrito(concepto: Concepto) {
       return { ...base, cantidadLeida: null, importe: null, errorCantidad: mensajeDe(error) }
     }
     const { producto } = linea
+    const delProducto = totales.get(producto.id) ?? cantidad
     const errorCantidad =
-      concepto === 'venta' && cantidad.mayorQue(producto.stock)
+      concepto === 'venta' && delProducto.mayorQue(producto.stock)
         ? `${mensajeStockInsuficiente(producto.nombre, producto.unidad, producto.stock)}. ${AYUDA_STOCK_INSUFICIENTE.venta}`
         : undefined
     return {
@@ -101,12 +132,15 @@ export function usarCarrito(concepto: Concepto) {
       errorCantidad,
       quedan:
         concepto === 'venta'
-          ? mensajeDeLoQueQueda(producto.stock, cantidad, producto.unidad)
+          ? mensajeDeLoQueQueda(producto.stock, delProducto, producto.unidad)
           : undefined,
     }
   }
 
-  const calculadas = computed(() => lineas.value.map(calcular))
+  const calculadas = computed(() => {
+    const totales = totalesPorProducto()
+    return lineas.value.map((linea) => calcular(linea, totales))
+  })
   /** RN-OP-12: suma de los importes de línea (las que todavía no se pueden leer no suman). */
   const total = computed(() =>
     Dinero.sumarTodos(
@@ -117,7 +151,30 @@ export function usarCarrito(concepto: Concepto) {
     calculadas.value.some((linea) => linea.cantidadLeida === null || linea.errorCantidad),
   )
 
-  const buscar = (productoId: string) => lineas.value.find((l) => l.producto.id === productoId)
+  const buscar = (id: string) => lineas.value.find((l) => l.id === id)
+  const delProducto = (productoId: string) => lineas.value.find((l) => l.producto.id === productoId)
+  const conPrecioDeSiempre = (productoId: string) =>
+    lineas.value.find(
+      (l) => l.producto.id === productoId && l.precio.igualA(precioBase(l.producto)),
+    )
+
+  /**
+   * RN-OP-07: dos líneas del mismo producto con el mismo precio se juntan en la primera (pasa
+   * al volver una parte al precio de siempre o al darle a otra parte el mismo precio especial).
+   */
+  function juntarIguales(): void {
+    const juntas: LineaDePantalla[] = []
+    for (const linea of lineas.value) {
+      const igual = juntas.find(
+        (l) => l.producto.id === linea.producto.id && l.precio.igualA(linea.precio),
+      )
+      const a = igual ? leerSinError(igual) : null
+      const b = igual ? leerSinError(linea) : null
+      if (igual && a && b) igual.cantidad = formatearNumero(a.sumar(b))
+      else juntas.push(linea)
+    }
+    lineas.value = juntas
+  }
 
   return {
     lineas: calculadas,
@@ -126,45 +183,82 @@ export function usarCarrito(concepto: Concepto) {
     hayErrores,
     vacio: computed(() => lineas.value.length === 0),
 
-    /** RN-OP-07: si el producto ya está, suma 1 a su línea; si no, lo agrega con cantidad 1. */
-    agregar(producto: ProductoVista): void {
-      const existente = buscar(producto.id)
+    /**
+     * RN-OP-07: si el producto ya está con su precio de siempre, suma 1 a esa línea; si no, lo
+     * agrega con cantidad 1. Devuelve el id de la línea.
+     */
+    agregar(producto: ProductoVista): string {
+      const existente = conPrecioDeSiempre(producto.id)
       if (!existente) {
-        lineas.value.push({ producto, cantidad: '1', precio: precioBase(producto) })
-        return
+        const id = nuevoId()
+        lineas.value.push({ id, producto, cantidad: '1', precio: precioBase(producto) })
+        return id
       }
       existente.producto = producto
       const actual = calcular(existente).cantidadLeida
       existente.cantidad = actual ? formatearNumero(actual.sumar(UNA)) : '1'
+      return existente.id
     },
 
-    cambiarCantidad(productoId: string, texto: string): void {
-      const linea = buscar(productoId)
+    cambiarCantidad(id: string, texto: string): void {
+      const linea = buscar(id)
       if (linea) linea.cantidad = texto
     },
 
     /**
      * Sincrónico a propósito (contrato de FilaDeCarrito.errorPrecio): lee el precio con el
-     * dominio y deja el error junto al campo, o aplica el precio nuevo.
+     * dominio y deja el error junto al campo, o aplica el precio nuevo. RN-OP-11: al vender,
+     * `unidades` (menos que las de la línea) separa esas unidades en otra línea con este precio.
      */
-    cambiarPrecio(productoId: string, texto: string): void {
-      const linea = buscar(productoId)
+    cambiarPrecio(id: string, texto: string, unidades?: string): void {
+      const linea = buscar(id)
       if (!linea) return
+      let precio: Dinero
       try {
-        linea.precio = concepto === 'venta' ? leerPrecioDeVenta(texto) : leerCosto(texto)
+        precio = concepto === 'venta' ? leerPrecioDeVenta(texto) : leerCosto(texto)
         linea.errorPrecio = undefined
       } catch (error) {
         linea.errorPrecio = mensajeDe(error)
+        return
       }
+      const todas = leerSinError(linea)
+      let parte: Cantidad | null = null
+      if (concepto === 'venta' && unidades !== undefined && todas) {
+        try {
+          parte = leerCantidad(unidades, linea.producto.unidad)
+        } catch {
+          parte = null
+        }
+        if (!parte || !parte.esPositiva() || parte.mayorQue(todas)) {
+          linea.errorUnidades = `Escribe cuántas, de 1 a ${formatearNumero(todas)}`
+          return
+        }
+      }
+      linea.errorUnidades = undefined
+      if (!parte || !todas || parte.igualA(todas)) {
+        linea.precio = precio
+      } else {
+        linea.cantidad = formatearNumero(todas.restar(parte))
+        const posicion = lineas.value.indexOf(linea) + 1
+        lineas.value.splice(posicion, 0, {
+          id: nuevoId(),
+          producto: linea.producto,
+          cantidad: formatearNumero(parte),
+          precio,
+        })
+      }
+      juntarIguales()
     },
 
-    cancelarPrecio(productoId: string): void {
-      const linea = buscar(productoId)
-      if (linea) linea.errorPrecio = undefined
+    cancelarPrecio(id: string): void {
+      const linea = buscar(id)
+      if (!linea) return
+      linea.errorPrecio = undefined
+      linea.errorUnidades = undefined
     },
 
-    quitar(productoId: string): void {
-      lineas.value = lineas.value.filter((l) => l.producto.id !== productoId)
+    quitar(id: string): void {
+      lineas.value = lineas.value.filter((l) => l.id !== id)
     },
 
     /**
@@ -204,7 +298,11 @@ export function usarCarrito(concepto: Concepto) {
     /** Lo que había antes (Deshacer deja el carrito como estaba para corregirlo). */
     copia(): CopiaDelCarrito {
       return {
-        lineas: lineas.value.map((l) => ({ ...l, errorPrecio: undefined })),
+        lineas: lineas.value.map((l) => ({
+          ...l,
+          errorPrecio: undefined,
+          errorUnidades: undefined,
+        })),
         cuando: { ...cuando.value },
       }
     },
@@ -255,8 +353,8 @@ export function usarCarrito(concepto: Concepto) {
       // r2 #4: tampoco se repite un producto que venga dos veces en la lista (vale el primero).
       let agregados = 0
       for (const { producto, cantidad, precio } of productos) {
-        if (buscar(producto.id)) continue
-        lineas.value.push({ producto, cantidad: formatearNumero(cantidad), precio })
+        if (delProducto(producto.id)) continue
+        lineas.value.push({ id: nuevoId(), producto, cantidad: formatearNumero(cantidad), precio })
         agregados += 1
       }
       return agregados

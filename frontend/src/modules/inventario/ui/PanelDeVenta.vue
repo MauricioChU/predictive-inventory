@@ -10,14 +10,15 @@ import type { Cuando, ErrorDeFecha } from './cuando'
 import ListaDelCarrito from './ListaDelCarrito.vue'
 
 /**
- * RN-OP-22 — el panel de venta (celular, < 1024 px): una hoja que sube desde abajo al agregar el
- * primer producto. Dos estados, siempre con botón (RN-UX-05, nada de deslizar):
- * - compacto: "En esta venta · N productos", el total y Confirmar venta; va en el flujo de la
- *   pantalla (sticky, justo sobre el pie), así reserva su lugar y no tapa la grilla;
- * - expandido: cubre la pantalla salvo un margen y suma las líneas (con cuánto queda de cada
- *   una) y ¿Cuándo fue la venta?; el total y Confirmar venta quedan siempre a la vista abajo.
- * Al abrir, el foco va al título; al cerrar, vuelve al botón que lo abrió. La asa de arriba es
- * solo un dibujo de la forma de la hoja.
+ * RN-OP-22 — el panel de venta (celular, < 1024 px): una hoja pegada abajo, sobre la
+ * navegación, que aparece ya abierta al agregar el primer producto. Siempre en el flujo de la
+ * pantalla (sticky): reserva su lugar, así la grilla de arriba se sigue viendo y tocando para
+ * agregar más. Dos estados, siempre con botón (RN-UX-05, nada de deslizar):
+ * - abierto (por defecto): las líneas (con cuánto queda de cada una) y ¿Cuándo fue la venta?;
+ *   mide lo que ocupa su contenido (sin huecos) y, con muchas, las líneas se desplazan dentro;
+ * - oculto: solo el título, el total (con cuántos productos) y Confirmar venta.
+ * El total y Confirmar venta quedan siempre a la vista abajo. Al abrir u ocultar con el botón,
+ * el foco va al título o vuelve al botón. La asa de arriba es solo un dibujo.
  */
 const props = defineProps<{
   carrito: CarritoDePantalla
@@ -39,19 +40,12 @@ const refRaiz = ref<HTMLElement>()
 const refTitulo = ref<HTMLElement>()
 const refAlternar = ref<HTMLElement>()
 const refPie = ref<HTMLElement>()
-const refCabecera = ref<HTMLElement>()
-/** El alto del panel compacto: se reserva mientras la hoja abierta flota sobre la pantalla. */
-const reserva = ref(0)
 
 // El foco por teclado nunca queda debajo del panel (WCAG 2.4.11), como con BarraDeTotal.
 usarAltoObservado(refRaiz, { variable: '--alto-barra-de-total' })
-// Abierta, la hoja se desplaza y el total con Confirmar venta queda pegado abajo: lo enfocado
-// se desplaza por encima de ese pie (scroll-padding), nunca debajo.
+// Dentro de la hoja, lo enfocado se desplaza por encima del pie (total y Confirmar venta).
 usarAltoObservado(refPie, { variable: '--alto-pie-del-panel' })
-usarAltoObservado(refCabecera, { variable: '--alto-cabecera-del-panel' })
 
-/** "1 producto" / "3 productos": va aparte del título para que, abierta la hoja junto a
- * "Cerrar", baje entera a su renglón en vez de partirse a la mitad. */
 const cuenta = computed(() => {
   const n = props.carrito.lineas.value.length
   return `${formatearEntero(n)} ${plural(n, 'producto', 'productos')}`
@@ -59,14 +53,13 @@ const cuenta = computed(() => {
 
 async function alternar(): Promise<void> {
   const abrir = !props.expandido
-  if (abrir) reserva.value = refRaiz.value?.offsetHeight ?? 0
   emit('update:expandido', abrir)
   await nextTick()
   ;(abrir ? refTitulo.value : refAlternar.value)?.focus()
 }
 
-/** Escape cierra la hoja abierta (además de su botón). */
-function cerrarConEscape(): void {
+/** Escape oculta el detalle (además de su botón). */
+function ocultarConEscape(): void {
   if (props.expandido) void alternar()
 }
 </script>
@@ -76,20 +69,15 @@ function cerrarConEscape(): void {
     ref="refRaiz"
     class="panel-de-venta"
     :class="{ 'panel-de-venta--abierto': expandido }"
-    :style="expandido ? { minBlockSize: `${reserva}px` } : undefined"
     :aria-labelledby="idTitulo"
-    @keydown.esc="cerrarConEscape"
+    @keydown.esc="ocultarConEscape"
   >
-    <!-- Tocar fuera de la hoja también la cierra (comodidad: el botón Cerrar siempre está). -->
-    <div v-if="expandido" class="velo" aria-hidden="true" @click="alternar" />
     <div class="hoja">
-      <div ref="refCabecera" class="cabecera-del-panel">
+      <div class="cabecera-del-panel">
         <div class="asa" aria-hidden="true" />
-        <!-- Tocar el título también abre y cierra (comodidad: el botón es lo que lee el lector). -->
-        <!-- Se lee "En esta venta · 3 productos" (el separador queda para el lector cuando la
-             cuenta baja a su renglón). -->
+        <!-- Tocar el título también abre y oculta (comodidad: el botón es lo que lee el lector). -->
         <h2 :id="idTitulo" ref="refTitulo" class="titulo-carrito" tabindex="-1" @click="alternar">
-          En esta venta<span class="cuenta"><span class="separador"> · </span>{{ cuenta }}</span>
+          En esta venta
         </h2>
         <button
           ref="refAlternar"
@@ -99,7 +87,7 @@ function cerrarConEscape(): void {
           :aria-controls="expandido ? idDetalle : undefined"
           @click="alternar"
         >
-          <span>{{ expandido ? 'Cerrar' : 'Ver detalle' }}</span>
+          <span>{{ expandido ? 'Ocultar' : 'Ver detalle' }}</span>
           <component :is="expandido ? ChevronDown : ChevronUp" aria-hidden="true" class="icono" />
         </button>
       </div>
@@ -107,6 +95,7 @@ function cerrarConEscape(): void {
       <div v-if="expandido" :id="idDetalle" class="detalle">
         <ListaDelCarrito :carrito="carrito" concepto="venta" texto-vacio="" compacta />
         <CuandoFue
+          class="cuando-del-panel"
           :model-value="cuando"
           pregunta="¿Cuándo fue la venta?"
           :error="errorFecha"
@@ -118,7 +107,9 @@ function cerrarConEscape(): void {
 
       <div ref="refPie" class="pie-del-panel">
         <p class="total-del-panel">
-          <span class="etiqueta">Total</span>
+          <span class="etiqueta"
+            >Total <span class="cuenta">· {{ cuenta }}</span></span
+          >
           <span class="total">{{ textoTotal }}</span>
         </p>
         <BotonPrincipal
@@ -134,27 +125,21 @@ function cerrarConEscape(): void {
 </template>
 
 <style scoped>
-/* Compacto: pegado sobre el pie global (navegación + aviso Deshacer), de borde a borde del
-   contenido (cubre el relleno de <main>). Reserva su propio lugar: no tapa lo de arriba. */
+/* Pegado sobre el pie global (navegación + aviso Deshacer), de borde a borde del contenido
+   (cubre el relleno de <main>). Va en el flujo: reserva su lugar y no tapa lo de arriba. */
 .panel-de-venta {
   position: sticky;
   bottom: var(--alto-pie, 0px);
   z-index: 5;
   margin: var(--espacio-4) calc(-1 * var(--espacio-4)) calc(-1 * var(--espacio-4));
 }
-/* La hoja es una cuadrícula: compacto = título · total y "Ver detalle" · Confirmar venta. */
 .hoja {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    'asa asa'
-    'titulo titulo'
-    'total alternar'
-    'avisos avisos'
-    'confirmar confirmar';
-  align-items: center;
-  gap: 0 var(--espacio-3);
+  display: flex;
+  flex-direction: column;
   max-inline-size: var(--ancho-contenido);
+  /* Abierta, mide lo que ocupa su contenido, sin huecos; con muchas líneas llega casi arriba
+     (deja ver el borde de la grilla) y las líneas se desplazan dentro. */
+  max-block-size: calc(100dvh - var(--alto-pie, 0px) - 4.5rem);
   margin-inline: auto;
   padding: var(--espacio-2) var(--espacio-4) var(--espacio-3);
   border: 1px solid var(--color-borde-foto);
@@ -163,16 +148,22 @@ function cerrarConEscape(): void {
   background: var(--color-superficie);
   box-shadow: var(--sombra-flotante);
 }
-/* Compacto: asa, título y botón son celdas de la hoja (la cabecera no dibuja caja). */
 .cabecera-del-panel {
-  display: contents;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'asa asa'
+    'titulo alternar';
+  align-items: center;
+  gap: 0 var(--espacio-3);
+  flex: none;
 }
 .asa {
   grid-area: asa;
   justify-self: center;
   inline-size: 2.5rem;
   block-size: 4px;
-  margin-block-end: var(--espacio-2);
+  margin-block-end: var(--espacio-1);
   border-radius: 999px;
   background: var(--color-borde);
   opacity: 0.55;
@@ -189,21 +180,7 @@ function cerrarConEscape(): void {
   outline: none;
 }
 .cuenta {
-  white-space: nowrap;
-}
-/* Abierta, "Cerrar" va al lado: la cuenta baja a su propio renglón, más chica. El separador
-   " · " queda solo para el lector (sigue diciendo "En esta venta · 3 productos"). */
-.panel-de-venta--abierto .cuenta {
-  display: block;
-  color: var(--color-texto-suave);
-  font-size: 0.95rem;
-}
-.panel-de-venta--abierto .separador {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
+  font-weight: 400;
   white-space: nowrap;
 }
 .alternar {
@@ -227,150 +204,78 @@ function cerrarConEscape(): void {
   block-size: 1.25em;
   flex: none;
 }
+/* Las líneas y la fecha: lo único que se desplaza; el título y el pie quedan fijos. */
 .detalle {
-  grid-area: detalle;
-  align-self: stretch;
+  /* Contenedor de lo posicionado adentro (los textos solo para el lector): si no, quedan fuera
+     del recorte del desplazamiento y alargan la página (hueco blanco bajo la navegación). */
+  position: relative;
+  flex: 0 1 auto;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: var(--espacio-3);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--espacio-4);
-  /* Aire para el anillo de foco de los campos que tocan el borde de la hoja. */
-  padding: 4px;
-  margin: 0 -4px var(--espacio-3);
+  gap: var(--espacio-3);
+  /* Aire para el anillo de foco de los campos que tocan el borde. */
+  padding: 0 4px var(--espacio-3);
+  margin: 0 -4px;
+  border-block-end: 1px solid var(--color-borde-foto);
+}
+.cuando-del-panel {
+  gap: var(--espacio-2);
 }
 .avisos-del-panel {
-  grid-area: avisos;
+  flex: none;
   min-inline-size: 0;
-  margin-block-end: var(--espacio-2);
+  margin-block-start: var(--espacio-2);
 }
-/* Compacto: el total y Confirmar venta son celdas de la hoja (el pie no dibuja caja); "Total"
-   va arriba del monto, para dejarle lugar a "Ver detalle" al lado. */
 .pie-del-panel {
-  display: contents;
+  flex: none;
+  display: grid;
+  gap: var(--espacio-2);
+  padding-block-start: var(--espacio-2);
 }
 .total-del-panel {
-  grid-area: total;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacio-3);
   margin: 0;
-  line-height: 1.1;
+  line-height: 1.15;
 }
 .etiqueta {
   color: var(--color-texto-suave);
   font-weight: 700;
-  white-space: nowrap;
 }
 .total {
   /* Un monto nunca se parte. */
   font-size: 1.6rem;
   font-weight: 700;
-  line-height: 1.15;
   white-space: nowrap;
 }
-.confirmar {
-  grid-area: confirmar;
-}
 
-/* Pantalla baja (celular en horizontal): el compacto se achata a dos filas — título y Ver detalle,
-   total y Confirmar venta — para dejarle lugar a la grilla. */
+/* Oculto: lo mínimo, para dejarle lugar a la grilla. */
+.panel-de-venta:not(.panel-de-venta--abierto) .pie-del-panel {
+  gap: var(--espacio-1);
+  padding-block-start: 0;
+}
+/* Pantalla baja (celular en horizontal): más alto para las líneas y sin asa. */
 @media (max-height: 520px) {
-  .panel-de-venta:not(.panel-de-venta--abierto) .hoja {
-    grid-template-areas:
-      'titulo alternar'
-      'avisos avisos'
-      'total confirmar';
+  .hoja {
+    max-block-size: calc(100dvh - var(--alto-pie, 0px) - var(--espacio-5));
   }
-  .panel-de-venta:not(.panel-de-venta--abierto) .asa {
+  .asa {
     display: none;
   }
 }
-
-/* Expandido: la hoja cubre la pantalla salvo un margen arriba y deja la navegación a la vista.
-   El panel conserva su lugar en la página (min-block-size en línea), así nada salta al abrir.
-   Título y "Cerrar" arriba, las líneas se desplazan en medio, y el total y Confirmar venta quedan
-   siempre a la vista abajo. */
 .panel-de-venta--abierto .hoja {
-  position: fixed;
-  inset-inline: 0;
-  inset-block-end: var(--alto-pie, 0px);
-  z-index: 8;
-  box-sizing: border-box;
-  inline-size: 100%;
-  block-size: calc(100dvh - var(--alto-pie, 0px) - var(--espacio-5));
-  /* La hoja entera se desplaza (también en celular horizontal o con letra Muy grande, donde las
-     líneas no entran); el total y Confirmar venta quedan pegados abajo, siempre a la vista. */
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scroll-padding-block-start: var(--alto-cabecera-del-panel, 4.5rem);
-  scroll-padding-block-end: var(--alto-pie-del-panel, 8rem);
-  padding-block: 0;
-  grid-template-areas:
-    'cabecera'
-    'detalle'
-    'avisos'
-    'pie';
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto 1fr auto auto;
   animation: abrir-hoja 0.18s ease-out;
-}
-.panel-de-venta--abierto .cabecera-del-panel {
-  grid-area: cabecera;
-  position: sticky;
-  inset-block-start: 0;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    'asa asa'
-    'titulo alternar';
-  align-items: center;
-  gap: 0 var(--espacio-3);
-  margin-inline: calc(-1 * var(--espacio-4));
-  padding: var(--espacio-2) var(--espacio-4) 0;
-  background: var(--color-superficie);
-}
-.panel-de-venta--abierto .total-del-panel,
-.panel-de-venta--abierto .confirmar {
-  grid-area: auto;
-}
-.panel-de-venta--abierto .pie-del-panel {
-  grid-area: pie;
-  position: sticky;
-  inset-block-end: 0;
-  display: grid;
-  gap: var(--espacio-1);
-  margin-inline: calc(-1 * var(--espacio-4));
-  padding: var(--espacio-2) var(--espacio-4) var(--espacio-3);
-  border-block-start: 1px solid var(--color-borde-foto);
-  background: var(--color-superficie);
-}
-.panel-de-venta--abierto .total-del-panel {
-  flex-direction: row;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--espacio-3);
-}
-.velo {
-  position: fixed;
-  inset: 0 0 var(--alto-pie, 0px) 0;
-  z-index: 7;
-  background: rgb(18 26 24 / 0.45);
-}
-/* Pantalla baja (celular en horizontal): no queda lugar para un título y un pie fijos; todo
-   se desplaza junto, con Confirmar venta al final. */
-@media (max-height: 520px) {
-  .panel-de-venta--abierto .cabecera-del-panel,
-  .panel-de-venta--abierto .pie-del-panel {
-    position: static;
-  }
-  .panel-de-venta--abierto .hoja {
-    scroll-padding-block: 0;
-  }
 }
 @keyframes abrir-hoja {
   from {
-    transform: translateY(1.5rem);
-    opacity: 0.6;
+    transform: translateY(1rem);
+    opacity: 0.7;
   }
   to {
     transform: none;

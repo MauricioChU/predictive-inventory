@@ -32,7 +32,7 @@ export async function registrarVenta(
       costoUnitario: producto.precioCompra,
     })
   }
-  const fusionadas = fusionarLineas(lineas, (l) => l.precioUnitario)
+  const fusionadas = fusionarLineas(lineas, (l) => l.precioUnitario, 'separar')
   const venta = Operacion.venta(await datosDeRegistro(ctx, momentos, datos.nota), fusionadas)
   await ctx.libro.registrar(venta, datosDeProductos(fusionadas.map((l) => l.producto)))
   return { operacionId: venta.id }

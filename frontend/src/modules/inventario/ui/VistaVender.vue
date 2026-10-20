@@ -26,8 +26,8 @@ import { usarDeshacer } from './usar-deshacer'
 
 /**
  * Vender (HU-OP-01, RN-OP-22; 06-experiencia-de-uso): buscar o tocar un más vendido → al agregar
- * el primer producto sube el panel de venta (total y Confirmar venta; abierto, las líneas con
- * cuánto queda de cada una y ¿Cuándo fue la venta?) → Confirmar venta → pantalla de éxito con
+ * el primer producto sube el panel de venta ya abierto (las líneas con cuánto queda; oculto, solo
+ * el total y Confirmar venta) → Confirmar venta → pantalla de éxito con
  * Deshacer (10 s) → Nueva venta, vacía. En PC (≥ 1024 px) el carrito va a la derecha, sin panel.
  */
 type Paso = 'carrito' | 'exito'
@@ -63,10 +63,13 @@ watch(carrito.vacio, (vacio) => {
 })
 
 function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): void {
-  carrito.agregar(producto)
+  // RN-OP-22: con el primer producto el panel aparece ya abierto (el foco se queda en la grilla
+  // para seguir agregando).
+  if (carrito.vacio.value) expandido.value = true
+  const lineaId = carrito.agregar(producto)
   anunciador.anunciar(`Agregaste ${producto.nombre}`)
-  // En celular el panel va compacto: no hay línea a la que llevar el foco.
-  if (origen === 'resultados' && esPC.value) void enfocarLinea(producto.id)
+  // En celular el foco se queda en la grilla, para seguir agregando.
+  if (origen === 'resultados' && esPC.value) void enfocarLinea(lineaId)
 }
 
 async function abrirDetalle(): Promise<void> {
@@ -167,8 +170,7 @@ async function nuevaVenta(): Promise<void> {
 
     <template v-else>
       <EncabezadoPagina titulo="Vender" />
-      <!-- Con la hoja abierta (celular), los avisos de atrás tampoco se alcanzan. -->
-      <div class="avisos" :inert="!esPC && expandido ? true : undefined">
+      <div class="avisos">
         <AvisoEnPagina
           v-if="alDia.quitados.value.length > 0"
           tono="atencion"
@@ -212,8 +214,8 @@ async function nuevaVenta(): Promise<void> {
 
       <!-- Celular: la grilla ocupa la pantalla y el panel sube cuando hay algo en la venta. -->
       <template v-else>
-        <!-- Con la hoja abierta, lo de atrás no se alcanza (ni con Tab ni con el lector). -->
-        <div class="buscador" :inert="expandido ? true : undefined">
+        <!-- La hoja abierta no tapa la grilla: se siguen tocando productos para agregarlos. -->
+        <div class="buscador">
           <BuscadorDeProductos concepto="venta" @elegir="agregar" />
         </div>
         <Transition name="panel">

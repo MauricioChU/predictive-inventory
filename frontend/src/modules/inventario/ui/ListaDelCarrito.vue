@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import { Cantidad } from '@/shared/domain/cantidad'
 import { formatearDinero } from '@/shared/domain/formato'
 import { useAnunciador } from '@/shared/ui/anunciador'
 import FilaDeCarrito from '@/shared/ui/componentes/FilaDeCarrito.vue'
@@ -30,9 +31,9 @@ const refRaiz = ref<HTMLElement>()
  * la última línea del panel de venta, el panel baja y desaparece: el foco va al título de la
  * pantalla.
  */
-async function quitar(productoId: string, nombre: string): Promise<void> {
+async function quitar(lineaId: string, nombre: string): Promise<void> {
   const contenedor = refRaiz.value?.closest<HTMLElement>('.columna-carrito, .panel-de-venta')
-  props.carrito.quitar(productoId)
+  props.carrito.quitar(lineaId)
   anunciador.anunciar(`Quitaste ${nombre}`)
   await nextTick()
   if (props.carrito.vacio.value && contenedor?.classList.contains('panel-de-venta')) {
@@ -47,6 +48,12 @@ watch(
   (productos) => void fotos.cargar(productos),
   { immediate: true },
 )
+
+const UNA = Cantidad.deEntero(1)
+/** RN-OP-11: al vender más de una, el precio nuevo puede ser solo para algunas. */
+function sePuedePartir(linea: (typeof lineas.value)[number]): boolean {
+  return esVenta.value && (linea.cantidadLeida?.mayorQue(UNA) ?? false)
+}
 
 const POR_UNIDAD = { UNIDAD: 'c/u', KILO: 'el kg', LITRO: 'el L' } as const
 const esVenta = computed(() => props.concepto === 'venta')
@@ -63,9 +70,10 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
     <ul v-else role="list" class="lineas" :class="{ 'lineas--compactas': compacta }">
       <li
         v-for="linea in lineas"
-        :key="linea.producto.id"
+        :key="linea.id"
         class="linea"
         :data-producto="linea.producto.id"
+        :data-linea="linea.id"
         tabindex="-1"
       >
         <FilaDeCarrito
@@ -85,11 +93,13 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
           :valor-precio="textoDePrecio(linea.precio)"
           :error-cantidad="linea.errorCantidad"
           :error-precio="linea.errorPrecio"
+          :partir-unidades="sePuedePartir(linea)"
+          :error-unidades="linea.errorUnidades"
           :compacta="compacta"
-          @update:cantidad="carrito.cambiarCantidad(linea.producto.id, $event)"
-          @cambiar-precio="carrito.cambiarPrecio(linea.producto.id, $event)"
-          @cancelar-precio="carrito.cancelarPrecio(linea.producto.id)"
-          @quitar="quitar(linea.producto.id, linea.producto.nombre)"
+          @update:cantidad="carrito.cambiarCantidad(linea.id, $event)"
+          @cambiar-precio="(precio, unidades) => carrito.cambiarPrecio(linea.id, precio, unidades)"
+          @cancelar-precio="carrito.cancelarPrecio(linea.id)"
+          @quitar="quitar(linea.id, linea.producto.nombre)"
         />
       </li>
     </ul>

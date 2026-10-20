@@ -84,6 +84,18 @@ export function pasosDeOperaciones(pasos: Pasos): void {
     },
   )
 
+  accion(
+    pasos,
+    'vendo {string} de {string} y {string} más a precio especial {string}',
+    async (m: Mundo, cantidad: string, nombre: string, otras: string, precio: string) => {
+      const productoId = await m.idDe(nombre)
+      await m.vender([
+        { productoId, cantidad },
+        { productoId, cantidad: otras, precioEspecial: precio },
+      ])
+    },
+  )
+
   accion(pasos, 'vendo:', async (m: Mundo, extra: ArgumentoExtra) => {
     await m.vender(await lineasDeLaTabla(m, extra))
   })

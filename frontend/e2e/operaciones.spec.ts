@@ -128,6 +128,8 @@ test.describe('Vender (HU-OP-01, RN-OP-22)', () => {
     await page.getByRole('button', { name: 'Nueva venta' }).click()
     await agregarBuscando(page, 'carbon', 'Carbón')
     await expect(page.locator('.aviso-deshacer')).toBeVisible()
+    // El panel sube con una animación corta: se mide ya quieto.
+    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
     const separacion = await page.evaluate(() => {
       const barra = document
         .querySelector('.panel-de-venta .hoja, .barra-de-total')!
@@ -156,7 +158,7 @@ test.describe('Vender (HU-OP-01, RN-OP-22)', () => {
 })
 
 test.describe('Panel de venta (RN-OP-22)', () => {
-  test('celular: sube compacto, abre con Ver detalle, dice cuánto queda y confirma desde el compacto', async ({
+  test('celular: sube abierto sin tapar la grilla, dice cuánto queda, se oculta y confirma', async ({
     page,
   }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'El panel deslizable es de celular (< 1024 px)')
@@ -171,35 +173,62 @@ test.describe('Panel de venta (RN-OP-22)', () => {
       .getByRole('list', { name: 'Resultados' })
       .getByRole('button', { name: /^Lejía 1 L/ })
       .click()
-    const panel = page.getByRole('region', { name: 'En esta venta · 1 producto' })
+    const panel = page.getByRole('region', { name: 'En esta venta' })
     await expect(panel).toBeVisible()
     await expect(totalDeLaVenta(page)).toHaveText('S/ 3.50')
-    await expect(panel.getByRole('button', { name: 'Ver detalle' })).toHaveAttribute(
+    await expect(panel.getByRole('button', { name: 'Ocultar' })).toHaveAttribute(
       'aria-expanded',
-      'false',
+      'true',
     )
-    // Compacto: no tapa la grilla (el buscador sigue a la vista) y mide lo mínimo.
-    await expect(page.locator('.lista-del-carrito')).toHaveCount(0)
-    const caja = (await panel.boundingBox())!
-    expect(caja.height, 'el panel compacto mide poco').toBeLessThan(200)
-    await expect(page.getByLabel('Buscar producto')).toBeInViewport()
-
-    await panel.getByRole('button', { name: 'Ver detalle' }).click()
+    // Abierto de una, sin huecos: mide lo que ocupa y la grilla de arriba sigue a la vista.
     const linea = lineaDe(page, 'Lejía 1 L')
     await expect(linea.getByText('Quedan 9 unid.')).toBeVisible()
-    await expect(page.getByRole('radio', { name: 'Ahora' })).toBeVisible()
+    await expect(page.getByRole('radio', { name: 'Ahora' })).toBeInViewport()
+    await expect(page.getByLabel('Buscar producto')).toBeInViewport()
     await linea.getByLabel('Cantidad (unid.)').fill('10')
     await expect(linea.getByText('Se acaba')).toBeVisible()
     await linea.getByLabel('Cantidad (unid.)').fill('3')
     await expect(linea.getByText('Quedan 7 unid.')).toBeVisible()
     await esperarSinDesplazamientoHorizontal(page)
+    // Nada se escapa del recorte del panel: al final de la página, la navegación queda pegada
+    // al borde de abajo (sin un hueco en blanco debajo).
+    const hueco = await page.evaluate(() => {
+      window.scrollTo(0, document.documentElement.scrollHeight)
+      return innerHeight - document.querySelector('nav')!.getBoundingClientRect().bottom
+    })
+    expect(Math.abs(hueco)).toBeLessThan(2)
 
-    await panel.getByRole('button', { name: 'Cerrar' }).click()
+    await panel.getByRole('button', { name: 'Ocultar' }).click()
     await expect(panel.getByRole('button', { name: 'Ver detalle' })).toBeFocused()
+    await expect(page.locator('.lista-del-carrito')).toHaveCount(0)
+    const caja = (await panel.boundingBox())!
+    expect(caja.height, 'el panel oculto mide poco').toBeLessThan(200)
     await expect(totalDeLaVenta(page)).toHaveText('S/ 10.50')
     await page.getByRole('button', { name: 'Confirmar venta' }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'Venta registrada' })).toBeVisible()
     expect(await stockDe(page, lejia)).toBe(7)
+  })
+
+  test('celular: un precio distinto para una sola unidad separa la línea', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'celular', 'El panel deslizable es de celular (< 1024 px)')
+    await abrirTiendaLista(page, './')
+    const lejia = await crearProducto(page, LEJIA)
+    await abrir(page, './vender')
+    await agregarBuscando(page, 'lejia', 'Lejía 1 L')
+    const linea = lineaDe(page, 'Lejía 1 L').first()
+    await linea.getByLabel('Cantidad (unid.)').fill('5')
+    await linea.getByRole('button', { name: /^Cambiar precio de Lejía 1 L/ }).click()
+    await linea.getByLabel('Nuevo precio en S/').fill('3')
+    await linea.getByLabel(/^¿Para cuántas\?/).fill('1')
+    await linea.getByRole('button', { name: 'Guardar precio' }).click()
+    await expect(lineaDe(page, 'Lejía 1 L')).toHaveCount(2)
+    await expect(lineaDe(page, 'Lejía 1 L').nth(1).getByText('Precio especial')).toBeVisible()
+    await expect(totalDeLaVenta(page)).toHaveText('S/ 17.00')
+    await page.getByRole('button', { name: 'Confirmar venta' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Venta registrada' })).toBeVisible()
+    expect(await stockDe(page, lejia)).toBe(5)
   })
 
   test('celular: quitar la última línea baja el panel', async ({ page }, testInfo) => {
@@ -227,7 +256,9 @@ test.describe('Panel de venta (RN-OP-22)', () => {
     await expect(page.getByRole('radio', { name: 'Ahora' })).toBeVisible()
     const buscador = (await page.getByLabel('Buscar producto').boundingBox())!
     const carrito = (await linea.boundingBox())!
-    expect(carrito.x, 'el carrito queda a la derecha del buscador').toBeGreaterThan(buscador.x + buscador.width - 1)
+    expect(carrito.x, 'el carrito queda a la derecha del buscador').toBeGreaterThan(
+      buscador.x + buscador.width - 1,
+    )
     await page.getByRole('button', { name: 'Confirmar venta' }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'Venta registrada' })).toBeVisible()
     expect(await stockDe(page, lejia)).toBe(9)

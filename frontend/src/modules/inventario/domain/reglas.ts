@@ -117,7 +117,8 @@ interface MovimientoConCantidad {
 /**
  * RN-OP-05: el stock nunca es negativo. Devuelve el stock resultante por producto o lanza
  * con el mensaje del PRIMER producto que falla, en el orden de las líneas. Un producto sin
- * registro de existencia tiene stock 0.
+ * registro de existencia tiene stock 0. Las líneas del mismo producto (RN-OP-11: parte de las
+ * unidades a otro precio) se acumulan: el mensaje dice el stock que había antes de la operación.
  */
 export function validarStock(
   movimientos: readonly MovimientoConCantidad[],
@@ -127,7 +128,8 @@ export function validarStock(
   const resultantes = new Map<string, Cantidad>()
   for (const movimiento of movimientos) {
     const actual = stockActual.get(movimiento.productoId) ?? Cantidad.cero()
-    const resultante = actual.sumar(movimiento.cantidad)
+    const previo = resultantes.get(movimiento.productoId) ?? actual
+    const resultante = previo.sumar(movimiento.cantidad)
     if (resultante.esNegativa()) {
       const producto = productos.get(movimiento.productoId)
       if (!producto) throw new Error(`Faltan los datos del producto ${movimiento.productoId}`)
@@ -144,13 +146,27 @@ export function validarStock(
 /**
  * RN-OP-07: suma en una sola línea las cantidades del mismo producto, en el orden en que
  * aparece cada producto por primera vez. Solo se suman líneas con el MISMO precio (el costo
- * en un ingreso, el precio aplicado en una venta): con precios distintos no hay una sola
- * línea correcta, así que se rechaza.
+ * en un ingreso, el precio aplicado en una venta). Con precios distintos, en un ingreso no hay
+ * una sola línea correcta y se rechaza; en una venta (`preciosDistintos: 'separar'`, RN-OP-11)
+ * cada precio queda en su línea: parte de las unidades se vendió a otro precio.
  */
 export function fusionarLineas<T extends MovimientoConCantidad>(
   lineas: readonly T[],
   precioDe: (linea: T) => Dinero,
+  preciosDistintos: 'rechazar' | 'separar' = 'rechazar',
 ): T[] {
+  if (preciosDistintos === 'separar') {
+    const porProductoYPrecio = new Map<string, T>()
+    for (const linea of lineas) {
+      const clave = `${linea.productoId}|${precioDe(linea).centimos}`
+      const previa = porProductoYPrecio.get(clave)
+      porProductoYPrecio.set(
+        clave,
+        previa ? { ...previa, cantidad: previa.cantidad.sumar(linea.cantidad) } : linea,
+      )
+    }
+    return [...porProductoYPrecio.values()]
+  }
   const porProducto = new Map<string, T>()
   for (const linea of lineas) {
     const previa = porProducto.get(linea.productoId)

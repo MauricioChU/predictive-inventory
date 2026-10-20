@@ -44,10 +44,17 @@ const props = withDefaults(
      */
     errorPrecio?: string
     /**
-     * RN-OP-22: la forma compacta del panel de venta en celular, para ver 2–3 líneas a la vez:
-     * nombre y cuánto queda arriba; − / + con el importe (y el precio por unidad) al lado; y
-     * Cambiar precio y Quitar en una sola fila. Las etiquetas "Cantidad (unid.)" e "Importe"
-     * quedan para el lector de pantalla. Los toques siguen de 48 px o más.
+     * RN-OP-11 (solo Vender): al cambiar el precio se pregunta también "¿Para cuántas?" (empieza
+     * en todas). Con menos, la pantalla separa esas unidades en otra línea con ese precio.
+     */
+    partirUnidades?: boolean
+    /** Error de "¿Para cuántas?", con el mismo contrato que errorPrecio. */
+    errorUnidades?: string
+    /**
+     * RN-OP-22: la forma compacta del panel de venta en celular: foto, nombre, cuánto queda y el
+     * precio por unidad, con el importe a la derecha; − / + debajo; y Cambiar precio y Quitar
+     * como acciones livianas (con texto, RN-UX-04). Las etiquetas "Cantidad (unid.)" e
+     * "Importe" quedan para el lector de pantalla. Los toques siguen de 48 px o más.
      */
     compacta?: boolean
   }>(),
@@ -62,14 +69,16 @@ const props = withDefaults(
     textoQuedan: undefined,
     errorCantidad: undefined,
     errorPrecio: undefined,
+    partirUnidades: false,
+    errorUnidades: undefined,
     compacta: false,
   },
 )
 const emit = defineEmits<{
   'update:cantidad': [valor: string]
   /** Lo escrito en la edición en línea, sin validar: lo valida quien usa la fila (ver
-   * errorPrecio). */
-  cambiarPrecio: [precio: string]
+   * errorPrecio). Con partirUnidades, también para cuántas unidades. */
+  cambiarPrecio: [precio: string, unidades?: string]
   /** Se cerró la edición sin guardar (Cancelar, Escape o "Cambiar precio" otra vez). */
   cancelarPrecio: []
   quitar: []
@@ -92,11 +101,15 @@ const textos = computed(() => TEXTOS[props.concepto])
 
 const editando = ref(false)
 const precioNuevo = ref('')
+const unidadesNuevas = ref('')
 const refCambiar = ref<InstanceType<typeof Boton>>()
 const refEdicion = ref<HTMLElement>()
 
+const refCambiarLiviano = ref<HTMLButtonElement>()
+
 function enfocarCambiar() {
-  ;(refCambiar.value?.$el as HTMLElement | undefined)?.focus()
+  if (props.compacta) refCambiarLiviano.value?.focus()
+  else (refCambiar.value?.$el as HTMLElement | undefined)?.focus()
 }
 
 function alternarEdicion() {
@@ -105,6 +118,7 @@ function alternarEdicion() {
     return
   }
   precioNuevo.value = props.valorPrecio ?? ''
+  unidadesNuevas.value = props.cantidad
   editando.value = true
   // Se abre para escribir el precio: el foco va al campo (abre el teclado numérico a propósito).
   void nextTick(() => refEdicion.value?.querySelector('input')?.focus())
@@ -127,8 +141,13 @@ function cancelar() {
 
 /** Ronda 1: emite y, ya con la respuesta de la pantalla (errorPrecio), decide si cerrar. */
 async function guardar() {
-  emit('cambiarPrecio', precioNuevo.value)
+  if (props.partirUnidades) emit('cambiarPrecio', precioNuevo.value, unidadesNuevas.value)
+  else emit('cambiarPrecio', precioNuevo.value)
   await nextTick()
+  if (props.errorUnidades && !props.errorPrecio) {
+    refEdicion.value?.querySelectorAll('input')[1]?.focus()
+    return
+  }
   if (props.errorPrecio) {
     // Precio inválido: queda abierta con lo escrito para corregirlo; el error ya se ve y se
     // anuncia (role="alert" de CampoNumero).
@@ -154,79 +173,150 @@ function alPresionarEnter(evento: KeyboardEvent) {
     role="group"
     :aria-labelledby="idNombre"
   >
-    <div class="cabecera">
-      <FotoDeProducto
-        :imagen="imagen"
-        :nombre="nombre"
-        :categoria="categoria"
-        tamano="chica"
-        decorativa
-      />
-      <div class="titulo">
-        <p :id="idNombre" class="nombre">{{ nombre }}</p>
-        <!-- Compacta: el precio por unidad va debajo del importe; aquí solo la marca. -->
-        <p v-if="!compacta || textoPrecioEspecial" class="precio">
-          <span v-if="!compacta">{{ textoPrecio }}</span>
-          <span v-if="textoPrecioEspecial" class="precio-especial">
-            <Tag aria-hidden="true" class="icono-especial" />
-            <span>{{ textoPrecioEspecial }}</span>
-          </span>
-        </p>
-        <p
-          v-if="textoQuedan"
-          class="quedan"
-          :class="{ 'quedan--acaba': textoQuedan === 'Se acaba' }"
-        >
-          {{ textoQuedan }}
+    <!-- RN-OP-22: compacta (panel de venta en celular). -->
+    <template v-if="compacta">
+      <div class="arriba">
+        <FotoDeProducto
+          :imagen="imagen"
+          :nombre="nombre"
+          :categoria="categoria"
+          tamano="chica"
+          decorativa
+        />
+        <div class="titulo">
+          <p :id="idNombre" class="nombre">{{ nombre }}</p>
+          <p
+            v-if="textoQuedan"
+            class="quedan"
+            :class="{ 'quedan--acaba': textoQuedan === 'Se acaba' }"
+          >
+            {{ textoQuedan }}
+          </p>
+          <!-- El precio por unidad ES el botón para cambiarlo: un toque menos y una fila menos. -->
+          <button
+            v-if="precioEditable"
+            ref="refCambiarLiviano"
+            type="button"
+            class="precio-tocable"
+            :class="{ 'precio-tocable--especial': textoPrecioEspecial }"
+            :aria-expanded="editando ? 'true' : 'false'"
+            :aria-controls="editando ? idEdicion : undefined"
+            @click="alternarEdicion"
+          >
+            <span class="solo-lector">{{ textos.cambiar }} de {{ nombre }}: </span>
+            <component
+              :is="textoPrecioEspecial ? Tag : Pencil"
+              aria-hidden="true"
+              class="icono-accion"
+            />
+            <span class="precio-unitario">{{ textoPrecio }}</span>
+            <span v-if="textoPrecioEspecial" class="marca-especial">{{ textoPrecioEspecial }}</span>
+          </button>
+          <p v-else class="precio-unitario">{{ textoPrecio }}</p>
+        </div>
+        <p class="importe">
+          <span class="solo-lector">{{ etiquetaImporte }}</span>
+          <span class="valor-importe">{{ textoImporte }}</span>
         </p>
       </div>
-    </div>
+      <div class="abajo">
+        <CampoNumero
+          class="cantidad"
+          :etiqueta="`Cantidad (${SIMBOLO_DE_UNIDAD[unidad]})`"
+          :model-value="cantidad"
+          :decimales="!porUnidades"
+          :minimo="minimo"
+          :error="errorCantidad"
+          etiqueta-oculta
+          @update:model-value="emit('update:cantidad', $event)"
+        />
+        <button
+          type="button"
+          class="accion-liviana accion-liviana--quitar"
+          :aria-label="`Quitar ${nombre}`"
+          @click="emit('quitar')"
+        >
+          <Trash2 aria-hidden="true" class="icono-accion" />
+          <span>Quitar</span>
+        </button>
+      </div>
+    </template>
 
-    <div class="cantidad-e-importe">
-      <!-- La unidad va en la etiqueta ("Cantidad (kg)") y no como sufijo junto al número: a
+    <template v-else>
+      <div class="cabecera">
+        <FotoDeProducto
+          :imagen="imagen"
+          :nombre="nombre"
+          :categoria="categoria"
+          tamano="chica"
+          decorativa
+        />
+        <div class="titulo">
+          <p :id="idNombre" class="nombre">{{ nombre }}</p>
+          <!-- Compacta: el precio por unidad va debajo del importe; aquí solo la marca. -->
+          <p v-if="!compacta || textoPrecioEspecial" class="precio">
+            <span v-if="!compacta">{{ textoPrecio }}</span>
+            <span v-if="textoPrecioEspecial" class="precio-especial">
+              <Tag aria-hidden="true" class="icono-especial" />
+              <span>{{ textoPrecioEspecial }}</span>
+            </span>
+          </p>
+          <p
+            v-if="textoQuedan"
+            class="quedan"
+            :class="{ 'quedan--acaba': textoQuedan === 'Se acaba' }"
+          >
+            {{ textoQuedan }}
+          </p>
+        </div>
+      </div>
+
+      <div class="cantidad-e-importe">
+        <!-- La unidad va en la etiqueta ("Cantidad (kg)") y no como sufijo junto al número: a
            320 px con letra Muy grande el sufijo dejaba el campo en ~34 px de ancho. -->
-      <CampoNumero
-        class="cantidad"
-        :etiqueta="`Cantidad (${SIMBOLO_DE_UNIDAD[unidad]})`"
-        :model-value="cantidad"
-        :decimales="!porUnidades"
-        :minimo="minimo"
-        :error="errorCantidad"
-        :etiqueta-oculta="compacta"
-        @update:model-value="emit('update:cantidad', $event)"
-      />
-      <p class="importe">
-        <span class="etiqueta-importe" :class="{ 'solo-lector': compacta }">{{
-          etiquetaImporte
-        }}</span>
-        <span class="valor-importe">{{ textoImporte }}</span>
-        <span v-if="compacta" class="precio-unitario">{{ textoPrecio }}</span>
-      </p>
-    </div>
+        <CampoNumero
+          class="cantidad"
+          :etiqueta="`Cantidad (${SIMBOLO_DE_UNIDAD[unidad]})`"
+          :model-value="cantidad"
+          :decimales="!porUnidades"
+          :minimo="minimo"
+          :error="errorCantidad"
+          :etiqueta-oculta="compacta"
+          @update:model-value="emit('update:cantidad', $event)"
+        />
+        <p class="importe">
+          <span class="etiqueta-importe" :class="{ 'solo-lector': compacta }">{{
+            etiquetaImporte
+          }}</span>
+          <span class="valor-importe">{{ textoImporte }}</span>
+          <span v-if="compacta" class="precio-unitario">{{ textoPrecio }}</span>
+        </p>
+      </div>
 
-    <!-- RN-UX-05: acciones a la vista, sin deslizar ni mantener presionado. El nombre accesible
+      <!-- RN-UX-05: acciones a la vista, sin deslizar ni mantener presionado. El nombre accesible
          empieza con el texto visible (WCAG 2.5.3) y dice de qué producto es. -->
-    <div class="acciones">
-      <Boton
-        v-if="precioEditable"
-        ref="refCambiar"
-        class="accion"
-        :texto="textos.cambiar"
-        :icono="Pencil"
-        :aria-label="`${textos.cambiar} de ${nombre}`"
-        :aria-expanded="editando ? 'true' : 'false'"
-        :aria-controls="editando ? idEdicion : undefined"
-        @click="alternarEdicion"
-      />
-      <Boton
-        class="accion"
-        texto="Quitar"
-        variante="peligro"
-        :icono="Trash2"
-        :aria-label="`Quitar ${nombre}`"
-        @click="emit('quitar')"
-      />
-    </div>
+      <div class="acciones">
+        <Boton
+          v-if="precioEditable"
+          ref="refCambiar"
+          class="accion"
+          :texto="textos.cambiar"
+          :icono="Pencil"
+          :aria-label="`${textos.cambiar} de ${nombre}`"
+          :aria-expanded="editando ? 'true' : 'false'"
+          :aria-controls="editando ? idEdicion : undefined"
+          @click="alternarEdicion"
+        />
+        <Boton
+          class="accion"
+          texto="Quitar"
+          variante="peligro"
+          :icono="Trash2"
+          :aria-label="`Quitar ${nombre}`"
+          @click="emit('quitar')"
+        />
+      </div>
+    </template>
 
     <!-- Escape cierra solo esta edición (.stop): no llega al panel de venta, que con Escape se
          cerraría entero. -->
@@ -239,6 +329,14 @@ function alPresionarEnter(evento: KeyboardEvent) {
       @keydown.enter="alPresionarEnter"
     >
       <CampoNumero v-model="precioNuevo" :etiqueta="textos.nuevo" decimales :error="errorPrecio" />
+      <CampoNumero
+        v-if="partirUnidades"
+        v-model="unidadesNuevas"
+        :etiqueta="`¿Para cuántas? (de ${cantidad})`"
+        :decimales="!porUnidades"
+        :minimo="minimo"
+        :error="errorUnidades"
+      />
       <div class="acciones">
         <Boton
           class="accion"
@@ -371,62 +469,143 @@ function alPresionarEnter(evento: KeyboardEvent) {
   }
 }
 
-/* RN-OP-22 — forma compacta (panel de venta en celular). Tres filas: foto, nombre y cuánto
-   queda; − / + con el importe y el precio por unidad a la derecha (si no entra, el importe baja
-   a su propia fila); Cambiar precio y Quitar lado a lado. Sin caja propia (la lista las separa
-   con una raya): todo el ancho de la hoja es para la línea. Toques de 48 px o más (RN-UX-02). */
+/* RN-OP-22 — forma compacta (panel de venta en celular). Sin caja propia (la lista las separa
+   con una raya). Arriba: foto, nombre, cuánto queda y el precio por unidad, con el importe a la
+   derecha. Abajo: − / + y las acciones livianas (si no entran, bajan a su fila). Toques de 48 px
+   o más (RN-UX-02); ningún texto por debajo de la letra elegida (RN-UX-01). */
 .fila-de-carrito--compacta {
-  gap: var(--espacio-2);
+  gap: var(--espacio-1);
   padding: var(--espacio-3) 0;
   border: none;
   border-radius: 0;
   background: none;
 }
-.fila-de-carrito--compacta .quedan {
-  margin-block-start: 2px;
-  font-size: 1rem;
+.arriba {
+  /* Foto | nombre | importe; debajo del nombre, cuánto queda y el precio, que pueden usar
+     también el ancho bajo el importe. */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0 var(--espacio-3);
 }
-.fila-de-carrito--compacta .cantidad-e-importe {
-  align-items: center;
-  gap: var(--espacio-2) var(--espacio-3);
+.arriba :deep(.foto-de-producto) {
+  grid-row: 1 / span 3;
 }
-/* El campo se reparte en la fila: − / cantidad / + a la izquierda y su error, si hay, debajo a
-   todo el ancho (no en una columna angosta junto al importe). */
-.fila-de-carrito--compacta .cantidad {
+.arriba .titulo {
   display: contents;
 }
-.fila-de-carrito--compacta .cantidad :deep(.fila) {
+.arriba .nombre {
+  grid-column: 2;
+}
+.arriba .quedan,
+.arriba .precio-tocable,
+.arriba > .titulo > .precio-unitario {
+  grid-column: 2 / span 2;
+  justify-self: start;
+}
+.arriba .quedan {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+/* Se ve como un enlace; mide 48 px de alto (RN-UX-02) pero sus márgenes negativos no agrandan
+   la fila (sin fondo, así no tapa lo de arriba). */
+.precio-tocable {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--espacio-1);
+  min-block-size: var(--alto-toque);
+  margin-block: calc((1.3em - var(--alto-toque)) / 2);
+  margin-inline: calc(-1 * var(--espacio-1)) 0;
+  padding: 0 var(--espacio-1);
+  border: none;
+  border-radius: var(--radio-chico);
+  background: none;
+  color: var(--color-primario);
+  font: inherit;
+  line-height: 1.3;
+  text-align: start;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.precio-tocable:hover {
+  text-decoration-thickness: 2px;
+}
+.precio-tocable--especial {
+  color: var(--color-advertencia);
+}
+.marca-especial {
+  font-weight: 700;
+}
+.precio-unitario {
+  margin: 0;
+  white-space: nowrap;
+}
+.arriba .importe {
+  grid-column: 3;
+  grid-row: 1;
+  margin: 0;
+  line-height: 1.25;
+}
+.arriba .valor-importe {
+  font-size: 1.2rem;
+}
+.abajo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-1) var(--espacio-3);
+}
+/* El campo se reparte en la fila: − / cantidad / + a la izquierda y su error, si hay, debajo a
+   todo el ancho. */
+.abajo .cantidad {
+  display: contents;
+}
+.abajo .cantidad :deep(.fila) {
   flex: 0 1 auto;
   min-inline-size: 0;
 }
-.fila-de-carrito--compacta .cantidad :deep(input) {
+.abajo .cantidad :deep(input) {
   flex: 0 1 3.5rem;
   inline-size: 3.5rem;
   min-inline-size: 2.75rem;
 }
-.fila-de-carrito--compacta .cantidad :deep(.error) {
+.abajo .cantidad :deep(.error) {
   order: 1;
   flex: 1 0 100%;
   margin: 0;
 }
-.fila-de-carrito--compacta .importe {
-  line-height: 1.2;
-}
-.fila-de-carrito--compacta .valor-importe {
-  font-size: 1.2rem;
-}
-.precio-unitario {
-  color: var(--color-texto-suave);
-  font-size: 0.875rem;
-  white-space: nowrap;
-}
-.fila-de-carrito--compacta .acciones {
-  justify-content: space-between;
-}
-.fila-de-carrito--compacta .acciones .accion {
-  flex: 0 1 auto;
+.accion-liviana {
+  margin-inline: auto calc(-1 * var(--espacio-2));
+  display: inline-flex;
+  align-items: center;
   gap: var(--espacio-1);
-  padding-inline: var(--espacio-2);
-  font-size: 0.9rem;
+  min-block-size: var(--alto-toque);
+  padding: 0 var(--espacio-2);
+  border: none;
+  border-radius: var(--radio-chico);
+  background: none;
+  color: var(--color-primario);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.accion-liviana--quitar {
+  color: var(--color-peligro);
+}
+.accion-liviana--quitar:hover {
+  background: var(--color-peligro-suave);
+}
+.icono-accion {
+  inline-size: 1.15em;
+  block-size: 1.15em;
+  flex: none;
+}
+.fila-de-carrito--compacta .edicion-precio {
+  margin-block-start: var(--espacio-1);
 }
 </style>

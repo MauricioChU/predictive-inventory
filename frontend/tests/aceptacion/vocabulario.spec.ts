@@ -22,9 +22,9 @@ describe('Vocabulario de pasos de aceptación', () => {
   const pasos = crearPasos()
   const pickles = FEATURES.flatMap((feature) => picklesDe(rutaDeFeature(feature)))
 
-  it('cubre los 123 escenarios (189 casos con sus Ejemplos)', () => {
-    expect(new Set(pickles.map((p) => `${p.uri}|${p.astNodeIds[0]}`)).size).toBe(123)
-    expect(pickles).toHaveLength(189)
+  it('cubre los 125 escenarios (191 casos con sus Ejemplos)', () => {
+    expect(new Set(pickles.map((p) => `${p.uri}|${p.astNodeIds[0]}`)).size).toBe(125)
+    expect(pickles).toHaveLength(191)
   })
 
   it('cada paso tiene exactamente una definición y ninguna definición sobra', () => {

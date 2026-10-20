@@ -145,7 +145,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     const { app } = await tiendaDePrueba()
     const p = await abrirVender(app)
     await agregarBuscando(p, 'lejia', 'Lejía 1 L')
-    expect(panel(p).get('.titulo-carrito').text()).toBe('En esta venta · 1 producto')
+    expect(panel(p).get('.titulo-carrito').text()).toBe('En esta venta')
     expect((p.w.get('.buscador-grande input').element as HTMLInputElement).value).toBe('')
     expect(p.w.find('.lista-de-productos').exists()).toBe(false)
   })
@@ -161,7 +161,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
   })
 
   describe('RN-OP-22: el panel de venta', () => {
-    it('al agregar el primer producto sube el panel compacto: región con nombre, total y Confirmar venta', async () => {
+    it('al agregar el primer producto sube el panel ya abierto: región con nombre, líneas, total y Confirmar venta', async () => {
       const { app } = await tiendaDePrueba()
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
@@ -170,16 +170,20 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       expect(region.element.tagName).toBe('SECTION')
       const titulo = region.get('.titulo-carrito')
       expect(region.attributes('aria-labelledby')).toBe(titulo.attributes('id'))
-      expect(titulo.text()).toBe('En esta venta · 1 producto')
+      expect(titulo.text()).toBe('En esta venta')
+      expect(panel(p).get('.total-del-panel .etiqueta').text()).toBe('Total · 1 producto')
       expect(total(p)).toBe('S/ 3.50')
       expect(confirmar(p).exists()).toBe(true)
       const alternar = region.get('.alternar')
-      expect(alternar.attributes('aria-expanded')).toBe('false')
-      expect(alternar.text()).toContain('Ver detalle')
-      // Compacto: ni líneas ni ¿Cuándo fue?; el buscador (la grilla) sigue a la vista.
-      expect(lineas(p)).toHaveLength(0)
-      expect(p.w.find('.panel-de-venta [role="radiogroup"]').exists()).toBe(false)
+      expect(alternar.attributes('aria-expanded')).toBe('true')
+      expect(alternar.text()).toContain('Ocultar')
+      // Abierto: las líneas y ¿Cuándo fue?; la grilla sigue a la vista y se puede tocar, y el
+      // foco no salta al panel (para seguir agregando).
+      expect(lineas(p)).toHaveLength(1)
+      expect(p.w.find('.panel-de-venta [role="radiogroup"]').exists()).toBe(true)
       expect(p.w.find('.buscador-grande').exists()).toBe(true)
+      expect(p.w.get('.buscador').attributes('inert')).toBeUndefined()
+      expect(document.activeElement).not.toBe(titulo.element)
     })
 
     it('la cabecera cuenta los productos y el total los suma', async () => {
@@ -187,24 +191,23 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
       await agregarBuscando(p, 'carbon', 'Carbón')
-      expect(panel(p).get('.titulo-carrito').text()).toBe('En esta venta · 2 productos')
+      expect(panel(p).get('.total-del-panel .etiqueta').text()).toBe('Total · 2 productos')
       expect(total(p)).toBe('S/ 7.50')
     })
 
-    it('Ver detalle abre el panel: aria-expanded, el foco pasa al título, y se ven líneas y ¿Cuándo fue?', async () => {
+    it('Ver detalle vuelve a abrir el panel: aria-expanded, el foco pasa al título, y se ven líneas y ¿Cuándo fue?', async () => {
       const { app } = await tiendaDePrueba()
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+      await boton(panel(p), 'Ocultar').trigger('click')
+      await esperarDatos(app)
       await boton(panel(p), 'Ver detalle').trigger('click')
       await esperarDatos(app)
 
       expect(panel(p).get('.alternar').attributes('aria-expanded')).toBe('true')
-      expect(panel(p).get('.alternar').text()).toContain('Cerrar')
+      expect(panel(p).get('.alternar').text()).toContain('Ocultar')
       expect(document.activeElement).toBe(panel(p).get('.titulo-carrito').element)
       expect(lineas(p)).toHaveLength(1)
-      // Lo de atrás (el buscador) no se alcanza mientras la hoja está abierta.
-      expect(p.w.get('.buscador').attributes('inert')).toBeDefined()
-      expect(p.w.get('.avisos').attributes('inert')).toBeDefined()
       expect(
         panel(p)
           .findAll('[role="radio"]')
@@ -214,7 +217,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       expect(confirmar(p).exists()).toBe(true)
     })
 
-    it('Cerrar baja el panel a compacto y el foco vuelve al botón que lo abrió', async () => {
+    it('Ocultar deja solo el total y Confirmar venta, y el foco queda en el botón', async () => {
       const { app } = await tiendaDePrueba()
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
@@ -222,14 +225,11 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       ;(alternar().element as HTMLElement).focus()
       await alternar().trigger('click')
       await esperarDatos(app)
-      expect(alternar().attributes('aria-expanded')).toBe('true')
-
-      await alternar().trigger('click')
-      await esperarDatos(app)
       expect(alternar().attributes('aria-expanded')).toBe('false')
+      expect(alternar().text()).toContain('Ver detalle')
       expect(lineas(p)).toHaveLength(0)
-      expect(p.w.get('.buscador').attributes('inert')).toBeUndefined()
-      expect(p.w.get('.avisos').attributes('inert')).toBeUndefined()
+      expect(total(p)).toBe('S/ 3.50')
+      expect(confirmar(p).exists()).toBe(true)
       expect(document.activeElement).toBe(alternar().element)
     })
 
@@ -240,7 +240,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       for (const evento of ['touchstart', 'touchmove', 'pointermove', 'dblclick']) {
         await panel(p).trigger(evento)
       }
-      expect(panel(p).get('.alternar').attributes('aria-expanded')).toBe('false')
+      expect(panel(p).get('.alternar').attributes('aria-expanded')).toBe('true')
       // La asa es solo un dibujo: no se puede tocar ni la lee el lector de pantalla.
       expect(panel(p).get('.asa').attributes('aria-hidden')).toBe('true')
     })
@@ -302,7 +302,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
       await detalle(p)
-      await boton(lineas(p)[0]!, 'Cambiar precio').trigger('click')
+      await lineas(p)[0]!.get('.precio-tocable').trigger('click')
       await esperarDatos(app)
       await lineas(p)[0]!.get('.edicion-precio input').trigger('keydown', { key: 'Escape' })
       await esperarDatos(app)
@@ -315,7 +315,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       expect(document.activeElement).toBe(panel(p).get('.alternar').element)
     })
 
-    it('cada línea del panel es compacta: el nombre, cuánto queda, − / + con el importe al lado, y Cambiar precio y Quitar en una fila', async () => {
+    it('cada línea del panel es compacta: nombre, cuánto queda y precio c/u con el importe al lado; − / + con Cambiar precio y Quitar', async () => {
       const { app } = await tiendaDePrueba()
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
@@ -327,17 +327,15 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       expect(etiqueta.text()).toBe('Cantidad (unid.)')
       expect(etiqueta.classes()).toContain('solo-lector')
       expect(etiqueta.attributes('for')).toBe(linea.get('.cantidad input').attributes('id'))
-      expect(linea.get('.etiqueta-importe').classes()).toContain('solo-lector')
+      expect(linea.get('.importe .solo-lector').text()).toBe('Importe')
       expect(linea.get('.valor-importe').text()).toBe('S/ 3.50')
-      expect(
-        linea
-          .get('.acciones')
-          .findAll('button')
-          .map((b) => b.text().trim()),
-      ).toEqual(['Cambiar precio', 'Quitar'])
-      // La cabecera: el título con la cuenta aparte (no se parte a la mitad junto a "Cerrar").
-      expect(panel(p).get('.titulo-carrito .cuenta').text()).toContain('1 producto')
-      expect(panel(p).get('.titulo-carrito').text()).toBe('En esta venta · 1 producto')
+      expect(linea.get('.quedan').text()).toBe('Quedan 9 unid.')
+      // El precio por unidad es el botón para cambiarlo; Quitar va junto a − / +.
+      const precio = linea.get('.precio-tocable')
+      expect(precio.text()).toContain('S/ 3.50 c/u')
+      expect(precio.get('.solo-lector').text()).toBe('Cambiar precio de Lejía 1 L:')
+      expect(linea.get('.abajo').text()).toContain('Quitar')
+      expect(panel(p).get('.titulo-carrito').text()).toBe('En esta venta')
     })
 
     it('el panel no tapa la grilla: va en el flujo de la pantalla, que le deja su lugar', async () => {
@@ -390,7 +388,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
       await cambiarCantidad(p, 0, '11')
-      await boton(panel(p), 'Cerrar').trigger('click')
+      await boton(panel(p), 'Ocultar').trigger('click')
       await esperarDatos(app)
 
       await confirmarVenta(p)
@@ -404,7 +402,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
       await cambiarCantidad(p, 0, '')
-      await boton(panel(p), 'Cerrar').trigger('click')
+      await boton(panel(p), 'Ocultar').trigger('click')
       await esperarDatos(app)
       await confirmarVenta(p)
       expect(lineas(p)[0]!.get('.campo-numero .error').text()).toBe('Escribe la cantidad')
@@ -505,7 +503,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     await cambiarCantidad(p, 0, '2')
     const linea = () => lineas(p)[0]!
 
-    await boton(linea(), 'Cambiar precio').trigger('click')
+    await linea().get('.precio-tocable').trigger('click')
     await linea().get('.edicion-precio input').setValue('0.00')
     await boton(linea(), 'Guardar precio').trigger('click')
     await esperarDatos(app)
@@ -524,6 +522,36 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     const [venta] = await app.inventario.historial({ tipo: 'VENTA' })
     expect(venta?.total?.centimos).toBe(600)
     expect((await app.catalogo.obtenerProducto(ids.lejia))?.precioVenta.centimos).toBe(350)
+  })
+
+  it('RN-OP-11: un precio distinto solo para algunas unidades separa la línea y se registra así', async () => {
+    const { app, ids } = await tiendaDePrueba()
+    const p = await abrirVender(app)
+    await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+    await cambiarCantidad(p, 0, '5')
+    const linea = () => lineas(p)[0]!
+
+    await linea().get('.precio-tocable').trigger('click')
+    const campos = linea().findAll('.edicion-precio input')
+    expect(campos).toHaveLength(2)
+    expect((campos[1]!.element as HTMLInputElement).value).toBe('5')
+    expect(linea().get('.edicion-precio').text()).toContain('¿Para cuántas? (de 5)')
+    await campos[0]!.setValue('3.00')
+    await campos[1]!.setValue('1')
+    await boton(linea(), 'Guardar precio').trigger('click')
+    await esperarDatos(app)
+
+    expect(lineas(p)).toHaveLength(2)
+    expect(cantidadDe(p, 0)).toBe('4')
+    expect(cantidadDe(p, 1)).toBe('1')
+    expect(lineas(p)[1]!.text()).toContain('Precio especial')
+    expect(lineas(p)[1]!.text()).toContain('Quedan 5 unid.')
+    expect(total(p)).toBe('S/ 17.00')
+
+    await confirmarVenta(p)
+    const [venta] = await app.inventario.historial({ tipo: 'VENTA' })
+    expect(venta?.total?.centimos).toBe(1700)
+    expect(await stock(app, ids.lejia)).toBe('5')
   })
 
   it('RN-OP-10 / RN-UX-11 / RN-OP-18: confirmar registra la venta, muestra el éxito y ofrece Deshacer; "Nueva venta" vuelve vacío', async () => {
@@ -682,7 +710,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
       await detalle(p)
-      await boton(lineas(p)[0]!, 'Cambiar precio').trigger('click')
+      await lineas(p)[0]!.get('.precio-tocable').trigger('click')
       await lineas(p)[0]!.get('.edicion-precio input').setValue('3.00')
       await boton(lineas(p)[0]!, 'Guardar precio').trigger('click')
       await esperarDatos(app)
@@ -828,7 +856,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     it('si se eligió Otro día sin hora y se confirma desde el compacto, se abre el detalle para completarla', async () => {
       const { app, p } = await ventaDeLejia()
       await boton(p.w, 'Otro día').trigger('click')
-      await boton(panel(p), 'Cerrar').trigger('click')
+      await boton(panel(p), 'Ocultar').trigger('click')
       await esperarDatos(app)
       await confirmarVenta(p)
       expect(panel(p).get('.alternar').attributes('aria-expanded')).toBe('true')
