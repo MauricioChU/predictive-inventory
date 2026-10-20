@@ -10,7 +10,7 @@ const ANCHOS = [320, 360, 768, 1280]
  * pantalla titulada "Llegó mercadería". El resto se titula como su destino.
  */
 const TITULOS: Partial<Record<string, string | RegExp>> = {
-  Inicio: /^Hola, Bodega Rosita/,
+  Inicio: /^BODEGA ROSITA/,
   Recibir: 'Llegó mercadería',
 }
 

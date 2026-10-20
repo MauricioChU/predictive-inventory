@@ -13,7 +13,7 @@ describe('BotonPrincipal', () => {
     expect(w.emitted('click')).toHaveLength(1)
   })
   it('no emite click deshabilitado', async () => {
-    const w = mount(BotonPrincipal, { props: { texto: 'Cobrar', deshabilitado: true } })
+    const w = mount(BotonPrincipal, { props: { texto: 'Confirmar venta', deshabilitado: true } })
     await w.trigger('click')
     expect(w.emitted('click')).toBeUndefined()
   })

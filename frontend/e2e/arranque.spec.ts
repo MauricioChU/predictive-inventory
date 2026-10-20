@@ -93,7 +93,7 @@ test.describe('Ola 3: la app arranca con los datos guardados en el celular', () 
 
   /** Plan 14: Inicio saluda. Plan 12 (RN-UX-12): "Recibir" abre la pantalla "Llegó mercadería". */
   const TITULOS: Partial<Record<string, string | RegExp>> = {
-    Inicio: /^Hola, Bodega Rosita/,
+    Inicio: /^BODEGA ROSITA/,
     Recibir: 'Llegó mercadería',
   }
 

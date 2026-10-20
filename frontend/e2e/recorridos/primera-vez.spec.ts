@@ -50,7 +50,7 @@ test.describe('Recorrido: la primera vez, uno por uno', () => {
     await expect(page.getByText(comoSeLee('Contaste 1 producto. 1 con diferencia: -S/ 4.80'))).toBeVisible()
 
     await page.getByRole('button', { name: 'Ir a Inicio' }).first().click()
-    await expect(h1(page)).toHaveText(/^Hola, Bodega Rosita/)
+    await expect(h1(page)).toHaveText(/^BODEGA ROSITA/)
     await expect(page.locator('html')).toHaveAttribute('data-letra', 'MUY_GRANDE')
 
     // Lo cargado está en Productos con el stock contado y la foto.
@@ -64,7 +64,7 @@ test.describe('Recorrido: la primera vez, uno por uno', () => {
     await page.reload()
     await expect(h1(page)).toHaveText('Productos')
     await irA(page, 'Inicio')
-    await expect(h1(page)).toHaveText(/^Hola, Bodega Rosita/)
+    await expect(h1(page)).toHaveText(/^BODEGA ROSITA/)
     await esperarSinPalabrasQueEvitar(page)
   })
 })

@@ -9,7 +9,7 @@ withDefaults(
     etiqueta: string
     /** "S/ 14.63" */
     textoTotal: string
-    /** "Cobrar" */
+    /** "Confirmar venta" */
     textoAccion: string
     icono?: Component
     deshabilitado?: boolean

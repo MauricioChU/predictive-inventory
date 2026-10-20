@@ -26,6 +26,40 @@ const LEJIA = producto('lejia', 'Lejía 1 L')
 const CARBON = producto('carbon', 'Carbón')
 
 describe('carrito de pantalla', () => {
+  it('RN-OP-22: al vender, cada línea dice cuánto queda tras la venta y se actualiza al cambiar la cantidad', () => {
+    const carrito = usarCarrito('venta')
+    const id = carrito.agregar(LEJIA)
+    expect(carrito.lineas.value[0]!.quedan).toBe('Quedan 9 unid.')
+    carrito.cambiarCantidad(id, '3')
+    expect(carrito.lineas.value[0]!.quedan).toBe('Quedan 7 unid.')
+    carrito.cambiarCantidad(id, '10')
+    expect(carrito.lineas.value[0]!.quedan).toBe('Se acaba')
+  })
+
+  it('RN-OP-22 / RN-OP-05: sin cantidad válida o pasando el stock no hay "quedan" y sigue el error', () => {
+    const carrito = usarCarrito('venta')
+    const id = carrito.agregar(LEJIA)
+    carrito.cambiarCantidad(id, '11')
+    expect(carrito.lineas.value[0]!.quedan).toBeUndefined()
+    expect(carrito.lineas.value[0]!.errorCantidad).toContain('Solo quedan 10 unid. de Lejía 1 L')
+    carrito.cambiarCantidad(id, '')
+    expect(carrito.lineas.value[0]!.quedan).toBeUndefined()
+  })
+
+  it('RN-OP-22: Llegó mercadería no muestra "quedan"', () => {
+    const carrito = usarCarrito('ingreso')
+    carrito.agregar(LEJIA)
+    expect(carrito.lineas.value[0]!.quedan).toBeUndefined()
+  })
+
+  it('Llegó mercadería: tocar otra vez un producto con el costo cambiado suma a su línea', () => {
+    const carrito = usarCarrito('ingreso')
+    const id = carrito.agregar(LEJIA)
+    carrito.cambiarPrecio(id, '2.10')
+    expect(carrito.agregar(LEJIA)).toBe(id)
+    expect(carrito.lineas.value.map((l) => [l.cantidad, l.precio.centimos])).toEqual([['2', 210]])
+  })
+
   it('r2 #4: agregarFaltantes no repite un producto que ya estaba ni uno repetido en la lista', () => {
     const carrito = usarCarrito('ingreso')
     carrito.agregar(LEJIA)
@@ -44,9 +78,9 @@ describe('carrito de pantalla', () => {
   it('r2 #1: refrescar pone al día stock y precio base; deja el precio especial; quita lo que ya no está', () => {
     const carrito = usarCarrito('venta')
     carrito.agregar(LEJIA)
-    carrito.agregar(CARBON)
+    const idCarbon = carrito.agregar(CARBON)
     carrito.agregar(producto('escoba', 'Escoba'))
-    carrito.cambiarPrecio('carbon', '3.00')
+    carrito.cambiarPrecio(idCarbon, '3.00')
     const quitados = carrito.refrescar(
       new Map([
         [
@@ -85,5 +119,78 @@ describe('carrito de pantalla', () => {
     expect(carrito.aDatosDeVenta(new Map([['lejia', Dinero.deTexto('3.50')]])).lineas).toEqual([
       { productoId: 'lejia', cantidad: '1' },
     ])
+  })
+
+  describe('RN-OP-11: precio distinto para parte de las unidades', () => {
+    function conCinco() {
+      const carrito = usarCarrito('venta')
+      const id = carrito.agregar(LEJIA)
+      carrito.cambiarCantidad(id, '5')
+      return { carrito, id }
+    }
+    const resumen = (carrito: ReturnType<typeof usarCarrito>) =>
+      carrito.lineas.value.map((l) => [l.cantidad, l.precio.centimos, l.precioCambiado])
+
+    it('separa esas unidades en otra línea con el precio nuevo; el total suma ambas', () => {
+      const { carrito, id } = conCinco()
+      carrito.cambiarPrecio(id, '3.00', '1')
+      expect(resumen(carrito)).toEqual([
+        ['4', 350, false],
+        ['1', 300, true],
+      ])
+      expect(carrito.total.value.centimos).toBe(4 * 350 + 300)
+      expect(carrito.aDatosDeVenta().lineas).toEqual([
+        { productoId: 'lejia', cantidad: '4' },
+        { productoId: 'lejia', cantidad: '1', precioEspecial: 'S/ 3.00' },
+      ])
+    })
+
+    it('con todas las unidades cambia el precio de la línea, sin separar', () => {
+      const { carrito, id } = conCinco()
+      carrito.cambiarPrecio(id, '3.00', '5')
+      expect(resumen(carrito)).toEqual([['5', 300, true]])
+    })
+
+    it('"quedan" y el stock (RN-OP-05) cuentan las dos líneas del producto', () => {
+      const { carrito, id } = conCinco()
+      carrito.cambiarPrecio(id, '3.00', '2')
+      expect(carrito.lineas.value.map((l) => l.quedan)).toEqual([
+        'Quedan 5 unid.',
+        'Quedan 5 unid.',
+      ])
+      carrito.cambiarCantidad(id, '9')
+      expect(carrito.lineas.value.every((l) => l.errorCantidad?.includes('Solo quedan 10'))).toBe(
+        true,
+      )
+    })
+
+    it('volver una parte al precio de siempre la junta otra vez con su línea', () => {
+      const { carrito, id } = conCinco()
+      carrito.cambiarPrecio(id, '3.00', '1')
+      const especial = carrito.lineas.value[1]!.id
+      carrito.cambiarPrecio(especial, '3.50')
+      expect(resumen(carrito)).toEqual([['5', 350, false]])
+    })
+
+    it('tocar el producto otra vez suma a la línea con el precio de siempre', () => {
+      const { carrito, id } = conCinco()
+      carrito.cambiarPrecio(id, '3.00', '5')
+      carrito.agregar(LEJIA)
+      expect(resumen(carrito)).toEqual([
+        ['5', 300, true],
+        ['1', 350, false],
+      ])
+    })
+
+    it('cuántas debe ser de 1 a las que hay en la línea', () => {
+      const { carrito, id } = conCinco()
+      carrito.cambiarPrecio(id, '3.00', '6')
+      expect(carrito.lineas.value[0]!.errorUnidades).toBe('Son 5 en total: escribe de 1 a 5')
+      carrito.cambiarPrecio(id, '3.00', '0')
+      expect(carrito.lineas.value[0]!.errorUnidades).toBe('Son 5 en total: escribe de 1 a 5')
+      expect(resumen(carrito)).toEqual([['5', 350, false]])
+      carrito.cancelarPrecio(id)
+      expect(carrito.lineas.value[0]!.errorUnidades).toBeUndefined()
+    })
   })
 })

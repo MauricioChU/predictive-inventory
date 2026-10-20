@@ -4,6 +4,20 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+### Nuevo
+
+- Puedes vender algunas unidades a otro precio (por ejemplo, de 5, una más barata para un amigo): toca «¿Vendiste alguno a otro precio?», di cuántos y a cuánto; nunca deja poner más de los que estás vendiendo, y la venta guarda cada precio por separado. Mientras ese formulario esté abierto no se puede confirmar la venta: primero guarda o cancela.
+
+### Cambiado
+
+- Vender: al elegir un producto se abre, a toda la pantalla, el panel con lo que llevas, cuánto queda de cada uno y el botón para confirmar; con «Ocultar» vuelves a la lista para agregar más. El panel sube y baja despacio, para que se vea.
+- En el panel, el precio por unidad va debajo del importe y es el botón para cambiarlo; Quitar va junto a − / +.
+- Inicio muestra la fecha en mayúsculas y el nombre de tu tienda sin saludo; Ajustes queda solo con la tuerca.
+
+### Quitado
+
+- Ya no se calcula el vuelto ni se pregunta con cuánto pagan.
+
 ## [0.3.1] · 2026-10-19
 
 ### Cambiado

@@ -30,9 +30,8 @@ export { OPCIONES_DE_SOBRECOMPRA } from './application/ingresos'
 
 export { Carrito } from './domain/carrito'
 export type { LineaDelCarrito, ProductoEnCarrito } from './domain/carrito'
-export { BILLETES_RAPIDOS, calcularVuelto } from './domain/vuelto'
-export type { ResultadoDelVuelto } from './domain/vuelto'
 export { etiquetaDeOperacion } from './domain/etiquetas'
+export { mensajeDeLoQueQueda } from './domain/mensajes'
 
 export {
   RepositorioDeConteoEnMemoria,

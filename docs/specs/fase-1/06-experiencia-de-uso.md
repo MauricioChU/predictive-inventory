@@ -19,7 +19,7 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 | **RN-UX-01** | **Tamaño de letra** configurable: Normal (18 px), **Grande (20 px, por defecto)** y Muy grande (24 px). Todo el diseño escala con esa base. |
 | **RN-UX-02** | **Zonas táctiles** de al menos **48 × 48 px**; los botones de acción principal miden al menos **56 px** de alto y ocupan todo el ancho en celular. Separación mínima de 8 px entre elementos tocables.<br>*Excepción deliberada:* con letra *Muy grande* en 320–360 px, la barra del total pone el total y su botón en una sola fila (el botón no ocupa todo el ancho) para no tapar media pantalla; si el texto no entra, el botón baja a su fila a todo el ancho. |
 | **RN-UX-03** | **Contraste** mínimo 7:1 para texto normal y 4.5:1 para texto grande e íconos (WCAG AAA para texto). |
-| **RN-UX-04** | **Íconos siempre acompañados de texto.** El color nunca es la única señal (RN-AL-05). |
+| **RN-UX-04** | **Íconos siempre acompañados de texto.** El color nunca es la única señal (RN-AL-05).<br>*Excepción deliberada:* el botón **Ajustes** de Inicio es solo la tuerca, con el nombre accesible "Ajustes" (`aria-label`) y una zona táctil de al menos 48 × 48 px. |
 | **RN-UX-05** | **Sin gestos ocultos**: nada depende de deslizar, mantener presionado ni doble toque. Todo tiene un botón visible. |
 | **RN-UX-06** | **Números fáciles**: los campos de cantidad y precio abren el teclado numérico y tienen botones **− / +** grandes. Se aceptan coma o punto como separador decimal. |
 | **RN-UX-07** | **Mensajes en lenguaje simple**, en tono amable y de "tú". Los errores dicen **qué pasó y qué hacer**, nunca un código técnico: "Solo quedan 2 unid. de Lejía 1 L. Cambia la cantidad o registra la llegada de mercadería." |
@@ -38,8 +38,8 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 ### Inicio
 ```
 ┌──────────────────────────────┐
-│ Hola, Bodega Rosita 👋    ⚙  │
-│ lunes 19 de octubre 3:24 p. m.│
+│ BODEGA ROSITA            ⚙  │
+│ LUNES 19 DE OCTUBRE          │
 │ ┌──────────────────────────┐ │
 │ │ Hoy ganaste  S/ 48.20    │ │
 │ │ Vendiste     S/ 162.50   │ │
@@ -58,14 +58,34 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 │ Inicio Vender Recibir Prod. Control │
 └──────────────────────────────┘
 ```
-Debajo del saludo va la **fecha a la izquierda y la hora a la derecha** (hora de la tienda, Lima; se actualiza sola, sin anunciarse). Las acciones quedan **abajo, sobre la navegación**, al alcance del pulgar; si el contenido es más alto que la pantalla (letra Muy grande, 320 px), todo fluye hacia abajo sin taparse.
+El encabezado es el **nombre de la tienda en mayúsculas**, sin saludo ni emoji (si no hay nombre, el encabezado dice *Inicio*), y a la derecha la tuerca de *Ajustes*. Debajo va la **fecha en mayúsculas**, sin hora (el celular ya la muestra); es la fecha de la tienda (Lima) y, si la medianoche pasa con la app abierta, se pone al día al volver a la app. Las acciones quedan **abajo, sobre la navegación**, al alcance del pulgar; si el contenido es más alto que la pantalla (letra Muy grande, 320 px), todo fluye hacia abajo sin taparse.
 
 ### Vender
-1. Buscar (campo grande arriba) → resultados con **foto grande**, nombre, precio y stock; los más vendidos primero. Debajo del buscador, accesos rápidos a los 8 productos más vendidos.
-2. Tocar un producto lo agrega con cantidad 1; aparecen − / + grandes.
-3. Abajo, fijo: **Total S/ 14.63** y botón **Cobrar**.
-4. Cobrar: botones de billetes (S/ 10 · 20 · 50 · 100 · Exacto) o monto escrito → **Vuelto S/ 5.37** → **Confirmar venta**.
+```
+┌──────────────────────────────┐        ┌──────────────────────────────┐
+│╭────────────────────────────╮│        │ Vender                       │
+││ ▬ En esta venta   Ocultar ▾ ││        │ [ Buscar producto          ] │
+││ [▢] Lejía 1 L     S/ 10.50 ││        │ Más vendidos  [Lejía][Carbón]│
+││     Quedan 7     ✎ S/ 3.50 ││        │  (grilla, sigue a la vista)  │
+││ [−] 3 [+]        🗑 Quitar ││        │ ╭──────────────────────────╮ │
+││ 🏷 ¿Vendiste alguno a otro ││        │ │ ▬ En esta venta Ver det.▴│ │
+││    precio?                 ││        │ │ Total · 2 prod. S/ 11.00 │ │
+││ ¿Cuándo fue la venta?      ││        │ │ [   Confirmar venta     ]│ │
+││ ( Ahora )  ( Otro día )    ││        │ ╰──────────────────────────╯ │
+││ Total · 1 prod.  S/ 10.50  ││        │ Inicio Vender Recibir ...    │
+││ [    Confirmar venta     ] ││        └──────────────────────────────┘
+│╰────────────────────────────╯│
+│ Inicio Vender Recibir ...    │
+└──────────────────────────────┘
+ panel abierto (toda la pantalla)               panel oculto
+```
+1. Buscar (campo grande arriba) → resultados con **foto grande**, nombre, precio y stock; los más vendidos primero. Debajo del buscador, accesos rápidos a los 8 productos más vendidos. No hay sección "En esta venta" mientras no se haya elegido nada.
+2. Tocar un producto lo agrega con cantidad 1 y **sube el panel de venta ya abierto, a toda la pantalla** (RN-OP-22), con el foco en su título; lo de atrás no se alcanza mientras está abierto. Para agregar otro producto se toca *Ocultar* (o fuera de la hoja). La hoja sube y baja despacio (≈ 0,4 s, para ver de dónde sale y adónde vuelve) con la animación compartida de hojas (`--duracion-hoja` en tokens.css, `hoja-entra` / `hoja-sale` en base.css), que usarán las demás hojas; sin movimiento si el sistema pide reducirlo.
+3. **Panel abierto**: título *En esta venta* con *Ocultar*; cada línea, compacta: foto, nombre e importe; debajo, **"Quedan N unid."** (o "Se acaba") y, bajo el importe, el **precio por unidad, que es el botón para cambiarlo** en toda la línea (subrayado, con lápiz; con precio especial, etiqueta y "Precio especial"); − / + y *Quitar*; y, en la línea con el precio de siempre y más de una unidad, el enlace ***¿Vendiste alguno a otro precio?*** (RN-OP-11), que abre *¿Cuántos? (de N)* y *¿A cuánto cada uno? (S/)* con *Guardar* y *Cancelar*; mientras esté abierto (o el de cambiar precio), *Confirmar venta* queda bloqueado con "Guarda o cancela el precio para confirmar.". Las líneas y *¿Cuándo fue la venta?* van seguidas, sin huecos; **Total · N productos** y **Confirmar venta** quedan pegados abajo. Todos los textos van a la letra elegida o más (RN-UX-01) y todo lo tocable mide 48 px o más.
+4. **Panel oculto** (con *Ocultar* o tocando el título; se vuelve a abrir con *Ver detalle*, siempre con botón: RN-UX-05): pegado abajo, no tapa la grilla: título, total y Confirmar venta (en celular horizontal, en dos filas). Confirmar desde ahí registra con *Ahora*. Si se quitan todas las líneas, el panel baja y desaparece.
 5. Pantalla de éxito con ✓, resumen y **Deshacer** (10 s) → vuelve a Vender vacío.
+
+En PC (desde 1024 px) no hay panel deslizable: el carrito queda a la derecha del buscador con el mismo contenido que el panel expandido y *Confirmar venta*. El panel es una región con nombre ("En esta venta"); al abrirse (también al aparecer con el primer producto) el foco pasa a su título y al ocultarlo vuelve al botón; la cabecera lleva `aria-expanded`; sin animación si el sistema pide reducir movimiento.
 
 ### Recibir (Llegó mercadería)
 Igual que Vender, pero cada línea muestra **costo** editable en lugar del precio de venta. Se puede abrir prellenada desde *Para comprar*. Al confirmar, avisa si algo es una **sobrecompra** (RN-OP-20).

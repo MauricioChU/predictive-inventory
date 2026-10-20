@@ -9,7 +9,6 @@ import {
   type DatosDeVenta,
   type EstadoDelConteo,
   type ResultadoDeRevision,
-  type ResultadoDelVuelto,
 } from '@/modules/inventario'
 import type { ArchivoGenerado, HojaDeExcel, Previsualizacion } from '@/modules/respaldo'
 import type { Respuesta } from '@/shared/application/respuesta'
@@ -80,13 +79,11 @@ export class Mundo {
   ultimoIngreso: string | null = null
 
   readonly carrito = new Carrito()
-  total: Dinero | null = null
-  vuelto: ResultadoDelVuelto | null = null
   conteo: EstadoDelConteo | null = null
   revision: ResultadoDeRevision | null = null
 
   /**
-   * La "pantalla simulada": los textos que mostró la última acción (vuelto, "El stock ya
+   * La "pantalla simulada": los textos que mostró la última acción (lo que dice el panel de venta, "El stock ya
    * estaba correcto", progreso del conteo, resumen de una copia). Se vacía al empezar cada
    * acción.
    */

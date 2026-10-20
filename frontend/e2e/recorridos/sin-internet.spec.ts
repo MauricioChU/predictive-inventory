@@ -70,14 +70,13 @@ test.describe('RN-SIS-08 / RN-UX-14: en modo avión (build de producción con Se
     await context.setOffline(true)
     anotarPedidosFallidos(page, fallidos)
     await page.reload()
-    await expect(h1(page)).toHaveText(/^Hola, Bodega Rosita/)
+    await expect(h1(page)).toHaveText(/^BODEGA ROSITA/)
     await esperarSinErroresDeConexion(page, 'Inicio')
 
     await page.getByRole('button', { name: 'Vender' }).click()
     await venderPorPantalla(
       page,
       [{ buscado: 'lejia', nombre: 'Lejía Tradicional 1 L', cantidad: 3 }],
-      'S/ 20',
       'S/ 10.50',
     )
     await esperarSinErroresDeConexion(page, 'Venta registrada')
@@ -101,7 +100,7 @@ test.describe('RN-SIS-08 / RN-UX-14: en modo avión (build de producción con Se
     const otra = await context.newPage()
     anotarPedidosFallidos(otra, fallidos)
     await abrir(otra, './')
-    await expect(h1(otra)).toHaveText(/^Hola, Bodega Rosita/)
+    await expect(h1(otra)).toHaveText(/^BODEGA ROSITA/)
     await expect(otra.locator('.tarjeta-de-cifra')).toContainText(comoSeLee('Vendiste S/ 10.50'))
     await esperarSinErroresDeConexion(otra, 'Inicio en otra ventana')
 

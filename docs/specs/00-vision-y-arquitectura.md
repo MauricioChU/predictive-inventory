@@ -33,7 +33,7 @@ Una aplicación que:
 
 | Fase | Entrega | Incluye |
 |---|---|---|
-| **1. App local** | PWA instalable en Android, 100 % offline | Catálogo, ventas con carrito y vuelto, llegada de mercadería, mermas, conteos, anulaciones, alertas en la app y notificaciones del sistema con la app abierta, Torre de control completa, consulta "¿Necesito comprar?", aviso de sobrecompra, conteo guiado, Excel, respaldo/restauración, importación de productos, fotos. |
+| **1. App local** | PWA instalable en Android, 100 % offline | Catálogo, ventas con panel de venta, llegada de mercadería, mermas, conteos, anulaciones, alertas en la app y notificaciones del sistema con la app abierta, Torre de control completa, consulta "¿Necesito comprar?", aviso de sobrecompra, conteo guiado, Excel, respaldo/restauración, importación de productos, fotos. |
 | **2. Nube** | Backend FastAPI + Postgres (Neon) | Sincronización en segundo plano, notificaciones push **con la app cerrada**, resumen diario automático, respaldos nocturnos de la base en la nube con prueba de restauración. |
 | **3. Consulta a distancia** | La misma PWA en cualquier navegador | Inicio de sesión del administrador, modo consulta (solo lectura), avisos por Telegram (opcional), y luego escritura desde varios dispositivos. |
 

@@ -36,6 +36,11 @@
   --separacion-toque: 8px;
   --ancho-contenido: 720px;
   --ancho-contenido-pc: 1200px;
+  /* Hojas que suben desde abajo (panel de venta y las que vengan): lentas para que se vea de
+     dónde salen y adónde vuelven. Animaciones en base.css; cerrar con animar-salida-de-hoja.ts. */
+  --duracion-hoja: 420ms;
+  --curva-hoja-entrar: cubic-bezier(0.22, 1, 0.36, 1);
+  --curva-hoja-salir: cubic-bezier(0.55, 0, 0.75, 0.2);
 }
 
 /* RN-UX-01: la base escala todo el diseño (rem). */

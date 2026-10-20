@@ -19,7 +19,7 @@ import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import EstadoVacio from '@/shared/ui/componentes/EstadoVacio.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import TarjetaDeCifra from '@/shared/ui/componentes/TarjetaDeCifra.vue'
-import FechaYHora from './FechaYHora.vue'
+import FechaDeHoy from './FechaDeHoy.vue'
 import { haciaPantalla, type PantallaDeOtraRama } from './pantallas-de-otras-ramas'
 
 const aplicacion = useAplicacion()
@@ -33,7 +33,8 @@ const atencion = ref<ResumenDeAtencion | null>(null)
 const hayProductos = ref<boolean | null>(null)
 const fallo = ref(false)
 
-const saludo = computed(() => (nombreTienda.value ? `Hola, ${nombreTienda.value}` : 'Hola'))
+/** Plan 20: el nombre de la tienda en mayúsculas (el guardado no cambia); sin nombre, solo "Inicio". */
+const encabezado = computed(() => nombreTienda.value.trim().toLocaleUpperCase('es') || 'Inicio')
 
 /** RN-AN-03: la ganancia neta de hoy (o la pérdida, dicha como tal) y las ventas. */
 const cifraDeHoy = computed(() => {
@@ -102,14 +103,14 @@ function verLoQueSeAcaba(): void {
 <template>
   <div class="vista-inicio">
     <header class="saludo">
-      <h1>{{ saludo }} <span aria-hidden="true">👋</span></h1>
-      <RouterLink :to="{ name: 'ajustes' }" class="enlace-ajustes">
+      <h1>{{ encabezado }}</h1>
+      <!-- Excepción deliberada a RN-UX-04: solo la tuerca, con nombre accesible y zona de 48 px. -->
+      <RouterLink :to="{ name: 'ajustes' }" class="enlace-ajustes" aria-label="Ajustes">
         <Settings aria-hidden="true" class="icono" />
-        <span>Ajustes</span>
       </RouterLink>
     </header>
 
-    <FechaYHora />
+    <FechaDeHoy />
 
     <MensajeDeError
       v-if="fallo"
@@ -118,7 +119,7 @@ function verLoQueSeAcaba(): void {
     />
 
     <!--
-      Inicio es para vender (plan 19). Celular: encabezado → fecha y hora → lo de hoy (cifras y lo
+      Inicio es para vender (plan 19). Celular: encabezado → fecha → lo de hoy (cifras y lo
       que se acaba) → espacio libre → las acciones, pegadas abajo, al alcance del pulgar (si el
       contenido es más alto que la pantalla, todo fluye sin taparse). PC: lo que hay que saber a
       la izquierda y lo que hay que hacer a la derecha.
@@ -212,6 +213,9 @@ h1 {
   text-decoration: none;
 }
 .enlace-ajustes {
+  justify-content: center;
+  min-width: var(--alto-toque);
+  padding-inline: var(--espacio-2);
   border: 2px solid var(--color-borde);
   background: var(--color-fondo);
 }

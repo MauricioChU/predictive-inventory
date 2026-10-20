@@ -21,7 +21,7 @@ Objetivo: que **cada regla de negocio esté probada** y que **ningún merge romp
 | **RN-SIS-02** | Cobertura mínima: **dominio 95 %**, **aplicación 90 %** (líneas y ramas). |
 | **RN-SIS-03** | TypeScript estricto, sin `any` explícito. ESLint y Prettier sin errores. |
 | **RN-SIS-04** | El **dominio no importa** Vue, Pinia, Dexie ni nada de `infrastructure` o `ui` (ESLint `no-restricted-imports`, ver [ADR-0005](../../adr/0005-arquitectura-hexagonal-modular.md)). |
-| **RN-SIS-05** | **E2E** de los flujos críticos (primera vez, crear producto, vender con vuelto, deshacer, recibir mercadería con aviso de sobrecompra, conteo guiado, ¿necesito comprar?, lista para comprar → registrar llegada, guardar y restaurar copia) en **360 × 740** (Android) y **1280 × 800** (PC). |
+| **RN-SIS-05** | **E2E** de los flujos críticos (primera vez, crear producto, vender con panel de venta, deshacer, recibir mercadería con aviso de sobrecompra, conteo guiado, ¿necesito comprar?, lista para comprar → registrar llegada, guardar y restaurar copia) en **360 × 740** (Android) y **1280 × 800** (PC). |
 | **RN-SIS-06** | **Responsive** automatizado: en cada pantalla, a **320, 360, 768 y 1280 px** y con letra *Muy grande*, `scrollWidth ≤ clientWidth` (sin desplazamiento horizontal) y ningún botón principal queda fuera de la vista. |
 | **RN-SIS-07** | **Accesibilidad**: axe-core sin violaciones `serious` ni `critical` en cada pantalla. |
 | **RN-SIS-08** | **Offline**: una prueba E2E abre la app, pasa a modo sin conexión, recarga y completa una venta. |

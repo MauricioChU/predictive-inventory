@@ -17,6 +17,23 @@ export function mensajeStockInsuficiente(nombre: string, unidad: Unidad, stock: 
     : `Solo quedan ${cantidad} de ${nombre}`
 }
 
+/**
+ * RN-OP-22: lo que muestra cada línea del panel de venta — cuántas unidades quedan tras la venta
+ * (stock − cantidad): "Quedan 7 unid.", "Queda 1 kg" o "Se acaba" si no queda nada. Si la
+ * cantidad pasa el stock no hay nada que decir aquí: vale el error de RN-OP-05.
+ */
+export function mensajeDeLoQueQueda(
+  stock: Cantidad,
+  cantidad: Cantidad,
+  unidad: Unidad,
+): string | undefined {
+  if (cantidad.mayorQue(stock)) return undefined
+  const queda = stock.restar(cantidad)
+  if (!queda.esPositiva()) return 'Se acaba'
+  const texto = formatearCantidad(queda, unidad)
+  return queda.esUno() ? `Queda ${texto}` : `Quedan ${texto}`
+}
+
 const POR_UNIDAD_DE_MEDIDA: Record<Unidad, string> = {
   UNIDAD: 'por unidad',
   KILO: 'por kilo',

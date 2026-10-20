@@ -35,18 +35,3 @@ export interface AccesoRapido {
 
 /** Vender: accesos rápidos a los 8 productos más vendidos (06-experiencia-de-uso). */
 export const MAXIMO_DE_ACCESOS_RAPIDOS = 8
-
-export interface Billete {
-  /** Lo que dice el botón: "S/ 20". */
-  etiqueta: string
-  /** Lo que pasa a "Paga con" al tocarlo, como lo escribiría la persona: "20". */
-  valor: string
-}
-
-/** Billetes de la pantalla Cobrar (06-experiencia-de-uso, Vender paso 4). */
-export const BILLETES_DE_SOLES: readonly Billete[] = [
-  { etiqueta: 'S/ 10', valor: '10' },
-  { etiqueta: 'S/ 20', valor: '20' },
-  { etiqueta: 'S/ 50', valor: '50' },
-  { etiqueta: 'S/ 100', valor: '100' },
-]
