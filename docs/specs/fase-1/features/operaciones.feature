@@ -123,6 +123,18 @@ Característica: Operaciones de stock
     Y la ganancia de la venta es "S/ 1.20"
     Y el producto "Lejía 1 L" tiene precio de venta "3.50"
 
+  @RN-OP-11 @RN-OP-07
+  Escenario: Parte de las unidades a otro precio quedan en su propia línea
+    Cuando vendo "4" de "Lejía 1 L" y "1" más a precio especial "3.00"
+    Entonces el total de la venta es "S/ 17.00"
+    Y el stock de "Lejía 1 L" es "5"
+
+  @RN-OP-11 @RN-OP-05
+  Escenario: Las dos líneas del mismo producto juntas no pueden pasar el stock
+    Cuando vendo "8" de "Lejía 1 L" y "3" más a precio especial "3.00"
+    Entonces el resultado es "error: Solo quedan 10 unid. de Lejía 1 L"
+    Y el stock de "Lejía 1 L" es "10"
+
   @RN-OP-11
   Escenario: El precio especial debe ser mayor que cero
     Cuando vendo "2" de "Lejía 1 L" a precio especial "0.00"

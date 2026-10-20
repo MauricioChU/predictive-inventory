@@ -63,26 +63,30 @@ El encabezado es el **nombre de la tienda en mayúsculas**, sin saludo ni emoji 
 ### Vender
 ```
 ┌──────────────────────────────┐        ┌──────────────────────────────┐
-│ Vender                       │        │ En esta venta · 2 productos  │
-│ [ Buscar producto          ] │        │  ▲ Cerrar                    │
-│ Más vendidos  [Lejía][Carbón]│        │ Lejía 1 L   [−] 2 [+] S/ 7.00│
-│  (grilla, sigue a la vista)  │        │   Quedan 8 unid.   Quitar   │
-│ ╭──────────────────────────╮ │        │ Carbón      [−] 1 [+] S/ 4.00│
-│ │ ▬  En esta venta · 2     │ │        │   Se acaba         Quitar   │
-│ │ Total S/ 11.00 Ver detalle│ │       │ ¿Cuándo fue la venta?        │
-│ │ [   Confirmar venta     ]│ │        │  ( Ahora )  ( Otro día )     │
-│ ╰──────────────────────────╯ │        │ Total S/ 11.00               │
-│ Inicio Vender Recibir ...    │        │ [   Confirmar venta       ]  │
-└──────────────────────────────┘        └──────────────────────────────┘
-        panel compacto                          panel expandido
+│ Vender                       │        │ Vender                       │
+│ [ Buscar producto          ] │        │ [ Buscar producto          ] │
+│ ╭──────────────────────────╮ │        │ Más vendidos  [Lejía][Carbón]│
+│ │ ▬ En esta venta  Ocultar ▾│ │       │  (grilla, sigue a la vista)  │
+│ │ [▢] Lejía 1 L     S/ 7.00│ │        │                              │
+│ │     Quedan 8 unid.       │ │        │                              │
+│ │     ✎ S/ 3.50 c/u        │ │        │ ╭──────────────────────────╮ │
+│ │ [−] 2 [+]       🗑 Quitar │ │        │ │ ▬ En esta venta Ver det.▴│ │
+│ │ ¿Cuándo fue la venta?    │ │        │ │ Total · 2 prod. S/ 11.00 │ │
+│ │ ( Ahora )  ( Otro día )  │ │        │ │ [   Confirmar venta     ]│ │
+│ │ Total · 2 prod. S/ 11.00 │ │        │ ╰──────────────────────────╯ │
+│ │ [   Confirmar venta     ]│ │        │ Inicio Vender Recibir ...    │
+│ ╰──────────────────────────╯ │        └──────────────────────────────┘
+│ Inicio Vender Recibir ...    │
+└──────────────────────────────┘
+   panel abierto (al agregar)                   panel oculto
 ```
 1. Buscar (campo grande arriba) → resultados con **foto grande**, nombre, precio y stock; los más vendidos primero. Debajo del buscador, accesos rápidos a los 8 productos más vendidos. No hay sección "En esta venta" mientras no se haya elegido nada.
-2. Tocar un producto lo agrega con cantidad 1 y **sube desde abajo el panel de venta** (RN-OP-22), que no tapa la grilla: la página deja espacio para seguir eligiendo.
-3. **Panel compacto** (por defecto): "En esta venta · N producto(s)" con una flecha y *Ver detalle*, el **total** en grande y **Confirmar venta** (ancho completo, 56 px). Confirmar desde aquí registra la venta con *Ahora*.
-4. **Panel expandido** (al tocar la cabecera o *Ver detalle*; se cierra con *Cerrar* o la misma cabecera, siempre con botón: RN-UX-05): cada línea, compacta para ver dos o tres a la vez: foto, nombre y **"Quedan N unid."** (o "Se acaba"); − / + con el importe y el precio por unidad al lado; *Cambiar precio* y *Quitar* lado a lado (todo tocable de 48 px o más); *¿Cuándo fue la venta?* (*Ahora* / *Otro día*); el total y **Confirmar venta**. Si se quitan todas las líneas, el panel baja y desaparece.
+2. Tocar un producto lo agrega con cantidad 1 y **sube desde abajo el panel de venta ya abierto** (RN-OP-22). Mide lo que ocupa su contenido, sin huecos (con muchas líneas llega casi arriba y las líneas se desplazan dentro), y no tapa la grilla: se siguen tocando productos para agregarlos.
+3. **Panel abierto**: título *En esta venta* con *Ocultar*; cada línea, compacta: foto, nombre, **"Quedan N unid."** (o "Se acaba") y el **precio por unidad, que es el botón para cambiarlo** (subrayado, con lápiz; con precio especial, etiqueta y la marca "Precio especial"), con el importe a la derecha; debajo − / + y *Quitar*. Luego *¿Cuándo fue la venta?* (*Ahora* / *Otro día*); abajo, siempre a la vista, **Total · N productos** y **Confirmar venta**. Todos los textos van a la letra elegida o más (RN-UX-01) y todo lo tocable mide 48 px o más.
+4. **Cambiar precio** abre, en la misma línea, *Nuevo precio en S/* y, si hay más de una unidad, *¿Para cuántas? (de N)* (RN-OP-11). **Panel oculto** (con *Ocultar* o tocando el título; se vuelve a abrir con *Ver detalle*, siempre con botón: RN-UX-05): título, total y Confirmar venta. Confirmar desde ahí registra con *Ahora*. Si se quitan todas las líneas, el panel baja y desaparece.
 5. Pantalla de éxito con ✓, resumen y **Deshacer** (10 s) → vuelve a Vender vacío.
 
-En PC (desde 1024 px) no hay panel deslizable: el carrito queda a la derecha del buscador con el mismo contenido que el panel expandido y *Confirmar venta*. El panel es una región con nombre ("En esta venta"); al expandirse el foco pasa a su título y al cerrar vuelve al botón que lo abrió; la cabecera lleva `aria-expanded`; sin animación si el sistema pide reducir movimiento.
+En PC (desde 1024 px) no hay panel deslizable: el carrito queda a la derecha del buscador con el mismo contenido que el panel expandido y *Confirmar venta*. El panel es una región con nombre ("En esta venta"); al abrirse con su botón el foco pasa a su título y al ocultarlo vuelve al botón (al aparecer con el primer producto, el foco se queda en la grilla); la cabecera lleva `aria-expanded`; sin animación si el sistema pide reducir movimiento.
 
 ### Recibir (Llegó mercadería)
 Igual que Vender, pero cada línea muestra **costo** editable en lugar del precio de venta. Se puede abrir prellenada desde *Para comprar*. Al confirmar, avisa si algo es una **sobrecompra** (RN-OP-20).

@@ -73,7 +73,7 @@ El inventario funciona como un **libro de operaciones**: cada hecho del negocio 
 | **RN-OP-04** | **Precisión por unidad**: `UNIDAD` solo acepta enteros; `KILO` y `LITRO` aceptan hasta **3 decimales** (gramos o mililitros). |
 | **RN-OP-05** | **El stock nunca es negativo.** Si una operación dejaría algún producto bajo 0, se rechaza **completa** y el mensaje dice qué producto falta y cuánto hay: "Solo quedan 2 unid. de Lejía 1 L". |
 | **RN-OP-06** | Una operación con varias líneas se registra **entera o no se registra** (atómica). |
-| **RN-OP-07** | Una operación no repite un producto: si se agrega dos veces el mismo, se **suman** las cantidades en una sola línea. Solo se suman líneas con el mismo precio (el de venta en una venta, el costo en un ingreso); si es distinto, se rechaza: "Pusiste el mismo producto dos veces con distinto precio. Déjalo en una sola línea." |
+| **RN-OP-07** | Una operación no repite un producto: si se agrega dos veces el mismo, se **suman** las cantidades en una sola línea. Solo se suman líneas con el mismo precio (el de venta en una venta, el costo en un ingreso). En un ingreso, con costos distintos se rechaza: "Pusiste el mismo producto dos veces con distinto precio. Déjalo en una sola línea." En una venta, cada precio queda en su propia línea (RN-OP-11). |
 | **RN-OP-08** | Solo se operan productos **activos** (salvo la anulación de una operación pasada de un producto ya archivado). Un producto que no existe se rechaza: "No encontramos ese producto". |
 | **RN-OP-09** | La fecha de una operación puede ser **ahora o hasta 7 días atrás**, nunca futura. Por defecto es ahora. Si se elige otra fecha, se elige también la hora; sin hora (o si no se puede leer) se pide: "Elige la fecha y la hora". La validación de stock (RN-OP-05) se hace contra el stock **actual**. |
 
@@ -82,10 +82,10 @@ El inventario funciona como un **libro de operaciones**: cada hecho del negocio 
 | Id | Regla |
 |---|---|
 | **RN-OP-10** | Cada línea de venta guarda el **precio de venta** y el **costo unitario** vigentes en ese momento. |
-| **RN-OP-11** | El precio de una línea puede cambiarse **solo para esa venta** (rebaja o precio especial). Debe ser mayor que S/ 0.00. El precio del producto no cambia. |
+| **RN-OP-11** | El precio de una línea puede cambiarse **solo para esa venta** (rebaja o precio especial). Debe ser mayor que S/ 0.00. El precio del producto no cambia. Si la línea tiene más de una unidad, se elige **para cuántas** (por defecto, todas): con menos, esas unidades pasan a otra línea del mismo producto con ese precio (p. ej. de 5, 4 a S/ 3.50 y 1 a S/ 3.00 para un amigo), y la venta se registra con las dos líneas, cada una con su precio y su ganancia. El stock (RN-OP-05) y "Quedan" (RN-OP-22) cuentan las dos juntas. Volver una parte al precio de siempre la junta otra vez con su línea. |
 | **RN-OP-12** | **Importe de línea** = precio × cantidad, redondeado al céntimo (mitad hacia arriba). **Total de la venta** = suma de importes de línea. **Ganancia de línea** = importe − (costo × cantidad redondeado al céntimo). |
 | ~~RN-OP-13~~ | **Retirada** (2026-10-19): el dueño no usa el vuelto en la app; ya no se pregunta con cuánto pagan. |
-| **RN-OP-22** | **Panel de venta**: al agregar el primer producto aparece el panel con el total y *Confirmar venta*; cada línea muestra cuántas unidades quedan tras la venta (stock − cantidad) en tiempo real ("Quedan 7 unid."; si no queda nada, "Se acaba"; si la cantidad pasa el stock, vale RN-OP-05); *¿Cuándo fue la venta?* está en el panel expandido; confirmar registra la venta con *Ahora* salvo que se haya elegido *Otro día* (RN-OP-09). |
+| **RN-OP-22** | **Panel de venta**: al agregar el primer producto aparece el panel **ya abierto**, con las líneas, el total y *Confirmar venta*; mide lo que ocupa su contenido (sin huecos) y no tapa la grilla, que se sigue tocando para agregar; *Ocultar* lo deja en el título, el total y *Confirmar venta*; cada línea muestra cuántas unidades quedan tras la venta (stock − cantidad) en tiempo real ("Quedan 7 unid."; si no queda nada, "Se acaba"; si la cantidad pasa el stock, vale RN-OP-05); *¿Cuándo fue la venta?* está en el panel abierto; confirmar registra la venta con *Ahora* salvo que se haya elegido *Otro día* (RN-OP-09). |
 
 ### Llegada de mercadería (ingreso)
 
