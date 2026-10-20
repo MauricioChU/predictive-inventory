@@ -34,7 +34,7 @@ const refRaiz = ref<HTMLElement>()
 async function quitar(lineaId: string, nombre: string): Promise<void> {
   const contenedor = refRaiz.value?.closest<HTMLElement>('.columna-carrito, .panel-de-venta')
   props.carrito.quitar(lineaId)
-  anunciador.anunciar(`Quitaste ${nombre}`)
+  anunciador.anunciar(`${props.concepto === 'venta' ? 'Cancelaste' : 'Quitaste'} ${nombre}`)
   await nextTick()
   if (props.carrito.vacio.value && contenedor?.classList.contains('panel-de-venta')) {
     await enfocarTitulo()
@@ -98,6 +98,7 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
           :maximo-separar="linea.cantidadLeida ? linea.cantidadLeida.milesimas / 1000 : undefined"
           :error-unidades="linea.errorUnidades"
           :compacta="compacta"
+          :texto-quitar="esVenta ? 'Cancelar' : 'Quitar'"
           @update:cantidad="carrito.cambiarCantidad(linea.id, $event)"
           @cambiar-precio="carrito.cambiarPrecio(linea.id, $event)"
           @separar="(unidades, precio) => carrito.cambiarPrecio(linea.id, precio, unidades)"

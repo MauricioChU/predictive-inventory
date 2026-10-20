@@ -38,7 +38,7 @@ onUnmounted(() => {
     así un lector de pantalla lo nota de las dos formas: el anuncio y, al enfocar el título,
     leerlo directamente.
   -->
-  <div class="pantalla-exito">
+  <div class="pantalla-exito aparece">
     <CircleCheck aria-hidden="true" class="icono" />
     <h1 ref="refEncabezado">{{ titulo }}</h1>
     <!-- Plan 12: "Total S/ 46.80" nunca se parte (RN-UX-09). -->
@@ -48,18 +48,30 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* Al centro del alto libre (sobre la navegación y el aviso Deshacer), con la animación
+   compartida de aparecer (base.css): el ✓ crece y el resto sube suave. */
 .pantalla-exito {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  min-block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
+  box-sizing: border-box;
   gap: var(--espacio-3);
   padding: var(--espacio-6) var(--espacio-4);
   text-align: center;
   color: var(--color-exito);
 }
 .icono {
-  width: 4rem;
-  height: 4rem;
+  width: 4.5rem;
+  height: 4.5rem;
+  animation: exito-icono var(--duracion-hoja) var(--curva-hoja-entrar) both;
+}
+@keyframes exito-icono {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
 }
 h1 {
   font-size: 1.375rem;

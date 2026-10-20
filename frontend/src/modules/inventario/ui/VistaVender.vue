@@ -3,7 +3,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { Check, ShoppingCart } from 'lucide-vue-next'
 import type { ProductoVista } from '@/modules/catalogo'
 import { useAplicacion } from '@/app/proveer-aplicacion'
-import { formatearDinero } from '@/shared/domain/formato'
+import { formatearCantidad, formatearDinero } from '@/shared/domain/formato'
 import { useAnunciador } from '@/shared/ui/anunciador'
 import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import BarraDeTotal from '@/shared/ui/componentes/BarraDeTotal.vue'
@@ -47,6 +47,15 @@ const expandido = ref(false)
 const registrando = ref(false)
 const error = ref<ErrorParaMostrar | null>(null)
 const detalleDeExito = ref('')
+/** Lo que se vendió, para la pantalla de éxito: "2 unid. × S/ 3.50" e importe por línea. */
+interface LineaVendida {
+  id: string
+  nombre: string
+  detalle: string
+  importe: string
+  especial: boolean
+}
+const vendido = ref<LineaVendida[]>([])
 const errorFecha = ref<ErrorDeFecha>()
 
 const textoTotal = computed(() => formatearDinero(carrito.total.value))
@@ -140,6 +149,15 @@ async function confirmar(): Promise<void> {
   const copia = carrito.copia()
   const totalVendido = textoTotal.value
   detalleDeExito.value = `Total ${totalVendido}`
+  vendido.value = carrito.lineas.value.map((linea) => ({
+    id: linea.id,
+    nombre: linea.producto.nombre,
+    detalle: linea.cantidadLeida
+      ? `${formatearCantidad(linea.cantidadLeida, linea.producto.unidad)} × ${formatearDinero(linea.precio)}`
+      : '',
+    importe: linea.importe ? formatearDinero(linea.importe) : '',
+    especial: linea.precioCambiado,
+  }))
   carrito.vaciar()
   expandido.value = false
   paso.value = 'exito'
@@ -172,6 +190,15 @@ async function nuevaVenta(): Promise<void> {
 <template>
   <div class="vista-vender" :class="{ 'vista-vender--con-panel': !esPC && paso === 'carrito' }">
     <PantallaExito v-if="paso === 'exito'" titulo="Venta registrada" :detalle="detalleDeExito">
+      <ul v-if="vendido.length > 0" class="vendido" aria-label="Lo que vendiste">
+        <li v-for="linea in vendido" :key="linea.id" class="linea-vendida">
+          <span class="nombre-vendido">{{ linea.nombre }}</span>
+          <span class="importe-vendido">{{ linea.importe }}</span>
+          <span class="detalle-vendido">
+            {{ linea.detalle }}<template v-if="linea.especial"> · Precio especial</template>
+          </span>
+        </li>
+      </ul>
       <BotonPrincipal
         class="accion-exito"
         texto="Nueva venta"
@@ -272,6 +299,44 @@ async function nuevaVenta(): Promise<void> {
 }
 .buscador {
   min-inline-size: 0;
+}
+.vendido {
+  display: grid;
+  gap: var(--espacio-2);
+  inline-size: 100%;
+  max-inline-size: 28rem;
+  margin: var(--espacio-2) 0 0;
+  padding: var(--espacio-3) var(--espacio-4);
+  border: 1px solid var(--color-borde-foto);
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  list-style: none;
+  text-align: start;
+}
+.linea-vendida {
+  /* Nombre e importe en una fila; si el nombre no entra sin partir una palabra (320 px, letra
+     Muy grande), el importe baja a su propia fila. */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--espacio-3);
+}
+.linea-vendida + .linea-vendida {
+  padding-block-start: var(--espacio-2);
+  border-block-start: 1px solid var(--color-borde-foto);
+}
+.nombre-vendido {
+  flex: 1 1 8rem;
+  font-weight: 700;
+}
+.importe-vendido {
+  margin-inline-start: auto;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.detalle-vendido {
+  flex-basis: 100%;
+  color: var(--color-texto-suave);
 }
 .accion-exito {
   align-self: stretch;

@@ -3,7 +3,7 @@ import { computed, nextTick, ref, useId } from 'vue'
 import { Check, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import { formatearEntero, plural } from '@/shared/domain/formato'
 import { usarAltoObservado } from '@/shared/ui/alto-observado'
-import { animarSalidaDeHoja } from '@/shared/ui/animar-salida-de-hoja'
+import { alTerminarAnimacion } from '@/shared/ui/al-terminar-animacion'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import type { CarritoDePantalla } from './carrito-de-pantalla'
 import CuandoFue from './CuandoFue.vue'
@@ -69,7 +69,8 @@ async function alternar(): Promise<void> {
   }
   // Baja despacio y recién después queda oculta.
   cerrando.value = true
-  animarSalidaDeHoja(refHoja.value, () => {
+  await nextTick()
+  alTerminarAnimacion(refHoja.value, () => {
     cerrando.value = false
     emit('update:expandido', false)
     void nextTick(() => refAlternar.value?.focus())
@@ -98,7 +99,11 @@ function ocultarConEscape(): void {
       aria-hidden="true"
       @click="alternar"
     />
-    <div ref="refHoja" class="hoja" :class="{ 'hoja-entra': expandido && !cerrando }">
+    <div
+      ref="refHoja"
+      class="hoja"
+      :class="{ 'hoja-entra': expandido && !cerrando, 'hoja-sale': cerrando }"
+    >
       <div ref="refCabecera" class="cabecera-del-panel">
         <div class="asa" aria-hidden="true" />
         <!-- Tocar el título también abre y oculta (comodidad: el botón es lo que lee el lector). -->

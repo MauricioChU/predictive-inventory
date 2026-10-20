@@ -34,7 +34,8 @@ textarea {
 /*
  * Hojas que suben desde abajo (uso: el elemento de la hoja con la clase `hoja-entra` al
  * aparecer y `hoja-sale` antes de quitarla; su velo con `velo-entra` / `velo-sale`). Para
- * cerrar, animarSalidaDeHoja() (shared/ui/animar-salida-de-hoja.ts) espera a que termine.
+ * cerrar, el componente pone `hoja-sale` con su :class y alTerminarAnimacion()
+ * (shared/ui/al-terminar-animacion.ts) avisa cuándo quitarla.
  */
 @keyframes hoja-subir {
   from {
@@ -67,6 +68,16 @@ textarea {
 }
 .hoja-sale {
   animation: hoja-bajar var(--duracion-hoja) var(--curva-hoja-salir) both;
+}
+/* Contenido que aparece (pantallas de éxito y lo que venga): sube suave y se aclara. */
+@keyframes aparecer {
+  from {
+    transform: translateY(1rem);
+    opacity: 0;
+  }
+}
+.aparece {
+  animation: aparecer var(--duracion-hoja) var(--curva-hoja-entrar) both;
 }
 .velo-entra {
   animation: velo-aparecer var(--duracion-hoja) ease-out both;

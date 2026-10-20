@@ -60,6 +60,9 @@ const props = withDefaults(
      * "Importe" quedan para el lector de pantalla. Los toques siguen de 48 px o más.
      */
     compacta?: boolean
+    /** Texto del botón que saca la línea: "Cancelar" en Vender (se cancela ese producto de la
+     * venta), "Quitar" en lo demás. */
+    textoQuitar?: string
   }>(),
   {
     imagen: undefined,
@@ -76,6 +79,7 @@ const props = withDefaults(
     maximoSeparar: undefined,
     errorUnidades: undefined,
     compacta: false,
+    textoQuitar: 'Quitar',
   },
 )
 const emit = defineEmits<{
@@ -302,11 +306,11 @@ function alPresionarEnter(evento: KeyboardEvent) {
         <button
           type="button"
           class="accion-liviana accion-liviana--quitar"
-          :aria-label="`Quitar ${nombre}`"
+          :aria-label="`${textoQuitar} ${nombre}`"
           @click="emit('quitar')"
         >
           <Trash2 aria-hidden="true" class="icono-accion" />
-          <span>Quitar</span>
+          <span>{{ textoQuitar }}</span>
         </button>
       </div>
       <button
@@ -424,10 +428,10 @@ function alPresionarEnter(evento: KeyboardEvent) {
         />
         <Boton
           class="accion"
-          texto="Quitar"
+          :texto="textoQuitar"
           variante="peligro"
           :icono="Trash2"
-          :aria-label="`Quitar ${nombre}`"
+          :aria-label="`${textoQuitar} ${nombre}`"
           @click="emit('quitar')"
         />
       </div>

@@ -4,6 +4,12 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+### Cambiado
+
+- Vender: el panel ahora también baja despacio al tocar «Ocultar».
+- Al registrar una venta, la confirmación aparece al centro con una animación y muestra lo que vendiste: cada producto con su cantidad, precio e importe, y el total.
+- En el panel de venta, el botón para sacar un producto de la venta dice «Cancelar».
+
 ## [0.4.0] · 2026-10-20
 
 ### Nuevo
