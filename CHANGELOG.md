@@ -4,6 +4,8 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+## [0.4.0] · 2026-10-20
+
 ### Nuevo
 
 - Puedes vender algunas unidades a otro precio (por ejemplo, de 5, una más barata para un amigo): toca «¿Vendiste alguno a otro precio?», di cuántos y a cuánto; nunca deja poner más de los que estás vendiendo, y la venta guarda cada precio por separado. Mientras ese formulario esté abierto no se puede confirmar la venta: primero guarda o cancela.
