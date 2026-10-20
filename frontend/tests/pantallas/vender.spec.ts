@@ -177,13 +177,13 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       const alternar = region.get('.alternar')
       expect(alternar.attributes('aria-expanded')).toBe('true')
       expect(alternar.text()).toContain('Ocultar')
-      // Abierto: las líneas y ¿Cuándo fue?; la grilla sigue a la vista y se puede tocar, y el
-      // foco no salta al panel (para seguir agregando).
+      // Abierto a toda la pantalla: las líneas y ¿Cuándo fue?; lo de atrás no se alcanza y el
+      // foco pasa al título del panel.
       expect(lineas(p)).toHaveLength(1)
       expect(p.w.find('.panel-de-venta [role="radiogroup"]').exists()).toBe(true)
-      expect(p.w.find('.buscador-grande').exists()).toBe(true)
-      expect(p.w.get('.buscador').attributes('inert')).toBeUndefined()
-      expect(document.activeElement).not.toBe(titulo.element)
+      expect(p.w.get('.buscador').attributes('inert')).toBeDefined()
+      expect(p.w.get('.avisos').attributes('inert')).toBeDefined()
+      expect(document.activeElement).toBe(titulo.element)
     })
 
     it('la cabecera cuenta los productos y el total los suma', async () => {
@@ -524,34 +524,46 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     expect((await app.catalogo.obtenerProducto(ids.lejia))?.precioVenta.centimos).toBe(350)
   })
 
-  it('RN-OP-11: un precio distinto solo para algunas unidades separa la línea y se registra así', async () => {
+  it('RN-OP-11: "¿Vendiste alguno a otro precio?" separa esas unidades y no deja pasar de las que hay', async () => {
     const { app, ids } = await tiendaDePrueba()
     const p = await abrirVender(app)
     await agregarBuscando(p, 'lejia', 'Lejía 1 L')
-    await cambiarCantidad(p, 0, '5')
+    // Con una sola unidad no hay nada que separar (para eso está el precio de la línea).
+    expect(lineas(p)[0]!.find('.otro-precio').exists()).toBe(false)
+    await cambiarCantidad(p, 0, '2')
     const linea = () => lineas(p)[0]!
 
-    await linea().get('.precio-tocable').trigger('click')
-    const campos = linea().findAll('.edicion-precio input')
-    expect(campos).toHaveLength(2)
-    expect((campos[1]!.element as HTMLInputElement).value).toBe('5')
-    expect(linea().get('.edicion-precio').text()).toContain('¿Para cuántas? (de 5)')
-    await campos[0]!.setValue('3.00')
-    await campos[1]!.setValue('1')
-    await boton(linea(), 'Guardar precio').trigger('click')
+    await boton(linea(), '¿Vendiste alguno a otro precio?').trigger('click')
+    const [cuantos, precio] = linea().findAll('.separar input')
+    expect(linea().get('.separar').text()).toContain('¿Cuántos? (de 2)')
+    expect((cuantos!.element as HTMLInputElement).value).toBe('1')
+    // "+" se detiene en 2, y escribir más se marca al momento sin dejar guardar.
+    const mas = linea()
+      .findAll('.separar .campo-numero')[0]!
+      .get('button[aria-label="Agregar uno"]')
+    await mas.trigger('click')
+    expect((cuantos!.element as HTMLInputElement).value).toBe('2')
+    expect(mas.attributes('disabled')).toBeDefined()
+    await cuantos!.setValue('5')
+    expect(linea().get('.separar .error').text()).toBe('Son 2 en total: escribe de 1 a 2')
+    expect(boton(linea(), 'Guardar').attributes('disabled')).toBeDefined()
+
+    await cuantos!.setValue('1')
+    await precio!.setValue('3.00')
+    await boton(linea(), 'Guardar').trigger('click')
     await esperarDatos(app)
 
     expect(lineas(p)).toHaveLength(2)
-    expect(cantidadDe(p, 0)).toBe('4')
+    expect(cantidadDe(p, 0)).toBe('1')
     expect(cantidadDe(p, 1)).toBe('1')
     expect(lineas(p)[1]!.text()).toContain('Precio especial')
-    expect(lineas(p)[1]!.text()).toContain('Quedan 5 unid.')
-    expect(total(p)).toBe('S/ 17.00')
+    expect(lineas(p)[1]!.text()).toContain('Quedan 8 unid.')
+    expect(total(p)).toBe('S/ 6.50')
 
     await confirmarVenta(p)
     const [venta] = await app.inventario.historial({ tipo: 'VENTA' })
-    expect(venta?.total?.centimos).toBe(1700)
-    expect(await stock(app, ids.lejia)).toBe('5')
+    expect(venta?.total?.centimos).toBe(650)
+    expect(await stock(app, ids.lejia)).toBe('8')
   })
 
   it('RN-OP-10 / RN-UX-11 / RN-OP-18: confirmar registra la venta, muestra el éxito y ofrece Deshacer; "Nueva venta" vuelve vacío', async () => {

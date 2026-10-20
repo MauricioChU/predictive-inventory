@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { Check, ShoppingCart } from 'lucide-vue-next'
 import type { ProductoVista } from '@/modules/catalogo'
 import { useAplicacion } from '@/app/proveer-aplicacion'
@@ -62,14 +62,21 @@ watch(carrito.vacio, (vacio) => {
   if (vacio) expandido.value = false
 })
 
-function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): void {
-  // RN-OP-22: con el primer producto el panel aparece ya abierto (el foco se queda en la grilla
-  // para seguir agregando).
-  if (carrito.vacio.value) expandido.value = true
+async function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): Promise<void> {
+  const primero = carrito.vacio.value
   const lineaId = carrito.agregar(producto)
   anunciador.anunciar(`Agregaste ${producto.nombre}`)
-  // En celular el foco se queda en la grilla, para seguir agregando.
-  if (origen === 'resultados' && esPC.value) void enfocarLinea(lineaId)
+  if (esPC.value) {
+    if (origen === 'resultados') void enfocarLinea(lineaId)
+    return
+  }
+  // RN-OP-22: con el primer producto el panel aparece ya abierto, a toda la pantalla; el foco
+  // pasa a su título (lo de atrás queda inerte).
+  if (primero) {
+    expandido.value = true
+    await nextTick()
+    document.querySelector<HTMLElement>('.panel-de-venta .titulo-carrito')?.focus()
+  }
 }
 
 async function abrirDetalle(): Promise<void> {
@@ -170,7 +177,8 @@ async function nuevaVenta(): Promise<void> {
 
     <template v-else>
       <EncabezadoPagina titulo="Vender" />
-      <div class="avisos">
+      <!-- Con la hoja abierta (celular), los avisos de atrás tampoco se alcanzan. -->
+      <div class="avisos" :inert="!esPC && expandido ? true : undefined">
         <AvisoEnPagina
           v-if="alDia.quitados.value.length > 0"
           tono="atencion"
@@ -214,8 +222,8 @@ async function nuevaVenta(): Promise<void> {
 
       <!-- Celular: la grilla ocupa la pantalla y el panel sube cuando hay algo en la venta. -->
       <template v-else>
-        <!-- La hoja abierta no tapa la grilla: se siguen tocando productos para agregarlos. -->
-        <div class="buscador">
+        <!-- Con la hoja abierta, lo de atrás no se alcanza (ni con Tab ni con el lector). -->
+        <div class="buscador" :inert="expandido ? true : undefined">
           <BuscadorDeProductos concepto="venta" @elegir="agregar" />
         </div>
         <Transition name="panel">
@@ -274,7 +282,11 @@ async function nuevaVenta(): Promise<void> {
     transform 0.2s ease-out,
     opacity 0.2s ease-out;
 }
-.panel-enter-from,
+/* Al entrar, solo un fundido: un transform en la sección haría que la hoja abierta (fixed) se
+   ubique respecto a ella y no a la pantalla mientras dura. La hoja sube con su propia animación. */
+.panel-enter-from {
+  opacity: 0;
+}
 .panel-leave-to {
   transform: translateY(100%);
   opacity: 0;

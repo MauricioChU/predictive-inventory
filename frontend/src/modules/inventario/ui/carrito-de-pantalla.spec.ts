@@ -177,9 +177,9 @@ describe('carrito de pantalla', () => {
     it('cuántas debe ser de 1 a las que hay en la línea', () => {
       const { carrito, id } = conCinco()
       carrito.cambiarPrecio(id, '3.00', '6')
-      expect(carrito.lineas.value[0]!.errorUnidades).toBe('Escribe cuántas, de 1 a 5')
+      expect(carrito.lineas.value[0]!.errorUnidades).toBe('Son 5 en total: escribe de 1 a 5')
       carrito.cambiarPrecio(id, '3.00', '0')
-      expect(carrito.lineas.value[0]!.errorUnidades).toBe('Escribe cuántas, de 1 a 5')
+      expect(carrito.lineas.value[0]!.errorUnidades).toBe('Son 5 en total: escribe de 1 a 5')
       expect(resumen(carrito)).toEqual([['5', 350, false]])
       carrito.cancelarPrecio(id)
       expect(carrito.lineas.value[0]!.errorUnidades).toBeUndefined()

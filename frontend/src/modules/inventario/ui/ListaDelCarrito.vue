@@ -50,7 +50,7 @@ watch(
 )
 
 const UNA = Cantidad.deEntero(1)
-/** RN-OP-11: al vender más de una, el precio nuevo puede ser solo para algunas. */
+/** RN-OP-11: al vender más de una, se puede vender alguna a otro precio. */
 function sePuedePartir(linea: (typeof lineas.value)[number]): boolean {
   return esVenta.value && (linea.cantidadLeida?.mayorQue(UNA) ?? false)
 }
@@ -93,11 +93,13 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
           :valor-precio="textoDePrecio(linea.precio)"
           :error-cantidad="linea.errorCantidad"
           :error-precio="linea.errorPrecio"
-          :partir-unidades="sePuedePartir(linea)"
+          :puede-separar="sePuedePartir(linea)"
+          :maximo-separar="linea.cantidadLeida ? linea.cantidadLeida.milesimas / 1000 : undefined"
           :error-unidades="linea.errorUnidades"
           :compacta="compacta"
           @update:cantidad="carrito.cambiarCantidad(linea.id, $event)"
-          @cambiar-precio="(precio, unidades) => carrito.cambiarPrecio(linea.id, precio, unidades)"
+          @cambiar-precio="carrito.cambiarPrecio(linea.id, $event)"
+          @separar="(unidades, precio) => carrito.cambiarPrecio(linea.id, precio, unidades)"
           @cancelar-precio="carrito.cancelarPrecio(linea.id)"
           @quitar="quitar(linea.id, linea.producto.nombre)"
         />

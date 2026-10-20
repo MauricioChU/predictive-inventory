@@ -63,30 +63,29 @@ El encabezado es el **nombre de la tienda en mayúsculas**, sin saludo ni emoji 
 ### Vender
 ```
 ┌──────────────────────────────┐        ┌──────────────────────────────┐
-│ Vender                       │        │ Vender                       │
-│ [ Buscar producto          ] │        │ [ Buscar producto          ] │
-│ ╭──────────────────────────╮ │        │ Más vendidos  [Lejía][Carbón]│
-│ │ ▬ En esta venta  Ocultar ▾│ │       │  (grilla, sigue a la vista)  │
-│ │ [▢] Lejía 1 L     S/ 7.00│ │        │                              │
-│ │     Quedan 8 unid.       │ │        │                              │
-│ │     ✎ S/ 3.50 c/u        │ │        │ ╭──────────────────────────╮ │
-│ │ [−] 2 [+]       🗑 Quitar │ │        │ │ ▬ En esta venta Ver det.▴│ │
-│ │ ¿Cuándo fue la venta?    │ │        │ │ Total · 2 prod. S/ 11.00 │ │
-│ │ ( Ahora )  ( Otro día )  │ │        │ │ [   Confirmar venta     ]│ │
-│ │ Total · 2 prod. S/ 11.00 │ │        │ ╰──────────────────────────╯ │
-│ │ [   Confirmar venta     ]│ │        │ Inicio Vender Recibir ...    │
-│ ╰──────────────────────────╯ │        └──────────────────────────────┘
+│╭────────────────────────────╮│        │ Vender                       │
+││ ▬ En esta venta   Ocultar ▾ ││        │ [ Buscar producto          ] │
+││ [▢] Lejía 1 L     S/ 10.50 ││        │ Más vendidos  [Lejía][Carbón]│
+││     Quedan 7     ✎ S/ 3.50 ││        │  (grilla, sigue a la vista)  │
+││ [−] 3 [+]        🗑 Quitar ││        │ ╭──────────────────────────╮ │
+││ 🏷 ¿Vendiste alguno a otro ││        │ │ ▬ En esta venta Ver det.▴│ │
+││    precio?                 ││        │ │ Total · 2 prod. S/ 11.00 │ │
+││ ¿Cuándo fue la venta?      ││        │ │ [   Confirmar venta     ]│ │
+││ ( Ahora )  ( Otro día )    ││        │ ╰──────────────────────────╯ │
+││ Total · 1 prod.  S/ 10.50  ││        │ Inicio Vender Recibir ...    │
+││ [    Confirmar venta     ] ││        └──────────────────────────────┘
+│╰────────────────────────────╯│
 │ Inicio Vender Recibir ...    │
 └──────────────────────────────┘
-   panel abierto (al agregar)                   panel oculto
+ panel abierto (toda la pantalla)               panel oculto
 ```
 1. Buscar (campo grande arriba) → resultados con **foto grande**, nombre, precio y stock; los más vendidos primero. Debajo del buscador, accesos rápidos a los 8 productos más vendidos. No hay sección "En esta venta" mientras no se haya elegido nada.
-2. Tocar un producto lo agrega con cantidad 1 y **sube desde abajo el panel de venta ya abierto** (RN-OP-22). Mide lo que ocupa su contenido, sin huecos (con muchas líneas llega casi arriba y las líneas se desplazan dentro), y no tapa la grilla: se siguen tocando productos para agregarlos.
-3. **Panel abierto**: título *En esta venta* con *Ocultar*; cada línea, compacta: foto, nombre, **"Quedan N unid."** (o "Se acaba") y el **precio por unidad, que es el botón para cambiarlo** (subrayado, con lápiz; con precio especial, etiqueta y la marca "Precio especial"), con el importe a la derecha; debajo − / + y *Quitar*. Luego *¿Cuándo fue la venta?* (*Ahora* / *Otro día*); abajo, siempre a la vista, **Total · N productos** y **Confirmar venta**. Todos los textos van a la letra elegida o más (RN-UX-01) y todo lo tocable mide 48 px o más.
-4. **Cambiar precio** abre, en la misma línea, *Nuevo precio en S/* y, si hay más de una unidad, *¿Para cuántas? (de N)* (RN-OP-11). **Panel oculto** (con *Ocultar* o tocando el título; se vuelve a abrir con *Ver detalle*, siempre con botón: RN-UX-05): título, total y Confirmar venta. Confirmar desde ahí registra con *Ahora*. Si se quitan todas las líneas, el panel baja y desaparece.
+2. Tocar un producto lo agrega con cantidad 1 y **sube el panel de venta ya abierto, a toda la pantalla** (RN-OP-22), con el foco en su título; lo de atrás no se alcanza mientras está abierto. Para agregar otro producto se toca *Ocultar* (o fuera de la hoja).
+3. **Panel abierto**: título *En esta venta* con *Ocultar*; cada línea, compacta: foto, nombre e importe; debajo, **"Quedan N unid."** (o "Se acaba") y, bajo el importe, el **precio por unidad, que es el botón para cambiarlo** en toda la línea (subrayado, con lápiz; con precio especial, etiqueta y "Precio especial"); − / + y *Quitar*; y, con más de una unidad, el enlace ***¿Vendiste alguno a otro precio?*** (RN-OP-11), que abre *¿Cuántos? (de N)* y *¿A cuánto cada uno? (S/)* con *Guardar* y *Cancelar*. Las líneas y *¿Cuándo fue la venta?* van seguidas, sin huecos; **Total · N productos** y **Confirmar venta** quedan pegados abajo. Todos los textos van a la letra elegida o más (RN-UX-01) y todo lo tocable mide 48 px o más.
+4. **Panel oculto** (con *Ocultar* o tocando el título; se vuelve a abrir con *Ver detalle*, siempre con botón: RN-UX-05): pegado abajo, no tapa la grilla: título, total y Confirmar venta (en celular horizontal, en dos filas). Confirmar desde ahí registra con *Ahora*. Si se quitan todas las líneas, el panel baja y desaparece.
 5. Pantalla de éxito con ✓, resumen y **Deshacer** (10 s) → vuelve a Vender vacío.
 
-En PC (desde 1024 px) no hay panel deslizable: el carrito queda a la derecha del buscador con el mismo contenido que el panel expandido y *Confirmar venta*. El panel es una región con nombre ("En esta venta"); al abrirse con su botón el foco pasa a su título y al ocultarlo vuelve al botón (al aparecer con el primer producto, el foco se queda en la grilla); la cabecera lleva `aria-expanded`; sin animación si el sistema pide reducir movimiento.
+En PC (desde 1024 px) no hay panel deslizable: el carrito queda a la derecha del buscador con el mismo contenido que el panel expandido y *Confirmar venta*. El panel es una región con nombre ("En esta venta"); al abrirse (también al aparecer con el primer producto) el foco pasa a su título y al ocultarlo vuelve al botón; la cabecera lleva `aria-expanded`; sin animación si el sistema pide reducir movimiento.
 
 ### Recibir (Llegó mercadería)
 Igual que Vender, pero cada línea muestra **costo** editable en lugar del precio de venta. Se puede abrir prellenada desde *Para comprar*. Al confirmar, avisa si algo es una **sobrecompra** (RN-OP-20).

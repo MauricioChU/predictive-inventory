@@ -25,7 +25,7 @@ export interface LineaDePantalla {
   precio: Dinero
   /** Error del último precio escrito en la edición en línea (FilaDeCarrito.errorPrecio). */
   errorPrecio?: string
-  /** Error de "¿Para cuántas?" en la misma edición (solo al vender). */
+  /** Error de "¿Cuántos?" al vender alguno a otro precio. */
   errorUnidades?: string
 }
 
@@ -230,7 +230,7 @@ export function usarCarrito(concepto: Concepto) {
           parte = null
         }
         if (!parte || !parte.esPositiva() || parte.mayorQue(todas)) {
-          linea.errorUnidades = `Escribe cuántas, de 1 a ${formatearNumero(todas)}`
+          linea.errorUnidades = `Son ${formatearNumero(todas)} en total: escribe de 1 a ${formatearNumero(todas)}`
           return
         }
       }

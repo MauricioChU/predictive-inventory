@@ -8,6 +8,8 @@ const props = withDefaults(
     modelValue: string
     paso?: number
     minimo?: number
+    /** Tope: "+" se deshabilita al llegar (p. ej. no separar más unidades de las que hay). */
+    maximo?: number
     decimales?: boolean
     error?: string
     sufijo?: string
@@ -18,6 +20,7 @@ const props = withDefaults(
   {
     paso: 1,
     minimo: 0,
+    maximo: undefined,
     decimales: false,
     error: undefined,
     sufijo: undefined,
@@ -40,6 +43,9 @@ const redondear = (valor: number): number => Math.round(valor * 1000) / 1000
 // 2.2, paso 0.1 y valor 2.3 se deshabilitaba (2.3 - 0.1 = 2.1999… < 2.2) aunque cambiar()
 // sí habría aceptado bajar a 2.2.
 const enMinimo = computed(() => redondear(valorNumerico.value - props.paso) < props.minimo)
+const enMaximo = computed(
+  () => props.maximo !== undefined && redondear(valorNumerico.value + props.paso) > props.maximo,
+)
 const describedBy = computed(() => {
   const ids = [props.sufijo ? idSufijo : null, props.error ? idError : null].filter(
     (valor): valor is string => valor !== null,
@@ -62,9 +68,17 @@ watch(enMinimo, (ahoraDeshabilitado) => {
   }
 })
 
+// Igual con "+" al llegar al tope: el foco pasa a "−".
+watch(enMaximo, (ahoraDeshabilitado) => {
+  if (ahoraDeshabilitado && document.activeElement === refBotonMas.value) {
+    refBotonMenos.value?.focus()
+  }
+})
+
 function cambiar(delta: number) {
   const siguiente = redondear(valorNumerico.value + delta)
   if (siguiente < props.minimo) return
+  if (props.maximo !== undefined && siguiente > props.maximo) return
   emit('update:modelValue', String(siguiente))
 }
 </script>
@@ -101,6 +115,8 @@ function cambiar(delta: number) {
         type="button"
         class="paso"
         aria-label="Agregar uno"
+        :disabled="enMaximo"
+        :aria-disabled="enMaximo ? 'true' : undefined"
         @click="cambiar(paso)"
       >
         <Plus aria-hidden="true" />

@@ -158,7 +158,7 @@ test.describe('Vender (HU-OP-01, RN-OP-22)', () => {
 })
 
 test.describe('Panel de venta (RN-OP-22)', () => {
-  test('celular: sube abierto sin tapar la grilla, dice cuánto queda, se oculta y confirma', async ({
+  test('celular: sube abierto a toda la pantalla, dice cuánto queda, se oculta y confirma', async ({
     page,
   }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'El panel deslizable es de celular (< 1024 px)')
@@ -174,30 +174,25 @@ test.describe('Panel de venta (RN-OP-22)', () => {
       .getByRole('button', { name: /^Lejía 1 L/ })
       .click()
     const panel = page.getByRole('region', { name: 'En esta venta' })
-    await expect(panel).toBeVisible()
+    await expect(panel.getByRole('heading', { name: 'En esta venta' })).toBeVisible()
     await expect(totalDeLaVenta(page)).toHaveText('S/ 3.50')
     await expect(panel.getByRole('button', { name: 'Ocultar' })).toHaveAttribute(
       'aria-expanded',
       'true',
     )
-    // Abierto de una, sin huecos: mide lo que ocupa y la grilla de arriba sigue a la vista.
+    // Abierto de una a toda la pantalla, con el foco en su título: la línea y la fecha seguidas.
+    await expect(panel.getByRole('heading', { name: 'En esta venta' })).toBeFocused()
+    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+    const hoja = (await page.locator('.panel-de-venta .hoja').boundingBox())!
+    expect(hoja.y, 'la hoja llega casi arriba').toBeLessThan(30)
     const linea = lineaDe(page, 'Lejía 1 L')
     await expect(linea.getByText('Quedan 9 unid.')).toBeVisible()
     await expect(page.getByRole('radio', { name: 'Ahora' })).toBeInViewport()
-    await expect(page.getByLabel('Buscar producto')).toBeInViewport()
     await linea.getByLabel('Cantidad (unid.)').fill('10')
     await expect(linea.getByText('Se acaba')).toBeVisible()
     await linea.getByLabel('Cantidad (unid.)').fill('3')
     await expect(linea.getByText('Quedan 7 unid.')).toBeVisible()
     await esperarSinDesplazamientoHorizontal(page)
-    // Nada se escapa del recorte del panel: al final de la página, la navegación queda pegada
-    // al borde de abajo (sin un hueco en blanco debajo).
-    const hueco = await page.evaluate(() => {
-      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' })
-      return innerHeight - document.querySelector('nav')!.getBoundingClientRect().bottom
-    })
-    expect(Math.abs(hueco)).toBeLessThan(2)
-
     await panel.getByRole('button', { name: 'Ocultar' }).click()
     await expect(panel.getByRole('button', { name: 'Ver detalle' })).toBeFocused()
     await expect(page.locator('.lista-del-carrito')).toHaveCount(0)
@@ -209,9 +204,7 @@ test.describe('Panel de venta (RN-OP-22)', () => {
     expect(await stockDe(page, lejia)).toBe(7)
   })
 
-  test('celular: un precio distinto para una sola unidad separa la línea', async ({
-    page,
-  }, testInfo) => {
+  test('celular: vender una unidad a otro precio separa la línea', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'El panel deslizable es de celular (< 1024 px)')
     await abrirTiendaLista(page, './')
     const lejia = await crearProducto(page, LEJIA)
@@ -219,10 +212,12 @@ test.describe('Panel de venta (RN-OP-22)', () => {
     await agregarBuscando(page, 'lejia', 'Lejía 1 L')
     const linea = lineaDe(page, 'Lejía 1 L').first()
     await linea.getByLabel('Cantidad (unid.)').fill('5')
-    await linea.getByRole('button', { name: /^Cambiar precio de Lejía 1 L/ }).click()
-    await linea.getByLabel('Nuevo precio en S/').fill('3')
-    await linea.getByLabel(/^¿Para cuántas\?/).fill('1')
-    await linea.getByRole('button', { name: 'Guardar precio' }).click()
+    await linea.getByRole('button', { name: '¿Vendiste alguno a otro precio?' }).click()
+    await linea.getByLabel(/^¿Cuántos\?/).fill('7')
+    await expect(linea.getByText('Son 5 en total: escribe de 1 a 5')).toBeVisible()
+    await linea.getByLabel(/^¿Cuántos\?/).fill('1')
+    await linea.getByLabel('¿A cuánto cada uno? (S/)').fill('3')
+    await linea.getByRole('button', { name: 'Guardar', exact: true }).click()
     await expect(lineaDe(page, 'Lejía 1 L')).toHaveCount(2)
     await expect(lineaDe(page, 'Lejía 1 L').nth(1).getByText('Precio especial')).toBeVisible()
     await expect(totalDeLaVenta(page)).toHaveText('S/ 17.00')
