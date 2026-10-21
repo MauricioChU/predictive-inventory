@@ -105,7 +105,7 @@ test.describe('Recorrido: un día de tienda', () => {
       )
       // Vuelve al carrito para corregirla; aquí no se vende.
       await abrirDetalleDeVenta(page)
-      await page.getByRole('button', { name: `Cancelar ${LEJIA}` }).click()
+      await page.getByRole('button', { name: `Quitar ${LEJIA}` }).click()
       await expect(lineaDelCarrito(page, LEJIA)).toHaveCount(0)
       await esperarCifrasDeInicio(page, 'Hoy ganaste S/ 5.70 Vendiste S/ 16.50')
     })

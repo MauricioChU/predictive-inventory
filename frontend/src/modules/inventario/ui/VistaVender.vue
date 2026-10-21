@@ -67,9 +67,9 @@ watch(textoTotal, (nuevo) => {
   if (!carrito.vacio.value) anunciador.anunciar(`Total ${nuevo}`)
 })
 
-// Sin líneas no hay panel que abrir.
+// Sin líneas: en celular el panel baja con su animación (PanelDeVenta); en PC no hay hoja.
 watch(carrito.vacio, (vacio) => {
-  if (vacio) expandido.value = false
+  if (vacio && esPC.value) expandido.value = false
 })
 
 async function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): Promise<void> {

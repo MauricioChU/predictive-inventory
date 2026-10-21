@@ -237,7 +237,7 @@ test.describe('Panel de venta (RN-OP-22)', () => {
     await crearProducto(page, LEJIA)
     await abrir(page, './vender')
     await agregarBuscando(page, 'lejia', 'Lejía 1 L')
-    await lineaDe(page, 'Lejía 1 L').getByRole('button', { name: 'Cancelar Lejía 1 L' }).click()
+    await lineaDe(page, 'Lejía 1 L').getByRole('button', { name: 'Quitar Lejía 1 L' }).click()
     await expect(page.locator('.lista-del-carrito')).toHaveCount(0)
     await expect(totalDeLaVenta(page)).toHaveText('S/ 0.00')
     await expect(page.getByRole('heading', { level: 1, name: 'Vender' })).toBeFocused()

@@ -51,7 +51,11 @@ export async function esperarSinDesplazamientoHorizontal(page: Page): Promise<vo
 /** RN-SIS-07 */
 export async function esperarSinViolacionesGraves(page: Page): Promise<void> {
   // Lo que está apareciendo (semitransparente) se mide ya quieto: si no, el contraste da mal.
-  await page.evaluate(() => Promise.allSettled(document.getAnimations().map((a) => a.finished)))
+  // Dos cuadros antes: Vue arranca las transiciones de entrada un cuadro después de montar.
+  await page.evaluate(async () => {
+    await new Promise((listo) => requestAnimationFrame(() => requestAnimationFrame(listo)))
+    await Promise.allSettled(document.getAnimations().map((a) => a.finished))
+  })
   const resultado = await new AxeBuilder({ page }).analyze()
   const graves = resultado.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
   expect(graves.map((v) => `${v.id}: ${v.help}`)).toEqual([])

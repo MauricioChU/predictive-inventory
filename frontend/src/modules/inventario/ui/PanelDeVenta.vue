@@ -79,15 +79,24 @@ async function alternar(): Promise<void> {
     refTitulo.value?.focus()
     return
   }
-  // Baja despacio y recién después queda oculta.
+  await cerrar(true)
+}
+
+/** Baja despacio y recién después queda oculta (también al quitar el último producto). */
+async function cerrar(enfocarBoton: boolean): Promise<void> {
+  if (cerrando.value || !props.expandido) return
   cerrando.value = true
   await nextTick()
   alTerminarAnimacion(refHoja.value, () => {
     cerrando.value = false
     emit('update:expandido', false)
-    void nextTick(() => refAlternar.value?.focus())
+    if (enfocarBoton) void nextTick(() => refAlternar.value?.focus())
   })
 }
+
+watch(vacio, (sinProductos) => {
+  if (sinProductos) void cerrar(false)
+})
 
 /** Escape oculta el detalle (además de su botón). */
 function ocultarConEscape(): void {
@@ -118,7 +127,8 @@ function ocultarConEscape(): void {
       :class="{ 'hoja-entra': expandido && !cerrando, 'hoja-sale': cerrando }"
     >
       <div ref="refCabecera" class="cabecera-del-panel">
-        <div class="asa" aria-hidden="true" />
+        <!-- Tocar la asa también abre y oculta (comodidad: el botón es lo que lee el lector). -->
+        <div class="asa" aria-hidden="true" @click="vacio ? undefined : alternar()" />
         <!-- Tocar el título también abre y oculta (comodidad: el botón es lo que lee el lector). -->
         <h2
           :id="idTitulo"
@@ -136,9 +146,11 @@ function ocultarConEscape(): void {
           class="alternar"
           :aria-expanded="expandido ? 'true' : 'false'"
           :aria-controls="expandido ? idDetalle : undefined"
+          :aria-label="expandido ? 'Ocultar' : undefined"
+          :class="{ 'alternar--solo-icono': expandido }"
           @click="alternar"
         >
-          <span>{{ expandido ? 'Ocultar' : 'Ver detalle' }}</span>
+          <span v-if="!expandido">Ver detalle</span>
           <component :is="expandido ? ChevronDown : ChevronUp" aria-hidden="true" class="icono" />
         </button>
       </div>
@@ -218,6 +230,12 @@ function ocultarConEscape(): void {
   border-radius: 999px;
   background: var(--color-borde);
   opacity: 0.55;
+  cursor: pointer;
+  /* Zona de toque más alta que la raya que se ve. */
+  box-sizing: content-box;
+  background-clip: content-box;
+  padding-block: var(--espacio-2);
+  margin-block: calc(-1 * var(--espacio-2)) calc(var(--espacio-1) - var(--espacio-2));
 }
 .titulo-carrito {
   grid-area: titulo;
@@ -245,6 +263,10 @@ function ocultarConEscape(): void {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+.alternar--solo-icono {
+  justify-content: center;
+  min-inline-size: var(--alto-toque);
 }
 .icono {
   inline-size: 1.25em;
@@ -339,7 +361,6 @@ function ocultarConEscape(): void {
   inset-block-end: 0;
   margin-inline: calc(-1 * var(--espacio-4));
   padding: var(--espacio-2) var(--espacio-4) var(--espacio-3);
-  border-block-start: 1px solid var(--color-borde-foto);
   background: var(--color-superficie);
 }
 .velo {
