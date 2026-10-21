@@ -117,7 +117,7 @@ async function registrarLlegada(): Promise<void> {
   }
   carrito.marcarVacias()
   if (carrito.hayErrores.value) {
-    expandido.value = true
+    if (!esPC.value) expandido.value = true
     await enfocarPrimerError('.lista-del-carrito')
     anunciador.anunciar('Revisa lo que está marcado en la lista.')
     return
@@ -347,7 +347,7 @@ watch(
             :texto-total="textoTotal"
             texto-accion="Registrar llegada"
             :icono="PackageCheck"
-            :deshabilitado="registrando"
+            :deshabilitado="registrando || carrito.hayEdicionAbierta.value"
             @accion="registrarLlegada"
           />
         </template>
