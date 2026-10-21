@@ -143,17 +143,20 @@ test.describe('Vender (HU-OP-01, RN-OP-22)', () => {
     expect(separacion).toBeGreaterThanOrEqual(8)
   })
 
-  test('RN-OP-05 / RN-UX-07: vender más de lo que hay se marca junto a la cantidad', async ({
+  test('RN-OP-05: nunca deja vender más de lo que hay (lo escrito de más vuelve a lo que hay)', async ({
     page,
   }) => {
     await abrirTiendaLista(page, './')
     await crearProducto(page, LEJIA)
     await abrir(page, './vender')
     await agregarBuscando(page, 'lejia', 'Lejía 1 L')
-    await lineaDe(page, 'Lejía 1 L').getByLabel('Cantidad (unid.)').fill('11')
-    await expect(lineaDe(page, 'Lejía 1 L').getByRole('alert')).toHaveText(
-      'Solo quedan 10 unid. de Lejía 1 L. Cambia la cantidad o registra la llegada de mercadería.',
-    )
+    const cantidad = lineaDe(page, 'Lejía 1 L').getByLabel('Cantidad (unid.)')
+    await cantidad.fill('11')
+    await expect(cantidad).toHaveValue('10')
+    await expect(lineaDe(page, 'Lejía 1 L').getByRole('alert')).toHaveCount(0)
+    await expect(
+      lineaDe(page, 'Lejía 1 L').getByRole('button', { name: 'Agregar uno' }),
+    ).toBeDisabled()
   })
 })
 
@@ -166,7 +169,9 @@ test.describe('Panel de venta (RN-OP-22)', () => {
     const lejia = await crearProducto(page, LEJIA)
     await crearProducto(page, CARBON)
     await abrir(page, './vender')
-    await expect(page.locator('.panel-de-venta')).toHaveCount(0)
+    // Desde el inicio está el bloque, cerrado y en cero.
+    await expect(totalDeLaVenta(page)).toHaveText('S/ 0.00')
+    await expect(page.getByRole('button', { name: 'Confirmar venta' })).toBeDisabled()
 
     await page.getByLabel('Buscar producto').fill('lejia')
     await page
@@ -226,14 +231,15 @@ test.describe('Panel de venta (RN-OP-22)', () => {
     expect(await stockDe(page, lejia)).toBe(5)
   })
 
-  test('celular: quitar la última línea baja el panel', async ({ page }, testInfo) => {
+  test('celular: cancelar la última línea deja el bloque cerrado en cero', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'El panel deslizable es de celular (< 1024 px)')
     await abrirTiendaLista(page, './')
     await crearProducto(page, LEJIA)
     await abrir(page, './vender')
     await agregarBuscando(page, 'lejia', 'Lejía 1 L')
     await lineaDe(page, 'Lejía 1 L').getByRole('button', { name: 'Cancelar Lejía 1 L' }).click()
-    await expect(page.locator('.panel-de-venta')).toHaveCount(0)
+    await expect(page.locator('.lista-del-carrito')).toHaveCount(0)
+    await expect(totalDeLaVenta(page)).toHaveText('S/ 0.00')
     await expect(page.getByRole('heading', { level: 1, name: 'Vender' })).toBeFocused()
   })
 

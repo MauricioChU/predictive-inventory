@@ -6,7 +6,8 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ### Cambiado
 
-- Vender: el panel ahora también baja despacio al tocar «Ocultar».
+- Vender: el bloque «En esta venta» está abajo desde el inicio, en S/ 0.00; al elegir un producto crece hasta ocupar la pantalla y al tocar «Ocultar» vuelve a meterse abajo, despacio.
+- Ya no se puede vender más de lo que hay: el + se detiene, lo escrito de más vuelve a lo que hay y tocar otra vez un producto agotado no lo suma.
 - Al registrar una venta, la confirmación aparece al centro con una animación y muestra lo que vendiste: cada producto con su cantidad, precio e importe, y el total.
 - En el panel de venta, el botón para sacar un producto de la venta dice «Cancelar».
 

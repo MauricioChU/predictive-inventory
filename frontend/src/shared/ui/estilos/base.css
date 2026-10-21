@@ -37,20 +37,17 @@ textarea {
  * cerrar, el componente pone `hoja-sale` con su :class y alTerminarAnimacion()
  * (shared/ui/al-terminar-animacion.ts) avisa cuándo quitarla.
  */
+/* La hoja (fija, con su borde de arriba en inset-block-start) crece desde donde está cerrada
+   y vuelve ahí: --hoja-cerrada-arriba es esa posición (p. ej. el borde de arriba del panel
+   compacto); sin ella, sale y vuelve desde el borde de abajo de la pantalla. */
 @keyframes hoja-subir {
   from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: none;
+    inset-block-start: var(--hoja-cerrada-arriba, 100dvh);
   }
 }
 @keyframes hoja-bajar {
-  from {
-    transform: none;
-  }
   to {
-    transform: translateY(100%);
+    inset-block-start: var(--hoja-cerrada-arriba, 100dvh);
   }
 }
 @keyframes velo-aparecer {

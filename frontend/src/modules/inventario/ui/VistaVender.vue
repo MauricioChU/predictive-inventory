@@ -73,6 +73,11 @@ watch(carrito.vacio, (vacio) => {
 })
 
 async function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): Promise<void> {
+  // RN-OP-05: nunca más de lo que hay (contando todas las líneas del producto).
+  if (!carrito.puedeAgregar(producto)) {
+    anunciador.anunciar(`No quedan más ${producto.nombre}`)
+    return
+  }
   const primero = carrito.vacio.value
   const lineaId = carrito.agregar(producto)
   anunciador.anunciar(`Agregaste ${producto.nombre}`)
@@ -259,28 +264,27 @@ async function nuevaVenta(): Promise<void> {
         </template>
       </DisposicionDeCarrito>
 
-      <!-- Celular: la grilla ocupa la pantalla y el panel sube cuando hay algo en la venta. -->
+      <!-- Celular: la grilla ocupa la pantalla y el panel de venta queda abajo. -->
       <template v-else>
         <!-- Con la hoja abierta, lo de atrás no se alcanza (ni con Tab ni con el lector). -->
         <div class="buscador" :inert="expandido ? true : undefined">
           <BuscadorDeProductos concepto="venta" @elegir="agregar" />
         </div>
-        <Transition name="panel">
-          <PanelDeVenta
-            v-if="!carrito.vacio.value"
-            v-model:cuando="cuando"
-            v-model:expandido="expandido"
-            :carrito="carrito"
-            :error-fecha="errorFecha"
-            :texto-total="textoTotal"
-            :registrando="registrando"
-            @confirmar="confirmar"
-          >
-            <template v-if="error" #avisos>
-              <MensajeDeError :mensaje="error.mensaje" :ayuda="error.ayuda" />
-            </template>
-          </PanelDeVenta>
-        </Transition>
+        <!-- RN-OP-22: siempre abajo (en S/ 0.00 sin productos); con el primero crece a toda la
+             pantalla y al ocultarse vuelve a ese bloque. -->
+        <PanelDeVenta
+          v-model:cuando="cuando"
+          v-model:expandido="expandido"
+          :carrito="carrito"
+          :error-fecha="errorFecha"
+          :texto-total="textoTotal"
+          :registrando="registrando"
+          @confirmar="confirmar"
+        >
+          <template v-if="error" #avisos>
+            <MensajeDeError :mensaje="error.mensaje" :ayuda="error.ayuda" />
+          </template>
+        </PanelDeVenta>
       </template>
     </template>
   </div>
@@ -349,23 +353,5 @@ async function nuevaVenta(): Promise<void> {
   align-self: stretch;
   margin: var(--espacio-4) auto 0;
   max-inline-size: 28rem;
-}
-
-/* El panel sube desde abajo con una transición corta (sin movimiento si el sistema lo pide:
-   base.css baja todas las animaciones). */
-.panel-enter-active,
-.panel-leave-active {
-  transition:
-    transform var(--duracion-hoja) var(--curva-hoja-salir),
-    opacity var(--duracion-hoja) ease-out;
-}
-/* Al entrar, solo un fundido: un transform en la sección haría que la hoja abierta (fixed) se
-   ubique respecto a ella y no a la pantalla mientras dura. La hoja sube con su propia animación. */
-.panel-enter-from {
-  opacity: 0;
-}
-.panel-leave-to {
-  transform: translateY(100%);
-  opacity: 0;
 }
 </style>

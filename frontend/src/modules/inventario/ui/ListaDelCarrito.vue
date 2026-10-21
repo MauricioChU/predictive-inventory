@@ -95,6 +95,7 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
           :error-cantidad="linea.errorCantidad"
           :error-precio="linea.errorPrecio"
           :puede-separar="sePuedePartir(linea)"
+          :maximo-cantidad="linea.maximo ? linea.maximo.milesimas / 1000 : undefined"
           :maximo-separar="linea.cantidadLeida ? linea.cantidadLeida.milesimas / 1000 : undefined"
           :error-unidades="linea.errorUnidades"
           :compacta="compacta"

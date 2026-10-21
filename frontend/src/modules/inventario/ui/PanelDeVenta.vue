@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, useId } from 'vue'
+import { computed, nextTick, ref, useId, watch } from 'vue'
 import { Check, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import { formatearEntero, plural } from '@/shared/domain/formato'
 import { usarAltoObservado } from '@/shared/ui/alto-observado'
@@ -49,7 +49,19 @@ const cerrando = ref(false)
 const bloqueado = computed(() => props.carrito.hayEdicionAbierta.value)
 
 // El foco por teclado nunca queda debajo del panel (WCAG 2.4.11), como con BarraDeTotal.
-usarAltoObservado(refRaiz, { variable: '--alto-barra-de-total' })
+const altoRaiz = usarAltoObservado(refRaiz, { variable: '--alto-barra-de-total' })
+/** Alto del bloque cerrado: abierta, la hoja crece desde ahí y vuelve ahí al ocultarse (y el
+ * bloque conserva ese lugar en la página, así nada salta). */
+const altoCerrado = ref(0)
+watch(altoRaiz, (alto) => {
+  if (!props.expandido && alto > 0) altoCerrado.value = alto
+})
+const estiloRaiz = computed(() => ({
+  '--hoja-cerrada-arriba': `calc(100dvh - var(--alto-pie, 0px) - ${altoCerrado.value}px)`,
+  ...(props.expandido && altoCerrado.value > 0 ? { minBlockSize: `${altoCerrado.value}px` } : {}),
+}))
+/** Sin productos: el bloque está, en S/ 0.00, sin "Ver detalle" y sin poder confirmar. */
+const vacio = computed(() => props.carrito.vacio.value)
 // Abierta, la hoja se desplaza con el título y el pie pegados: lo enfocado queda entre ambos.
 usarAltoObservado(refPie, { variable: '--alto-pie-del-panel' })
 usarAltoObservado(refCabecera, { variable: '--alto-cabecera-del-panel' })
@@ -88,6 +100,7 @@ function ocultarConEscape(): void {
     ref="refRaiz"
     class="panel-de-venta"
     :class="{ 'panel-de-venta--abierto': expandido }"
+    :style="estiloRaiz"
     :aria-labelledby="idTitulo"
     @keydown.esc="ocultarConEscape"
   >
@@ -107,10 +120,17 @@ function ocultarConEscape(): void {
       <div ref="refCabecera" class="cabecera-del-panel">
         <div class="asa" aria-hidden="true" />
         <!-- Tocar el título también abre y oculta (comodidad: el botón es lo que lee el lector). -->
-        <h2 :id="idTitulo" ref="refTitulo" class="titulo-carrito" tabindex="-1" @click="alternar">
+        <h2
+          :id="idTitulo"
+          ref="refTitulo"
+          class="titulo-carrito"
+          tabindex="-1"
+          @click="vacio ? undefined : alternar()"
+        >
           En esta venta
         </h2>
         <button
+          v-if="!vacio"
           ref="refAlternar"
           type="button"
           class="alternar"
@@ -150,7 +170,7 @@ function ocultarConEscape(): void {
           class="confirmar"
           texto="Confirmar venta"
           :icono="Check"
-          :deshabilitado="registrando || bloqueado"
+          :deshabilitado="registrando || bloqueado || vacio"
           @click="emit('confirmar')"
         />
       </div>
@@ -261,6 +281,8 @@ function ocultarConEscape(): void {
 }
 .total-del-panel {
   display: flex;
+  /* 320 px con letra Muy grande: el monto baja a su renglón antes que desbordar. */
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--espacio-3);

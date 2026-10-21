@@ -49,6 +49,8 @@ const props = withDefaults(
      * la pantalla pasa esas unidades a otra línea con ese precio.
      */
     puedeSeparar?: boolean
+    /** RN-OP-05: tope de la cantidad (lo que queda en stock para esta línea); "+" se detiene. */
+    maximoCantidad?: number
     /** Cuántas hay en la línea: tope de "¿Cuántos?". */
     maximoSeparar?: number
     /** Error de "¿Cuántos?", con el mismo contrato que errorPrecio. */
@@ -76,6 +78,7 @@ const props = withDefaults(
     errorCantidad: undefined,
     errorPrecio: undefined,
     puedeSeparar: false,
+    maximoCantidad: undefined,
     maximoSeparar: undefined,
     errorUnidades: undefined,
     compacta: false,
@@ -299,6 +302,7 @@ function alPresionarEnter(evento: KeyboardEvent) {
           :model-value="cantidad"
           :decimales="!porUnidades"
           :minimo="minimo"
+          :maximo="maximoCantidad"
           :error="errorCantidad"
           etiqueta-oculta
           @update:model-value="emit('update:cantidad', $event)"
@@ -402,6 +406,7 @@ function alPresionarEnter(evento: KeyboardEvent) {
           :model-value="cantidad"
           :decimales="!porUnidades"
           :minimo="minimo"
+          :maximo="maximoCantidad"
           :error="errorCantidad"
           :etiqueta-oculta="compacta"
           @update:model-value="emit('update:cantidad', $event)"
