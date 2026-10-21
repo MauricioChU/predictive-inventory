@@ -127,6 +127,7 @@ test.describe('Recorrido: un día de tienda', () => {
       await page.getByRole('button', { name: 'Registrar llegada' }).click()
       await expect(h1(page)).toHaveText('Llegó mercadería')
       await expect(page.getByText('Cargamos tu lista para comprar de hoy')).toBeVisible()
+      await abrirDetalleDeVenta(page)
       const llegada = lineaDelCarrito(page, JABON)
       await expect(llegada.getByLabel('Cantidad (unid.)')).toHaveValue('5')
       await llegada.getByRole('button', { name: `Cambiar costo de ${JABON}` }).click()

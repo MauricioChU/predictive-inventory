@@ -13,11 +13,13 @@ import DialogoConfirmacion from '@/shared/ui/componentes/DialogoConfirmacion.vue
 import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import PantallaExito from '@/shared/ui/componentes/PantallaExito.vue'
+import { usarPantallaAncha } from '@/shared/ui/usar-pantalla-ancha'
 import type { DatosDeIngreso } from '../application/ingresos'
 import BuscadorDeProductos, { type OrigenDeLaEleccion } from './BuscadorDeProductos.vue'
 import CuandoFue from './CuandoFue.vue'
 import DisposicionDeCarrito from './DisposicionDeCarrito.vue'
 import ListaDelCarrito from './ListaDelCarrito.vue'
+import PanelDeCarrito from './PanelDeCarrito.vue'
 import { useCarritos } from './carritos'
 import { errorDeFechaDelDominio, instanteDe, type ErrorDeFecha } from './cuando'
 import { enfocarLinea, enfocarPrimerError, enfocarTitulo, vibrar } from './foco-y-respuesta'
@@ -30,6 +32,8 @@ import { usarDeshacer } from './usar-deshacer'
  * línea lleva su costo editable. Al registrar, el caso de uso puede avisar una sobrecompra
  * (RN-OP-20, no bloquea) y preguntar si se actualiza el precio de compra (RN-OP-14, por defecto
  * sí). Con `?desde=para-comprar` arranca con la lista de hoy de Análisis (RN-AN-08).
+ * En celular usa el mismo panel de Vender (PanelDeCarrito, RN-OP-22): abajo desde el inicio en
+ * S/ 0.00, a toda la pantalla con el primer producto. En PC, el carrito a la derecha.
  */
 type Paso = 'carrito' | 'exito'
 type Aviso = { productoId: string; mensaje: string }
@@ -46,8 +50,10 @@ const cuando = carrito.cuando
 // r2 #1: al volver con lo cargado guardado, sus productos se ponen al día.
 const alDia = usarCarritoAlDia(carrito)
 const deshacer = usarDeshacer()
+const esPC = usarPantallaAncha()
 
 const paso = ref<Paso>('carrito')
+const expandido = ref(false)
 const registrando = ref(false)
 const error = ref<ErrorParaMostrar | null>(null)
 const dialogo = ref<Dialogo | null>(null)
@@ -81,15 +87,37 @@ const tituloDePrecios = computed(() => {
     : 'Cambiaron los costos'
 })
 
-function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): void {
+// Sin líneas: en celular el panel baja con su animación (PanelDeCarrito); en PC no hay hoja.
+watch(carrito.vacio, (vacio) => {
+  if (vacio && esPC.value) expandido.value = false
+})
+
+async function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): Promise<void> {
+  const primero = carrito.vacio.value
   const lineaId = carrito.agregar(producto)
-  anunciador.anunciar(`Agregaste ${producto.nombre}. Costo total ${textoTotal.value}`)
-  if (origen === 'resultados') void enfocarLinea(lineaId)
+  anunciador.anunciar(`Agregaste ${producto.nombre}. Valor total ${textoTotal.value}`)
+  if (esPC.value) {
+    if (origen === 'resultados') void enfocarLinea(lineaId)
+    return
+  }
+  // Con el primer producto el panel aparece ya abierto; el foco pasa a su título.
+  if (primero) {
+    expandido.value = true
+    await nextTick()
+    document.querySelector<HTMLElement>('.panel-de-venta .titulo-carrito')?.focus()
+  }
 }
 
 async function registrarLlegada(): Promise<void> {
+  if (registrando.value) return
+  if (carrito.hayEdicionAbierta.value) {
+    // RN-OP-11: un costo escrito sin guardar no se registra por error.
+    anunciador.anunciar('Guarda o cancela el costo para confirmar.')
+    return
+  }
   carrito.marcarVacias()
   if (carrito.hayErrores.value) {
+    expandido.value = true
     await enfocarPrimerError('.lista-del-carrito')
     anunciador.anunciar('Revisa lo que está marcado en la lista.')
     return
@@ -99,12 +127,21 @@ async function registrarLlegada(): Promise<void> {
   await intentar()
 }
 
+/** La fecha de "Otro día" falta o no vale: el panel se abre y el foco va a ese campo. */
+async function revisarFecha(): Promise<void> {
+  if (!esPC.value) expandido.value = true
+  await enfocarPrimerError('.vista-recibir .cuando-fue')
+}
+
 async function intentar(): Promise<void> {
   if (registrando.value) return
   error.value = null
   const fecha = instanteDe(cuando.value)
   errorFecha.value = fecha.error
-  if (fecha.error) return
+  if (fecha.error) {
+    await revisarFecha()
+    return
+  }
   registrando.value = true
   try {
     const respuesta = await aplicacion.inventario.registrarIngreso({
@@ -122,7 +159,8 @@ async function intentar(): Promise<void> {
   } catch (causa) {
     const mostrado = errorParaMostrar(causa, 'ingreso')
     errorFecha.value = errorDeFechaDelDominio(mostrado.codigo, mostrado.mensaje)
-    if (!errorFecha.value) error.value = mostrado
+    if (errorFecha.value) await revisarFecha()
+    else error.value = mostrado
   } finally {
     registrando.value = false
   }
@@ -141,6 +179,7 @@ async function cambiarCantidad(): Promise<void> {
   dialogo.value = null
   if (actual?.tipo !== 'sobrecompra') return
   avisoParaCorregir.value = actual.avisos.map((a) => a.mensaje).join(' ')
+  if (!esPC.value) expandido.value = true
   // Después de que el diálogo se cerró (al cerrarse, el navegador devuelve el foco al botón
   // que lo abrió): recién ahí el foco va al campo de la primera cantidad avisada.
   await nextTick()
@@ -170,9 +209,10 @@ function responderPrecio(actualizar: boolean): void {
 function registrada(): void {
   const copia = carrito.copia()
   const n = copia.lineas.length
-  const costoTotal = textoTotal.value
-  detalleDeExito.value = `${formatearEntero(n)} ${plural(n, 'producto', 'productos')} · Costo total ${costoTotal}`
+  const valorTotal = textoTotal.value
+  detalleDeExito.value = `${formatearEntero(n)} ${plural(n, 'producto', 'productos')} · Valor total ${valorTotal}`
   carrito.vaciar()
+  expandido.value = false
   respuestas = {}
   prellenada.value = null
   paso.value = 'exito'
@@ -182,7 +222,7 @@ function registrada(): void {
   deshacer.ofrecer({
     mensaje: 'Mercadería registrada',
     alDeshacer: ({ pantallaAbierta }) => {
-      const deshecha = `Deshiciste la llegada de mercadería (costo total ${costoTotal})`
+      const deshecha = `Deshiciste la llegada de mercadería (valor total ${valorTotal})`
       // r1 #2: si ya se está cargando otra llegada, no se toca; lo dice el resultado.
       if (!carrito.vacio.value) {
         return pantallaAbierta
@@ -232,7 +272,7 @@ watch(
 </script>
 
 <template>
-  <div class="vista-recibir">
+  <div class="vista-recibir" :class="{ 'vista-recibir--con-panel': !esPC && paso === 'carrito' }">
     <PantallaExito v-if="paso === 'exito'" titulo="Mercadería registrada" :detalle="detalleDeExito">
       <BotonPrincipal
         class="accion-exito"
@@ -244,7 +284,8 @@ watch(
 
     <template v-else>
       <EncabezadoPagina titulo="Llegó mercadería" />
-      <div class="avisos">
+      <!-- Con la hoja abierta (celular), los avisos de atrás tampoco se alcanzan. -->
+      <div class="avisos" :inert="!esPC && expandido ? true : undefined">
         <AvisoEnPagina
           v-if="alDia.quitados.value.length > 0"
           tono="atencion"
@@ -264,17 +305,21 @@ watch(
           titulo="Tu lista para comprar de hoy está vacía"
           texto="Busca los productos que llegaron."
         />
-        <AvisoEnPagina
-          v-if="avisoParaCorregir"
-          tono="atencion"
-          titulo="Revisa la cantidad"
-          :texto="avisoParaCorregir"
-          texto-cerrar="Cerrar"
-          @cerrar="avisoParaCorregir = null"
-        />
-        <MensajeDeError v-if="error" :mensaje="error.mensaje" :ayuda="error.ayuda" />
+        <template v-if="esPC">
+          <AvisoEnPagina
+            v-if="avisoParaCorregir"
+            tono="atencion"
+            titulo="Revisa la cantidad"
+            :texto="avisoParaCorregir"
+            texto-cerrar="Cerrar"
+            @cerrar="avisoParaCorregir = null"
+          />
+          <MensajeDeError v-if="error" :mensaje="error.mensaje" :ayuda="error.ayuda" />
+        </template>
       </div>
-      <DisposicionDeCarrito titulo-carrito="Lo que llegó">
+
+      <!-- PC: el carrito a la derecha del buscador. -->
+      <DisposicionDeCarrito v-if="esPC" titulo-carrito="Lo que llegó">
         <template #buscador>
           <BuscadorDeProductos concepto="ingreso" @elegir="agregar" />
         </template>
@@ -294,7 +339,7 @@ watch(
         <template #total>
           <BarraDeTotal
             v-if="!carrito.vacio.value"
-            etiqueta="Costo total"
+            etiqueta="Valor total"
             :texto-total="textoTotal"
             texto-accion="Registrar llegada"
             :icono="PackageCheck"
@@ -303,6 +348,40 @@ watch(
           />
         </template>
       </DisposicionDeCarrito>
+
+      <!-- Celular: la grilla ocupa la pantalla y el panel queda abajo, como en Vender. -->
+      <template v-else>
+        <div class="buscador" :inert="expandido ? true : undefined">
+          <BuscadorDeProductos concepto="ingreso" @elegir="agregar" />
+        </div>
+        <PanelDeCarrito
+          v-model:cuando="cuando"
+          v-model:expandido="expandido"
+          :carrito="carrito"
+          concepto="ingreso"
+          titulo="Lo que llegó"
+          texto-accion="Registrar llegada"
+          :icono="PackageCheck"
+          etiqueta-total="Valor total"
+          pregunta-fecha="¿Cuándo llegó?"
+          :error-fecha="errorFecha"
+          :texto-total="textoTotal"
+          :registrando="registrando"
+          @confirmar="registrarLlegada"
+        >
+          <template v-if="avisoParaCorregir || error" #avisos>
+            <AvisoEnPagina
+              v-if="avisoParaCorregir"
+              tono="atencion"
+              titulo="Revisa la cantidad"
+              :texto="avisoParaCorregir"
+              texto-cerrar="Cerrar"
+              @cerrar="avisoParaCorregir = null"
+            />
+            <MensajeDeError v-if="error" :mensaje="error.mensaje" :ayuda="error.ayuda" />
+          </template>
+        </PanelDeCarrito>
+      </template>
 
       <DialogoConfirmacion
         :abierto="dialogo?.tipo === 'sobrecompra'"
@@ -330,6 +409,18 @@ watch(
 </template>
 
 <style scoped>
+/* Celular: la pantalla llena el alto libre y el panel queda abajo, sobre la navegación. */
+.vista-recibir--con-panel {
+  display: flex;
+  flex-direction: column;
+  min-block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
+}
+.vista-recibir--con-panel :deep(.panel-de-venta) {
+  margin-block-start: auto;
+}
+.buscador {
+  min-inline-size: 0;
+}
 .avisos {
   display: grid;
   gap: var(--espacio-3);

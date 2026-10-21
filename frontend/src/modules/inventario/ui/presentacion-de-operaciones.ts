@@ -82,7 +82,7 @@ export function totalesDe(operacion: OperacionVista): { etiqueta: string; valor:
         { etiqueta: 'Ganancia', valor: formatearDinero(operacion.ganancia ?? Dinero.cero()) },
       ]
     case 'INGRESO':
-      return [{ etiqueta: 'Costo total', valor: formatearDinero(costoTotal(operacion)) }]
+      return [{ etiqueta: 'Valor total', valor: formatearDinero(costoTotal(operacion)) }]
     case 'MERMA':
       return [{ etiqueta: 'Pérdida', valor: formatearDinero(costoTotal(operacion)) }]
     default:

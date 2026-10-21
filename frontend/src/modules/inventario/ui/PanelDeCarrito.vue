@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, useId, watch } from 'vue'
-import { Check, ChevronDown, ChevronUp } from 'lucide-vue-next'
+import { computed, nextTick, ref, useId, watch, type Component } from 'vue'
+import { ChevronDown, ChevronUp } from 'lucide-vue-next'
 import { formatearEntero, plural } from '@/shared/domain/formato'
 import { usarAltoObservado } from '@/shared/ui/alto-observado'
 import { alTerminarAnimacion } from '@/shared/ui/al-terminar-animacion'
@@ -11,7 +11,7 @@ import type { Cuando, ErrorDeFecha } from './cuando'
 import ListaDelCarrito from './ListaDelCarrito.vue'
 
 /**
- * RN-OP-22 — el panel de venta (celular, < 1024 px). Dos estados, siempre con botón (RN-UX-05,
+ * RN-OP-22 — el panel del carrito (celular, < 1024 px). Dos estados, siempre con botón (RN-UX-05,
  * nada de deslizar):
  * - abierto (aparece así con el primer producto): una hoja que ocupa toda la pantalla sobre la
  *   navegación, con el título y "Ocultar" arriba; las líneas (con cuánto queda) y ¿Cuándo fue
@@ -20,9 +20,21 @@ import ListaDelCarrito from './ListaDelCarrito.vue'
  * - oculto: pegado abajo en el flujo de la pantalla (reserva su lugar, no tapa la grilla): el
  *   título, el total (con cuántos productos) y Confirmar venta.
  * Al abrir, el foco va al título; al ocultar, vuelve al botón. La asa es solo un dibujo.
+ * Lo comparten Vender (concepto "venta") y Llegó mercadería (concepto "ingreso"): cambian los
+ * textos, la pregunta de la fecha y la línea de cada producto (ListaDelCarrito).
  */
 const props = defineProps<{
   carrito: CarritoDePantalla
+  concepto: 'venta' | 'ingreso'
+  /** "En esta venta" / "Lo que llegó". */
+  titulo: string
+  /** "Confirmar venta" / "Registrar llegada". */
+  textoAccion: string
+  icono: Component
+  /** "Total" / "Valor total". */
+  etiquetaTotal: string
+  /** "¿Cuándo fue la venta?" / "¿Cuándo llegó?". */
+  preguntaFecha: string
   cuando: Cuando
   errorFecha?: ErrorDeFecha
   textoTotal: string
@@ -137,7 +149,7 @@ function ocultarConEscape(): void {
           tabindex="-1"
           @click="vacio ? undefined : alternar()"
         >
-          En esta venta
+          {{ titulo }}
         </h2>
         <button
           v-if="!vacio"
@@ -156,11 +168,11 @@ function ocultarConEscape(): void {
       </div>
 
       <div v-if="expandido" :id="idDetalle" class="detalle">
-        <ListaDelCarrito :carrito="carrito" concepto="venta" texto-vacio="" compacta />
+        <ListaDelCarrito :carrito="carrito" :concepto="concepto" texto-vacio="" compacta />
         <CuandoFue
           class="cuando-del-panel"
           :model-value="cuando"
-          pregunta="¿Cuándo fue la venta?"
+          :pregunta="preguntaFecha"
           :error="errorFecha"
           @update:model-value="emit('update:cuando', $event)"
         />
@@ -171,17 +183,17 @@ function ocultarConEscape(): void {
       <div ref="refPie" class="pie-del-panel">
         <p class="total-del-panel">
           <span class="etiqueta"
-            >Total <span class="cuenta">· {{ cuenta }}</span></span
+            >{{ etiquetaTotal }} <span class="cuenta">· {{ cuenta }}</span></span
           >
           <span class="total">{{ textoTotal }}</span>
         </p>
         <p v-if="bloqueado" class="aviso-bloqueo" role="status">
-          Guarda o cancela el precio para confirmar.
+          Guarda o cancela el {{ concepto === 'venta' ? 'precio' : 'costo' }} para confirmar.
         </p>
         <BotonPrincipal
           class="confirmar"
-          texto="Confirmar venta"
-          :icono="Check"
+          :texto="textoAccion"
+          :icono="icono"
           :deshabilitado="registrando || bloqueado || vacio"
           @click="emit('confirmar')"
         />
@@ -287,6 +299,8 @@ function ocultarConEscape(): void {
   gap: var(--espacio-2);
 }
 .avisos-del-panel {
+  display: grid;
+  gap: var(--espacio-3);
   flex: none;
   min-inline-size: 0;
   margin-block-start: var(--espacio-2);

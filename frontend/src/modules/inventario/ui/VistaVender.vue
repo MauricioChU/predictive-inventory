@@ -17,7 +17,7 @@ import BuscadorDeProductos, { type OrigenDeLaEleccion } from './BuscadorDeProduc
 import CuandoFue from './CuandoFue.vue'
 import DisposicionDeCarrito from './DisposicionDeCarrito.vue'
 import ListaDelCarrito from './ListaDelCarrito.vue'
-import PanelDeVenta from './PanelDeVenta.vue'
+import PanelDeCarrito from './PanelDeCarrito.vue'
 import { useCarritos } from './carritos'
 import { errorDeFechaDelDominio, instanteDe, type ErrorDeFecha } from './cuando'
 import { enfocarLinea, enfocarPrimerError, enfocarTitulo, vibrar } from './foco-y-respuesta'
@@ -67,7 +67,7 @@ watch(textoTotal, (nuevo) => {
   if (!carrito.vacio.value) anunciador.anunciar(`Total ${nuevo}`)
 })
 
-// Sin líneas: en celular el panel baja con su animación (PanelDeVenta); en PC no hay hoja.
+// Sin líneas: en celular el panel baja con su animación (PanelDeCarrito); en PC no hay hoja.
 watch(carrito.vacio, (vacio) => {
   if (vacio && esPC.value) expandido.value = false
 })
@@ -272,10 +272,16 @@ async function nuevaVenta(): Promise<void> {
         </div>
         <!-- RN-OP-22: siempre abajo (en S/ 0.00 sin productos); con el primero crece a toda la
              pantalla y al ocultarse vuelve a ese bloque. -->
-        <PanelDeVenta
+        <PanelDeCarrito
           v-model:cuando="cuando"
           v-model:expandido="expandido"
           :carrito="carrito"
+          concepto="venta"
+          titulo="En esta venta"
+          texto-accion="Confirmar venta"
+          :icono="Check"
+          etiqueta-total="Total"
+          pregunta-fecha="¿Cuándo fue la venta?"
           :error-fecha="errorFecha"
           :texto-total="textoTotal"
           :registrando="registrando"
@@ -284,7 +290,7 @@ async function nuevaVenta(): Promise<void> {
           <template v-if="error" #avisos>
             <MensajeDeError :mensaje="error.mensaje" :ayuda="error.ayuda" />
           </template>
-        </PanelDeVenta>
+        </PanelDeCarrito>
       </template>
     </template>
   </div>

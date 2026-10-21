@@ -247,7 +247,10 @@ function alPresionarEnter(evento: KeyboardEvent) {
 <template>
   <div
     class="fila-de-carrito"
-    :class="{ 'fila-de-carrito--compacta': compacta }"
+    :class="{
+      'fila-de-carrito--compacta': compacta,
+      'fila-de-carrito--costo': compacta && concepto === 'costo',
+    }"
     role="group"
     :aria-labelledby="idNombre"
   >
@@ -688,6 +691,23 @@ function alPresionarEnter(evento: KeyboardEvent) {
   .arriba .importe {
     align-items: flex-start;
   }
+}
+/* El costo ("Costo S/ 2.40 c/u") es más largo que el precio: va bajo el nombre, a todo el ancho
+   de la línea, y no le quita lugar al nombre ni al importe. Su toque (48 px) crece con relleno. */
+.fila-de-carrito--costo .arriba .precio-tocable,
+.fila-de-carrito--costo .arriba .precio-fijo {
+  grid-column: 2 / span 2;
+  grid-row: auto;
+  justify-self: start;
+  text-align: start;
+}
+.fila-de-carrito--costo .arriba .precio-tocable {
+  flex-wrap: nowrap;
+  margin-block: 0;
+  padding-block: calc((var(--alto-toque) - 1.3em) / 2);
+}
+.fila-de-carrito--costo .arriba .precio-tocable .precio-unitario {
+  white-space: normal;
 }
 .precio-tocable--especial {
   color: var(--color-advertencia);

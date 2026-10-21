@@ -42,6 +42,14 @@ async function abrir(app: AplicacionDePrueba, ruta = '/recibir') {
   return pantalla
 }
 
+/** Abre el detalle del panel (líneas y ¿Cuándo llegó?), si no estaba abierto. */
+async function detalle(p: PantallaMontada) {
+  if (p.w.find('.panel-de-venta .alternar[aria-expanded="false"]').exists()) {
+    await boton(p.w.get('.panel-de-venta'), 'Ver detalle').trigger('click')
+    await esperarDatos(p.app)
+  }
+}
+
 async function agregar(p: PantallaMontada, texto: string, nombre: string) {
   await buscar(p, texto)
   const tarjeta = p.w
@@ -79,6 +87,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     await p.ir('/historial')
     await app.catalogo.archivarProducto({ productoId: lejia, confirmado: true })
     await p.ir('/recibir')
+    await detalle(p)
     expect(lineas(p).map((l) => l.get('.nombre').text())).toEqual(['Carbón'])
     const aviso = p.w.findAll('.aviso-en-pagina').find((a) => leer(a).includes('Quitamos'))
     expect(aviso && leer(aviso)).toContain('Quitamos Lejía 1 L: ya no está a la venta')
@@ -102,10 +111,12 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     const p = await abrir(app)
     await agregar(p, 'lejia', 'Lejía 1 L')
     await cantidad(p, 0, '6')
-    expect(lineas(p)[0]!.get('.precio').text()).toBe('Costo S/ 2.40 c/u')
-    expect(boton(lineas(p)[0]!, 'Cambiar costo').exists()).toBe(true)
-    expect(p.w.get('.barra-de-total .etiqueta').text()).toBe('Costo total')
-    expect(p.w.get('.barra-de-total .total').text()).toBe('S/ 14.40')
+    expect(lineas(p)[0]!.get('.precio-unitario').text()).toBe('Costo S/ 2.40 c/u')
+    expect(lineas(p)[0]!.get('.precio-tocable .solo-lector').text()).toBe(
+      'Cambiar costo de Lejía 1 L:',
+    )
+    expect(p.w.get('.total-del-panel .etiqueta').text()).toContain('Valor total')
+    expect(p.w.get('.panel-de-venta .total').text()).toBe('S/ 14.40')
   })
 
   it('RN-OP-01 / RN-OP-18: registra la llegada, muestra el éxito y ofrece Deshacer, que la anula', async () => {
@@ -116,7 +127,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     await registrar(p)
     expect(await stock(app, lejia)).toBe('16')
     expect(p.w.get('.pantalla-exito h1').text()).toBe('Mercadería registrada')
-    expect(leer(p.w.get('.pantalla-exito .detalle'))).toBe('1 producto · Costo total S/ 14.40')
+    expect(leer(p.w.get('.pantalla-exito .detalle'))).toBe('1 producto · Valor total S/ 14.40')
     expect(leer(p.w.get('.aviso-deshacer'))).toContain('Mercadería registrada')
 
     await p.w.get('.aviso-deshacer .deshacer').trigger('click')
@@ -129,7 +140,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     const p = await abrir(app)
     await agregar(p, 'lejia', 'Lejía 1 L')
     await cantidad(p, 0, '12')
-    await boton(lineas(p)[0]!, 'Cambiar costo').trigger('click')
+    await lineas(p)[0]!.get('.precio-tocable').trigger('click')
     await lineas(p)[0]!.get('.edicion-precio input').setValue('2.60')
     await boton(lineas(p)[0]!, 'Guardar costo').trigger('click')
     await esperarDatos(app)
@@ -154,7 +165,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     const p = await abrir(app)
     await agregar(p, 'lejia', 'Lejía 1 L')
     await cantidad(p, 0, '12')
-    await boton(lineas(p)[0]!, 'Cambiar costo').trigger('click')
+    await lineas(p)[0]!.get('.precio-tocable').trigger('click')
     await lineas(p)[0]!.get('.edicion-precio input').setValue('2,60')
     await boton(lineas(p)[0]!, 'Guardar costo').trigger('click')
     await esperarDatos(app)
@@ -169,7 +180,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     const { app, lejia } = await conLejia()
     const p = await abrir(app)
     await agregar(p, 'lejia', 'Lejía 1 L')
-    await boton(lineas(p)[0]!, 'Cambiar costo').trigger('click')
+    await lineas(p)[0]!.get('.precio-tocable').trigger('click')
     await lineas(p)[0]!.get('.edicion-precio input').setValue('2.60')
     await boton(lineas(p)[0]!, 'Guardar costo').trigger('click')
     await esperarDatos(app)
@@ -188,6 +199,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     await cantidad(p, 0, '6')
     await p.ir('/vender')
     await p.ir('/recibir')
+    await detalle(p)
     expect((lineas(p)[0]!.get('.cantidad input').element as HTMLInputElement).value).toBe('6')
   })
 
@@ -198,7 +210,8 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     await p.ir('/vender')
     await app.catalogo.editarProducto({ productoId: lejia, precioCompra: '2.80' })
     await p.ir('/recibir')
-    expect(lineas(p)[0]!.get('.precio').text()).toBe('Costo S/ 2.80 c/u')
+    await detalle(p)
+    expect(lineas(p)[0]!.get('.precio-unitario').text()).toBe('Costo S/ 2.80 c/u')
     expect(lineas(p)[0]!.text()).not.toContain('Costo nuevo')
   })
 
@@ -211,7 +224,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     await p.w.get('.aviso-deshacer .deshacer').trigger('click')
     await esperarDatos(app)
     expect(leer(p.w.get('.resultado-de-deshacer'))).toContain(
-      'Deshiciste la llegada de mercadería (costo total S/ 14.40). Los productos volvieron a la lista.',
+      'Deshiciste la llegada de mercadería (valor total S/ 14.40). Los productos volvieron a la lista.',
     )
   })
 
@@ -219,7 +232,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     const { app } = await conLejia()
     const p = await abrir(app)
     await agregar(p, 'lejia', 'Lejía 1 L')
-    await boton(lineas(p)[0]!, 'Cambiar costo').trigger('click')
+    await lineas(p)[0]!.get('.precio-tocable').trigger('click')
     await lineas(p)[0]!.get('.edicion-precio input').setValue('-1')
     await boton(lineas(p)[0]!, 'Guardar costo').trigger('click')
     await esperarDatos(app)
@@ -328,10 +341,11 @@ describe('Llegó mercadería (HU-OP-03)', () => {
       const p = await abrir(app, '/recibir?desde=para-comprar')
 
       expect(p.w.text()).toContain('Cargamos tu lista para comprar de hoy')
+      await detalle(p)
       expect(lineas(p)).toHaveLength(1)
       expect(lineas(p)[0]!.get('.nombre').text()).toBe('Lejía 1 L')
       expect((lineas(p)[0]!.get('.cantidad input').element as HTMLInputElement).value).toBe('5')
-      expect(lineas(p)[0]!.get('.precio').text()).toBe('Costo S/ 2.40 c/u')
+      expect(lineas(p)[0]!.get('.precio-unitario').text()).toBe('Costo S/ 2.40 c/u')
 
       await cantidad(p, 0, '6')
       await registrar(p)
@@ -359,6 +373,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
       const p = await abrir(app)
       await agregar(p, 'carbon', 'Carbón')
       await p.ir('/recibir?desde=para-comprar')
+      await detalle(p)
       expect(lineas(p).map((l) => l.get('.nombre').text())).toEqual(['Carbón', 'Lejía 1 L'])
     })
 
