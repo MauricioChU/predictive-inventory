@@ -64,7 +64,7 @@ El encabezado es el **nombre de la tienda en mayúsculas**, sin saludo ni emoji 
 ```
 ┌──────────────────────────────┐        ┌──────────────────────────────┐
 │╭────────────────────────────╮│        │ Vender                       │
-││ ▬ En esta venta   Ocultar ▾ ││        │ [ Buscar producto          ] │
+││ ▬ En esta venta         ⌄  ││        │ [ Buscar producto          ] │
 ││ [▢] Lejía 1 L     S/ 10.50 ││        │ Más vendidos  [Lejía][Carbón]│
 ││     Quedan 7     ✎ S/ 3.50 ││        │  (grilla, sigue a la vista)  │
 ││ [−] 3 [+]        🗑 Quitar ││        │ ╭──────────────────────────╮ │
