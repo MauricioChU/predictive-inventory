@@ -215,6 +215,17 @@ export function pantallasDeLaTienda(ids: IdsDeDemostracion): Pantalla[] {
     // Historial
     { nombre: 'Historial', ruta: './historial' },
     {
+      nombre: 'Inicio: hoja Movimientos',
+      ruta: './',
+      preparar: async (page) => {
+        await page.getByRole('button', { name: /^Movimientos/ }).click()
+        await expect(page.getByRole('heading', { name: 'Movimientos', level: 2 })).toBeVisible()
+        // La hoja sube despacio: se revisa ya quieta, no a mitad de la animación.
+        await page.waitForFunction(() => document.querySelector('.hoja')?.getAnimations().every((a) => a.playState === 'finished'))
+        await expect(page.locator('.hoja .operacion').first()).toBeVisible()
+      },
+    },
+    {
       nombre: 'Detalle de una venta',
       ruta: './historial',
       preparar: async (page) => {

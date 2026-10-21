@@ -6,6 +6,8 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ### Cambiado
 
+- Inicio entra completo en una sola pantalla: el aviso «4 productos se acaban» es ahora una fila de una línea con una flecha para ver los productos, y la tarjeta de lo de hoy ocupa menos.
+- «Historial» de Inicio se llama «Movimientos» y se abre en una hoja desde abajo, con la misma lista por días; en vez de «Mostrar», eliges la fecha: Hoy, Ayer, 7 días, 30 días o un día que elijas. Se cierra con la flecha, la rayita gris o tocando fuera.
 - Llegó mercadería en el celular: ahora usa el mismo bloque de abajo que Vender («Lo que llegó»): está desde el inicio en S/ 0.00, crece a toda la pantalla al elegir el primer producto y se oculta con la flecha. Sigues pudiendo cambiar el costo de cada producto y anotar cuándo llegó.
 - El «Costo total» ahora se llama «Valor total» al recibir mercadería (en la pantalla, en la confirmación y en el detalle del historial).
 - Vender: el bloque «En esta venta» está abajo desde el inicio, en S/ 0.00; al elegir un producto crece hasta ocupar la pantalla y al tocar «Ocultar» vuelve a meterse abajo, despacio.

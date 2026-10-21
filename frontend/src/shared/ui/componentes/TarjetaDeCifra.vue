@@ -12,8 +12,10 @@ const props = withDefaults(
     textoDetalle?: string
     /** Solo cambia el aspecto: lo que significa la cifra lo dice el texto (RN-UX-04). */
     tono?: 'normal' | 'exito' | 'peligro'
+    /** Menos alto (Inicio entra en una pantalla): menos relleno y el detalle más pegado. */
+    compacta?: boolean
   }>(),
-  { textoDetalle: undefined, tono: 'normal' },
+  { textoDetalle: undefined, tono: 'normal', compacta: false },
 )
 
 const valor = computed(() => pegarCifras(props.textoValor))
@@ -21,7 +23,10 @@ const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.text
 </script>
 
 <template>
-  <div class="tarjeta-de-cifra" :class="`tarjeta-de-cifra--${tono}`">
+  <div
+    class="tarjeta-de-cifra"
+    :class="[`tarjeta-de-cifra--${tono}`, { 'tarjeta-de-cifra--compacta': compacta }]"
+  >
     <!-- Título y cifra en UN párrafo: el lector de pantalla lee "Hoy ganaste S/ 48.20" de una
          vez, no dos datos sueltos. El espacio explícito los separa también al leerlos. -->
     <p class="cifra">
@@ -76,6 +81,15 @@ const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.text
 .detalle {
   margin: var(--espacio-2) 0 0;
   color: var(--color-texto-suave);
+}
+.tarjeta-de-cifra--compacta {
+  padding-block: var(--espacio-2);
+}
+.tarjeta-de-cifra--compacta .valor {
+  line-height: 1.05;
+}
+.tarjeta-de-cifra--compacta .detalle {
+  margin-block-start: 0;
 }
 .tarjeta-de-cifra--exito {
   border-left-color: var(--color-exito);

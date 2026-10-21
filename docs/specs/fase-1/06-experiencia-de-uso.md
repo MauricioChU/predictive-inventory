@@ -4,6 +4,8 @@ La app la usa principalmente una **persona mayor en un celular Android**. Cada d
 
 Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.md](07-calidad.md).
 
+Patrones de diseño reutilizables (hoja inferior, panel de carrito, fila de aviso, animaciones): [docs/diseno/patrones.md](../../diseno/patrones.md).
+
 ## Principios
 
 1. **Una acción principal por pantalla**, grande y abajo, al alcance del pulgar.
@@ -19,7 +21,7 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 | **RN-UX-01** | **Tamaño de letra** configurable: Normal (18 px), **Grande (20 px, por defecto)** y Muy grande (24 px). Todo el diseño escala con esa base. |
 | **RN-UX-02** | **Zonas táctiles** de al menos **48 × 48 px**; los botones de acción principal miden al menos **56 px** de alto y ocupan todo el ancho en celular. Separación mínima de 8 px entre elementos tocables.<br>*Excepción deliberada:* con letra *Muy grande* en 320–360 px, la barra del total pone el total y su botón en una sola fila (el botón no ocupa todo el ancho) para no tapar media pantalla; si el texto no entra, el botón baja a su fila a todo el ancho. |
 | **RN-UX-03** | **Contraste** mínimo 7:1 para texto normal y 4.5:1 para texto grande e íconos (WCAG AAA para texto). |
-| **RN-UX-04** | **Íconos siempre acompañados de texto.** El color nunca es la única señal (RN-AL-05).<br>*Excepción deliberada:* el botón **Ajustes** de Inicio es solo la tuerca, con el nombre accesible "Ajustes" (`aria-label`) y una zona táctil de al menos 48 × 48 px. Lo mismo el botón para ocultar el panel de venta abierto: solo la flecha ⌄, con el nombre accesible "Ocultar" (cerrado dice *Ver detalle*). |
+| **RN-UX-04** | **Íconos siempre acompañados de texto.** El color nunca es la única señal (RN-AL-05).<br>*Excepción deliberada:* el botón **Ajustes** de Inicio es solo la tuerca, con el nombre accesible "Ajustes" (`aria-label`) y una zona táctil de al menos 48 × 48 px. Lo mismo el botón para ocultar el panel de venta abierto: solo la flecha ⌄, con el nombre accesible "Ocultar" (cerrado dice *Ver detalle*); la flecha ⌄ de toda **hoja inferior** ("Cerrar", p. ej. *Movimientos*) y la flecha › de la fila de aviso de Inicio ("Ver productos"), ambas con zona táctil de 48 × 48 px. |
 | **RN-UX-05** | **Sin gestos ocultos**: nada depende de deslizar, mantener presionado ni doble toque. Todo tiene un botón visible. |
 | **RN-UX-06** | **Números fáciles**: los campos de cantidad y precio abren el teclado numérico y tienen botones **− / +** grandes. Se aceptan coma o punto como separador decimal. |
 | **RN-UX-07** | **Mensajes en lenguaje simple**, en tono amable y de "tú". Los errores dicen **qué pasó y qué hacer**, nunca un código técnico: "Solo quedan 2 unid. de Lejía 1 L. Cambia la cantidad o registra la llegada de mercadería." |
@@ -27,7 +29,7 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 | **RN-UX-09** | **Responsive real**: ninguna pantalla tiene desplazamiento horizontal entre **320 px y 1920 px** de ancho, en vertical y horizontal, y con la letra en *Muy grande*. |
 | **RN-UX-10** | **Estados vacíos útiles**: cada lista vacía explica por qué y ofrece la acción siguiente ("Aún no tienes productos. **Agregar el primero**"). |
 | **RN-UX-11** | **Retroalimentación inmediata**: cada operación muestra una confirmación visible (pantalla verde con ✓ y el resumen) y una vibración corta si el celular la permite. |
-| **RN-UX-12** | **Navegación fija** con 5 destinos, ícono y texto: **Inicio · Vender · Recibir · Productos · Control**. En celular va abajo; desde 1024 px, a la izquierda. *Ajustes* e *Historial* se abren desde Inicio. |
+| **RN-UX-12** | **Navegación fija** con 5 destinos, ícono y texto: **Inicio · Vender · Recibir · Productos · Control**. En celular va abajo; desde 1024 px, a la izquierda. *Ajustes* se abre desde Inicio; *Movimientos* (el historial de días) se abre en una hoja desde Inicio. |
 | ~~RN-UX-13~~ | **Retirada** (2026-10-19): el dueño no quiere la tarjeta "Instala la app" en Inicio; instalar sigue posible desde el menú del navegador. |
 | **RN-UX-14** | **Sin internet no hay diferencia**: ninguna pantalla muestra errores de conexión en la Fase 1, y la app abre y funciona completa en modo avión. |
 | **RN-UX-15** | **Accesible**: navegable con lector de pantalla (TalkBack): cada control tiene nombre, los avisos importantes se anuncian (`aria-live`), el orden de foco es lógico y se respeta "reducir movimiento" del sistema. |
@@ -44,21 +46,18 @@ Criterios ejecutables: pruebas E2E y de accesibilidad descritas en [07-calidad.m
 │ │ Hoy ganaste  S/ 48.20    │ │
 │ │ Vendiste     S/ 162.50   │ │
 │ └──────────────────────────┘ │
-│ ┌ 🟠 4 productos se acaban ┐ │
-│ │ 1 agotado y 3 por acabarse│ │
-│ │      Ver productos  ›    │ │
-│ └──────────────────────────┘ │
+│ ┌ 🟠 4 productos se acaban  ›┐ │
 │                              │
 │   (espacio libre)            │
 │ [ 🛒  VENDER               ] │
 │ [ 📦  LLEGÓ MERCADERÍA     ] │
 │ [ 🤔  ¿NECESITO COMPRAR?   ] │
-│  Historial ›                 │
+│  Movimientos ⌃               │
 ├──────────────────────────────┤
 │ Inicio Vender Recibir Prod. Control │
 └──────────────────────────────┘
 ```
-El encabezado es el **nombre de la tienda en mayúsculas**, sin saludo ni emoji (si no hay nombre, el encabezado dice *Inicio*), y a la derecha la tuerca de *Ajustes*. Debajo va la **fecha en mayúsculas**, sin hora (el celular ya la muestra); es la fecha de la tienda (Lima) y, si la medianoche pasa con la app abierta, se pone al día al volver a la app. Las acciones quedan **abajo, sobre la navegación**, al alcance del pulgar; si el contenido es más alto que la pantalla (letra Muy grande, 320 px), todo fluye hacia abajo sin taparse.
+El encabezado es el **nombre de la tienda en mayúsculas**, sin saludo ni emoji (si no hay nombre, el encabezado dice *Inicio*), y a la derecha la tuerca de *Ajustes*. Debajo va la **fecha en mayúsculas**, sin hora (el celular ya la muestra); es la fecha de la tienda (Lima) y, si la medianoche pasa con la app abierta, se pone al día al volver a la app. Las acciones quedan **abajo, sobre la navegación**, al alcance del pulgar; **Inicio entra en una sola pantalla** (360 × 740 con letra Grande, sin desplazar): el aviso es una fila compacta y los avisos que vengan se apilan igual, una bajo otra. Si el contenido es más alto que la pantalla (letra Muy grande, 320 px), todo fluye hacia abajo sin taparse.
 
 ### Vender
 ```
@@ -116,8 +115,10 @@ Cuando el pago cae hoy, mañana o pasado mañana, la tarjeta suma una línea arr
 
 *Configurar* y *Cambiar* abren la pantalla **Alquiler del local**: tres botones de opción (*Una vez al mes* · *Dos veces al mes* · *No pago, el local es mío*) y, si paga, el monto (con − / +, RN-UX-06) y uno o dos selectores del día del mes (1 al 31). Abajo, *Guardar*. La misma pantalla se abre desde *Ajustes → Datos de la tienda*.
 
-### Historial
-Operaciones agrupadas por día ("Hoy", "Ayer", "Lunes 12"), con filtro por tipo. Tocar una muestra el detalle y el botón **Anular**.
+### Movimientos (Historial)
+Desde Inicio, **Movimientos** abre una **hoja inferior** (a toda la pantalla, sobre la navegación; se cierra con la flecha ⌄ "Cerrar", tocando la asa gris o el velo, o con Escape; lo de atrás queda inerte pero la navegación de abajo sigue alcanzable, el foco va al título al abrir y vuelve al botón al cerrar). Muestra las operaciones agrupadas por día ("Hoy", "Ayer", "Lunes 12") con **filtros de fecha**: *Hoy · Ayer · 7 días · 30 días · Elegir día* (al abrir, *7 días*; con *Elegir día* no se busca una fecha futura o inválida: avisa). La hoja abierta y su filtro viven en la dirección de Inicio (`/?movimientos=7-dias`), así que volver desde el detalle de una operación —también tras anularla— reabre la hoja con el mismo filtro. Por pedido se traen hasta 3 páginas; si falta, *Ver más*. Tocar una operación muestra el detalle y el botón **Anular**.
+
+La pantalla *Historial* (`/historial`, con filtro por tipo) sigue existiendo para los enlaces que llegan a ella (detalle de un producto, avisos).
 
 ### Ajustes
 Datos de la tienda (incluye *Alquiler del local*), días entre compras, días de anticipación, aviso de sobrecompra, tamaño de letra, notificaciones, categorías, **Guardar copia** (con el aviso "Hace N días que no guardas una copia", RN-RE-06), **Restaurar copia**, **Exportar a Excel**, **Importar productos**, **Revisar datos** y *Acerca de* (versión).

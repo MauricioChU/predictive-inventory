@@ -184,10 +184,10 @@ test.describe('Recorrido: un día de tienda', () => {
       await expect(masVendidos.locator('ol').first().locator('li').first()).toContainText(LEJIA)
     })
 
-    await test.step('Historial lo lista todo, y anular la venta 2 deja el stock bien (RN-OP-17)', async () => {
+    await test.step('Movimientos lo lista todo, y anular la venta 2 deja el stock bien (RN-OP-17)', async () => {
       await irA(page, 'Inicio')
-      await page.getByRole('link', { name: /^Historial/ }).click()
-      await expect(h1(page)).toHaveText('Historial')
+      await page.getByRole('button', { name: /^Movimientos/ }).click()
+      await expect(page.getByRole('heading', { name: 'Movimientos', level: 2 })).toBeVisible()
       await expect(page.locator('#contenido .operacion .tipo')).toHaveText([
         'Venta',
         'Conteo de stock',
@@ -208,6 +208,8 @@ test.describe('Recorrido: un día de tienda', () => {
       await expect(page.getByRole('dialog')).toContainText('¿Anular esta venta?')
       await page.getByRole('button', { name: 'Sí, anular' }).click()
       await expect(h1(page)).toHaveText('Operación anulada')
+      // Se llegó desde la hoja Movimientos: el botón vuelve a ella.
+      await expect(page.getByRole('button', { name: 'Volver a Movimientos' })).toBeVisible()
 
       await esperarStockEnElDetalle(page, 'lejia', LEJIA, 'Tienes 7 unid.')
       await esperarStockEnElDetalle(page, 'jabon', JABON, 'Tienes 9 unid.')

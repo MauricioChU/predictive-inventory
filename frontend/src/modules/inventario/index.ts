@@ -1,3 +1,4 @@
+import { defineAsyncComponent } from 'vue'
 // API pública del módulo Inventario (RN-OP). Otros módulos y la composición solo entran por aquí.
 export { crearModuloInventario } from './application/modulo'
 export type {
@@ -50,5 +51,7 @@ export const VistaRecibir = () => import('./ui/VistaRecibir.vue')
 export const VistaMerma = () => import('./ui/VistaMerma.vue')
 export const VistaContarStock = () => import('./ui/VistaContarStock.vue')
 export const VistaContarTodo = () => import('./ui/VistaContarTodo.vue')
+// «Movimientos» de Inicio: el historial de días en una hoja inferior (carga al abrirla).
+export const HojaDeMovimientos = defineAsyncComponent(() => import('./ui/HojaDeMovimientos.vue'))
 export const VistaHistorial = () => import('./ui/VistaHistorial.vue')
 export const VistaOperacion = () => import('./ui/VistaOperacion.vue')
