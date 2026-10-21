@@ -49,6 +49,8 @@ const props = withDefaults(
      * la pantalla pasa esas unidades a otra línea con ese precio.
      */
     puedeSeparar?: boolean
+    /** RN-OP-05: tope de la cantidad (lo que queda en stock para esta línea); "+" se detiene. */
+    maximoCantidad?: number
     /** Cuántas hay en la línea: tope de "¿Cuántos?". */
     maximoSeparar?: number
     /** Error de "¿Cuántos?", con el mismo contrato que errorPrecio. */
@@ -60,6 +62,9 @@ const props = withDefaults(
      * "Importe" quedan para el lector de pantalla. Los toques siguen de 48 px o más.
      */
     compacta?: boolean
+    /** Texto del botón que saca la línea: "Cancelar" en Vender (se cancela ese producto de la
+     * venta), "Quitar" en lo demás. */
+    textoQuitar?: string
   }>(),
   {
     imagen: undefined,
@@ -73,9 +78,11 @@ const props = withDefaults(
     errorCantidad: undefined,
     errorPrecio: undefined,
     puedeSeparar: false,
+    maximoCantidad: undefined,
     maximoSeparar: undefined,
     errorUnidades: undefined,
     compacta: false,
+    textoQuitar: 'Quitar',
   },
 )
 const emit = defineEmits<{
@@ -295,18 +302,22 @@ function alPresionarEnter(evento: KeyboardEvent) {
           :model-value="cantidad"
           :decimales="!porUnidades"
           :minimo="minimo"
+          :maximo="maximoCantidad"
           :error="errorCantidad"
           etiqueta-oculta
           @update:model-value="emit('update:cantidad', $event)"
         />
+        <!-- Mientras se edita un precio se oculta: su "Cancelar" no se confunde con el del
+             formulario (uno saca el producto, el otro solo cierra la edición). -->
         <button
+          v-if="!algunaEdicion"
           type="button"
           class="accion-liviana accion-liviana--quitar"
-          :aria-label="`Quitar ${nombre}`"
+          :aria-label="`${textoQuitar} ${nombre}`"
           @click="emit('quitar')"
         >
           <Trash2 aria-hidden="true" class="icono-accion" />
-          <span>Quitar</span>
+          <span>{{ textoQuitar }}</span>
         </button>
       </div>
       <button
@@ -395,6 +406,7 @@ function alPresionarEnter(evento: KeyboardEvent) {
           :model-value="cantidad"
           :decimales="!porUnidades"
           :minimo="minimo"
+          :maximo="maximoCantidad"
           :error="errorCantidad"
           :etiqueta-oculta="compacta"
           @update:model-value="emit('update:cantidad', $event)"
@@ -424,10 +436,10 @@ function alPresionarEnter(evento: KeyboardEvent) {
         />
         <Boton
           class="accion"
-          texto="Quitar"
+          :texto="textoQuitar"
           variante="peligro"
           :icono="Trash2"
-          :aria-label="`Quitar ${nombre}`"
+          :aria-label="`${textoQuitar} ${nombre}`"
           @click="emit('quitar')"
         />
       </div>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, useId } from 'vue'
+import { computed, nextTick, ref, useId, watch } from 'vue'
 import { Check, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import { formatearEntero, plural } from '@/shared/domain/formato'
 import { usarAltoObservado } from '@/shared/ui/alto-observado'
-import { animarSalidaDeHoja } from '@/shared/ui/animar-salida-de-hoja'
+import { alTerminarAnimacion } from '@/shared/ui/al-terminar-animacion'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import type { CarritoDePantalla } from './carrito-de-pantalla'
 import CuandoFue from './CuandoFue.vue'
@@ -49,7 +49,19 @@ const cerrando = ref(false)
 const bloqueado = computed(() => props.carrito.hayEdicionAbierta.value)
 
 // El foco por teclado nunca queda debajo del panel (WCAG 2.4.11), como con BarraDeTotal.
-usarAltoObservado(refRaiz, { variable: '--alto-barra-de-total' })
+const altoRaiz = usarAltoObservado(refRaiz, { variable: '--alto-barra-de-total' })
+/** Alto del bloque cerrado: abierta, la hoja crece desde ahí y vuelve ahí al ocultarse (y el
+ * bloque conserva ese lugar en la página, así nada salta). */
+const altoCerrado = ref(0)
+watch(altoRaiz, (alto) => {
+  if (!props.expandido && alto > 0) altoCerrado.value = alto
+})
+const estiloRaiz = computed(() => ({
+  '--hoja-cerrada-arriba': `calc(100dvh - var(--alto-pie, 0px) - ${altoCerrado.value}px)`,
+  ...(props.expandido && altoCerrado.value > 0 ? { minBlockSize: `${altoCerrado.value}px` } : {}),
+}))
+/** Sin productos: el bloque está, en S/ 0.00, sin "Ver detalle" y sin poder confirmar. */
+const vacio = computed(() => props.carrito.vacio.value)
 // Abierta, la hoja se desplaza con el título y el pie pegados: lo enfocado queda entre ambos.
 usarAltoObservado(refPie, { variable: '--alto-pie-del-panel' })
 usarAltoObservado(refCabecera, { variable: '--alto-cabecera-del-panel' })
@@ -67,14 +79,24 @@ async function alternar(): Promise<void> {
     refTitulo.value?.focus()
     return
   }
-  // Baja despacio y recién después queda oculta.
+  await cerrar(true)
+}
+
+/** Baja despacio y recién después queda oculta (también al quitar el último producto). */
+async function cerrar(enfocarBoton: boolean): Promise<void> {
+  if (cerrando.value || !props.expandido) return
   cerrando.value = true
-  animarSalidaDeHoja(refHoja.value, () => {
+  await nextTick()
+  alTerminarAnimacion(refHoja.value, () => {
     cerrando.value = false
     emit('update:expandido', false)
-    void nextTick(() => refAlternar.value?.focus())
+    if (enfocarBoton) void nextTick(() => refAlternar.value?.focus())
   })
 }
+
+watch(vacio, (sinProductos) => {
+  if (sinProductos) void cerrar(false)
+})
 
 /** Escape oculta el detalle (además de su botón). */
 function ocultarConEscape(): void {
@@ -87,6 +109,7 @@ function ocultarConEscape(): void {
     ref="refRaiz"
     class="panel-de-venta"
     :class="{ 'panel-de-venta--abierto': expandido }"
+    :style="estiloRaiz"
     :aria-labelledby="idTitulo"
     @keydown.esc="ocultarConEscape"
   >
@@ -98,22 +121,36 @@ function ocultarConEscape(): void {
       aria-hidden="true"
       @click="alternar"
     />
-    <div ref="refHoja" class="hoja" :class="{ 'hoja-entra': expandido && !cerrando }">
+    <div
+      ref="refHoja"
+      class="hoja"
+      :class="{ 'hoja-entra': expandido && !cerrando, 'hoja-sale': cerrando }"
+    >
       <div ref="refCabecera" class="cabecera-del-panel">
-        <div class="asa" aria-hidden="true" />
+        <!-- Tocar la asa también abre y oculta (comodidad: el botón es lo que lee el lector). -->
+        <div class="asa" aria-hidden="true" @click="vacio ? undefined : alternar()" />
         <!-- Tocar el título también abre y oculta (comodidad: el botón es lo que lee el lector). -->
-        <h2 :id="idTitulo" ref="refTitulo" class="titulo-carrito" tabindex="-1" @click="alternar">
+        <h2
+          :id="idTitulo"
+          ref="refTitulo"
+          class="titulo-carrito"
+          tabindex="-1"
+          @click="vacio ? undefined : alternar()"
+        >
           En esta venta
         </h2>
         <button
+          v-if="!vacio"
           ref="refAlternar"
           type="button"
           class="alternar"
           :aria-expanded="expandido ? 'true' : 'false'"
           :aria-controls="expandido ? idDetalle : undefined"
+          :aria-label="expandido ? 'Ocultar' : undefined"
+          :class="{ 'alternar--solo-icono': expandido }"
           @click="alternar"
         >
-          <span>{{ expandido ? 'Ocultar' : 'Ver detalle' }}</span>
+          <span v-if="!expandido">Ver detalle</span>
           <component :is="expandido ? ChevronDown : ChevronUp" aria-hidden="true" class="icono" />
         </button>
       </div>
@@ -145,7 +182,7 @@ function ocultarConEscape(): void {
           class="confirmar"
           texto="Confirmar venta"
           :icono="Check"
-          :deshabilitado="registrando || bloqueado"
+          :deshabilitado="registrando || bloqueado || vacio"
           @click="emit('confirmar')"
         />
       </div>
@@ -193,6 +230,12 @@ function ocultarConEscape(): void {
   border-radius: 999px;
   background: var(--color-borde);
   opacity: 0.55;
+  cursor: pointer;
+  /* Zona de toque más alta que la raya que se ve. */
+  box-sizing: content-box;
+  background-clip: content-box;
+  padding-block: var(--espacio-2);
+  margin-block: calc(-1 * var(--espacio-2)) calc(var(--espacio-1) - var(--espacio-2));
 }
 .titulo-carrito {
   grid-area: titulo;
@@ -220,6 +263,10 @@ function ocultarConEscape(): void {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+.alternar--solo-icono {
+  justify-content: center;
+  min-inline-size: var(--alto-toque);
 }
 .icono {
   inline-size: 1.25em;
@@ -256,6 +303,8 @@ function ocultarConEscape(): void {
 }
 .total-del-panel {
   display: flex;
+  /* 320 px con letra Muy grande: el monto baja a su renglón antes que desbordar. */
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--espacio-3);
@@ -312,7 +361,6 @@ function ocultarConEscape(): void {
   inset-block-end: 0;
   margin-inline: calc(-1 * var(--espacio-4));
   padding: var(--espacio-2) var(--espacio-4) var(--espacio-3);
-  border-block-start: 1px solid var(--color-borde-foto);
   background: var(--color-superficie);
 }
 .velo {

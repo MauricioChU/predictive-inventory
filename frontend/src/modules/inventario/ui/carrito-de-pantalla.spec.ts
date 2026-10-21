@@ -39,9 +39,15 @@ describe('carrito de pantalla', () => {
   it('RN-OP-22 / RN-OP-05: sin cantidad válida o pasando el stock no hay "quedan" y sigue el error', () => {
     const carrito = usarCarrito('venta')
     const id = carrito.agregar(LEJIA)
+    // RN-OP-05: lo escrito de más se corrige a lo que hay.
     carrito.cambiarCantidad(id, '11')
+    expect(carrito.lineas.value[0]!.cantidad).toBe('10')
+    // Si el stock bajó por otro lado (al volver a la pantalla), sigue el error.
+    carrito.refrescar(
+      new Map([['lejia', producto('lejia', 'Lejía 1 L', { stock: Cantidad.deEntero(4) })]]),
+    )
     expect(carrito.lineas.value[0]!.quedan).toBeUndefined()
-    expect(carrito.lineas.value[0]!.errorCantidad).toContain('Solo quedan 10 unid. de Lejía 1 L')
+    expect(carrito.lineas.value[0]!.errorCantidad).toContain('Solo quedan 4 unid. de Lejía 1 L')
     carrito.cambiarCantidad(id, '')
     expect(carrito.lineas.value[0]!.quedan).toBeUndefined()
   })
@@ -158,10 +164,10 @@ describe('carrito de pantalla', () => {
         'Quedan 5 unid.',
         'Quedan 5 unid.',
       ])
+      // La otra línea lleva 2: esta llega como mucho a 8.
       carrito.cambiarCantidad(id, '9')
-      expect(carrito.lineas.value.every((l) => l.errorCantidad?.includes('Solo quedan 10'))).toBe(
-        true,
-      )
+      expect(carrito.lineas.value[0]!.cantidad).toBe('8')
+      expect(carrito.lineas.value.every((l) => l.errorCantidad === undefined)).toBe(true)
     })
 
     it('volver una parte al precio de siempre la junta otra vez con su línea', () => {

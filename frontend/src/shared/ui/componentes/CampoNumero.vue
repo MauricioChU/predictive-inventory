@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useId, watch } from 'vue'
+import { computed, nextTick, ref, useId, watch } from 'vue'
 import { Minus, Plus } from 'lucide-vue-next'
 
 const props = withDefaults(
@@ -75,6 +75,16 @@ watch(enMaximo, (ahoraDeshabilitado) => {
   }
 })
 
+/** Si quien usa el campo corrige lo escrito (p. ej. al tope del stock) y el valor no cambia,
+ * Vue no repinta: el campo vuelve a mostrar el valor real. */
+function alEscribir(evento: Event) {
+  const campo = evento.target as HTMLInputElement
+  emit('update:modelValue', campo.value)
+  void nextTick(() => {
+    if (campo.value !== props.modelValue) campo.value = props.modelValue
+  })
+}
+
 function cambiar(delta: number) {
   const siguiente = redondear(valorNumerico.value + delta)
   if (siguiente < props.minimo) return
@@ -105,7 +115,7 @@ function cambiar(delta: number) {
         :aria-invalid="error ? 'true' : undefined"
         :aria-describedby="describedBy"
         autocomplete="off"
-        @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+        @input="alEscribir"
       />
       <!-- M10: el sufijo (p. ej. "kg") se asocia al input por aria-describedby, si no un
            lector de pantalla solo anuncia el número y pierde la unidad. -->

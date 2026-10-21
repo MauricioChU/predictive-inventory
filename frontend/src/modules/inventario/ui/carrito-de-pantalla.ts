@@ -42,6 +42,9 @@ export interface LineaCalculada extends LineaDePantalla {
   errorCantidad?: string
   /** RN-OP-22 (solo al vender): "Quedan 7 unid." / "Se acaba" tras la venta. */
   quedan?: string
+  /** RN-OP-05 (solo al vender): lo más que puede llevar esta línea (el stock menos lo que
+   * llevan las otras líneas del mismo producto). */
+  maximo?: Cantidad
   importe: Dinero | null
   /** El precio no es el de siempre (precio especial o costo nuevo). */
   precioCambiado: boolean
@@ -131,6 +134,8 @@ export function usarCarrito(concepto: Concepto) {
     return {
       ...base,
       cantidadLeida: cantidad,
+      maximo:
+        concepto === 'venta' ? producto.stock.restar(delProducto.restar(cantidad)) : undefined,
       importe: linea.precio.multiplicarPor(cantidad),
       errorCantidad,
       quedan:
@@ -214,9 +219,24 @@ export function usarCarrito(concepto: Concepto) {
       return existente.id
     },
 
+    /** RN-OP-05: al vender, lo escrito de más se corrige solo a lo que hay. */
     cambiarCantidad(id: string, texto: string): void {
       const linea = buscar(id)
-      if (linea) linea.cantidad = texto
+      if (!linea) return
+      linea.cantidad = texto
+      if (concepto !== 'venta') return
+      const escrita = leerSinError(linea)
+      if (!escrita) return
+      const otras = (totalesPorProducto().get(linea.producto.id) ?? escrita).restar(escrita)
+      const maximo = linea.producto.stock.restar(otras)
+      if (escrita.mayorQue(maximo) && maximo.esPositiva()) linea.cantidad = formatearNumero(maximo)
+    },
+
+    /** RN-OP-05: al vender, ¿queda stock para sumar uno más de este producto? */
+    puedeAgregar(producto: ProductoVista): boolean {
+      if (concepto !== 'venta') return true
+      const lleva = totalesPorProducto().get(producto.id) ?? Cantidad.cero()
+      return producto.stock.mayorOIgualQue(lleva.sumar(UNA))
     },
 
     /**
