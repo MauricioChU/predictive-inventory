@@ -6,6 +6,8 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ### Cambiado
 
+- Llegó mercadería en el celular: ahora usa el mismo bloque de abajo que Vender («Lo que llegó»): está desde el inicio en S/ 0.00, crece a toda la pantalla al elegir el primer producto y se oculta con la flecha. Sigues pudiendo cambiar el costo de cada producto y anotar cuándo llegó.
+- El «Costo total» ahora se llama «Valor total» al recibir mercadería (en la pantalla, en la confirmación y en el detalle del historial).
 - Vender: el bloque «En esta venta» está abajo desde el inicio, en S/ 0.00; al elegir un producto crece hasta ocupar la pantalla y al tocar «Ocultar» vuelve a meterse abajo, despacio.
 - Ya no se puede vender más de lo que hay: el + se detiene, lo escrito de más vuelve a lo que hay y tocar otra vez un producto agotado no lo suma.
 - Al registrar una venta, la confirmación aparece al centro con una animación y muestra lo que vendiste: cada producto con su cantidad, precio e importe, y el total.
