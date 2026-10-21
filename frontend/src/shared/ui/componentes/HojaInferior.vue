@@ -30,10 +30,17 @@ const cerrando = ref(false)
 const abridor =
   props.volverA ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null)
 
+/** Escape cierra estando el foco donde esté (mientras la hoja está montada). */
+function alTeclear(evento: KeyboardEvent): void {
+  if (evento.key === 'Escape' && !evento.defaultPrevented) void cerrar()
+}
+
 onMounted(() => {
   refTitulo.value?.focus()
+  document.addEventListener('keydown', alTeclear)
 })
 onBeforeUnmount(() => {
+  document.removeEventListener('keydown', alTeclear)
   // Recién cuando quien la usa terminó de sacar el `inert` de lo de atrás.
   void nextTick(() => {
     if (abridor?.isConnected) abridor.focus()
@@ -50,7 +57,7 @@ async function cerrar(): Promise<void> {
 </script>
 
 <template>
-  <section class="hoja-inferior" :aria-labelledby="idTitulo" @keydown.esc="cerrar">
+  <section class="hoja-inferior" :aria-labelledby="idTitulo">
     <div
       class="velo"
       :class="cerrando ? 'velo-sale' : 'velo-entra'"

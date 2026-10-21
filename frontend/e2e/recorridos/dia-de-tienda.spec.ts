@@ -207,6 +207,8 @@ test.describe('Recorrido: un día de tienda', () => {
       await expect(page.getByRole('dialog')).toContainText('¿Anular esta venta?')
       await page.getByRole('button', { name: 'Sí, anular' }).click()
       await expect(h1(page)).toHaveText('Operación anulada')
+      // Se llegó desde la hoja Movimientos: el botón vuelve a ella.
+      await expect(page.getByRole('button', { name: 'Volver a Movimientos' })).toBeVisible()
 
       await esperarStockEnElDetalle(page, 'lejia', LEJIA, 'Tienes 7 unid.')
       await esperarStockEnElDetalle(page, 'jabon', JABON, 'Tienes 9 unid.')

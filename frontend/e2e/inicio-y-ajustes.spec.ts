@@ -353,6 +353,24 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     await page.getByRole('radio', { name: '30 días' }).click()
     await expect(page.locator('.hoja .operacion .tipo').first()).toHaveText('Venta')
 
+    // Elegir día: un día futuro no busca nada y avisa.
+    await page.getByRole('radio', { name: 'Elegir día' }).click()
+    await page.getByLabel('¿Qué día?').fill('2099-01-01')
+    await expect(page.getByText('Elige un día que ya pasó, o hoy.')).toBeVisible()
+    await expect(page.locator('.hoja .operacion')).toHaveCount(0)
+    await page.getByRole('radio', { name: '30 días' }).click()
+    await expect(page.locator('.hoja .operacion .tipo').first()).toHaveText('Venta')
+
+    // El detalle y atrás: la hoja reabre con su filtro (la dirección la guarda).
+    await page.locator('.hoja .operacion').filter({ hasText: 'Venta' }).first().click()
+    await expect(page.getByRole('heading', { name: 'Venta', level: 1 })).toBeVisible()
+    await page.getByRole('button', { name: 'Volver' }).click()
+    await expect(page.getByRole('heading', { name: 'Movimientos', level: 2 })).toBeVisible()
+    await expect(page).toHaveURL(/movimientos=30-dias/)
+    await expect(page.getByRole('radio', { name: '30 días' })).toBeChecked()
+
+    // Escape cierra aunque el foco esté en otro lado de la hoja.
+    await page.getByRole('radio', { name: '30 días' }).focus()
     await page.keyboard.press('Escape')
     await expect(page.locator('.hoja')).toHaveCount(0)
     await expect(boton).toBeFocused()

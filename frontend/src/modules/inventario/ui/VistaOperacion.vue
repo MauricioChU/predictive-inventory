@@ -29,6 +29,15 @@ import { hoyEnLaTienda } from '@/shared/domain/fecha'
 const aplicacion = useAplicacion()
 const route = useRoute()
 const router = useRouter()
+/** Se llegó desde la hoja «Movimientos» de Inicio: tras anular, se vuelve a ella con su filtro. */
+const vinoDeMovimientos = String(
+  (window.history.state as { back?: string | null } | null)?.back ?? '',
+).includes('movimientos=')
+
+function volverAlHistorial(): void {
+  if (vinoDeMovimientos) router.back()
+  else void router.push({ name: 'historial' })
+}
 
 const operacion = ref<OperacionVista | null>(null)
 /** La que anuló esta (si esta es una anulación). */
@@ -106,9 +115,9 @@ async function anular(): Promise<void> {
     >
       <BotonPrincipal
         class="accion-exito"
-        texto="Volver al Historial"
+        :texto="vinoDeMovimientos ? 'Volver a Movimientos' : 'Volver al Historial'"
         :icono="History"
-        @click="router.push({ name: 'historial' })"
+        @click="volverAlHistorial"
       />
     </PantallaExito>
 

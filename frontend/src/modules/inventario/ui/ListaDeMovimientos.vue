@@ -14,8 +14,8 @@ import { montoDe, resumenDeProductos, type FiltroDeTipo } from './presentacion-d
 /**
  * La lista del Historial (HU-OP-08), agrupada por día, lo más nuevo primero. La usan la pantalla
  * Historial (con filtro por tipo) y la hoja «Movimientos» de Inicio (con filtro por fecha).
- * Con `rango` trae páginas hasta cubrir el rango y muestra solo esos días; sin él, de a páginas
- * con «Ver más» (plan 17).
+ * Con `rango` trae páginas (hasta 3 por pedido) hasta cubrir el rango y muestra solo esos días,
+ * con «Ver más» si falta; sin él, de a páginas con «Ver más» (plan 17).
  */
 const props = withDefaults(
   defineProps<{
@@ -32,6 +32,8 @@ const emit = defineEmits<{ accion: [] }>()
 const aplicacion = useAplicacion()
 /** Cuántas operaciones se traen de una vez ("Ver más" trae otras tantas). */
 const POR_PAGINA = 60
+/** Con rango, cuántas páginas se piden de una vez; si falta, aparece «Ver más» para seguir. */
+const PAGINAS_POR_PEDIDO = 3
 
 const operaciones = ref<OperacionVista[]>([])
 const siguiente = ref<string | null>(null)
@@ -54,22 +56,29 @@ function faltaCubrir(): boolean {
   return !ultima || diaDe(ultima.ocurridaEn) >= props.rango.desde
 }
 
+/** Trae la página que sigue y, con rango, otras hasta cubrirlo o llegar al tope por pedido. */
+async function traer(numero: number, desde?: string): Promise<boolean> {
+  let siguientePagina = desde
+  for (let n = 0; n < PAGINAS_POR_PEDIDO; n += 1) {
+    const pagina = await aplicacion.inventario.paginaDelHistorial(consulta(siguientePagina))
+    if (numero !== pedido) return false
+    operaciones.value = [...operaciones.value, ...pagina.operaciones]
+    siguiente.value = pagina.siguiente
+    siguientePagina = pagina.siguiente ?? undefined
+    if (!faltaCubrir()) break
+  }
+  return true
+}
+
 async function cargar(): Promise<void> {
   const numero = (pedido += 1)
   trayendoMas.value = false
+  // Al cambiar de filtro no queda a la vista la lista vieja.
+  cargado.value = false
+  operaciones.value = []
+  siguiente.value = null
   try {
-    let pagina = await aplicacion.inventario.paginaDelHistorial(consulta())
-    if (numero !== pedido) return
-    operaciones.value = pagina.operaciones
-    siguiente.value = pagina.siguiente
-    while (faltaCubrir()) {
-      pagina = await aplicacion.inventario.paginaDelHistorial(
-        consulta(siguiente.value ?? undefined),
-      )
-      if (numero !== pedido) return
-      operaciones.value = [...operaciones.value, ...pagina.operaciones]
-      siguiente.value = pagina.siguiente
-    }
+    if (!(await traer(numero))) return
     error.value = null
   } catch (causa) {
     if (numero === pedido) error.value = errorParaMostrar(causa, 'anulacion')
@@ -83,13 +92,10 @@ async function verMas(): Promise<void> {
   const desde = siguiente.value
   if (desde === null || trayendoMas.value) return
   const numero = pedido
-  const yaHabia = operaciones.value.length
+  const yaHabia = refRaiz.value?.querySelectorAll('.operacion').length ?? 0
   trayendoMas.value = true
   try {
-    const pagina = await aplicacion.inventario.paginaDelHistorial(consulta(desde))
-    if (numero !== pedido) return
-    operaciones.value = [...operaciones.value, ...pagina.operaciones]
-    siguiente.value = pagina.siguiente
+    if (!(await traer(numero, desde))) return
     error.value = null
   } catch (causa) {
     if (numero === pedido) error.value = errorParaMostrar(causa, 'anulacion')
@@ -120,11 +126,13 @@ const grupos = computed(() => {
   }
   return resultado
 })
-const quedanMas = computed(() => !props.rango && siguiente.value !== null)
+/** Sin rango, mientras haya más páginas; con rango, solo si el tope cortó antes de cubrirlo. */
+const quedanMas = computed(() => siguiente.value !== null && (!props.rango || faltaCubrir()))
 </script>
 
 <template>
   <div ref="refRaiz" class="lista-de-movimientos">
+    <p v-if="!cargado" class="cargando" role="status">Cargando…</p>
     <MensajeDeError v-if="error" :mensaje="error.mensaje" :ayuda="error.ayuda" />
     <ListaAgrupadaPorDia
       v-if="cargado"
@@ -231,6 +239,10 @@ const quedanMas = computed(() => !props.rango && siguiente.value !== null)
   inline-size: 1.5rem;
   block-size: 1.5rem;
   transform: translateY(-50%);
+  color: var(--color-texto-suave);
+}
+.cargando {
+  margin: 0;
   color: var(--color-texto-suave);
 }
 .ver-mas {

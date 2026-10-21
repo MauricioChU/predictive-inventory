@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   ChevronUp,
   CircleHelp,
@@ -26,6 +26,7 @@ import { haciaPantalla, type PantallaDeOtraRama } from './pantallas-de-otras-ram
 const aplicacion = useAplicacion()
 const estadoGlobal = useEstadoGlobal()
 const router = useRouter()
+const route = useRoute()
 
 const nombreTienda = ref('')
 const deHoy = ref<{ ganancia: Dinero; ventas: Dinero } | null>(null)
@@ -33,14 +34,35 @@ const atencion = ref<ResumenDeAtencion | null>(null)
 /** `null` mientras se lee. */
 const hayProductos = ref<boolean | null>(null)
 const fallo = ref(false)
-/** La hoja «Movimientos» (el historial de días); abierta, lo de atrás queda inerte. */
-const movimientosAbiertos = ref(false)
-/** El botón que la abrió: a él vuelve el foco al cerrarla. */
-const abridorDeMovimientos = ref<HTMLElement | null>(null)
+/**
+ * La hoja «Movimientos» (el historial de días) vive en la dirección: `/?movimientos=7-dias`.
+ * Así, volver desde el detalle de una operación reabre la hoja con su filtro. Abierta, lo de
+ * atrás queda inerte.
+ */
+const filtroDeMovimientos = computed(() =>
+  typeof route.query.movimientos === 'string' ? route.query.movimientos : null,
+)
+const movimientosAbiertos = computed(() => filtroDeMovimientos.value !== null)
+/** El botón que la abre: a él vuelve el foco al cerrarla. */
+const refMovimientos = ref<HTMLElement | null>(null)
 
-function abrirMovimientos(evento: Event): void {
-  abridorDeMovimientos.value = evento.currentTarget as HTMLElement
-  movimientosAbiertos.value = true
+// Al cerrarse (también si la hoja volvió a abrirse desde el detalle, sin botón que la abriera),
+// el foco vuelve al botón.
+watch(movimientosAbiertos, (abierta) => {
+  if (!abierta) void nextTick(() => refMovimientos.value?.focus())
+})
+
+function abrirMovimientos(): void {
+  void router.push({ name: 'inicio', query: { movimientos: '7-dias' } })
+}
+function cambiarFiltroDeMovimientos(filtro: string): void {
+  void router.replace({ name: 'inicio', query: { movimientos: filtro } })
+}
+/** Cerrarla vuelve a Inicio a secas: con `back` si se llegó desde ahí (sin dejar historia de más). */
+function cerrarMovimientos(): void {
+  const atras = (window.history.state as { back?: string | null } | null)?.back
+  if (atras === router.resolve({ name: 'inicio' }).fullPath) router.back()
+  else void router.replace({ name: 'inicio' })
 }
 
 /** Plan 20: el nombre de la tienda en mayúsculas (el guardado no cambia); sin nombre, solo "Inicio". */
@@ -180,7 +202,12 @@ function verLoQueSeAcaba(): void {
           :icono="CircleHelp"
           @click="ir('necesito-comprar')"
         />
-        <button type="button" class="enlace-movimientos" @click="abrirMovimientos">
+        <button
+          ref="refMovimientos"
+          type="button"
+          class="enlace-movimientos"
+          @click="abrirMovimientos"
+        >
           <History aria-hidden="true" class="icono" />
           <span>Movimientos</span>
           <ChevronUp aria-hidden="true" class="icono" />
@@ -190,8 +217,10 @@ function verLoQueSeAcaba(): void {
 
     <HojaDeMovimientos
       v-if="movimientosAbiertos"
-      :volver-a="abridorDeMovimientos"
-      @cerrar="movimientosAbiertos = false"
+      :filtro="filtroDeMovimientos ?? '7-dias'"
+      :volver-a="refMovimientos"
+      @update:filtro="cambiarFiltroDeMovimientos"
+      @cerrar="cerrarMovimientos"
     />
   </div>
 </template>
@@ -277,6 +306,8 @@ h1 {
   margin: auto calc(-1 * var(--espacio-4)) calc(-1 * var(--espacio-2));
   padding: var(--espacio-2) var(--espacio-4);
   background: var(--color-fondo);
+  /* Cuando el contenido pasa por debajo (pantalla baja), se nota que es una barra encima. */
+  box-shadow: 0 -6px 8px -6px rgb(18 26 24 / 0.35);
 }
 /* Lo enfocado con el teclado no queda debajo de "Vender" pegado (WCAG 2.4.11)... */
 .vista-inicio :is(a, button) {
