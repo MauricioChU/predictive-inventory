@@ -270,7 +270,7 @@ test.describe('Inicio', () => {
     await expect(cifra).toContainText('S/ 2.20')
     await expect(cifra).toContainText('Vendiste S/ 7.00')
     await expect(page.getByText('1 producto se acaba')).toBeVisible()
-    await expect(page.getByText('1 agotado')).toHaveCount(1)
+    await expect(page.getByText('1 agotado')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Ver productos' })).toBeVisible()
 
     for (const texto of ['Resumen del día', 'guardas una copia', 'pagas el local', 'Instala la app en tu celular']) {
@@ -316,6 +316,54 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     }
   }
 
+  test('360×740 Grande: Inicio entra en una sola pantalla y el aviso es una fila de una línea', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
+    await abrirInicioCompleto(page, 'GRANDE', 360, 740)
+    expect(await page.evaluate(() => document.documentElement.scrollHeight), 'sin desplazar').toBeLessThanOrEqual(740)
+    const fila = page.locator('.fila-de-aviso')
+    await expect(fila).toContainText('2 productos se acaban')
+    await expect(fila).not.toContainText('agotado')
+    expect((await fila.boundingBox())!.height, 'una sola línea').toBeLessThan(60)
+    await expect(page.getByRole('button', { name: /^Movimientos/ })).toBeVisible()
+  })
+
+  test('Movimientos abre una hoja con filtros de fecha, deja lo de atrás inerte y devuelve el foco', async ({
+    page,
+  }) => {
+    await abrirTiendaLista(page, './')
+    const lejia = await crearProducto(page, { nombre: 'Lejía 1 L', compra: '2.40', venta: '3.50', stock: '10' })
+    await vender(page, lejia, '1')
+    await abrir(page, './')
+
+    const boton = page.getByRole('button', { name: /^Movimientos/ })
+    await boton.click()
+    const titulo = page.getByRole('heading', { name: 'Movimientos', level: 2 })
+    await expect(titulo).toBeFocused()
+    await expect(page.locator('.vista-inicio > .cuerpo')).toHaveAttribute('inert', '')
+    await expect(page.getByRole('radio', { name: 'Hoy' })).toBeVisible()
+    await expect(page.getByText('Mostrar', { exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Volver' })).toHaveCount(0)
+    // Hoy: la venta y el stock inicial; Ayer: nada.
+    await page.getByRole('radio', { name: 'Hoy' }).click()
+    await expect(page.locator('.hoja .operacion .tipo').first()).toHaveText('Venta')
+    await page.getByRole('radio', { name: 'Ayer' }).click()
+    await expect(page.getByText('No hay movimientos en estos días')).toBeVisible()
+    await page.getByRole('radio', { name: '30 días' }).click()
+    await expect(page.locator('.hoja .operacion .tipo').first()).toHaveText('Venta')
+
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.hoja')).toHaveCount(0)
+    await expect(boton).toBeFocused()
+    await expect(page.locator('.vista-inicio > .cuerpo')).not.toHaveAttribute('inert', '')
+
+    await boton.click()
+    await page.getByRole('button', { name: 'Cerrar' }).click()
+    await expect(page.locator('.hoja')).toHaveCount(0)
+    await expect(boton).toBeFocused()
+  })
+
   test('320×700 Muy grande: enfocar "Vender" pegado no mueve la página', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
     await abrirInicioCompleto(page, 'MUY_GRANDE', 320, 700)
@@ -343,7 +391,7 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     const cifra = await caja('.cifra')
     const aviso = await caja('.atencion')
     const vender = await caja('.vender-fijo')
-    const historial = await caja('.enlace-historial')
+    const historial = await caja('.enlace-movimientos')
     const acciones = { y: vender.y, height: historial.y + historial.height - vender.y }
     const navegacion = await page.getByRole('navigation').boundingBox()
     expect(cifra.y).toBeGreaterThanOrEqual(fecha.y + fecha.height - 1)

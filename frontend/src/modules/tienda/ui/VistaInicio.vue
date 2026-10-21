@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import {
-  ChevronRight,
+  ChevronUp,
   CircleHelp,
   History,
   PackagePlus,
@@ -12,11 +12,12 @@ import {
 import { useEstadoGlobal } from '@/app/estado-global'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import { RUTA_SE_ACABAN, type ResumenDeAtencion } from '@/modules/alertas'
+import { HojaDeMovimientos } from '@/modules/inventario'
 import type { Dinero } from '@/shared/domain/dinero'
 import { formatearDinero, plural } from '@/shared/domain/formato'
-import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import EstadoVacio from '@/shared/ui/componentes/EstadoVacio.vue'
+import FilaDeAviso from '@/shared/ui/componentes/FilaDeAviso.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import TarjetaDeCifra from '@/shared/ui/componentes/TarjetaDeCifra.vue'
 import FechaDeHoy from './FechaDeHoy.vue'
@@ -32,6 +33,15 @@ const atencion = ref<ResumenDeAtencion | null>(null)
 /** `null` mientras se lee. */
 const hayProductos = ref<boolean | null>(null)
 const fallo = ref(false)
+/** La hoja «Movimientos» (el historial de días); abierta, lo de atrás queda inerte. */
+const movimientosAbiertos = ref(false)
+/** El botón que la abrió: a él vuelve el foco al cerrarla. */
+const abridorDeMovimientos = ref<HTMLElement | null>(null)
+
+function abrirMovimientos(evento: Event): void {
+  abridorDeMovimientos.value = evento.currentTarget as HTMLElement
+  movimientosAbiertos.value = true
+}
 
 /** Plan 20: el nombre de la tienda en mayúsculas (el guardado no cambia); sin nombre, solo "Inicio". */
 const encabezado = computed(() => nombreTienda.value.trim().toLocaleUpperCase('es') || 'Inicio')
@@ -102,7 +112,7 @@ function verLoQueSeAcaba(): void {
 
 <template>
   <div class="vista-inicio">
-    <header class="saludo">
+    <header class="saludo" :inert="movimientosAbiertos ? true : undefined">
       <h1>{{ encabezado }}</h1>
       <!-- Excepción deliberada a RN-UX-04: solo la tuerca, con nombre accesible y zona de 48 px. -->
       <RouterLink :to="{ name: 'ajustes' }" class="enlace-ajustes" aria-label="Ajustes">
@@ -110,7 +120,7 @@ function verLoQueSeAcaba(): void {
       </RouterLink>
     </header>
 
-    <FechaDeHoy />
+    <FechaDeHoy :inert="movimientosAbiertos ? true : undefined" />
 
     <MensajeDeError
       v-if="fallo"
@@ -124,10 +134,11 @@ function verLoQueSeAcaba(): void {
       contenido es más alto que la pantalla, todo fluye sin taparse). PC: lo que hay que saber a
       la izquierda y lo que hay que hacer a la derecha.
     -->
-    <div class="cuerpo">
+    <div class="cuerpo" :inert="movimientosAbiertos ? true : undefined">
       <TarjetaDeCifra
         v-if="cifraDeHoy"
         class="cifra"
+        compacta
         :titulo="cifraDeHoy.titulo"
         :texto-valor="cifraDeHoy.valor"
         :texto-detalle="cifraDeHoy.detalle"
@@ -142,15 +153,15 @@ function verLoQueSeAcaba(): void {
           accion="Agregar el primero"
           @accion="ir('producto-nuevo')"
         />
-        <AvisoEnPagina
+        <!-- Filas compactas: varias alertas se apilan una bajo otra sin alargar la pantalla. -->
+        <FilaDeAviso
           v-else-if="atencion.contador > 0"
           tono="atencion"
-          :titulo="tituloDeAtencion"
-          :texto="atencion.texto"
+          :texto="tituloDeAtencion"
           texto-accion="Ver productos"
           @accion="verLoQueSeAcaba"
         />
-        <AvisoEnPagina v-else tono="exito" :titulo="atencion.texto" />
+        <FilaDeAviso v-else tono="exito" :texto="atencion.texto" />
       </div>
 
       <div class="acciones">
@@ -169,13 +180,19 @@ function verLoQueSeAcaba(): void {
           :icono="CircleHelp"
           @click="ir('necesito-comprar')"
         />
-        <RouterLink :to="haciaPantalla(router, 'historial')" class="enlace-historial">
+        <button type="button" class="enlace-movimientos" @click="abrirMovimientos">
           <History aria-hidden="true" class="icono" />
-          <span>Historial</span>
-          <ChevronRight aria-hidden="true" class="icono" />
-        </RouterLink>
+          <span>Movimientos</span>
+          <ChevronUp aria-hidden="true" class="icono" />
+        </button>
       </div>
     </div>
+
+    <HojaDeMovimientos
+      v-if="movimientosAbiertos"
+      :volver-a="abridorDeMovimientos"
+      @cerrar="movimientosAbiertos = false"
+    />
   </div>
 </template>
 
@@ -183,7 +200,7 @@ function verLoQueSeAcaba(): void {
 .vista-inicio {
   display: flex;
   flex-direction: column;
-  gap: var(--espacio-4);
+  gap: var(--espacio-3);
   /* Ocupa el alto que deja libre la navegación (medida en vivo en --alto-pie). */
   min-height: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
 }
@@ -193,7 +210,7 @@ function verLoQueSeAcaba(): void {
   align-items: center;
   justify-content: space-between;
   gap: var(--espacio-2) var(--espacio-4);
-  padding-block: var(--espacio-2);
+  padding-block: 0;
 }
 h1 {
   margin: 0;
@@ -201,7 +218,7 @@ h1 {
   line-height: 1.2;
 }
 .enlace-ajustes,
-.enlace-historial {
+.enlace-movimientos {
   display: inline-flex;
   align-items: center;
   gap: var(--espacio-2);
@@ -219,11 +236,16 @@ h1 {
   border: 2px solid var(--color-borde);
   background: var(--color-fondo);
 }
-.enlace-historial {
+.enlace-movimientos {
   align-self: flex-start;
   padding-inline: var(--espacio-2);
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 0.2em;
+  cursor: pointer;
 }
 .icono {
   width: 1.25em;
@@ -235,7 +257,7 @@ h1 {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--espacio-4);
+  gap: var(--espacio-3);
 }
 /* Celular: sin caja propia, así "Vender" se pega abajo dentro de todo el cuerpo de Inicio (un
    elemento pegajoso no sale de la caja de su padre). */

@@ -65,13 +65,13 @@ test.describe('Los textos de la spec, exactos', () => {
       'Productos',
       /^Control/,
     ])
-    // RN-UX-10 y la pantalla Inicio (06): las tres acciones, y Ajustes e Historial desde aquí.
+    // RN-UX-10 y la pantalla Inicio (06): las tres acciones, y Ajustes y Movimientos desde aquí.
     await expect(page.getByText('Aún no tienes productos')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Agregar el primero' })).toBeVisible()
     for (const accion of ['Vender', 'Llegó mercadería', '¿Necesito comprar?']) {
       await expect(page.locator('#contenido').getByRole('button', { name: accion, exact: true })).toBeVisible()
     }
-    await expect(page.getByRole('link', { name: /^Historial/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Movimientos/ })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Ajustes' })).toBeVisible()
     // Plan 19: Inicio es solo para vender (RN-UX-13 retirada).
     await expect(page.getByText('Instala la app en tu celular')).toHaveCount(0)

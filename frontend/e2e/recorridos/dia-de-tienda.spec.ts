@@ -183,10 +183,10 @@ test.describe('Recorrido: un día de tienda', () => {
       await expect(masVendidos.locator('ol').first().locator('li').first()).toContainText(LEJIA)
     })
 
-    await test.step('Historial lo lista todo, y anular la venta 2 deja el stock bien (RN-OP-17)', async () => {
+    await test.step('Movimientos lo lista todo, y anular la venta 2 deja el stock bien (RN-OP-17)', async () => {
       await irA(page, 'Inicio')
-      await page.getByRole('link', { name: /^Historial/ }).click()
-      await expect(h1(page)).toHaveText('Historial')
+      await page.getByRole('button', { name: /^Movimientos/ }).click()
+      await expect(page.getByRole('heading', { name: 'Movimientos', level: 2 })).toBeVisible()
       await expect(page.locator('#contenido .operacion .tipo')).toHaveText([
         'Venta',
         'Conteo de stock',

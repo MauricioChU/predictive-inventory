@@ -6,6 +6,8 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ### Cambiado
 
+- Inicio entra completo en una sola pantalla: el aviso «4 productos se acaban» es ahora una fila de una línea con una flecha para ver los productos, y la tarjeta de lo de hoy ocupa menos.
+- «Historial» de Inicio se llama «Movimientos» y se abre en una hoja desde abajo, con la misma lista por días; en vez de «Mostrar», eliges la fecha: Hoy, Ayer, 7 días, 30 días o un día que elijas. Se cierra con la flecha, la rayita gris o tocando fuera.
 - Vender: el bloque «En esta venta» está abajo desde el inicio, en S/ 0.00; al elegir un producto crece hasta ocupar la pantalla y al tocar «Ocultar» vuelve a meterse abajo, despacio.
 - Ya no se puede vender más de lo que hay: el + se detiene, lo escrito de más vuelve a lo que hay y tocar otra vez un producto agotado no lo suma.
 - Al registrar una venta, la confirmación aparece al centro con una animación y muestra lo que vendiste: cada producto con su cantidad, precio e importe, y el total.

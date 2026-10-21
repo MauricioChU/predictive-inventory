@@ -215,6 +215,14 @@ export function pantallasDeLaTienda(ids: IdsDeDemostracion): Pantalla[] {
     // Historial
     { nombre: 'Historial', ruta: './historial' },
     {
+      nombre: 'Inicio: hoja Movimientos',
+      ruta: './',
+      preparar: async (page) => {
+        await page.getByRole('button', { name: /^Movimientos/ }).click()
+        await expect(page.getByRole('heading', { name: 'Movimientos', level: 2 })).toBeVisible()
+      },
+    },
+    {
       nombre: 'Detalle de una venta',
       ruta: './historial',
       preparar: async (page) => {
