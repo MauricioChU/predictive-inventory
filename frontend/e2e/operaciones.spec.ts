@@ -45,7 +45,8 @@ async function agregarBuscando(page: Page, texto: string, nombre: string): Promi
  * del carrito en PC, el total sigue a 1.6rem y "Registrar llegada" va en su propia fila, a todo el ancho.
  */
 test.describe('BarraDeTotal fuera de la forma compacta', () => {
-  for (const ancho of [360, 412, 1280]) {
+  // En celular Llegó mercadería usa el panel (como Vender); la barra queda en la columna de PC.
+  for (const ancho of [1280]) {
     test(`${ancho} px con letra Grande: total a 1.6rem y botón a todo el ancho en su fila`, async ({
       page,
     }) => {
@@ -53,7 +54,7 @@ test.describe('BarraDeTotal fuera de la forma compacta', () => {
       await page.setViewportSize({ width: ancho, height: 800 })
       await abrirTiendaLista(page, './')
       await crearProducto(page, LEJIA)
-      // La BarraDeTotal ya no es de Vender (usa el panel de venta): se mide en Llegó mercadería.
+      // La BarraDeTotal ya no es de Vender ni de Recibir en celular (usan el panel): se mide en PC.
       await abrir(page, './recibir')
       await agregarBuscando(page, 'lejia', 'Lejía 1 L')
       const m = await page.evaluate(() => {
@@ -347,6 +348,7 @@ test.describe('Llegó mercadería (HU-OP-03, HU-OP-09)', () => {
     await expect(page).toHaveURL(/\/recibir\?desde=para-comprar$/)
 
     await expect(page.getByText('Cargamos tu lista para comprar de hoy')).toBeVisible()
+    await abrirDetalleDeVenta(page)
     await expect(page.locator('.lista-del-carrito .fila-de-carrito')).toHaveCount(1)
     await expect(lineaDe(page, 'Lejía 1 L').getByLabel('Cantidad (unid.)')).toHaveValue('5')
     await page.getByRole('button', { name: 'Registrar llegada' }).click()
