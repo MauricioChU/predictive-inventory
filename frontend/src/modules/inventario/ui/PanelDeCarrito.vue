@@ -168,6 +168,7 @@ function ocultarConEscape(): void {
       </div>
 
       <div v-if="expandido" :id="idDetalle" class="detalle">
+        <slot name="arriba" />
         <ListaDelCarrito :carrito="carrito" :concepto="concepto" texto-vacio="" compacta />
         <CuandoFue
           class="cuando-del-panel"

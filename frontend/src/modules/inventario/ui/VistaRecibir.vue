@@ -256,6 +256,8 @@ async function prellenarDesdeParaComprar(): Promise<void> {
       }),
     )
     prellenada.value = lineas.length === 0 ? 'vacia' : 'con-lineas'
+    // Como con el primer producto: en celular el panel aparece abierto, con el aviso adentro.
+    if (lineas.length > 0 && !esPC.value) expandido.value = true
   } catch (causa) {
     error.value = errorParaMostrar(causa, 'ingreso')
   }
@@ -293,18 +295,20 @@ watch(
           texto-cerrar="Cerrar"
           @cerrar="alDia.cerrarAviso"
         />
-        <AvisoEnPagina
-          v-if="prellenada === 'con-lineas'"
-          tono="info"
-          titulo="Cargamos tu lista para comprar de hoy"
-          texto="Cambia lo que haga falta antes de registrar."
-        />
-        <AvisoEnPagina
-          v-else-if="prellenada === 'vacia'"
-          tono="info"
-          titulo="Tu lista para comprar de hoy está vacía"
-          texto="Busca los productos que llegaron."
-        />
+        <template v-if="esPC || prellenada === 'vacia'">
+          <AvisoEnPagina
+            v-if="prellenada === 'con-lineas'"
+            tono="info"
+            titulo="Cargamos tu lista para comprar de hoy"
+            texto="Cambia lo que haga falta antes de registrar."
+          />
+          <AvisoEnPagina
+            v-else-if="prellenada === 'vacia'"
+            tono="info"
+            titulo="Tu lista para comprar de hoy está vacía"
+            texto="Busca los productos que llegaron."
+          />
+        </template>
         <template v-if="esPC">
           <AvisoEnPagina
             v-if="avisoParaCorregir"
@@ -369,6 +373,13 @@ watch(
           :registrando="registrando"
           @confirmar="registrarLlegada"
         >
+          <template v-if="prellenada === 'con-lineas'" #arriba>
+            <AvisoEnPagina
+              tono="info"
+              titulo="Cargamos tu lista para comprar de hoy"
+              texto="Cambia lo que haga falta antes de registrar."
+            />
+          </template>
           <template v-if="avisoParaCorregir || error" #avisos>
             <AvisoEnPagina
               v-if="avisoParaCorregir"
