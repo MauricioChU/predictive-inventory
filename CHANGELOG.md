@@ -4,6 +4,8 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+## [0.5.2] · 2026-10-22
+
 ### Cambiado
 
 - Vender y Recibir: el «Deshacer» ahora está dentro de la pantalla de confirmación, arriba a la derecha, con la cuenta de los 10 segundos («Deshacer (9)»). Si te vas de esa pantalla, desaparece.
