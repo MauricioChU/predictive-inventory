@@ -6,7 +6,7 @@ import {
   usarLetra,
 } from './utilidades/calidad'
 import { caja } from './utilidades/escenarios'
-import { abrir } from './utilidades/navegacion'
+import { abrir, esperarQueTermineLaAnimacion } from './utilidades/navegacion'
 import { abrirTiendaLista } from './utilidades/tienda'
 import { crearConHistoria, crearProductos, FOTO_PNG, objetivosChicos } from './utilidades/productos'
 
@@ -60,7 +60,9 @@ test.describe('Productos: flujos críticos', () => {
     await abrirTiendaLista(page, './productos')
     await expect(page.getByText('Aún no tienes productos')).toBeVisible()
     await page.getByRole('button', { name: 'Agregar el primero' }).click()
-    await expect(page.getByRole('heading', { level: 1, name: 'Producto nuevo' })).toBeVisible()
+    // Abre en una hoja (sin salir de la lista).
+    await expect(page.getByRole('heading', { name: 'Producto nuevo' })).toBeVisible()
+    await expect(page).toHaveURL(/\/productos$/)
 
     await page.getByLabel('Nombre del producto').fill('Lejía Tradicional 1 L')
     // La foto de la galería (el otro input abre la cámara de atrás: capture="environment").
@@ -119,6 +121,7 @@ test.describe('Productos: flujos críticos', () => {
 
     // "Queda poco" combina con la búsqueda; "Borrar" vuelve a mostrar todo.
     await page.getByRole('button', { name: 'Borrar' }).click()
+    await page.getByRole('button', { name: /^Filtros/ }).click()
     await page.getByRole('radio', { name: 'Queda poco' }).click()
     await expect.poll(() => nombresEnLaLista(page)).toEqual(['Lejía Tradicional 2 L'])
   })
@@ -136,10 +139,11 @@ test.describe('Productos: flujos críticos', () => {
 
     await expect(page.getByRole('heading', { level: 1, name: 'Productos' })).toBeVisible()
     await expect(page).toHaveURL(/\/productos\?estado=se-acaban$/)
-    await expect(page.getByRole('radio', { name: 'Se acaban' })).toBeChecked()
+    await expect(page.getByRole('button', { name: 'Quitar filtro Se acaban' })).toBeVisible()
     // Solo lo agotado y lo que queda poco; lo que tiene stock no sale.
     await expect.poll(async () => (await nombresEnLaLista(page)).sort()).toEqual(['Escoba', 'Lejía Tradicional 2 L'])
 
+    await page.getByRole('button', { name: /^Filtros/ }).click()
     await page.getByRole('radio', { name: 'Todos' }).click()
     await expect.poll(async () => (await nombresEnLaLista(page)).length).toBe(4)
   })
@@ -174,6 +178,7 @@ test.describe('Productos: flujos críticos', () => {
     // Ya no está entre los activos; sí en Archivados.
     await page.getByRole('link', { name: 'Productos' }).click()
     await expect(page.getByText('Aún no tienes productos')).toHaveCount(0)
+    await page.getByRole('button', { name: /^Filtros/ }).click()
     await page.getByRole('radio', { name: 'Archivados' }).click()
     await expect.poll(() => nombresEnLaLista(page)).toEqual(['Escoba'])
   })
@@ -264,7 +269,8 @@ async function pantallas(
       ruta: './productos',
       preparar: async () => {
         await page.getByLabel('Buscar producto').fill('l')
-        await page.getByRole('button', { name: /^Categoría:/ }).click()
+        await page.getByRole('button', { name: /^Filtros/ }).click()
+        await esperarQueTermineLaAnimacion(page)
       },
     },
     { ruta: `./productos/${jabon}` },

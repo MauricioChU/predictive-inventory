@@ -93,7 +93,8 @@ export interface ProductoPorPantalla {
  * Con `conFoto`, elige una foto de la galería (el otro campo abre la cámara).
  */
 export async function llenarProductoNuevo(page: Page, p: ProductoPorPantalla): Promise<void> {
-  await expect(h1(page)).toHaveText('Producto nuevo')
+  // Página (primera vez) o hoja de Productos: el título cambia de nivel.
+  await expect(page.getByRole('heading', { name: 'Producto nuevo' })).toBeVisible()
   await page.getByLabel('Nombre del producto').fill(p.nombre)
   if (p.conFoto) {
     const foto = page.getByRole('group', { name: 'Foto del producto' })
@@ -108,7 +109,7 @@ export async function llenarProductoNuevo(page: Page, p: ProductoPorPantalla): P
   await page.getByLabel('¿Cuántos tienes ahora?').fill(p.stock)
   if (p.minimo !== undefined) await page.getByLabel('Stock mínimo').fill(p.minimo)
   await page.getByRole('button', { name: 'Guardar producto' }).click()
-  await expect(h1(page)).toHaveText('Producto guardado')
+  await expect(page.getByRole('heading', { level: 1, name: 'Producto guardado' })).toBeVisible()
 }
 
 /** Desde la navegación: Productos → "Agregar producto" (o "Agregar el primero") → guardar. */
@@ -116,6 +117,13 @@ export async function crearProductoPorPantalla(page: Page, p: ProductoPorPantall
   await irA(page, 'Productos')
   await page.getByRole('button', { name: /^Agregar (el primero|producto)$/ }).click()
   await llenarProductoNuevo(page, p)
+  // El formulario vive en una hoja sobre la lista: se cierra para seguir con lo demás.
+  // (Desde Primera vez es la pantalla de siempre: no hay hoja que cerrar.)
+  const cerrar = page.getByRole('button', { name: 'Cerrar', exact: true })
+  if ((await cerrar.count()) > 0) {
+    await cerrar.click()
+    await expect(cerrar).toHaveCount(0)
+  }
 }
 
 /** Un destino de la navegación fija (RN-UX-12). */

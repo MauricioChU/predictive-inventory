@@ -42,3 +42,8 @@ export async function abrir(page: Page, ruta: string): Promise<void> {
   }, letra)
   await expect(page.locator('html')).toHaveAttribute('data-letra', letra)
 }
+
+/** Espera a que terminen las animaciones de la pantalla (p. ej. una hoja que sube) antes de medir. */
+export async function esperarQueTermineLaAnimacion(page: Page): Promise<void> {
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'))
+}

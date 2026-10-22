@@ -34,6 +34,17 @@ Para todo lo que se consulta sin salir de la pantalla (Movimientos y lo que veng
 - Abre con `hoja-entra`, cierra con `hoja-sale`; el velo y la asa también la cierran; Escape también.
 - Lo de atrás queda `inert`; al abrir, el foco va al título; al cerrar, vuelve al botón que la abrió (`volverA`).
 - Sin "Volver": la hoja se cierra, no se navega.
+- Pie opcional (`#pie`, recibe `cerrar`): un botón principal fijo abajo, fuera de lo que se desplaza.
+
+### Filtros en hoja + chips (Productos)
+
+- Arriba, en una fila: el buscador y el botón «Filtros» (ícono + texto + número de filtros puestos). Si no caben (letra Muy grande), el botón pasa debajo.
+- El botón abre `HojaDeFiltros.vue`: «Mostrar» (opciones en cuadros que se envuelven) y «Categoría» (una opción por fila, la elegida marcada); se aplican al tocar y el pie «Ver N productos» solo cierra.
+- Lo activo va debajo del buscador en chips quitables (pastilla pequeña, zona de toque de 48 px, nombre accesible «Quitar filtro X»); sin filtros no hay línea.
+
+### Formulario dentro de una hoja
+
+- Un formulario de página se mete en la hoja con una propiedad `en-hoja`: sin su encabezado ni «Volver», con el botón de guardar pegado al fondo de la hoja (`position: sticky` con el relleno del cuerpo cancelado) y la confirmación dentro de la hoja. Ejemplo: `FormularioDeProducto.vue` desde Productos.
 
 ## Panel de carrito — `PanelDeCarrito.vue`
 

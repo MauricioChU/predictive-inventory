@@ -74,6 +74,8 @@ async function cerrar(): Promise<void> {
         </button>
       </div>
       <div class="cuerpo"><slot /></div>
+      <!-- Pie fijo abajo (botón principal; recibe `cerrar` para bajar la hoja con su animación), fuera de lo que se desplaza. -->
+      <div v-if="$slots.pie" class="pie"><slot name="pie" :cerrar="cerrar" /></div>
     </div>
   </section>
 </template>
@@ -162,6 +164,12 @@ async function cerrar(): Promise<void> {
   padding: var(--espacio-2) var(--espacio-4) var(--espacio-4);
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+.pie {
+  flex: none;
+  padding: var(--espacio-3) var(--espacio-4);
+  background: var(--color-fondo);
+  box-shadow: var(--sombra-flotante);
 }
 /* PC: la navegación está a la izquierda (260 px, LayoutApp) y queda a la vista y alcanzable. */
 @media (min-width: 1024px) {

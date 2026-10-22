@@ -4,6 +4,11 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+### Cambiado
+
+- Productos: los filtros ya no ocupan media pantalla. Arriba quedan el buscador y un botón «Filtros» (con cuántos hay puestos); al tocarlo se abre una hoja con «Mostrar» y la «Categoría» como lista, y abajo «Ver N productos». Lo que tienes filtrado se ve debajo del buscador en chips que se quitan con ✕.
+- «Agregar producto» abre el formulario en una hoja desde abajo, sin salir de la lista; al guardar, la confirmación se ve en la misma hoja.
+
 ## [0.5.2] · 2026-10-22
 
 ### Cambiado

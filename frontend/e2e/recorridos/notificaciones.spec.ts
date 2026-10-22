@@ -76,7 +76,7 @@ test.describe('Recorrido: los avisos en el celular', () => {
     await tocarNotificacion(page, deVarios.url)
     await expect(h1(page)).toHaveText('Productos')
     await expect(page).toHaveURL(/\/productos\?estado=se-acaban$/)
-    await expect(page.getByRole('radio', { name: 'Se acaban' })).toBeChecked()
+    await expect(page.getByRole('button', { name: 'Quitar filtro Se acaban' })).toBeVisible()
     for (const nombre of [LEJIA, 'Jabón Bolívar', 'Bolsas de basura x10']) {
       await expect(page.locator('#contenido').getByText(nombre, { exact: true })).toBeVisible()
     }
