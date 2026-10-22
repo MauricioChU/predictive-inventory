@@ -238,7 +238,7 @@ function registrada(): void {
   if (route.query.desde) void router.replace({ name: 'recibir' })
   deshacer.ofrecer(
     {
-      mensaje: 'Mercadería registrada',
+      mensaje: 'Llegada registrada',
       alDeshacer: ({ pantallaAbierta }) => {
         const deshecha = `Deshiciste la llegada de mercadería (valor total ${valorTotal})`
         // r1 #2: si ya se está cargando otra llegada, no se toca; lo dice el resultado.
@@ -298,7 +298,7 @@ watch(
   <div class="vista-recibir" :class="{ 'vista-recibir--con-panel': !esPC && paso === 'carrito' }">
     <PantallaExito
       v-if="paso === 'exito'"
-      titulo="Mercadería registrada"
+      titulo="Llegada registrada"
       :detalle="detalleDeExito"
       :segundos-para-deshacer="deshacer.restante.value"
       al-centro
@@ -307,7 +307,7 @@ watch(
       <ResumenDeLineas :lineas="llegado" etiqueta="Lo que llegó" />
       <BotonPrincipal
         class="accion-exito"
-        texto="Registrar otra llegada"
+        texto="Nueva llegada"
         :icono="PackagePlus"
         @click="otraLlegada"
       />

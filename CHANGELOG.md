@@ -7,7 +7,7 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 ### Cambiado
 
 - Vender y Recibir: el «Deshacer» ahora está dentro de la pantalla de confirmación, arriba a la derecha, con la cuenta de los 10 segundos («Deshacer (9)»). Si te vas de esa pantalla, desaparece.
-- Al recibir mercadería, la confirmación tiene el mismo diseño que la de Vender: al centro, con lo que llegó (producto, cantidad × costo, importe y «Costo nuevo» si cambió) y el valor total.
+- Al recibir mercadería, la confirmación («Llegada registrada», con «Nueva llegada») tiene el mismo diseño que la de Vender: al centro, con lo que llegó (producto, cantidad × costo, importe y «Costo nuevo» si cambió) y el valor total.
 
 ## [0.5.0] · 2026-10-21
 

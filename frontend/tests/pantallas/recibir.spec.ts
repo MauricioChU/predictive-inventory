@@ -126,7 +126,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     await cantidad(p, 0, '6')
     await registrar(p)
     expect(await stock(app, lejia)).toBe('16')
-    expect(p.w.get('.pantalla-exito h1').text()).toBe('Mercadería registrada')
+    expect(p.w.get('.pantalla-exito h1').text()).toBe('Llegada registrada')
     expect(leer(p.w.get('.pantalla-exito .detalle'))).toBe('1 producto · Valor total S/ 14.40')
     expect(leer(p.w.get('.pantalla-exito .deshacer'))).toMatch(/Deshacer\s*\(10\)/)
     expect(p.w.find('.aviso-deshacer').exists()).toBe(false)
@@ -160,7 +160,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     await esperarDatos(app)
     expect(await stock(app, lejia)).toBe('22')
     expect((await app.catalogo.obtenerProducto(lejia))?.precioCompra.centimos).toBe(260)
-    expect(p.w.get('.pantalla-exito h1').text()).toBe('Mercadería registrada')
+    expect(p.w.get('.pantalla-exito h1').text()).toBe('Llegada registrada')
   })
 
   it('RN-OP-14: se puede registrar el costo distinto sin cambiar el precio de compra', async () => {
@@ -296,7 +296,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
       await boton(dialogo, 'Registrar igual').trigger('click')
       await esperarDatos(app)
       expect(await stock(app, escoba)).toBe('6')
-      expect(p.w.get('.pantalla-exito h1').text()).toBe('Mercadería registrada')
+      expect(p.w.get('.pantalla-exito h1').text()).toBe('Llegada registrada')
     })
 
     it('"Cambiar cantidad" no registra nada: deja el aviso a la vista y el foco en la cantidad', async () => {

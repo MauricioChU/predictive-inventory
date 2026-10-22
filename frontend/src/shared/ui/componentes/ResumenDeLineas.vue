@@ -53,7 +53,8 @@ defineProps<{ lineas: LineaDeResumen[]; etiqueta: string }>()
   border-block-start: 1px solid var(--color-borde-foto);
 }
 .nombre {
-  flex: 1 1 8rem;
+  flex: 1 1 auto;
+  min-inline-size: 0;
   font-weight: 700;
 }
 .importe {
