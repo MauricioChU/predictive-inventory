@@ -112,13 +112,11 @@ test.describe('Los textos de la spec, exactos', () => {
       [{ buscado: 'lejia', nombre: 'Lejía Tradicional 1 L', cantidad: 1 }],
       'S/ 3.50',
     )
-    // El reloj salta 13 s (pasados los 10 s y los 2 s de margen para un toque justo al cerrar)
-    // sin que corra el temporizador que cierra el aviso: un toque que llega tarde.
+    // El Deshacer va dentro de la confirmación y cuenta con la hora real: si el reloj salta 13 s
+    // (p. ej. el celular se suspendió), al volver ya no se ofrece; no hay toque que llegue tarde.
+    await expect(page.getByRole('button', { name: /^Deshacer/ })).toBeVisible()
     await page.clock.setSystemTime(await page.evaluate(() => Date.now() + 13_000))
-    await page.getByRole('button', { name: /^Deshacer/ }).click()
-    await expect(page.locator('.resultado-de-deshacer')).toContainText(
-      'Ya pasó el tiempo para deshacer. Puedes anularla desde el Historial.',
-    )
+    await expect(page.getByRole('button', { name: /^Deshacer/ })).toHaveCount(0)
     await esperarSinPalabrasQueEvitar(page)
   })
 
