@@ -4,16 +4,19 @@ import { CircleCheck, Undo2 } from 'lucide-vue-next'
 import { pegarCifras } from '../texto-sin-cortes'
 import { CLAVE_ANUNCIADOR } from '../anunciador'
 
-const props = defineProps<{
-  titulo: string
-  detalle?: string
-  /** Al centro del alto libre (Vender). Sin esto, arriba: deja ver lo que la pantalla pone
-   * debajo (p. ej. Producto guardado y sus botones). */
-  alCentro?: boolean
-  /** RN-OP-18: con esto, el botón Deshacer va arriba a la derecha de la pantalla, con lo que
-   * queda de los 10 s. Al vencer, quien la monta lo quita (pasa `undefined`). */
-  segundosParaDeshacer?: number
-}>()
+const props = withDefaults(
+  defineProps<{
+    titulo: string
+    detalle?: string
+    /** Al centro del alto libre (por defecto, en todas). `false` si la pantalla pone algo
+     * debajo y centra el conjunto ella misma (Producto guardado y sus botones). */
+    alCentro?: boolean
+    /** RN-OP-18: con esto, el botón Deshacer va arriba a la derecha de la pantalla, con lo que
+     * queda de los 10 s. Al vencer, quien la monta lo quita (pasa `undefined`). */
+    segundosParaDeshacer?: number
+  }>(),
+  { detalle: undefined, alCentro: true, segundosParaDeshacer: undefined },
+)
 const emit = defineEmits<{ deshacer: [] }>()
 
 const refEncabezado = ref<HTMLHeadingElement>()

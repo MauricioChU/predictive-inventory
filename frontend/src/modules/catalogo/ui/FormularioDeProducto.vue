@@ -391,8 +391,10 @@ function verProducto(productoId: string) {
 
 <template>
   <div class="formulario-de-producto">
-    <template v-if="exito">
+    <!-- Al centro como todas las confirmaciones, pero con sus botones: se centra el conjunto. -->
+    <div v-if="exito" class="exito-centrado">
       <PantallaExito
+        :al-centro="false"
         :titulo="
           exito.tipo === 'creado'
             ? 'Producto guardado'
@@ -447,7 +449,7 @@ function verProducto(productoId: string) {
           />
         </template>
       </div>
-    </template>
+    </div>
 
     <template v-else>
       <EncabezadoPagina :titulo="titulo" volver />
@@ -607,6 +609,12 @@ function verProducto(productoId: string) {
 </template>
 
 <style scoped>
+.exito-centrado {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
+}
 .formulario-de-producto {
   display: grid;
   gap: var(--espacio-4);

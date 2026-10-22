@@ -221,6 +221,18 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       expect(confirmar(p).exists()).toBe(true)
     })
 
+    it('con el panel oculto, elegir otro producto lo vuelve a abrir', async () => {
+      const { app } = await tiendaDePrueba()
+      const p = await abrirVender(app)
+      await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+      await panel(p).get('.alternar').trigger('click')
+      await esperarDatos(app)
+      expect(panel(p).get('.alternar').attributes('aria-expanded')).toBe('false')
+      await agregarBuscando(p, 'carbon', 'Carbón')
+      expect(panel(p).get('.alternar').attributes('aria-expanded')).toBe('true')
+      expect(lineas(p)).toHaveLength(2)
+    })
+
     it('Ocultar deja solo el total y Confirmar venta, y el foco queda en el botón', async () => {
       const { app } = await tiendaDePrueba()
       const p = await abrirVender(app)
