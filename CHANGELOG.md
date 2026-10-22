@@ -4,6 +4,8 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+## [0.5.0] · 2026-10-21
+
 ### Cambiado
 
 - Inicio entra completo en una sola pantalla: el aviso «4 productos se acaban» es ahora una fila de una línea con una flecha para ver los productos, y la tarjeta de lo de hoy ocupa menos.
