@@ -93,7 +93,6 @@ watch(carrito.vacio, (vacio) => {
 })
 
 async function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): Promise<void> {
-  const primero = carrito.vacio.value
   const lineaId = carrito.agregar(producto)
   anunciador.anunciar(`Agregaste ${producto.nombre}. Valor total ${textoTotal.value}`)
   if (esPC.value) {
@@ -101,10 +100,13 @@ async function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): Pro
     return
   }
   // Con el primer producto el panel aparece ya abierto; el foco pasa a su título.
-  if (primero) {
+  // También si estaba oculto: elegir otro producto lo vuelve a abrir. Sin mover lo de atrás.
+  if (!expandido.value) {
     expandido.value = true
     await nextTick()
-    document.querySelector<HTMLElement>('.panel-de-venta .titulo-carrito')?.focus()
+    document
+      .querySelector<HTMLElement>('.panel-de-venta .titulo-carrito')
+      ?.focus({ preventScroll: true })
   }
 }
 
