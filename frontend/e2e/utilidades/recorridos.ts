@@ -127,7 +127,7 @@ export async function irA(
   await enlace.click()
   await expect(enlace).toHaveAttribute('aria-current', 'page')
   await esperarVistaQuieta(page)
-  await expect(page.locator('[data-app-montada] #contenido h1')).toBeVisible()
+  await expect(page.locator('[data-app-montada] #contenido .cambio-de-vista:not(.cambio-de-vista-leave-active) h1')).toBeVisible()
 }
 
 export const lineaDelCarrito = (page: Page, nombre: string) =>

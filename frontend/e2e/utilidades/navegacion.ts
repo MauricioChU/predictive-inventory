@@ -40,7 +40,7 @@ export async function usarLetra(page: Page, letra: Letra): Promise<void> {
  */
 export async function abrir(page: Page, ruta: string): Promise<void> {
   await page.goto(ruta)
-  await expect(page.locator('[data-app-montada] #contenido h1')).toBeVisible()
+  await expect(page.locator('[data-app-montada] #contenido .cambio-de-vista:not(.cambio-de-vista-leave-active) h1')).toBeVisible()
   const letra = letraPedida.get(page)
   if (letra === undefined) return
   await page.evaluate(async (valor) => {

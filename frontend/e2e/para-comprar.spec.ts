@@ -118,7 +118,7 @@ test.describe('Para comprar', () => {
     // Recibir (rama 12) se abre prellenado leyendo la lista de hoy: no viaja nada por la ruta.
     await expect(page).toHaveURL(/\/recibir\?desde=para-comprar$/)
     await esperarVistaQuieta(page)
-    await expect(page.locator('[data-app-montada] #contenido h1')).toBeVisible()
+    await expect(page.locator('[data-app-montada] #contenido .cambio-de-vista:not(.cambio-de-vista-leave-active) h1')).toBeVisible()
     const llegada = await page.evaluate(async () => {
       const app = (
         window as Window & {
