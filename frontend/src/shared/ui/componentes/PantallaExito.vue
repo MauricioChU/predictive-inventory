@@ -4,7 +4,13 @@ import { CircleCheck } from 'lucide-vue-next'
 import { pegarCifras } from '../texto-sin-cortes'
 import { CLAVE_ANUNCIADOR } from '../anunciador'
 
-const props = defineProps<{ titulo: string; detalle?: string }>()
+const props = defineProps<{
+  titulo: string
+  detalle?: string
+  /** Al centro del alto libre (Vender). Sin esto, arriba: deja ver lo que la pantalla pone
+   * debajo (p. ej. Producto guardado y sus botones). */
+  alCentro?: boolean
+}>()
 
 const refEncabezado = ref<HTMLHeadingElement>()
 // Hallazgo 4: el anunciador es opcional a propósito (segundo argumento de inject): si alguien
@@ -38,7 +44,7 @@ onUnmounted(() => {
     así un lector de pantalla lo nota de las dos formas: el anuncio y, al enfocar el título,
     leerlo directamente.
   -->
-  <div class="pantalla-exito">
+  <div class="pantalla-exito aparece" :class="{ 'pantalla-exito--al-centro': alCentro }">
     <CircleCheck aria-hidden="true" class="icono" />
     <h1 ref="refEncabezado">{{ titulo }}</h1>
     <!-- Plan 12: "Total S/ 46.80" nunca se parte (RN-UX-09). -->
@@ -48,18 +54,32 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* Con alCentro, al centro del alto libre (sobre la navegación y el aviso Deshacer), con la animación
+   compartida de aparecer (base.css): el ✓ crece y el resto sube suave. */
 .pantalla-exito {
   display: flex;
   flex-direction: column;
   align-items: center;
+  box-sizing: border-box;
   gap: var(--espacio-3);
   padding: var(--espacio-6) var(--espacio-4);
   text-align: center;
   color: var(--color-exito);
 }
+.pantalla-exito--al-centro {
+  justify-content: center;
+  min-block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
+}
 .icono {
-  width: 4rem;
-  height: 4rem;
+  width: 4.5rem;
+  height: 4.5rem;
+  animation: exito-icono var(--duracion-hoja) var(--curva-hoja-entrar) both;
+}
+@keyframes exito-icono {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
 }
 h1 {
   font-size: 1.375rem;

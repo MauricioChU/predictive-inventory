@@ -45,7 +45,8 @@ async function agregarBuscando(page: Page, texto: string, nombre: string): Promi
  * del carrito en PC, el total sigue a 1.6rem y "Registrar llegada" va en su propia fila, a todo el ancho.
  */
 test.describe('BarraDeTotal fuera de la forma compacta', () => {
-  for (const ancho of [360, 412, 1280]) {
+  // En celular Llegó mercadería usa el panel (como Vender); la barra queda en la columna de PC.
+  for (const ancho of [1280]) {
     test(`${ancho} px con letra Grande: total a 1.6rem y botón a todo el ancho en su fila`, async ({
       page,
     }) => {
@@ -53,7 +54,7 @@ test.describe('BarraDeTotal fuera de la forma compacta', () => {
       await page.setViewportSize({ width: ancho, height: 800 })
       await abrirTiendaLista(page, './')
       await crearProducto(page, LEJIA)
-      // La BarraDeTotal ya no es de Vender (usa el panel de venta): se mide en Llegó mercadería.
+      // La BarraDeTotal ya no es de Vender ni de Recibir en celular (usan el panel): se mide en PC.
       await abrir(page, './recibir')
       await agregarBuscando(page, 'lejia', 'Lejía 1 L')
       const m = await page.evaluate(() => {
@@ -143,17 +144,20 @@ test.describe('Vender (HU-OP-01, RN-OP-22)', () => {
     expect(separacion).toBeGreaterThanOrEqual(8)
   })
 
-  test('RN-OP-05 / RN-UX-07: vender más de lo que hay se marca junto a la cantidad', async ({
+  test('RN-OP-05: nunca deja vender más de lo que hay (lo escrito de más vuelve a lo que hay)', async ({
     page,
   }) => {
     await abrirTiendaLista(page, './')
     await crearProducto(page, LEJIA)
     await abrir(page, './vender')
     await agregarBuscando(page, 'lejia', 'Lejía 1 L')
-    await lineaDe(page, 'Lejía 1 L').getByLabel('Cantidad (unid.)').fill('11')
-    await expect(lineaDe(page, 'Lejía 1 L').getByRole('alert')).toHaveText(
-      'Solo quedan 10 unid. de Lejía 1 L. Cambia la cantidad o registra la llegada de mercadería.',
-    )
+    const cantidad = lineaDe(page, 'Lejía 1 L').getByLabel('Cantidad (unid.)')
+    await cantidad.fill('11')
+    await expect(cantidad).toHaveValue('10')
+    await expect(lineaDe(page, 'Lejía 1 L').getByRole('alert')).toHaveCount(0)
+    await expect(
+      lineaDe(page, 'Lejía 1 L').getByRole('button', { name: 'Agregar uno' }),
+    ).toBeDisabled()
   })
 })
 
@@ -166,7 +170,9 @@ test.describe('Panel de venta (RN-OP-22)', () => {
     const lejia = await crearProducto(page, LEJIA)
     await crearProducto(page, CARBON)
     await abrir(page, './vender')
-    await expect(page.locator('.panel-de-venta')).toHaveCount(0)
+    // Desde el inicio está el bloque, cerrado y en cero.
+    await expect(totalDeLaVenta(page)).toHaveText('S/ 0.00')
+    await expect(page.getByRole('button', { name: 'Confirmar venta' })).toBeDisabled()
 
     await page.getByLabel('Buscar producto').fill('lejia')
     await page
@@ -226,14 +232,15 @@ test.describe('Panel de venta (RN-OP-22)', () => {
     expect(await stockDe(page, lejia)).toBe(5)
   })
 
-  test('celular: quitar la última línea baja el panel', async ({ page }, testInfo) => {
+  test('celular: cancelar la última línea deja el bloque cerrado en cero', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'El panel deslizable es de celular (< 1024 px)')
     await abrirTiendaLista(page, './')
     await crearProducto(page, LEJIA)
     await abrir(page, './vender')
     await agregarBuscando(page, 'lejia', 'Lejía 1 L')
     await lineaDe(page, 'Lejía 1 L').getByRole('button', { name: 'Quitar Lejía 1 L' }).click()
-    await expect(page.locator('.panel-de-venta')).toHaveCount(0)
+    await expect(page.locator('.lista-del-carrito')).toHaveCount(0)
+    await expect(totalDeLaVenta(page)).toHaveText('S/ 0.00')
     await expect(page.getByRole('heading', { level: 1, name: 'Vender' })).toBeFocused()
   })
 
@@ -341,6 +348,7 @@ test.describe('Llegó mercadería (HU-OP-03, HU-OP-09)', () => {
     await expect(page).toHaveURL(/\/recibir\?desde=para-comprar$/)
 
     await expect(page.getByText('Cargamos tu lista para comprar de hoy')).toBeVisible()
+    await abrirDetalleDeVenta(page)
     await expect(page.locator('.lista-del-carrito .fila-de-carrito')).toHaveCount(1)
     await expect(lineaDe(page, 'Lejía 1 L').getByLabel('Cantidad (unid.)')).toHaveValue('5')
     await page.getByRole('button', { name: 'Registrar llegada' }).click()

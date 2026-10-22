@@ -110,15 +110,19 @@ function simularAncho(ancho: number) {
 }
 
 describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
-  it('muestra el buscador grande y, sin productos elegidos, ni panel ni sección "En esta venta"', async () => {
+  it('muestra el buscador grande y, sin productos elegidos, el bloque "En esta venta" en S/ 0.00 sin poder confirmar', async () => {
     const { app } = await tiendaDePrueba()
     const p = await abrirVender(app)
     expect(p.w.get('h1').text()).toBe('Vender')
     expect(p.w.get('.buscador-grande label').text()).toBe('Buscar producto')
     expect(p.w.find('.accesos-rapidos').exists()).toBe(false)
     expect(lineas(p)).toHaveLength(0)
-    expect(p.w.find('.panel-de-venta').exists()).toBe(false)
-    expect(p.w.text()).not.toContain('En esta venta')
+    // RN-OP-22: el bloque está desde el inicio, cerrado y en cero.
+    expect(panel(p).get('.titulo-carrito').text()).toBe('En esta venta')
+    expect(total(p)).toBe('S/ 0.00')
+    expect(panel(p).get('.total-del-panel .etiqueta').text()).toBe('Total · 0 productos')
+    expect(panel(p).find('.alternar').exists()).toBe(false)
+    expect(confirmar(p).attributes('disabled')).toBeDefined()
     expect(p.w.text()).not.toContain('Toca un producto para agregarlo.')
   })
 
@@ -176,7 +180,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       expect(confirmar(p).exists()).toBe(true)
       const alternar = region.get('.alternar')
       expect(alternar.attributes('aria-expanded')).toBe('true')
-      expect(alternar.text()).toContain('Ocultar')
+      expect(alternar.attributes('aria-label')).toBe('Ocultar')
       // Abierto a toda la pantalla: las líneas y ¿Cuándo fue?; lo de atrás no se alcanza y el
       // foco pasa al título del panel.
       expect(lineas(p)).toHaveLength(1)
@@ -199,13 +203,13 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       const { app } = await tiendaDePrueba()
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
-      await boton(panel(p), 'Ocultar').trigger('click')
+      await panel(p).get('.alternar').trigger('click')
       await esperarDatos(app)
       await boton(panel(p), 'Ver detalle').trigger('click')
       await esperarDatos(app)
 
       expect(panel(p).get('.alternar').attributes('aria-expanded')).toBe('true')
-      expect(panel(p).get('.alternar').text()).toContain('Ocultar')
+      expect(panel(p).get('.alternar').attributes('aria-label')).toBe('Ocultar')
       expect(document.activeElement).toBe(panel(p).get('.titulo-carrito').element)
       expect(lineas(p)).toHaveLength(1)
       expect(
@@ -259,17 +263,20 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       expect(quedan()).toBe('Quedan 6 unid.')
     })
 
-    it('si la cantidad deja el stock en 0 dice "Se acaba"; si lo pasa, no dice cuánto queda y sigue el error', async () => {
+    it('si la cantidad deja el stock en 0 dice "Se acaba"; nunca deja pasar de lo que hay', async () => {
       const { app } = await tiendaDePrueba()
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
       await cambiarCantidad(p, 0, '10')
       expect(lineas(p)[0]!.get('.quedan').text()).toBe('Se acaba')
+      // RN-OP-05: "+" se detiene y lo escrito de más se corrige solo a lo que hay.
+      expect(
+        lineas(p)[0]!.get('.cantidad button[aria-label="Agregar uno"]').attributes('disabled'),
+      ).toBeDefined()
       await cambiarCantidad(p, 0, '11')
-      expect(lineas(p)[0]!.find('.quedan').exists()).toBe(false)
-      expect(lineas(p)[0]!.get('.campo-numero .error').text()).toBe(
-        'Solo quedan 10 unid. de Lejía 1 L. Cambia la cantidad o registra la llegada de mercadería.',
-      )
+      expect(cantidadDe(p, 0)).toBe('10')
+      expect(lineas(p)[0]!.get('.quedan').text()).toBe('Se acaba')
+      expect(lineas(p)[0]!.find('.campo-numero .error').exists()).toBe(false)
     })
 
     it('con kilos: "Quedan 7.5 kg"', async () => {
@@ -280,7 +287,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       expect(lineas(p)[0]!.get('.quedan').text()).toBe('Quedan 7.5 kg')
     })
 
-    it('quitar la última línea baja el panel y el foco va al título de la pantalla', async () => {
+    it('cancelar la última línea deja el bloque cerrado en S/ 0.00 y el foco va al título de la pantalla', async () => {
       const { app } = await tiendaDePrueba()
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
@@ -293,7 +300,9 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
 
       await boton(lineas(p)[0]!, 'Quitar').trigger('click')
       await esperarDatos(app)
-      expect(p.w.find('.panel-de-venta').exists()).toBe(false)
+      expect(lineas(p)).toHaveLength(0)
+      expect(total(p)).toBe('S/ 0.00')
+      expect(panel(p).find('.alternar').exists()).toBe(false)
       expect(document.activeElement).toBe(p.w.get('#contenido h1').element)
     })
 
@@ -383,18 +392,19 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       }
     })
 
-    it('confirmar desde el compacto con una cantidad que pasa el stock abre el detalle y lleva el foco al error', async () => {
-      const { app, ids } = await tiendaDePrueba()
+    it('RN-OP-05: tocar otra vez un producto sin más stock no suma y lo dice', async () => {
+      const { app } = await tiendaDePrueba()
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
-      await cambiarCantidad(p, 0, '11')
-      await boton(panel(p), 'Ocultar').trigger('click')
+      await cambiarCantidad(p, 0, '10')
+      await panel(p).get('.alternar').trigger('click')
       await esperarDatos(app)
-
-      await confirmarVenta(p)
-      expect(panel(p).get('.alternar').attributes('aria-expanded')).toBe('true')
-      expect(document.activeElement).toBe(lineas(p)[0]!.get('.cantidad input').element)
-      expect(await stock(app, ids.lejia)).toBe('10')
+      await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+      await new Promise((resolver) => setTimeout(resolver, 300))
+      expect(leer(p.w.get('p[role="status"]'))).toContain('No quedan más Lejía 1 L')
+      await detalle(p)
+      expect(lineas(p)).toHaveLength(1)
+      expect(cantidadDe(p, 0)).toBe('10')
     })
 
     it('con una cantidad vacía no confirma: abre el detalle y pide escribirla', async () => {
@@ -402,7 +412,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
       await cambiarCantidad(p, 0, '')
-      await boton(panel(p), 'Ocultar').trigger('click')
+      await panel(p).get('.alternar').trigger('click')
       await esperarDatos(app)
       await confirmarVenta(p)
       expect(lineas(p)[0]!.get('.campo-numero .error').text()).toBe('Escribe la cantidad')
@@ -476,14 +486,13 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     expect(total(p)).toBe('S/ 7.00')
   })
 
-  it('RN-OP-05 / RN-UX-07: más de lo que hay se marca junto a la cantidad, con qué hacer', async () => {
+  it('RN-OP-05: escribir más de lo que hay se corrige solo a lo que hay, sin mensaje de error', async () => {
     const { app } = await tiendaDePrueba()
     const p = await abrirVender(app)
     await agregarBuscando(p, 'lejia', 'Lejía 1 L')
     await cambiarCantidad(p, 0, '11')
-    expect(lineas(p)[0]!.get('.campo-numero .error').text()).toBe(
-      'Solo quedan 10 unid. de Lejía 1 L. Cambia la cantidad o registra la llegada de mercadería.',
-    )
+    expect(cantidadDe(p, 0)).toBe('10')
+    expect(lineas(p)[0]!.find('.campo-numero .error').exists()).toBe(false)
   })
 
   it('RN-OP-04: un producto por unidades no acepta decimales (mensaje del dominio junto al campo)', async () => {
@@ -591,7 +600,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     await esperarDatos(app)
     expect(p.w.get('h1').text()).toBe('Vender')
     expect(lineas(p)).toHaveLength(0)
-    expect(p.w.find('.panel-de-venta').exists()).toBe(false)
+    expect(total(p)).toBe('S/ 0.00')
   })
 
   it('RN-OP-18: Deshacer anula la venta y deja el carrito como estaba para corregirlo', async () => {
@@ -697,7 +706,8 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
       await cambiarCantidad(p, 0, '5')
-      expect(lineas(p)[0]!.find('.campo-numero .error').exists()).toBe(true)
+      // Solo hay 2: queda en 2 y "+" se detiene.
+      expect(cantidadDe(p, 0)).toBe('2')
       await p.ir('/recibir')
       await app.inventario.registrarIngreso({
         lineas: [{ productoId: lejia, cantidad: '10', costo: '2.40' }],
@@ -706,6 +716,9 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       await p.ir('/vender')
       await detalle(p)
       expect(lineas(p)[0]!.find('.campo-numero .error').exists()).toBe(false)
+      // Con la llegada hay más: "+" vuelve a sumar.
+      await cambiarCantidad(p, 0, '5')
+      expect(cantidadDe(p, 0)).toBe('5')
       await confirmarVenta(p)
       expect(p.w.get('.pantalla-exito h1').text()).toBe('Venta registrada')
       expect(await stock(app, lejia)).toBe('7')
@@ -877,7 +890,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     it('si se eligió Otro día sin hora y se confirma desde el compacto, se abre el detalle para completarla', async () => {
       const { app, p } = await ventaDeLejia()
       await boton(p.w, 'Otro día').trigger('click')
-      await boton(panel(p), 'Ocultar').trigger('click')
+      await panel(p).get('.alternar').trigger('click')
       await esperarDatos(app)
       await confirmarVenta(p)
       expect(panel(p).get('.alternar').attributes('aria-expanded')).toBe('true')

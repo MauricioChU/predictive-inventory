@@ -135,7 +135,7 @@ export const lineaDelCarrito = (page: Page, nombre: string) =>
 
 /** Vender en celular (< 1024 px): ahí la venta va en el panel de venta (RN-OP-22), no en columna. */
 function esVenderEnCelular(page: Page): boolean {
-  return /\/vender(\?|$)/.test(page.url()) && (page.viewportSize()?.width ?? 0) < 1024
+  return /\/(vender|recibir)(\?|$)/.test(page.url()) && (page.viewportSize()?.width ?? 0) < 1024
 }
 
 const alternarDelPanel = (page: Page) => page.locator('.panel-de-venta .alternar')

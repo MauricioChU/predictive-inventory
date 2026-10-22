@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { instanteLocal } from '@/shared/domain/fecha'
 import { crearAplicacionDePrueba, type AplicacionDePrueba } from '../soporte/aplicacion-de-prueba'
 import { esperarPantalla, montarPantalla, type PantallaMontada } from '../soporte/montar-pantalla'
@@ -113,9 +113,10 @@ describe('Inicio', () => {
     await crearProductoDePrueba(app, { ...CARBON, stockInicial: '2' })
     const { wrapper, router } = await abrirInicio()
 
-    const aviso = wrapper.get('.aviso-en-pagina--atencion')
+    const aviso = wrapper.get('.fila-de-aviso--atencion')
     expect(aviso.text()).toContain('2 productos se acaban')
-    expect(aviso.text()).toContain('1 agotado y 1 por acabarse')
+    // Fila compacta: sin el subtítulo "1 agotado y 1 por acabarse".
+    expect(aviso.text()).not.toContain('agotado')
 
     await botonCon('Ver productos').trigger('click')
     await esperarPantalla()
@@ -130,7 +131,7 @@ describe('Inicio', () => {
     const { wrapper } = await abrirInicio()
 
     expect(wrapper.text()).toContain('Todo bien: no falta nada')
-    expect(wrapper.find('.aviso-en-pagina--atencion').exists()).toBe(false)
+    expect(wrapper.find('.fila-de-aviso--atencion').exists()).toBe(false)
   })
 
   it('RN-UX-10: sin productos ofrece agregar el primero', async () => {
@@ -147,7 +148,6 @@ describe('Inicio', () => {
     ['Vender', 'vender'],
     ['Llegó mercadería', 'recibir'],
     ['¿Necesito comprar?', 'necesito-comprar'],
-    ['Historial', 'historial'],
     ['Ajustes', 'ajustes'],
   ])('RN-UX-12: "%s" abre su pantalla', async (texto, nombre) => {
     await tiendaLista()
@@ -157,6 +157,19 @@ describe('Inicio', () => {
     await esperarPantalla()
 
     expect(router.currentRoute.value.name).toBe(nombre)
+  })
+
+  it('RN-UX-12: "Movimientos" abre la hoja del historial sin salir de Inicio', async () => {
+    await tiendaLista()
+    const { wrapper, router } = await abrirInicio()
+
+    await botonCon('Movimientos').trigger('click')
+    await esperarPantalla()
+
+    expect(router.currentRoute.value.name).toBe('inicio')
+    // La hoja se carga recién al abrirla.
+    await vi.waitFor(() => expect(wrapper.find('.hoja-inferior').exists()).toBe(true))
+    expect(wrapper.get('.hoja-inferior h2').text()).toBe('Movimientos')
   })
 
   it('plan 19: Inicio es solo para vender: sin resumen del día, recordatorios ni instalación', async () => {
@@ -193,9 +206,9 @@ describe('Inicio', () => {
       posicion('class="saludo"'),
       posicion('class="fecha-de-hoy"'),
       posicion('tarjeta-de-cifra'),
-      posicion('aviso-en-pagina--atencion'),
+      posicion('fila-de-aviso--atencion'),
       posicion('class="acciones"'),
-      posicion('class="enlace-historial"'),
+      posicion('class="enlace-movimientos"'),
     ]
     expect(orden).toEqual([...orden].sort((a, b) => a - b))
   })

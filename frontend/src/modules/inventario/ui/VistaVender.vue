@@ -3,7 +3,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { Check, ShoppingCart } from 'lucide-vue-next'
 import type { ProductoVista } from '@/modules/catalogo'
 import { useAplicacion } from '@/app/proveer-aplicacion'
-import { formatearDinero } from '@/shared/domain/formato'
+import { formatearCantidad, formatearDinero } from '@/shared/domain/formato'
 import { useAnunciador } from '@/shared/ui/anunciador'
 import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import BarraDeTotal from '@/shared/ui/componentes/BarraDeTotal.vue'
@@ -11,12 +11,13 @@ import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import PantallaExito from '@/shared/ui/componentes/PantallaExito.vue'
+import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
 import { usarPantallaAncha } from '@/shared/ui/usar-pantalla-ancha'
 import BuscadorDeProductos, { type OrigenDeLaEleccion } from './BuscadorDeProductos.vue'
 import CuandoFue from './CuandoFue.vue'
 import DisposicionDeCarrito from './DisposicionDeCarrito.vue'
 import ListaDelCarrito from './ListaDelCarrito.vue'
-import PanelDeVenta from './PanelDeVenta.vue'
+import PanelDeCarrito from './PanelDeCarrito.vue'
 import { useCarritos } from './carritos'
 import { errorDeFechaDelDominio, instanteDe, type ErrorDeFecha } from './cuando'
 import { enfocarLinea, enfocarPrimerError, enfocarTitulo, vibrar } from './foco-y-respuesta'
@@ -47,6 +48,15 @@ const expandido = ref(false)
 const registrando = ref(false)
 const error = ref<ErrorParaMostrar | null>(null)
 const detalleDeExito = ref('')
+/** Lo que se vendió, para la pantalla de éxito: "2 unid. × S/ 3.50" e importe por línea. */
+interface LineaVendida {
+  id: string
+  nombre: string
+  detalle: string
+  importe: string
+  especial: boolean
+}
+const vendido = ref<LineaVendida[]>([])
 const errorFecha = ref<ErrorDeFecha>()
 
 const textoTotal = computed(() => formatearDinero(carrito.total.value))
@@ -57,12 +67,17 @@ watch(textoTotal, (nuevo) => {
   if (!carrito.vacio.value) anunciador.anunciar(`Total ${nuevo}`)
 })
 
-// Sin líneas no hay panel que abrir.
+// Sin líneas: en celular el panel baja con su animación (PanelDeCarrito); en PC no hay hoja.
 watch(carrito.vacio, (vacio) => {
-  if (vacio) expandido.value = false
+  if (vacio && esPC.value) expandido.value = false
 })
 
 async function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): Promise<void> {
+  // RN-OP-05: nunca más de lo que hay (contando todas las líneas del producto).
+  if (!carrito.puedeAgregar(producto)) {
+    anunciador.anunciar(`No quedan más ${producto.nombre}`)
+    return
+  }
   const primero = carrito.vacio.value
   const lineaId = carrito.agregar(producto)
   anunciador.anunciar(`Agregaste ${producto.nombre}`)
@@ -140,6 +155,15 @@ async function confirmar(): Promise<void> {
   const copia = carrito.copia()
   const totalVendido = textoTotal.value
   detalleDeExito.value = `Total ${totalVendido}`
+  vendido.value = carrito.lineas.value.map((linea) => ({
+    id: linea.id,
+    nombre: linea.producto.nombre,
+    detalle: linea.cantidadLeida
+      ? `${formatearCantidad(linea.cantidadLeida, linea.producto.unidad)} × ${formatearDinero(linea.precio)}`
+      : '',
+    importe: linea.importe ? formatearDinero(linea.importe) : '',
+    especial: linea.precioCambiado,
+  }))
   carrito.vaciar()
   expandido.value = false
   paso.value = 'exito'
@@ -171,7 +195,22 @@ async function nuevaVenta(): Promise<void> {
 
 <template>
   <div class="vista-vender" :class="{ 'vista-vender--con-panel': !esPC && paso === 'carrito' }">
-    <PantallaExito v-if="paso === 'exito'" titulo="Venta registrada" :detalle="detalleDeExito">
+    <PantallaExito
+      v-if="paso === 'exito'"
+      titulo="Venta registrada"
+      :detalle="detalleDeExito"
+      al-centro
+    >
+      <ul v-if="vendido.length > 0" class="vendido" aria-label="Lo que vendiste">
+        <li v-for="linea in vendido" :key="linea.id" class="linea-vendida">
+          <span class="nombre-vendido">{{ linea.nombre }}</span>
+          <span class="importe-vendido">{{ linea.importe }}</span>
+          <span class="detalle-vendido">
+            {{ pegarCifras(linea.detalle)
+            }}<template v-if="linea.especial"> · Precio especial</template>
+          </span>
+        </li>
+      </ul>
       <BotonPrincipal
         class="accion-exito"
         texto="Nueva venta"
@@ -225,28 +264,33 @@ async function nuevaVenta(): Promise<void> {
         </template>
       </DisposicionDeCarrito>
 
-      <!-- Celular: la grilla ocupa la pantalla y el panel sube cuando hay algo en la venta. -->
+      <!-- Celular: la grilla ocupa la pantalla y el panel de venta queda abajo. -->
       <template v-else>
         <!-- Con la hoja abierta, lo de atrás no se alcanza (ni con Tab ni con el lector). -->
         <div class="buscador" :inert="expandido ? true : undefined">
           <BuscadorDeProductos concepto="venta" @elegir="agregar" />
         </div>
-        <Transition name="panel">
-          <PanelDeVenta
-            v-if="!carrito.vacio.value"
-            v-model:cuando="cuando"
-            v-model:expandido="expandido"
-            :carrito="carrito"
-            :error-fecha="errorFecha"
-            :texto-total="textoTotal"
-            :registrando="registrando"
-            @confirmar="confirmar"
-          >
-            <template v-if="error" #avisos>
-              <MensajeDeError :mensaje="error.mensaje" :ayuda="error.ayuda" />
-            </template>
-          </PanelDeVenta>
-        </Transition>
+        <!-- RN-OP-22: siempre abajo (en S/ 0.00 sin productos); con el primero crece a toda la
+             pantalla y al ocultarse vuelve a ese bloque. -->
+        <PanelDeCarrito
+          v-model:cuando="cuando"
+          v-model:expandido="expandido"
+          :carrito="carrito"
+          concepto="venta"
+          titulo="En esta venta"
+          texto-accion="Confirmar venta"
+          :icono="Check"
+          etiqueta-total="Total"
+          pregunta-fecha="¿Cuándo fue la venta?"
+          :error-fecha="errorFecha"
+          :texto-total="textoTotal"
+          :registrando="registrando"
+          @confirmar="confirmar"
+        >
+          <template v-if="error" #avisos>
+            <MensajeDeError :mensaje="error.mensaje" :ayuda="error.ayuda" />
+          </template>
+        </PanelDeCarrito>
       </template>
     </template>
   </div>
@@ -273,27 +317,47 @@ async function nuevaVenta(): Promise<void> {
 .buscador {
   min-inline-size: 0;
 }
+.vendido {
+  display: grid;
+  gap: var(--espacio-2);
+  inline-size: 100%;
+  max-inline-size: 28rem;
+  margin: var(--espacio-2) 0 0;
+  padding: var(--espacio-3) var(--espacio-4);
+  border: 1px solid var(--color-borde-foto);
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  list-style: none;
+  text-align: start;
+}
+.linea-vendida {
+  /* Nombre e importe en una fila; si el nombre no entra sin partir una palabra (320 px, letra
+     Muy grande), el importe baja a su propia fila. */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--espacio-3);
+}
+.linea-vendida + .linea-vendida {
+  padding-block-start: var(--espacio-2);
+  border-block-start: 1px solid var(--color-borde-foto);
+}
+.nombre-vendido {
+  flex: 1 1 8rem;
+  font-weight: 700;
+}
+.importe-vendido {
+  margin-inline-start: auto;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.detalle-vendido {
+  flex-basis: 100%;
+  color: var(--color-texto-suave);
+}
 .accion-exito {
   align-self: stretch;
   margin: var(--espacio-4) auto 0;
   max-inline-size: 28rem;
-}
-
-/* El panel sube desde abajo con una transición corta (sin movimiento si el sistema lo pide:
-   base.css baja todas las animaciones). */
-.panel-enter-active,
-.panel-leave-active {
-  transition:
-    transform var(--duracion-hoja) var(--curva-hoja-salir),
-    opacity var(--duracion-hoja) ease-out;
-}
-/* Al entrar, solo un fundido: un transform en la sección haría que la hoja abierta (fixed) se
-   ubique respecto a ella y no a la pantalla mientras dura. La hoja sube con su propia animación. */
-.panel-enter-from {
-  opacity: 0;
-}
-.panel-leave-to {
-  transform: translateY(100%);
-  opacity: 0;
 }
 </style>

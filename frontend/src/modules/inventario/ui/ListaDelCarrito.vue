@@ -68,7 +68,15 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
 <template>
   <div ref="refRaiz" class="lista-del-carrito">
     <p v-if="lineas.length === 0" class="vacio">{{ textoVacio }}</p>
-    <ul v-else role="list" class="lineas" :class="{ 'lineas--compactas': compacta }">
+    <!-- Al quitar una línea se desvanece y las de abajo suben suave; al agregar, aparece. -->
+    <TransitionGroup
+      v-else
+      tag="ul"
+      name="linea"
+      role="list"
+      class="lineas"
+      :class="{ 'lineas--compactas': compacta }"
+    >
       <li
         v-for="linea in lineas"
         :key="linea.id"
@@ -95,6 +103,7 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
           :error-cantidad="linea.errorCantidad"
           :error-precio="linea.errorPrecio"
           :puede-separar="sePuedePartir(linea)"
+          :maximo-cantidad="linea.maximo ? linea.maximo.milesimas / 1000 : undefined"
           :maximo-separar="linea.cantidadLeida ? linea.cantidadLeida.milesimas / 1000 : undefined"
           :error-unidades="linea.errorUnidades"
           :compacta="compacta"
@@ -106,7 +115,7 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
           @quitar="quitar(linea.id, linea.producto.nombre)"
         />
       </li>
-    </ul>
+    </TransitionGroup>
   </div>
 </template>
 
@@ -120,6 +129,7 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
   text-align: center;
 }
 .lineas {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: max(var(--separacion-toque), var(--espacio-2));
@@ -138,6 +148,25 @@ function textoPrecio(linea: (typeof lineas.value)[number]): string {
 .lineas--compactas .linea + .linea {
   border-block-start: 1px solid var(--color-borde);
   border-radius: 0;
+}
+.linea-enter-active,
+.linea-leave-active {
+  transition:
+    opacity var(--duracion-hoja) ease,
+    transform var(--duracion-hoja) var(--curva-hoja-entrar);
+}
+.linea-enter-from,
+.linea-leave-to {
+  opacity: 0;
+  transform: translateX(-1.5rem);
+}
+/* La que sale deja de ocupar lugar: las de abajo suben (linea-move). */
+.linea-leave-active {
+  position: absolute;
+  inset-inline: 0;
+}
+.linea-move {
+  transition: transform var(--duracion-hoja) var(--curva-hoja-entrar);
 }
 /* r2 #2: la línea recién agregada recibe el foco (tabindex -1, no entra en el orden de Tab). */
 .linea:focus-visible {

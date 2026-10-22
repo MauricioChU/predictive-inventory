@@ -138,6 +138,7 @@ describe('index', () => {
     expect(Object.keys(api).sort()).toEqual(
       [
         'Carrito',
+        'HojaDeMovimientos',
         'OPCIONES_DE_SOBRECOMPRA',
         'RepositorioDeConteoDexie',
         'RepositorioDeConteoEnMemoria',
