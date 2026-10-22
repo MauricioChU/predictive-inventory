@@ -78,7 +78,6 @@ async function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): Pro
     anunciador.anunciar(`No quedan más ${producto.nombre}`)
     return
   }
-  const primero = carrito.vacio.value
   const lineaId = carrito.agregar(producto)
   anunciador.anunciar(`Agregaste ${producto.nombre}`)
   if (esPC.value) {
@@ -87,10 +86,13 @@ async function agregar(producto: ProductoVista, origen: OrigenDeLaEleccion): Pro
   }
   // RN-OP-22: con el primer producto el panel aparece ya abierto, a toda la pantalla; el foco
   // pasa a su título (lo de atrás queda inerte).
-  if (primero) {
+  // También si estaba oculto: elegir otro producto lo vuelve a abrir. Sin mover lo de atrás.
+  if (!expandido.value) {
     expandido.value = true
     await nextTick()
-    document.querySelector<HTMLElement>('.panel-de-venta .titulo-carrito')?.focus()
+    document
+      .querySelector<HTMLElement>('.panel-de-venta .titulo-carrito')
+      ?.focus({ preventScroll: true })
   }
 }
 

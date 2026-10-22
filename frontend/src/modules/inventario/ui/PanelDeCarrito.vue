@@ -88,7 +88,7 @@ async function alternar(): Promise<void> {
   if (!props.expandido) {
     emit('update:expandido', true)
     await nextTick()
-    refTitulo.value?.focus()
+    refTitulo.value?.focus({ preventScroll: true })
     return
   }
   await cerrar(true)
@@ -102,7 +102,7 @@ async function cerrar(enfocarBoton: boolean): Promise<void> {
   alTerminarAnimacion(refHoja.value, () => {
     cerrando.value = false
     emit('update:expandido', false)
-    if (enfocarBoton) void nextTick(() => refAlternar.value?.focus())
+    if (enfocarBoton) void nextTick(() => refAlternar.value?.focus({ preventScroll: true }))
   })
 }
 
