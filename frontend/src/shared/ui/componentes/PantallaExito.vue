@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { inject, onMounted, onUnmounted, ref } from 'vue'
-import { CircleCheck } from 'lucide-vue-next'
+import { CircleCheck, Undo2 } from 'lucide-vue-next'
 import { pegarCifras } from '../texto-sin-cortes'
 import { CLAVE_ANUNCIADOR } from '../anunciador'
 
@@ -10,7 +10,11 @@ const props = defineProps<{
   /** Al centro del alto libre (Vender). Sin esto, arriba: deja ver lo que la pantalla pone
    * debajo (p. ej. Producto guardado y sus botones). */
   alCentro?: boolean
+  /** RN-OP-18: con esto, el botón Deshacer va arriba a la derecha de la pantalla, con lo que
+   * queda de los 10 s. Al vencer, quien la monta lo quita (pasa `undefined`). */
+  segundosParaDeshacer?: number
 }>()
+const emit = defineEmits<{ deshacer: [] }>()
 
 const refEncabezado = ref<HTMLHeadingElement>()
 // Hallazgo 4: el anunciador es opcional a propósito (segundo argumento de inject): si alguien
@@ -20,6 +24,9 @@ const anunciador = inject(CLAVE_ANUNCIADOR, undefined)
 let idAnuncio: number | undefined
 
 onMounted(() => {
+  // Al registrar desde abajo de una lista larga, la página quedaba scrolleada: el ✓ y Deshacer
+  // (arriba) no se veían. Con el resultado a la vista, se empieza desde arriba.
+  document.documentElement.scrollTop = 0
   idAnuncio = anunciador?.anunciar(
     props.detalle ? `${props.titulo}. ${props.detalle}` : props.titulo,
   )
@@ -44,7 +51,25 @@ onUnmounted(() => {
     así un lector de pantalla lo nota de las dos formas: el anuncio y, al enfocar el título,
     leerlo directamente.
   -->
-  <div class="pantalla-exito aparece" :class="{ 'pantalla-exito--al-centro': alCentro }">
+  <div
+    class="pantalla-exito aparece"
+    :class="{
+      'pantalla-exito--al-centro': alCentro,
+      'pantalla-exito--con-deshacer': segundosParaDeshacer !== undefined,
+    }"
+  >
+    <!-- Sin anuncio propio de la cuenta (aria-hidden): el aviso de que se puede deshacer lo
+         hace quien ofrece, una sola vez. -->
+    <button
+      v-if="segundosParaDeshacer !== undefined"
+      type="button"
+      class="deshacer"
+      @click="emit('deshacer')"
+    >
+      <Undo2 aria-hidden="true" class="icono-deshacer" />
+      <span>Deshacer</span>
+      <span class="contador" aria-hidden="true">({{ segundosParaDeshacer }})</span>
+    </button>
     <CircleCheck aria-hidden="true" class="icono" />
     <h1 ref="refEncabezado">{{ titulo }}</h1>
     <!-- Plan 12: "Total S/ 46.80" nunca se parte (RN-UX-09). -->
@@ -57,6 +82,7 @@ onUnmounted(() => {
 /* Con alCentro, al centro del alto libre (sobre la navegación y el aviso Deshacer), con la animación
    compartida de aparecer (base.css): el ✓ crece y el resto sube suave. */
 .pantalla-exito {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -65,6 +91,36 @@ onUnmounted(() => {
   padding: var(--espacio-6) var(--espacio-4);
   text-align: center;
   color: var(--color-exito);
+}
+.pantalla-exito--con-deshacer {
+  /* Lugar para el botón: el ✓ y el título nunca quedan debajo de él. */
+  padding-block-start: calc(var(--alto-toque) + var(--espacio-4));
+}
+.deshacer {
+  position: absolute;
+  inset-block-start: var(--espacio-2);
+  inset-inline-end: var(--espacio-4);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-block-size: var(--alto-toque);
+  padding: var(--espacio-1) var(--espacio-3);
+  border: 2px solid var(--color-texto);
+  border-radius: var(--radio-chico);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.icono-deshacer {
+  inline-size: 1.2em;
+  block-size: 1.2em;
+  flex: none;
+}
+.contador {
+  font-weight: 400;
 }
 .pantalla-exito--al-centro {
   justify-content: center;

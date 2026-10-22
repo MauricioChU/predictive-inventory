@@ -4,7 +4,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { PackageCheck, PackagePlus } from 'lucide-vue-next'
 import type { ProductoVista } from '@/modules/catalogo'
 import { useAplicacion } from '@/app/proveer-aplicacion'
-import { formatearDinero, formatearEntero, plural } from '@/shared/domain/formato'
+import {
+  formatearCantidad,
+  formatearDinero,
+  formatearEntero,
+  plural,
+} from '@/shared/domain/formato'
 import { useAnunciador } from '@/shared/ui/anunciador'
 import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import BarraDeTotal from '@/shared/ui/componentes/BarraDeTotal.vue'
@@ -13,6 +18,7 @@ import DialogoConfirmacion from '@/shared/ui/componentes/DialogoConfirmacion.vue
 import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import PantallaExito from '@/shared/ui/componentes/PantallaExito.vue'
+import ResumenDeLineas, { type LineaDeResumen } from '@/shared/ui/componentes/ResumenDeLineas.vue'
 import { usarPantallaAncha } from '@/shared/ui/usar-pantalla-ancha'
 import type { DatosDeIngreso } from '../application/ingresos'
 import BuscadorDeProductos, { type OrigenDeLaEleccion } from './BuscadorDeProductos.vue'
@@ -63,6 +69,8 @@ let respuestas: Respuestas = {}
 const avisoParaCorregir = ref<string | null>(null)
 const prellenada = ref<'con-lineas' | 'vacia' | null>(null)
 const detalleDeExito = ref('')
+/** Lo que llegó, para la pantalla de éxito: "12 unid. × S/ 2.40" e importe por línea. */
+const llegado = ref<LineaDeResumen[]>([])
 const errorFecha = ref<ErrorDeFecha>()
 
 const textoTotal = computed(() => formatearDinero(carrito.total.value))
@@ -211,6 +219,15 @@ function registrada(): void {
   const n = copia.lineas.length
   const valorTotal = textoTotal.value
   detalleDeExito.value = `${formatearEntero(n)} ${plural(n, 'producto', 'productos')} · Valor total ${valorTotal}`
+  llegado.value = carrito.lineas.value.map((linea) => ({
+    id: linea.id,
+    nombre: linea.producto.nombre,
+    detalle: linea.cantidadLeida
+      ? `${formatearCantidad(linea.cantidadLeida, linea.producto.unidad)} × ${formatearDinero(linea.precio)}`
+      : '',
+    importe: linea.importe ? formatearDinero(linea.importe) : '',
+    ...(linea.precioCambiado ? { marca: 'Costo nuevo' } : {}),
+  }))
   carrito.vaciar()
   expandido.value = false
   respuestas = {}
@@ -219,24 +236,28 @@ function registrada(): void {
   vibrar()
   // La lista ya se usó: recargar la pantalla no la vuelve a cargar.
   if (route.query.desde) void router.replace({ name: 'recibir' })
-  deshacer.ofrecer({
-    mensaje: 'Mercadería registrada',
-    alDeshacer: ({ pantallaAbierta }) => {
-      const deshecha = `Deshiciste la llegada de mercadería (valor total ${valorTotal})`
-      // r1 #2: si ya se está cargando otra llegada, no se toca; lo dice el resultado.
-      if (!carrito.vacio.value) {
-        return pantallaAbierta
-          ? `${deshecha}. Lo que estás cargando sigue aquí.`
-          : `${deshecha}. Lo que estabas cargando sigue en Llegó mercadería.`
-      }
-      carrito.restaurar(copia)
-      if (pantallaAbierta) paso.value = 'carrito'
-      return `${deshecha}. Los productos volvieron a la lista.`
+  deshacer.ofrecer(
+    {
+      mensaje: 'Mercadería registrada',
+      alDeshacer: ({ pantallaAbierta }) => {
+        const deshecha = `Deshiciste la llegada de mercadería (valor total ${valorTotal})`
+        // r1 #2: si ya se está cargando otra llegada, no se toca; lo dice el resultado.
+        if (!carrito.vacio.value) {
+          return pantallaAbierta
+            ? `${deshecha}. Lo que estás cargando sigue aquí.`
+            : `${deshecha}. Lo que estabas cargando sigue en Llegó mercadería.`
+        }
+        carrito.restaurar(copia)
+        if (pantallaAbierta) paso.value = 'carrito'
+        return `${deshecha}. Los productos volvieron a la lista.`
+      },
     },
-  })
+    { enPantalla: true },
+  )
 }
 
 async function otraLlegada(): Promise<void> {
+  deshacer.cancelar()
   paso.value = 'carrito'
   await enfocarTitulo()
 }
@@ -275,7 +296,15 @@ watch(
 
 <template>
   <div class="vista-recibir" :class="{ 'vista-recibir--con-panel': !esPC && paso === 'carrito' }">
-    <PantallaExito v-if="paso === 'exito'" titulo="Mercadería registrada" :detalle="detalleDeExito">
+    <PantallaExito
+      v-if="paso === 'exito'"
+      titulo="Mercadería registrada"
+      :detalle="detalleDeExito"
+      :segundos-para-deshacer="deshacer.restante.value"
+      al-centro
+      @deshacer="deshacer.deshacerAqui"
+    >
+      <ResumenDeLineas :lineas="llegado" etiqueta="Lo que llegó" />
       <BotonPrincipal
         class="accion-exito"
         texto="Registrar otra llegada"

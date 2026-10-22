@@ -5,6 +5,7 @@ import {
   usarLetra,
 } from './utilidades/calidad'
 import { abrir } from './utilidades/navegacion'
+import { mostrarAvisoDeshacer } from './utilidades/escenarios'
 import { abrirTiendaLista } from './utilidades/tienda'
 import {
   abrirDetalleDeVenta,
@@ -125,10 +126,9 @@ test.describe('Vender (HU-OP-01, RN-OP-22)', () => {
     await crearProducto(page, CARBON)
     await abrir(page, './vender')
     await agregarBuscando(page, 'lejia', 'Lejía 1 L')
-    await page.getByRole('button', { name: 'Confirmar venta' }).click()
-    await page.getByRole('button', { name: 'Nueva venta' }).click()
+    // Vender ya no usa el aviso de abajo: se muestra el global (el de las demás pantallas).
+    await mostrarAvisoDeshacer(page)
     await agregarBuscando(page, 'carbon', 'Carbón')
-    await expect(page.locator('.aviso-deshacer')).toBeVisible()
     // El panel sube con una animación corta: se mide ya quieto.
     await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
     const separacion = await page.evaluate(() => {
@@ -549,7 +549,7 @@ test.describe('Pantallas de operaciones: responsive, accesibles y tocables (letr
       await cerrarDetalleDeVenta(page)
       await revisar('Vender: panel compacto')
       await page.getByRole('button', { name: 'Confirmar venta' }).click()
-      await expect(page.locator('.aviso-deshacer')).toBeVisible()
+      await expect(page.locator('.pantalla-exito .deshacer')).toBeVisible()
       await revisar('Venta registrada')
 
       await abrir(page, './recibir')
@@ -564,6 +564,8 @@ test.describe('Pantallas de operaciones: responsive, accesibles y tocables (letr
       await revisar('Pregunta del precio de compra')
       await page.getByRole('button', { name: 'Sí, actualizar' }).click()
       await expect(page.getByRole('heading', { name: 'Mercadería registrada' })).toBeVisible()
+      await expect(page.locator('.pantalla-exito .deshacer')).toBeVisible()
+      await revisar('Mercadería registrada')
 
       await abrir(page, `./productos/${lejia}/merma`)
       await page.getByRole('radio', { name: 'Otro' }).click()

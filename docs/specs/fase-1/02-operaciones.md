@@ -107,7 +107,7 @@ El inventario funciona como un **libro de operaciones**: cada hecho del negocio 
 | Id | Regla |
 |---|---|
 | **RN-OP-17** | Cualquier operación, salvo una `ANULACION`, puede **anularse una sola vez**. La anulación invierte todos sus movimientos y se rechaza si dejaría stock negativo (RN-OP-05), por ejemplo al anular un ingreso cuya mercadería ya se vendió. La operación anulada y su anulación **no cuentan** en ningún cálculo de ventas, ganancias, mermas ni tendencias. |
-| **RN-OP-18** | Después de registrar cualquier operación se muestra **"Deshacer"** durante 10 segundos. Deshacer equivale a anularla sin pedir motivo. Un toque que llega cuando ya pasó ese tiempo se rechaza con "Ya pasó el tiempo para deshacer. Puedes anularla desde el Historial." El stock inicial y el retiro de stock que se registran al crear o archivar un producto (RN-CAT-08, RN-CAT-11) no ofrecen Deshacer. |
+| **RN-OP-18** | Después de registrar cualquier operación se muestra **"Deshacer"** durante 10 segundos (en Vender y Recibir, dentro de la pantalla de éxito, arriba a la derecha, con la cuenta; si la persona se va de esa pantalla, la oferta se cancela; en las demás, un aviso fijo abajo). Deshacer equivale a anularla sin pedir motivo. Un toque que llega cuando ya pasó ese tiempo se rechaza con "Ya pasó el tiempo para deshacer. Puedes anularla desde el Historial." El stock inicial y el retiro de stock que se registran al crear o archivar un producto (RN-CAT-08, RN-CAT-11) no ofrecen Deshacer. |
 
 ### Integridad
 
