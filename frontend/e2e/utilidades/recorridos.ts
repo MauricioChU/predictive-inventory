@@ -5,7 +5,7 @@ import process from 'node:process'
 import { expect, type Locator, type Page, type Worker } from '@playwright/test'
 import { FOTO_PNG } from './productos'
 import { enLima } from './historia-de-demostracion'
-import { abrir } from './navegacion'
+import { abrir, esperarVistaQuieta } from './navegacion'
 
 export const h1 = (page: Page) => page.getByRole('heading', { level: 1 })
 
@@ -123,11 +123,11 @@ export async function irA(
   page: Page,
   destino: 'Inicio' | 'Vender' | 'Recibir' | 'Productos' | 'Control',
 ): Promise<void> {
-  await page
-    .getByRole('navigation')
-    .getByRole('link', { name: new RegExp(`^${destino}`) })
-    .click()
-  await expect(page.locator('[data-app-montada] #contenido h1')).toBeVisible()
+  const enlace = page.getByRole('navigation').getByRole('link', { name: new RegExp(`^${destino}`) })
+  await enlace.click()
+  await expect(enlace).toHaveAttribute('aria-current', 'page')
+  await esperarVistaQuieta(page)
+  await expect(page.locator('[data-app-montada] #contenido .cambio-de-vista:not(.cambio-de-vista-leave-active) h1')).toBeVisible()
 }
 
 export const lineaDelCarrito = (page: Page, nombre: string) =>

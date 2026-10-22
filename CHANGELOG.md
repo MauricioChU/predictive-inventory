@@ -4,6 +4,10 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+### Cambiado
+
+- Al cambiar de pantalla con la navegación, la nueva entra deslizándose desde el lado de la pestaña que tocaste (y la anterior sale hacia el otro); al abrir un detalle entra desde la derecha y al volver, desde la izquierda. Con «reducir movimiento» del sistema no se anima.
+
 ## [0.5.2] · 2026-10-22
 
 ### Cambiado

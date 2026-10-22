@@ -6,7 +6,7 @@ import {
   usarLetra,
 } from './utilidades/calidad'
 import { caja } from './utilidades/escenarios'
-import { abrir } from './utilidades/navegacion'
+import { abrir, esperarVistaQuieta } from './utilidades/navegacion'
 import { abrirTiendaLista } from './utilidades/tienda'
 import { crearConHistoria, crearProductos, FOTO_PNG, objetivosChicos } from './utilidades/productos'
 
@@ -200,6 +200,7 @@ test.describe('Productos: flujos críticos', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: 'Lejía Tradicional 1 L' }),
     ).toBeVisible()
+    await esperarVistaQuieta(page)
     await expect(page.getByText(comoSeLee('S/ 2.00'))).toBeVisible()
     await expect(page.getByText('Con este precio pierdes dinero')).toBeVisible()
     // "Volver" desde el detalle no vuelve a la edición (no quedó dos veces en el historial).
