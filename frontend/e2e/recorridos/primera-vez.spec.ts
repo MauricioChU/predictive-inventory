@@ -8,6 +8,7 @@ import {
   irA,
   llenarProductoNuevo,
 } from '../utilidades/recorridos'
+import { esperarVistaQuieta } from '../utilidades/navegacion'
 import { anotarTextosVistos, esperarSinPalabrasQueEvitar } from '../utilidades/textos'
 
 test.describe('Recorrido: la primera vez, uno por uno', () => {
@@ -43,6 +44,7 @@ test.describe('Recorrido: la primera vez, uno por uno', () => {
     await page.getByRole('button', { name: 'Empezar a contar' }).click()
     await expect(page.getByRole('heading', { level: 2, name: 'Lejía Tradicional 1 L' })).toBeVisible()
     await expect(page.locator('#contenido img[src^="blob:"]')).toBeVisible()
+    await esperarVistaQuieta(page)
     await expect(page.locator('.barra-de-progreso .texto')).toHaveText('Llevas 0 de 1')
     await page.getByLabel('¿Cuántos hay? (unid.)').fill('10')
     await page.getByRole('button', { name: 'Siguiente' }).click()

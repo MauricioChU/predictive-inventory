@@ -1,5 +1,13 @@
 import { expect, type Page } from '@playwright/test'
 
+/**
+ * Mientras una pantalla entra, la anterior sigue un instante en la página (cambio de vista,
+ * patrones.md → Movimiento): para medir o buscar sin duplicados se espera a que quede una sola.
+ */
+export async function esperarVistaQuieta(page: Page): Promise<void> {
+  await page.waitForFunction(() => document.querySelectorAll('#contenido .cambio-de-vista').length <= 1)
+}
+
 export type Letra = 'NORMAL' | 'GRANDE' | 'MUY_GRANDE'
 
 /** La letra que cada prueba pidió con `usarLetra` (cada prueba tiene su propia página). */

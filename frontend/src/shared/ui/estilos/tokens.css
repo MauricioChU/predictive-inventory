@@ -41,6 +41,8 @@
   --duracion-hoja: 420ms;
   --curva-hoja-entrar: cubic-bezier(0.22, 1, 0.36, 1);
   --curva-hoja-salir: cubic-bezier(0.55, 0, 0.75, 0.2);
+  /* Cambio de vista (navegación): más corta que la hoja para no frenar al usar la app. */
+  --duracion-vista: 280ms;
 }
 
 /* RN-UX-01: la base escala todo el diseño (rem). */

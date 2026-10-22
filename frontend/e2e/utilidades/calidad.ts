@@ -1,7 +1,9 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, type Page } from '@playwright/test'
 
-export { usarLetra, type Letra } from './navegacion'
+import { esperarVistaQuieta } from './navegacion'
+
+export { esperarVistaQuieta, usarLetra, type Letra } from './navegacion'
 
 /** RN-UX-09 / RN-SIS-06.
  *
@@ -13,6 +15,7 @@ export { usarLetra, type Letra } from './navegacion'
  * desplazamiento horizontal interno.
  */
 export async function esperarSinDesplazamientoHorizontal(page: Page): Promise<void> {
+  await esperarVistaQuieta(page)
   const { scroll, cliente } = await page.evaluate(() => ({
     scroll: document.documentElement.scrollWidth,
     cliente: document.documentElement.clientWidth,
