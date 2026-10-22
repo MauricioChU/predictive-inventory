@@ -240,7 +240,7 @@ describe('Productos (lista)', () => {
     vista = await montarVista(app, '/productos?estado=se-acaban')
     const w = vista.wrapper
     expect(chips(w)).toEqual(['Se acaban'])
-    expect(w.get('.boton-filtros').attributes('aria-label')).toBe('Filtros · 1 activo')
+    expect(w.get('.boton-filtros').text()).toContain('Filtros · 1 activo')
     expect(nombres(w).sort()).toEqual(['Carbón vegetal', 'Lejía Tradicional 1 L'])
     await elegirEstado(w, 'Todos')
     expect(nombres(w)).toHaveLength(3)
@@ -251,7 +251,7 @@ describe('Productos (lista)', () => {
     await conProductos()
     vista = await montarVista(app, '/productos?estado=otra-cosa')
     expect(chips(vista.wrapper)).toEqual([])
-    expect(vista.wrapper.get('.boton-filtros').attributes('aria-label')).toBeUndefined()
+    expect(vista.wrapper.get('.boton-filtros').text()).toBe('Filtros')
   })
 
   it('un filtro sin productos lo explica y "Ver todos" lo quita', async () => {
@@ -280,7 +280,7 @@ describe('Productos (lista)', () => {
     await elegirOpcion(w, 'Carbón y combustibles')
     expect(nombres(w)).toEqual(['Carbón vegetal'])
     expect(chips(w)).toEqual(['Carbón y combustibles'])
-    expect(w.get('.boton-filtros').attributes('aria-label')).toBe('Filtros · 1 activo')
+    expect(w.get('.boton-filtros').text()).toContain('Filtros · 1 activo')
     // El botón de abajo dice cuántos productos se ven.
     expect(w.get('.hoja-inferior .pie').text()).toBe('Ver 1 producto')
 
@@ -300,7 +300,7 @@ describe('Productos (lista)', () => {
     const w = vista.wrapper
     await elegirOpcion(w, 'Se acaban')
     await elegirOpcion(w, 'Carbón y combustibles')
-    expect(w.get('.boton-filtros').attributes('aria-label')).toBe('Filtros · 2 activos')
+    expect(w.get('.boton-filtros').text()).toContain('Filtros · 2 activos')
     expect(chips(w)).toEqual(['Se acaban', 'Carbón y combustibles'])
   })
 

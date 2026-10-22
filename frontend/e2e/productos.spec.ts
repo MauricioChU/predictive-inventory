@@ -101,6 +101,20 @@ test.describe('Productos: flujos críticos', () => {
     await expect(page.getByRole('list', { name: 'Productos' })).toContainText(comoSeLee('12 unid.'))
   })
 
+  test('con una hoja abierta, tocar "Productos" en la navegación la cierra', async ({ page }) => {
+    await abrirTiendaLista(page, './productos')
+    await crearProductos(page, [LEJIAS[0]!])
+    await abrir(page, './productos')
+    await page.getByRole('button', { name: /^Filtros/ }).click()
+    await expect(page.getByRole('heading', { name: 'Filtros' })).toBeVisible()
+    await page.getByRole('navigation').getByRole('link', { name: /^Productos/ }).click()
+    await expect(page.getByRole('heading', { name: 'Filtros' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Agregar producto' }).click()
+    await expect(page.getByRole('heading', { name: 'Producto nuevo' })).toBeVisible()
+    await page.getByRole('navigation').getByRole('link', { name: /^Productos/ }).click()
+    await expect(page.getByRole('heading', { name: 'Producto nuevo' })).toHaveCount(0)
+  })
+
   test('buscar sin tildes y en cualquier orden', async ({ page }) => {
     await abrirTiendaLista(page, './productos')
     await crearProductos(page, LEJIAS)

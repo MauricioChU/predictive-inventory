@@ -413,6 +413,7 @@ function verProducto(productoId: string) {
     <div v-if="exito" class="exito-centrado">
       <PantallaExito
         :al-centro="false"
+        :titulo-oculto="enHoja"
         :titulo="
           exito.tipo === 'creado'
             ? 'Producto guardado'

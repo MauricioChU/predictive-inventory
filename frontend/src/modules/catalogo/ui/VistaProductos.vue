@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, shallowRef, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { isNavigationFailure, NavigationFailureType, useRoute, useRouter } from 'vue-router'
 import { ListFilter, Plus, Tags, X } from 'lucide-vue-next'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import type { EstadoDeStock } from '@/shared/contratos/estado-de-stock'
-import Boton from '@/shared/ui/componentes/Boton.vue'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import BuscadorGrande from '@/shared/ui/componentes/BuscadorGrande.vue'
 import HojaInferior from '@/shared/ui/componentes/HojaInferior.vue'
@@ -178,6 +177,9 @@ const resultado = computed(() =>
 const filtrosAbiertos = ref(false)
 const productoNuevo = ref<{ nombre: string; vez: number } | null>(null)
 const refBotonFiltros = ref<HTMLElement | null>(null)
+const refHojaNueva = ref<InstanceType<typeof HojaInferior>>()
+const refHojaFiltros = ref<InstanceType<typeof HojaDeFiltros>>()
+const tituloDeLaHoja = ref('Producto nuevo')
 const hojaAbierta = computed(() => filtrosAbiertos.value || productoNuevo.value !== null)
 
 /** A dónde vuelve el foco al cerrar la hoja de producto nuevo (el botón fijo, o el del vacío). */
@@ -185,10 +187,12 @@ const abridorDeProductoNuevo = ref<HTMLElement | null>(null)
 function agregar(nombre?: string) {
   abridorDeProductoNuevo.value =
     document.activeElement instanceof HTMLElement ? document.activeElement : null
+  tituloDeLaHoja.value = 'Producto nuevo'
   productoNuevo.value = { nombre: nombre ?? '', vez: 0 }
 }
 /** "Agregar otro producto": un formulario nuevo y vacío en la misma hoja. */
 function agregarOtro() {
+  tituloDeLaHoja.value = 'Producto nuevo'
   if (productoNuevo.value) productoNuevo.value = { nombre: '', vez: productoNuevo.value.vez + 1 }
 }
 /** Con lo nuevo guardado, la lista deja de filtrar (un filtro podría esconderlo): ver `@guardado`.
@@ -207,6 +211,23 @@ const filtrosActivos = computed(() => {
   if (nombreDeCategoria.value) chips.push({ id: 'categoria', texto: nombreDeCategoria.value })
   return chips
 })
+const textoDelBotonDeFiltros = computed(() => {
+  const n = filtrosActivos.value.length
+  return n === 0 ? 'Filtros' : `Filtros · ${n} ${n === 1 ? 'activo' : 'activos'}`
+})
+/** Con una hoja abierta, tocar "Productos" en la navegación (misma pantalla) la cierra. */
+const quitarEscucha = router.afterEach((to, _desde, falla) => {
+  if (to.name !== 'productos' || !isNavigationFailure(falla, NavigationFailureType.duplicated))
+    return
+  refHojaNueva.value?.cerrar()
+  refHojaFiltros.value?.cerrar()
+})
+onBeforeUnmount(quitarEscucha)
+
+function alGuardar() {
+  filtros.olvidar()
+  tituloDeLaHoja.value = 'Producto guardado'
+}
 function quitarFiltro(id: 'estado' | 'categoria') {
   if (id === 'estado') filtros.estado = 'TODOS'
   else filtros.categoriaId = ''
@@ -230,12 +251,11 @@ function abrirProducto(id: string) {
   <div class="vista-productos" :style="{ '--alto-accion': `${altoDeLaAccion}px` }">
     <div class="cabecera" :inert="hojaAbierta ? true : undefined">
       <EncabezadoPagina titulo="Productos" />
-      <Boton
-        class="ir-a-categorias"
-        texto="Categorías"
-        :icono="Tags"
-        @click="router.push({ name: 'categorias' })"
-      />
+      <!-- Si no cabe junto al título, queda solo el ícono (el texto sigue para el lector). -->
+      <button type="button" class="ir-a-categorias" @click="router.push({ name: 'categorias' })">
+        <Tags aria-hidden="true" class="icono" />
+        <span class="texto-categorias">Categorías</span>
+      </button>
     </div>
 
     <MensajeDeError v-if="error" :mensaje="error" ayuda="Vuelve a intentarlo en un momento." />
@@ -244,21 +264,21 @@ function abrirProducto(id: string) {
       <div class="cuerpo" :inert="hojaAbierta ? true : undefined">
         <section v-if="hayProductos" class="filtros" aria-label="Buscar y filtrar">
           <div class="fila-de-busqueda">
-            <BuscadorGrande v-model="filtros.texto" etiqueta="Buscar producto" />
+            <BuscadorGrande
+              v-model="filtros.texto"
+              etiqueta="Buscar producto"
+              marcador="Buscar producto"
+              etiqueta-oculta
+            />
             <button
               ref="refBotonFiltros"
               type="button"
               class="boton-filtros"
-              :aria-label="
-                filtrosActivos.length > 0
-                  ? `Filtros · ${filtrosActivos.length} ${filtrosActivos.length === 1 ? 'activo' : 'activos'}`
-                  : undefined
-              "
               :class="{ 'boton-filtros--con-filtros': filtrosActivos.length > 0 }"
               @click="filtrosAbiertos = true"
             >
               <ListFilter aria-hidden="true" class="icono" />
-              <span>Filtros</span>
+              <span class="solo-lector">{{ textoDelBotonDeFiltros }}</span>
               <span v-if="filtrosActivos.length > 0" class="cuenta" aria-hidden="true">{{
                 filtrosActivos.length
               }}</span>
@@ -310,6 +330,7 @@ function abrirProducto(id: string) {
 
     <HojaDeFiltros
       v-if="filtrosAbiertos"
+      ref="refHojaFiltros"
       v-model:estado="filtros.estado"
       v-model:categoria-id="filtros.categoriaId"
       :categorias="categorias"
@@ -319,7 +340,8 @@ function abrirProducto(id: string) {
     />
     <HojaInferior
       v-if="productoNuevo"
-      titulo="Producto nuevo"
+      ref="refHojaNueva"
+      :titulo="tituloDeLaHoja"
       :volver-a="abridorDeProductoNuevo"
       @cerrar="cerrarProductoNuevo"
     >
@@ -328,7 +350,7 @@ function abrirProducto(id: string) {
         en-hoja
         :nombre-inicial="productoNuevo.nombre"
         @agregar-otro="agregarOtro"
-        @guardado="filtros.olvidar()"
+        @guardado="alGuardar"
       />
     </HojaInferior>
   </div>
@@ -346,11 +368,42 @@ function abrirProducto(id: string) {
   scroll-margin-bottom: calc(var(--alto-accion, 0px) + var(--espacio-3));
 }
 .cabecera {
+  /* Título y "Categorías" en la misma fila: si no caben con su texto, queda solo el ícono. */
+  container-type: inline-size;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0 var(--espacio-3);
+}
+.ir-a-categorias {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  gap: var(--espacio-2);
+  min-block-size: var(--alto-toque);
+  min-inline-size: var(--alto-toque);
+  padding-inline: var(--espacio-4);
+  border: 2px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+@container (max-width: 17.5rem) {
+  .ir-a-categorias {
+    padding-inline: 0;
+  }
+  .texto-categorias {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
 }
 .cuerpo {
   display: grid;
@@ -365,31 +418,29 @@ function abrirProducto(id: string) {
   min-inline-size: 0;
 }
 .fila-de-busqueda {
+  /* Siempre una fila: el botón de filtros es solo el ícono (con el número de filtros puestos). */
   display: flex;
-  /* A 320 px con letra Muy grande el botón pasa debajo del buscador (no lo aplasta). */
-  flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: stretch;
   gap: var(--espacio-2);
   min-inline-size: 0;
 }
 .fila-de-busqueda > :first-child {
-  flex: 1 1 8rem;
+  flex: 1;
   min-inline-size: 0;
 }
 .boton-filtros {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  gap: var(--espacio-2);
   min-block-size: var(--alto-boton-principal);
-  padding-inline: var(--espacio-3);
+  min-inline-size: var(--alto-boton-principal);
+  padding: 0;
   border: 2px solid var(--color-borde);
-  border-radius: var(--radio-chico);
+  border-radius: var(--radio);
   background: var(--color-fondo);
   color: var(--color-texto);
-  font-size: 1rem;
-  font-weight: 700;
   cursor: pointer;
 }
 .boton-filtros--con-filtros {
@@ -398,34 +449,54 @@ function abrirProducto(id: string) {
   color: var(--color-primario);
 }
 .cuenta {
+  position: absolute;
+  inset-block-start: -0.5rem;
+  inset-inline-end: -0.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-inline-size: 1.5rem;
   block-size: 1.5rem;
+  padding-inline: 0.25rem;
+  box-sizing: border-box;
   border-radius: 999px;
   background: var(--color-primario);
   color: var(--color-fondo);
   font-size: 1rem;
+  font-weight: 700;
   line-height: 1;
 }
 .icono {
-  inline-size: 1.25em;
-  block-size: 1.25em;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
   flex: none;
 }
-/* Lo activo, en una línea de chips pequeños: la zona de toque (48 px) es más alta que el chip. */
+/* Lo activo, en UNA línea de chips: si no caben, se desplaza de lado dentro de su fila (la
+   página no se ensancha). La zona de toque (48 px) es más alta que el chip. */
 .chips {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0 var(--espacio-2);
   margin: calc(-1 * var(--espacio-2)) 0;
-  padding: 0;
+  padding: 0 var(--espacio-1);
   list-style: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar {
+  display: none;
+}
+.chips > li {
+  flex: none;
+  min-inline-size: 0;
+  max-inline-size: 85%;
+  display: flex;
 }
 .chip {
   display: inline-flex;
   align-items: center;
+  min-inline-size: 0;
   max-inline-size: 100%;
   min-block-size: var(--alto-toque);
   padding: 0;
@@ -447,8 +518,9 @@ function abrirProducto(id: string) {
 }
 .chip-texto {
   min-inline-size: 0;
-  overflow-wrap: anywhere;
-  text-align: start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .chip-x {
   inline-size: 1rem;

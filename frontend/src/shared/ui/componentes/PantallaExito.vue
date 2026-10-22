@@ -14,8 +14,11 @@ const props = withDefaults(
     /** RN-OP-18: con esto, el botón Deshacer va arriba a la derecha de la pantalla, con lo que
      * queda de los 10 s. Al vencer, quien la monta lo quita (pasa `undefined`). */
     segundosParaDeshacer?: number
+    /** El título sigue ahí para el lector (y recibe el foco), pero no se ve: lo muestra quien
+     * la contiene (el título de una hoja). */
+    tituloOculto?: boolean
   }>(),
-  { detalle: undefined, alCentro: true, segundosParaDeshacer: undefined },
+  { detalle: undefined, alCentro: true, segundosParaDeshacer: undefined, tituloOculto: false },
 )
 const emit = defineEmits<{ deshacer: [] }>()
 
@@ -74,7 +77,7 @@ onUnmounted(() => {
       <span class="contador" aria-hidden="true">({{ segundosParaDeshacer }})</span>
     </button>
     <CircleCheck aria-hidden="true" class="icono" />
-    <h1 ref="refEncabezado">{{ titulo }}</h1>
+    <h1 ref="refEncabezado" :class="{ 'solo-lector': tituloOculto }">{{ titulo }}</h1>
     <!-- Plan 12: "Total S/ 46.80" nunca se parte (RN-UX-09). -->
     <p v-if="detalle" class="detalle">{{ pegarCifras(detalle) }}</p>
     <slot />

@@ -54,6 +54,8 @@ async function cerrar(): Promise<void> {
   await nextTick()
   alTerminarAnimacion(refHoja.value, () => emit('cerrar'))
 }
+
+defineExpose({ cerrar })
 </script>
 
 <template>

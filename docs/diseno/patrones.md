@@ -11,7 +11,7 @@ Cómo se arman las pantallas de PAPITO para que todas se sientan de la misma fam
 | Espacios | `--espacio-1` … `--espacio-6` | Sin huecos en blanco: el contenido va seguido; lo fijo (pie, total) va pegado abajo. |
 | Colores | `tokens.css` | Texto 7:1; el color nunca es la única señal (va con texto o ícono). |
 | Cifras | `pegarCifras()` (`shared/ui/texto-sin-cortes.ts`) | "S/ 3.50" y "2 unid." nunca se parten entre renglones. |
-| Íconos | `lucide-vue-next` | Siempre con texto (RN-UX-04). Excepciones con nombre accesible: tuerca de Ajustes, flecha ⌄ de las hojas. |
+| Íconos | `lucide-vue-next` | Siempre con texto (RN-UX-04). Excepciones con nombre accesible: tuerca de Ajustes, flecha ⌄ de las hojas, «Filtros» (siempre) y «Categorías» (cuando no cabe junto al título) en Productos. |
 
 ## Movimiento
 
@@ -38,13 +38,13 @@ Para todo lo que se consulta sin salir de la pantalla (Movimientos y lo que veng
 
 ### Filtros en hoja + chips (Productos)
 
-- Arriba, en una fila: el buscador y el botón «Filtros» (ícono + texto + número de filtros puestos). Si no caben (letra Muy grande), el botón pasa debajo.
+- Arriba, siempre en una fila: el buscador (su etiqueta solo para el lector, con marcador «Buscar producto») y el botón «Filtros», solo ícono de 56 px con el número de filtros puestos (nombre accesible «Filtros · N activos»). «Categorías» queda junto al título; si no cabe con su texto, solo ícono.
 - El botón abre `HojaDeFiltros.vue`: «Mostrar» (opciones en cuadros que se envuelven) y «Categoría» (una opción por fila, la elegida marcada); se aplican al tocar y el pie «Ver N productos» solo cierra.
-- Lo activo va debajo del buscador en chips quitables (pastilla pequeña, zona de toque de 48 px, nombre accesible «Quitar filtro X»); sin filtros no hay línea.
+- Lo activo va debajo del buscador en UNA línea de chips quitables (pastilla pequeña, zona de toque de 48 px, nombre accesible «Quitar filtro X»); si no caben se desplazan de lado dentro de su fila, sin barra, y el texto largo lleva elipsis; sin filtros no hay línea.
 
 ### Formulario dentro de una hoja
 
-- Un formulario de página se mete en la hoja con una propiedad `en-hoja`: sin su encabezado ni «Volver», con el botón de guardar pegado al fondo de la hoja (`position: sticky` con el relleno del cuerpo cancelado) y la confirmación dentro de la hoja. Ejemplo: `FormularioDeProducto.vue` desde Productos.
+- Un formulario de página se mete en la hoja con una propiedad `en-hoja`: sin su encabezado ni «Volver», con el botón de guardar pegado al fondo de la hoja (`position: sticky` con el relleno del cuerpo cancelado) y la confirmación dentro de la hoja. Un solo título: el de la hoja cambia («Producto guardado») y el de la confirmación queda solo para el lector (`tituloOculto`). Tocar en la navegación la pantalla donde está la hoja la cierra. Ejemplo: `FormularioDeProducto.vue` desde Productos.
 
 ## Panel de carrito — `PanelDeCarrito.vue`
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import BotonesDeOpcion from '@/shared/ui/componentes/BotonesDeOpcion.vue'
 import HojaInferior from '@/shared/ui/componentes/HojaInferior.vue'
@@ -26,6 +26,9 @@ const emit = defineEmits<{
   cerrar: []
 }>()
 
+const hoja = ref<InstanceType<typeof HojaInferior>>()
+defineExpose({ cerrar: () => hoja.value?.cerrar() })
+
 const opcionesDeCategoria = computed(() => [
   { valor: '', etiqueta: 'Todas las categorías' },
   ...props.categorias.map((c) => ({ valor: c.id, etiqueta: c.nombre })),
@@ -36,7 +39,7 @@ const textoDelBoton = computed(() =>
 </script>
 
 <template>
-  <HojaInferior titulo="Filtros" :volver-a="volverA" @cerrar="emit('cerrar')">
+  <HojaInferior ref="hoja" titulo="Filtros" :volver-a="volverA" @cerrar="emit('cerrar')">
     <div class="filtros-en-hoja">
       <SelectorSegmentado
         :model-value="estado"
