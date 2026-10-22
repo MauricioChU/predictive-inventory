@@ -4,6 +4,11 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+### Arreglado
+
+- Vender y Llegó mercadería: si ocultas el panel y eliges otro producto, el panel se vuelve a abrir.
+- Al abrir y ocultar el panel, lo de atrás se queda donde estaba (no salta al final de la página).
+
 ## [0.5.0] · 2026-10-21
 
 ### Cambiado
