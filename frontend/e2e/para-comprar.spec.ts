@@ -11,7 +11,7 @@ import {
   textoDe,
   type ProductoParaPrueba,
 } from './utilidades/control'
-import { abrir, usarLetra } from './utilidades/navegacion'
+import { abrir, esperarVistaQuieta, usarLetra } from './utilidades/navegacion'
 
 /** Plan 13: Para comprar → Compartir → Registrar llegada (RN-AN-08). */
 
@@ -117,7 +117,8 @@ test.describe('Para comprar', () => {
     await page.getByRole('button', { name: 'Registrar llegada' }).click()
     // Recibir (rama 12) se abre prellenado leyendo la lista de hoy: no viaja nada por la ruta.
     await expect(page).toHaveURL(/\/recibir\?desde=para-comprar$/)
-    await expect(page.locator('[data-app-montada] #contenido h1')).toBeVisible()
+    await esperarVistaQuieta(page)
+    await expect(page.locator('[data-app-montada] #contenido .cambio-de-vista:not(.cambio-de-vista-leave-active) h1')).toBeVisible()
     const llegada = await page.evaluate(async () => {
       const app = (
         window as Window & {

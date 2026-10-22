@@ -24,6 +24,7 @@ Una sola familia de animaciones, lentas para que se vea de dónde sale y adónde
 | `.velo-entra` / `.velo-sale` | El fondo oscuro de una hoja abierta. |
 | `.aparece` | Contenido que llega (pantalla de éxito): sube suave y se aclara. |
 | `al-terminar-animacion.ts` | Para cerrar: el componente pone `hoja-sale` con su `:class` (nunca a mano: Vue la borra) y quita la hoja cuando la animación termina. |
+| `--duracion-vista` (280 ms) + `.cambio-de-vista-*` (en `LayoutApp.vue`) | Cambio de pantalla en la navegación: la vista nueva entra deslizándose desde el lado hacia el que se va y la vieja sale al contrario. Dirección en `router/direccion-de-vista.ts` (pestañas por orden; hacia adentro = derecha, volver = izquierda; hermanas de igual profundidad = solo fundido), fijada en `<html data-vista-direccion>`. Anima `left` (no `transform`) para que `PanelDeCarrito`/`HojaInferior` (`position: fixed`) no se rompan; `overflow-x: clip` solo mientras dura. La vista que sale queda `inert` y `aria-hidden`; el foco va al `h1` de la que entra. La primera carga no se anima. |
 | `TransitionGroup` de líneas | Quitar una línea la desvanece y las de abajo suben; agregar la hace aparecer. |
 
 ## Hoja inferior — `HojaInferior.vue`

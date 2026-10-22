@@ -4,6 +4,7 @@ import { rutasDeControl } from './rutas/control'
 import { rutasDeInicioYAjustes } from './rutas/inicio-y-ajustes'
 import { rutasDeOperaciones } from './rutas/operaciones'
 import { rutasDeProductos } from './rutas/productos'
+import { direccionDeVista } from './direccion-de-vista'
 import { instalarGuardiaDeLaPrimeraVez } from './primera-vez'
 
 /**
@@ -41,8 +42,14 @@ router.afterEach((to, from) => {
   // la ruta especial sin resolver (matched vacío) y robarle el foco a la página recién
   // abierta sería inesperado para quien ya decidió dónde poner el foco (p. ej. el navegador).
   if (from.matched.length === 0) return
+  // Animación de la vista: la dirección va en un atributo (no en props de <Transition>, que la
+  // vista que sale no vería). Se fija ANTES de que Vue pinte el cambio.
+  document.documentElement.dataset.vistaDireccion = direccionDeVista(to, from)
   void nextTick(() => {
-    const encabezado = document.querySelector<HTMLElement>('#contenido h1')
+    // Mientras dura la animación hay dos vistas: el foco va al título de la que entra.
+    const encabezado = document.querySelector<HTMLElement>(
+      '#contenido .cambio-de-vista:not(.cambio-de-vista-leave-active) h1',
+    )
     const destino = encabezado ?? document.getElementById('contenido')
     if (!destino) return
     if (!destino.hasAttribute('tabindex')) destino.setAttribute('tabindex', '-1')

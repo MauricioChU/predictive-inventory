@@ -35,7 +35,9 @@ watch(contextoAvisoDeshacer.resultado, async (resultado, anterior) => {
   if (!resultado && anterior) {
     if (!document.activeElement?.closest('.resultado-de-deshacer')) return
     await nextTick()
-    const titulo = document.querySelector<HTMLElement>('#contenido h1')
+    const titulo = document.querySelector<HTMLElement>(
+      '#contenido .cambio-de-vista:not(.cambio-de-vista-leave-active) h1',
+    )
     if (titulo && !titulo.hasAttribute('tabindex')) titulo.setAttribute('tabindex', '-1')
     titulo?.focus()
     return
@@ -44,6 +46,38 @@ watch(contextoAvisoDeshacer.resultado, async (resultado, anterior) => {
   await nextTick()
   document.querySelector<HTMLElement>('.resultado-de-deshacer .cerrar')?.focus()
 })
+
+// Vista que sale: ya no se alcanza (ni con teclado ni con lector) mientras se va.
+const animandoVista = ref(false)
+// La dirección se fija en cada vista al empezar a entrar o salir: si se navega otra vez a mitad
+// de la animación, el atributo de <html> cambia pero lo que ya se mueve no salta.
+function fijarLado(el: Element) {
+  const lado = getComputedStyle(document.documentElement).getPropertyValue('--vista-lado')
+  if (lado) (el as HTMLElement).style.setProperty('--vista-lado', lado)
+}
+function alEntrarVista(el: Element) {
+  animandoVista.value = true
+  fijarLado(el)
+}
+function alSalirVista(el: Element) {
+  const vista = el as HTMLElement
+  fijarLado(vista)
+  // Saldrá del flujo (absolute) y el router llevará la página arriba: se conserva dónde se
+  // veía (con la página desplazada) fijando su top, para que se deslice desde ahí y no salte.
+  const contenido = document.getElementById('contenido')
+  if (contenido) {
+    const relativo = vista.getBoundingClientRect().top - contenido.getBoundingClientRect().top
+    vista.style.top = `${relativo - window.scrollY}px`
+  }
+  vista.setAttribute('inert', '')
+  vista.setAttribute('aria-hidden', 'true')
+}
+function alCancelarSalida(el: Element) {
+  const vista = el as HTMLElement
+  vista.style.removeProperty('top')
+  vista.removeAttribute('inert')
+  vista.removeAttribute('aria-hidden')
+}
 
 // m5: alto real de lo que queda pegado abajo, para scroll-padding-bottom (ver estilos).
 const refPie = ref<HTMLElement>()
@@ -88,8 +122,30 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
   <!-- RN-UX-16: la primera vez no tiene navegación (no hay a dónde ir); sin ella, en PC el
        contenido ocupa todo el ancho en vez de dejar vacía la columna de 260 px. -->
   <div class="layout-app" :class="{ 'sin-navegacion': estadoGlobal.primeraVez }" data-app-montada>
-    <main id="contenido" class="contenido" tabindex="-1">
-      <RouterView />
+    <main
+      id="contenido"
+      class="contenido"
+      :class="{ 'animando-vista': animandoVista }"
+      tabindex="-1"
+    >
+      <!-- Cambio de vista: la nueva entra deslizándose desde el lado hacia el que se va (la
+           dirección la fija el router en <html data-vista-direccion>; estilos abajo). Se
+           anima `left` y no `transform` para que lo fijo (PanelDeCarrito, HojaInferior) siga
+           fijo a la pantalla durante la animación. -->
+      <RouterView v-slot="{ Component, route }">
+        <Transition
+          name="cambio-de-vista"
+          @before-enter="alEntrarVista"
+          @after-enter="animandoVista = false"
+          @enter-cancelled="animandoVista = false"
+          @before-leave="alSalirVista"
+          @leave-cancelled="alCancelarSalida"
+        >
+          <div v-if="Component" :key="String(route.name ?? route.path)" class="cambio-de-vista">
+            <component :is="Component" />
+          </div>
+        </Transition>
+      </RouterView>
     </main>
     <div ref="refPie" class="pie">
       <div
@@ -170,8 +226,64 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
   padding-inline: var(--espacio-4);
   padding-block: var(--espacio-4);
 }
+.contenido {
+  position: relative;
+}
 .contenido:focus {
   outline: none;
+}
+/* RN-UX-09: mientras una vista entra o sale no hay desplazamiento a los lados. `clip` no crea
+   contenedor de scroll ni de posición fija. */
+.contenido.animando-vista {
+  overflow-x: clip;
+}
+
+/* Cambio de vista (patrones.md → Movimiento). La dirección: <html data-vista-direccion>.
+   --vista-lado: de qué lado llega la vista nueva (+ derecha, - izquierda, 0 solo fundido); la
+   que sale se va al lado contrario. */
+.cambio-de-vista {
+  position: relative;
+  left: 0;
+}
+:global(html[data-vista-direccion='adelante']) {
+  --vista-lado: 100%;
+}
+:global(html[data-vista-direccion='atras']) {
+  --vista-lado: -100%;
+}
+:global(html[data-vista-direccion='fundido']) {
+  --vista-lado: 0%;
+}
+.cambio-de-vista-enter-active {
+  animation: vista-entrar var(--duracion-vista) var(--curva-hoja-entrar) both;
+}
+/* La primera vista (carga de la app) no se anima: aún no hay dirección. */
+:global(html:not([data-vista-direccion])) .cambio-de-vista-enter-active {
+  animation: none;
+}
+.cambio-de-vista-leave-active {
+  /* Fuera del flujo, en el mismo sitio (top/left/width de la columna con su relleno). */
+  position: absolute;
+  top: auto;
+  width: calc(100% - 2 * var(--espacio-4));
+  pointer-events: none;
+  animation: vista-salir var(--duracion-vista) var(--curva-hoja-salir) both;
+}
+@keyframes vista-entrar {
+  from {
+    left: var(--vista-lado, 0%);
+    opacity: 0;
+  }
+}
+@keyframes vista-salir {
+  from {
+    left: var(--espacio-4);
+    opacity: 1;
+  }
+  to {
+    left: calc(var(--espacio-4) - var(--vista-lado, 0%));
+    opacity: 0;
+  }
 }
 
 .pie {
