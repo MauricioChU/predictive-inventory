@@ -33,11 +33,13 @@ export function usarDeshacer() {
   /** Con `enPantalla`: lo que queda de los 10 s, para el botón de la pantalla de éxito. */
   const restante = ref<number>()
   let temporizador: ReturnType<typeof setInterval> | undefined
+  let alDeshacerAqui: (() => void) | undefined
 
   /** Retira la oferta de la pantalla (vence, se usa o la persona se va). */
   function cancelar(): void {
     if (temporizador !== undefined) clearInterval(temporizador)
     temporizador = undefined
+    alDeshacerAqui = undefined
     restante.value = undefined
     if (idAnuncio !== undefined) anunciador.limpiar(idAnuncio)
     idAnuncio = undefined
@@ -47,8 +49,6 @@ export function usarDeshacer() {
     abierta = false
     cancelar() // la oferta en pantalla no sigue en otra vista
   })
-
-  let alDeshacerAqui: (() => void) | undefined
 
   async function deshacer(oferta: OfertaDeDeshacer): Promise<void> {
     try {
@@ -75,20 +75,22 @@ export function usarDeshacer() {
         return
       }
       cancelar()
-      aviso.cerrar() // un aviso global de una operación anterior ya no vale
+      // Un aviso global de una operación anterior (de cualquier pantalla) ya no vale.
+      aviso.cerrar()
+      // Con reloj real: si el celular se suspende, al volver la cuenta ya está al día (RN-OP-18).
+      const vence = Date.now() + SEGUNDOS_PARA_DESHACER * 1000
       restante.value = SEGUNDOS_PARA_DESHACER
-      idAnuncio = anunciador.anunciar(
-        `${oferta.mensaje}. Puedes deshacer durante ${SEGUNDOS_PARA_DESHACER} segundos.`,
-      )
+      // El título ya lo anuncia la pantalla de éxito: aquí solo lo de deshacer.
+      idAnuncio = anunciador.anunciar(`Puedes deshacer durante ${SEGUNDOS_PARA_DESHACER} segundos.`)
       alDeshacerAqui = () => {
         cancelar()
         void deshacer(oferta)
       }
       temporizador = setInterval(() => {
         if (restante.value === undefined) return
-        restante.value -= 1
+        restante.value = Math.ceil((vence - Date.now()) / 1000)
         if (restante.value <= 0) cancelar()
-      }, 1000)
+      }, 250)
     },
     restante: readonly(restante),
     deshacerAqui(): void {
