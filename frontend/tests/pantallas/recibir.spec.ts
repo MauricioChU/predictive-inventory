@@ -126,11 +126,14 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     await cantidad(p, 0, '6')
     await registrar(p)
     expect(await stock(app, lejia)).toBe('16')
-    expect(p.w.get('.pantalla-exito h1').text()).toBe('Mercadería registrada')
+    expect(p.w.get('.pantalla-exito h1').text()).toBe('Llegada registrada')
     expect(leer(p.w.get('.pantalla-exito .detalle'))).toBe('1 producto · Valor total S/ 14.40')
-    expect(leer(p.w.get('.aviso-deshacer'))).toContain('Mercadería registrada')
+    expect(leer(p.w.get('.pantalla-exito .deshacer'))).toMatch(/Deshacer\s*\(10\)/)
+    expect(p.w.find('.aviso-deshacer').exists()).toBe(false)
+    expect(leer(p.w.get('.pantalla-exito .linea'))).toContain('Lejía 1 L')
+    expect(leer(p.w.get('.pantalla-exito .linea'))).toContain('6 unid. × S/ 2.40')
 
-    await p.w.get('.aviso-deshacer .deshacer').trigger('click')
+    await p.w.get('.pantalla-exito .deshacer').trigger('click')
     await esperarDatos(app)
     expect(await stock(app, lejia)).toBe('10')
   })
@@ -157,7 +160,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     await esperarDatos(app)
     expect(await stock(app, lejia)).toBe('22')
     expect((await app.catalogo.obtenerProducto(lejia))?.precioCompra.centimos).toBe(260)
-    expect(p.w.get('.pantalla-exito h1').text()).toBe('Mercadería registrada')
+    expect(p.w.get('.pantalla-exito h1').text()).toBe('Llegada registrada')
   })
 
   it('RN-OP-14: se puede registrar el costo distinto sin cambiar el precio de compra', async () => {
@@ -221,7 +224,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
     await agregar(p, 'lejia', 'Lejía 1 L')
     await cantidad(p, 0, '6')
     await registrar(p)
-    await p.w.get('.aviso-deshacer .deshacer').trigger('click')
+    await p.w.get('.pantalla-exito .deshacer').trigger('click')
     await esperarDatos(app)
     expect(leer(p.w.get('.resultado-de-deshacer'))).toContain(
       'Deshiciste la llegada de mercadería (valor total S/ 14.40). Los productos volvieron a la lista.',
@@ -293,7 +296,7 @@ describe('Llegó mercadería (HU-OP-03)', () => {
       await boton(dialogo, 'Registrar igual').trigger('click')
       await esperarDatos(app)
       expect(await stock(app, escoba)).toBe('6')
-      expect(p.w.get('.pantalla-exito h1').text()).toBe('Mercadería registrada')
+      expect(p.w.get('.pantalla-exito h1').text()).toBe('Llegada registrada')
     })
 
     it('"Cambiar cantidad" no registra nada: deja el aviso a la vista y el foco en la cantidad', async () => {

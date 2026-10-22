@@ -61,8 +61,9 @@ Para avisos que no deben alargar la pantalla (Inicio).
 
 ## Confirmación — `PantallaExito.vue`
 
-- ✓ que crece, título, resumen; con `alCentro`, al centro del alto libre (Vender muestra además lo que se vendió).
-- Deshacer (10 s) en el aviso de abajo.
+- ✓ que crece, título, resumen; con `alCentro`, al centro del alto libre. Vender y Recibir muestran además lo registrado con `ResumenDeLineas.vue` (nombre, importe, "2 unid. × S/ 3.50", marca "Precio especial" / "Costo nuevo"), igual en las dos.
+- Deshacer (10 s) como botón **dentro** de la pantalla, arriba a la derecha (`segundosParaDeshacer` + evento `deshacer`; se ve "Deshacer (9)" y desaparece al vencer). No persiste: si la persona se va, la oferta se cancela. Solo Vender y Recibir; las demás pantallas usan el aviso negro de abajo (`usarDeshacer().ofrecer(oferta, { enPantalla: true })`).
+- Al abrirse, la página vuelve arriba para que ✓ y Deshacer se vean.
 
 ## Verificar
 

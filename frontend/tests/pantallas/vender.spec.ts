@@ -606,7 +606,9 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     expect(await stock(app, ids.lejia)).toBe('8')
     expect(p.w.get('.pantalla-exito h1').text()).toBe('Venta registrada')
     expect(leer(p.w.get('.pantalla-exito .detalle'))).toBe('Total S/ 7.00')
-    expect(leer(p.w.get('.aviso-deshacer'))).toContain('Venta registrada')
+    expect(leer(p.w.get('.pantalla-exito .deshacer'))).toMatch(/Deshacer\s*\(10\)/)
+    expect(p.w.find('.aviso-deshacer').exists()).toBe(false)
+    expect(p.w.get('.pantalla-exito .linea .nombre').text()).toBe('Lejía 1 L')
 
     await boton(p.w, 'Nueva venta').trigger('click')
     await esperarDatos(app)
@@ -622,7 +624,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     await cambiarCantidad(p, 0, '2')
     await confirmarVenta(p)
 
-    await p.w.get('.aviso-deshacer .deshacer').trigger('click')
+    await p.w.get('.pantalla-exito .deshacer').trigger('click')
     await esperarDatos(app)
     expect(await stock(app, ids.lejia)).toBe('10')
     const [venta] = await app.inventario.historial({ tipo: 'VENTA' })
@@ -636,7 +638,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     expect(cantidadDe(p, 0)).toBe('2')
   })
 
-  it('r1 #2 (RN-UX-11): Deshacer con otra venta en curso no la toca y dice qué se deshizo', async () => {
+  it('RN-OP-18: "Nueva venta" retira el Deshacer: la venta queda registrada', async () => {
     const { app, ids } = await tiendaDePrueba()
     const p = await abrirVender(app)
     await agregarBuscando(p, 'lejia', 'Lejía 1 L')
@@ -646,17 +648,12 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     await esperarDatos(app)
     await agregarBuscando(p, 'carbon', 'Carbón')
 
-    await p.w.get('.aviso-deshacer .deshacer').trigger('click')
-    await esperarDatos(app)
-    expect(await stock(app, ids.lejia)).toBe('10')
-    await detalle(p)
-    expect(lineas(p).map((l) => l.get('.nombre').text())).toEqual(['Carbón'])
-    expect(leer(p.w.get('.resultado-de-deshacer'))).toContain(
-      'Deshiciste la venta de S/ 7.00. Lo que estás cargando sigue aquí.',
-    )
+    expect(p.w.find('.deshacer').exists()).toBe(false)
+    expect(p.w.find('.aviso-deshacer').exists()).toBe(false)
+    expect(await stock(app, ids.lejia)).toBe('8')
   })
 
-  it('r1 #2 (RN-UX-11): Deshacer después de irse a otra pantalla también se ve, y el carrito espera en Vender', async () => {
+  it('RN-OP-18: el Deshacer no sigue en otra pantalla: si se va, la oferta se cancela', async () => {
     const { app, ids } = await tiendaDePrueba()
     const p = await abrirVender(app)
     await agregarBuscando(p, 'lejia', 'Lejía 1 L')
@@ -664,16 +661,11 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     await confirmarVenta(p)
     await p.ir('/historial')
 
-    await p.w.get('.aviso-deshacer .deshacer').trigger('click')
-    await esperarDatos(app)
-    expect(await stock(app, ids.lejia)).toBe('10')
-    expect(leer(p.w.get('.resultado-de-deshacer'))).toContain(
-      'Deshiciste la venta de S/ 7.00. Tus productos volvieron al carrito.',
-    )
+    expect(p.w.find('.aviso-deshacer').exists()).toBe(false)
+    expect(p.w.find('.deshacer').exists()).toBe(false)
     await p.ir('/vender')
-    await detalle(p)
-    expect(lineas(p)).toHaveLength(1)
-    expect(cantidadDe(p, 0)).toBe('2')
+    expect(p.w.find('.deshacer').exists()).toBe(false)
+    expect(await stock(app, ids.lejia)).toBe('8')
   })
 
   it('r1 M9 (principio 2): el carrito no se pierde al tocar otra pantalla de la navegación', async () => {
@@ -818,7 +810,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     const p = await abrirVender(app)
     await agregarBuscando(p, 'lejia', 'Lejía 1 L')
     await confirmarVenta(p)
-    await p.w.get('.aviso-deshacer .deshacer').trigger('click')
+    await p.w.get('.pantalla-exito .deshacer').trigger('click')
     await esperarDatos(app)
     const cerrar = p.w.get('.resultado-de-deshacer .cerrar')
     ;(cerrar.element as HTMLElement).focus()
@@ -833,7 +825,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     await agregarBuscando(p, 'lejia', 'Lejía 1 L')
     await confirmarVenta(p)
     // Como con el dedo o el teclado: el botón Deshacer tiene el foco cuando se toca.
-    const deshacer = p.w.get('.aviso-deshacer .deshacer')
+    const deshacer = p.w.get('.pantalla-exito .deshacer')
     ;(deshacer.element as HTMLElement).focus()
     await deshacer.trigger('click')
     await esperarDatos(app)
@@ -926,7 +918,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       await p.w.get('input[type="date"]').setValue('2026-10-14')
       await p.w.get('input[type="time"]').setValue('18:30')
       await confirmarVenta(p)
-      await p.w.get('.aviso-deshacer .deshacer').trigger('click')
+      await p.w.get('.pantalla-exito .deshacer').trigger('click')
       await esperarDatos(app)
       await detalle(p)
       expect(p.w.get('[role="radio"][aria-checked="true"]').text()).toBe('Otro día')
