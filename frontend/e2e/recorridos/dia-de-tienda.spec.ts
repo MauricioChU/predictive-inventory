@@ -139,7 +139,7 @@ test.describe('Recorrido: un día de tienda', () => {
         comoSeLee('¿Actualizar el precio de compra a S/ 1.30? Ganarás S/ 0.70 por unidad'),
       )
       await dialogo.getByRole('button', { name: 'Sí, actualizar' }).click()
-      await expect(h1(page)).toHaveText('Mercadería registrada')
+      await expect(h1(page)).toHaveText('Llegada registrada')
       await esperarStockEnElDetalle(page, 'jabon', JABON, 'Tienes 8 unid.')
       await expect(page.locator('#contenido')).toContainText(comoSeLee('S/ 1.30'))
     })

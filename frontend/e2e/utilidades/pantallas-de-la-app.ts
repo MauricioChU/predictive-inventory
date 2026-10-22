@@ -109,7 +109,7 @@ export function pantallasDeLaTienda(ids: IdsDeDemostracion): Pantalla[] {
       preparar: async (page) => {
         await agregarAlCarrito(page, 'jabon', 'Jabón Bolívar')
         await page.getByRole('button', { name: 'Confirmar venta' }).click()
-        await expect(page.locator('.aviso-deshacer')).toBeVisible()
+        await expect(page.locator('.pantalla-exito .deshacer')).toBeVisible()
       },
     },
     // Recibir

@@ -5,6 +5,7 @@ import {
   usarLetra,
 } from './utilidades/calidad'
 import { abrir } from './utilidades/navegacion'
+import { mostrarAvisoDeshacer } from './utilidades/escenarios'
 import { abrirTiendaLista } from './utilidades/tienda'
 import {
   abrirDetalleDeVenta,
@@ -125,10 +126,9 @@ test.describe('Vender (HU-OP-01, RN-OP-22)', () => {
     await crearProducto(page, CARBON)
     await abrir(page, './vender')
     await agregarBuscando(page, 'lejia', 'Lejía 1 L')
-    await page.getByRole('button', { name: 'Confirmar venta' }).click()
-    await page.getByRole('button', { name: 'Nueva venta' }).click()
+    // Vender ya no usa el aviso de abajo: se muestra el global (el de las demás pantallas).
+    await mostrarAvisoDeshacer(page)
     await agregarBuscando(page, 'carbon', 'Carbón')
-    await expect(page.locator('.aviso-deshacer')).toBeVisible()
     // El panel sube con una animación corta: se mide ya quieto.
     await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
     const separacion = await page.evaluate(() => {
@@ -292,7 +292,7 @@ test.describe('Llegó mercadería (HU-OP-03, HU-OP-09)', () => {
     await expect(dialogo.getByRole('button', { name: 'Sí, actualizar' })).toBeFocused()
     await page.keyboard.press('Enter')
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Mercadería registrada' }),
+      page.getByRole('heading', { level: 1, name: 'Llegada registrada' }),
     ).toBeVisible()
     expect(await stockDe(page, lejia)).toBe(22)
     expect(await precioDeCompraDe(page, lejia)).toBe(260)
@@ -329,7 +329,7 @@ test.describe('Llegó mercadería (HU-OP-03, HU-OP-09)', () => {
     await page.getByRole('button', { name: 'Registrar llegada' }).click()
     await dialogo.getByRole('button', { name: 'Registrar igual' }).click()
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Mercadería registrada' }),
+      page.getByRole('heading', { level: 1, name: 'Llegada registrada' }),
     ).toBeVisible()
     expect(await stockDe(page, escoba)).toBe(7)
   })
@@ -353,7 +353,7 @@ test.describe('Llegó mercadería (HU-OP-03, HU-OP-09)', () => {
     await expect(lineaDe(page, 'Lejía 1 L').getByLabel('Cantidad (unid.)')).toHaveValue('5')
     await page.getByRole('button', { name: 'Registrar llegada' }).click()
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Mercadería registrada' }),
+      page.getByRole('heading', { level: 1, name: 'Llegada registrada' }),
     ).toBeVisible()
     expect(await stockDe(page, lejia)).toBe(7)
   })
@@ -549,7 +549,7 @@ test.describe('Pantallas de operaciones: responsive, accesibles y tocables (letr
       await cerrarDetalleDeVenta(page)
       await revisar('Vender: panel compacto')
       await page.getByRole('button', { name: 'Confirmar venta' }).click()
-      await expect(page.locator('.aviso-deshacer')).toBeVisible()
+      await expect(page.locator('.pantalla-exito .deshacer')).toBeVisible()
       await revisar('Venta registrada')
 
       await abrir(page, './recibir')
@@ -563,7 +563,9 @@ test.describe('Pantallas de operaciones: responsive, accesibles y tocables (letr
       await expect(page.getByRole('dialog')).toBeVisible()
       await revisar('Pregunta del precio de compra')
       await page.getByRole('button', { name: 'Sí, actualizar' }).click()
-      await expect(page.getByRole('heading', { name: 'Mercadería registrada' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Llegada registrada' })).toBeVisible()
+      await expect(page.locator('.pantalla-exito .deshacer')).toBeVisible()
+      await revisar('Llegada registrada')
 
       await abrir(page, `./productos/${lejia}/merma`)
       await page.getByRole('radio', { name: 'Otro' }).click()

@@ -11,7 +11,7 @@ import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import PantallaExito from '@/shared/ui/componentes/PantallaExito.vue'
-import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
+import ResumenDeLineas, { type LineaDeResumen } from '@/shared/ui/componentes/ResumenDeLineas.vue'
 import { usarPantallaAncha } from '@/shared/ui/usar-pantalla-ancha'
 import BuscadorDeProductos, { type OrigenDeLaEleccion } from './BuscadorDeProductos.vue'
 import CuandoFue from './CuandoFue.vue'
@@ -49,14 +49,7 @@ const registrando = ref(false)
 const error = ref<ErrorParaMostrar | null>(null)
 const detalleDeExito = ref('')
 /** Lo que se vendió, para la pantalla de éxito: "2 unid. × S/ 3.50" e importe por línea. */
-interface LineaVendida {
-  id: string
-  nombre: string
-  detalle: string
-  importe: string
-  especial: boolean
-}
-const vendido = ref<LineaVendida[]>([])
+const vendido = ref<LineaDeResumen[]>([])
 const errorFecha = ref<ErrorDeFecha>()
 
 const textoTotal = computed(() => formatearDinero(carrito.total.value))
@@ -164,32 +157,36 @@ async function confirmar(): Promise<void> {
       ? `${formatearCantidad(linea.cantidadLeida, linea.producto.unidad)} × ${formatearDinero(linea.precio)}`
       : '',
     importe: linea.importe ? formatearDinero(linea.importe) : '',
-    especial: linea.precioCambiado,
+    ...(linea.precioCambiado ? { marca: 'Precio especial' } : {}),
   }))
   carrito.vaciar()
   expandido.value = false
   paso.value = 'exito'
   vibrar()
-  deshacer.ofrecer({
-    mensaje: 'Venta registrada',
-    alDeshacer: ({ pantallaAbierta }) => {
-      const deshecha = `Deshiciste la venta de ${totalVendido}`
-      // r1 #2: si ya se está cargando otra venta, no se toca; lo dice el resultado.
-      if (!carrito.vacio.value) {
-        return pantallaAbierta
-          ? `${deshecha}. Lo que estás cargando sigue aquí.`
-          : `${deshecha}. Lo que estabas cargando sigue en Vender.`
-      }
-      // Lo más común es haberse equivocado en algo: el carrito vuelve (con su fecha, r1 M3)
-      // para corregirlo, aunque la persona ya esté en otra pantalla.
-      carrito.restaurar(copia)
-      if (pantallaAbierta) paso.value = 'carrito'
-      return `${deshecha}. Tus productos volvieron al carrito.`
+  deshacer.ofrecer(
+    {
+      mensaje: 'Venta registrada',
+      alDeshacer: ({ pantallaAbierta }) => {
+        const deshecha = `Deshiciste la venta de ${totalVendido}`
+        // r1 #2: si ya se está cargando otra venta, no se toca; lo dice el resultado.
+        if (!carrito.vacio.value) {
+          return pantallaAbierta
+            ? `${deshecha}. Lo que estás cargando sigue aquí.`
+            : `${deshecha}. Lo que estabas cargando sigue en Vender.`
+        }
+        // Lo más común es haberse equivocado en algo: el carrito vuelve (con su fecha, r1 M3)
+        // para corregirlo, aunque la persona ya esté en otra pantalla.
+        carrito.restaurar(copia)
+        if (pantallaAbierta) paso.value = 'carrito'
+        return `${deshecha}. Tus productos volvieron al carrito.`
+      },
     },
-  })
+    { enPantalla: true },
+  )
 }
 
 async function nuevaVenta(): Promise<void> {
+  deshacer.cancelar()
   paso.value = 'carrito'
   await enfocarTitulo()
 }
@@ -201,18 +198,11 @@ async function nuevaVenta(): Promise<void> {
       v-if="paso === 'exito'"
       titulo="Venta registrada"
       :detalle="detalleDeExito"
+      :segundos-para-deshacer="deshacer.restante.value"
       al-centro
+      @deshacer="deshacer.deshacerAqui"
     >
-      <ul v-if="vendido.length > 0" class="vendido" aria-label="Lo que vendiste">
-        <li v-for="linea in vendido" :key="linea.id" class="linea-vendida">
-          <span class="nombre-vendido">{{ linea.nombre }}</span>
-          <span class="importe-vendido">{{ linea.importe }}</span>
-          <span class="detalle-vendido">
-            {{ pegarCifras(linea.detalle)
-            }}<template v-if="linea.especial"> · Precio especial</template>
-          </span>
-        </li>
-      </ul>
+      <ResumenDeLineas :lineas="vendido" etiqueta="Lo que vendiste" />
       <BotonPrincipal
         class="accion-exito"
         texto="Nueva venta"
@@ -318,44 +308,6 @@ async function nuevaVenta(): Promise<void> {
 }
 .buscador {
   min-inline-size: 0;
-}
-.vendido {
-  display: grid;
-  gap: var(--espacio-2);
-  inline-size: 100%;
-  max-inline-size: 28rem;
-  margin: var(--espacio-2) 0 0;
-  padding: var(--espacio-3) var(--espacio-4);
-  border: 1px solid var(--color-borde-foto);
-  border-radius: var(--radio);
-  background: var(--color-superficie);
-  color: var(--color-texto);
-  list-style: none;
-  text-align: start;
-}
-.linea-vendida {
-  /* Nombre e importe en una fila; si el nombre no entra sin partir una palabra (320 px, letra
-     Muy grande), el importe baja a su propia fila. */
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 var(--espacio-3);
-}
-.linea-vendida + .linea-vendida {
-  padding-block-start: var(--espacio-2);
-  border-block-start: 1px solid var(--color-borde-foto);
-}
-.nombre-vendido {
-  flex: 1 1 8rem;
-  font-weight: 700;
-}
-.importe-vendido {
-  margin-inline-start: auto;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.detalle-vendido {
-  flex-basis: 100%;
-  color: var(--color-texto-suave);
 }
 .accion-exito {
   align-self: stretch;
