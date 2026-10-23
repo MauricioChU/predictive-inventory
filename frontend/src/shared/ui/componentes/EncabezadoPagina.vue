@@ -35,7 +35,7 @@ function alVolver() {
 </script>
 
 <template>
-  <header class="encabezado-pagina">
+  <header class="encabezado-pagina" :class="{ 'encabezado-pagina--con-volver': volver }">
     <button v-if="volver" type="button" class="volver" @click="alVolver">
       <ArrowLeft aria-hidden="true" class="icono" />
       <span>Volver</span>
@@ -57,6 +57,15 @@ function alVolver() {
   align-items: center;
   gap: var(--espacio-1) var(--espacio-3);
   padding-block: var(--espacio-4);
+}
+/* Con "Volver", el título va debajo, en su propia fila (no pegado al botón). */
+.encabezado-pagina--con-volver {
+  row-gap: 0;
+  padding-block-start: var(--espacio-1);
+}
+.encabezado-pagina--con-volver h1 {
+  flex-basis: 100%;
+  padding-inline: var(--espacio-2);
 }
 h1 {
   flex: 1 1 10rem;

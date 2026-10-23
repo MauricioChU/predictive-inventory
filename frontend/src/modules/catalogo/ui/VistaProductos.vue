@@ -267,8 +267,7 @@ function abrirProducto(id: string) {
             <BuscadorGrande
               v-model="filtros.texto"
               etiqueta="Buscar producto"
-              marcador="Buscar producto"
-              etiqueta-oculta
+              marcador="Por ejemplo: lejía"
             />
             <button
               ref="refBotonFiltros"
@@ -420,7 +419,8 @@ function abrirProducto(id: string) {
 .fila-de-busqueda {
   /* Siempre una fila: el botón de filtros es solo el ícono (con el número de filtros puestos). */
   display: flex;
-  align-items: stretch;
+  /* Con la etiqueta visible arriba del campo, el botón se alinea con el campo (abajo). */
+  align-items: flex-end;
   gap: var(--espacio-2);
   min-inline-size: 0;
 }

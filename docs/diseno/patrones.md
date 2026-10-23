@@ -40,7 +40,7 @@ Para todo lo que se consulta sin salir de la pantalla (Movimientos y lo que veng
 
 ### Filtros en hoja + chips (Productos)
 
-- Arriba, siempre en una fila: el buscador (su etiqueta solo para el lector, con marcador «Buscar producto») y el botón «Filtros», solo ícono de 56 px con el número de filtros puestos (nombre accesible «Filtros · N activos»). «Categorías» queda junto al título; si no cabe con su texto, solo ícono.
+- Arriba, siempre en una fila: el buscador (igual que el de Vender: etiqueta «Buscar producto» visible arriba, marcador «Por ejemplo: lejía»; el botón va alineado con el campo) y el botón «Filtros», solo ícono de 56 px con el número de filtros puestos (nombre accesible «Filtros · N activos»). «Categorías» queda junto al título; si no cabe con su texto, solo ícono.
 - El botón abre `HojaDeFiltros.vue`: «Mostrar» (opciones en cuadros que se envuelven) y «Categoría» (una opción por fila, la elegida marcada); se aplican al tocar y el pie «Ver N productos» solo cierra.
 - Lo activo va debajo del buscador en UNA línea de chips quitables (pastilla pequeña, zona de toque de 48 px, nombre accesible «Quitar filtro X»); si no caben se desplazan de lado dentro de su fila, sin barra, y el texto largo lleva elipsis; sin filtros no hay línea.
 
@@ -81,6 +81,11 @@ Para avisos que no deben alargar la pantalla (Inicio).
 - ✓ que crece, título, resumen; con `alCentro`, al centro del alto libre. Vender y Recibir muestran además lo registrado con `ResumenDeLineas.vue` (nombre, importe, "2 unid. × S/ 3.50", marca "Precio especial" / "Costo nuevo"), igual en las dos.
 - Deshacer (10 s) como botón **dentro** de la pantalla, arriba a la derecha (`segundosParaDeshacer` + evento `deshacer`; se ve "Deshacer (9)" y desaparece al vencer). No persiste: si la persona se va, la oferta se cancela. Solo Vender y Recibir; las demás pantallas usan el aviso negro de abajo (`usarDeshacer().ofrecer(oferta, { enPantalla: true })`).
 - Al abrirse, la página vuelve arriba para que ✓ y Deshacer se vean.
+
+## Detalle de producto — `VistaDetalleProducto.vue`
+
+- «Volver» en su propia fila y el nombre debajo como título (`EncabezadoPagina` con `volver`).
+- Foto a la izquierda (30 %, tope 7 rem) y «Tienes» con el estado a su derecha; «Se acaba en…» y «Vendes…» debajo, compactos; «Contar stock» y «Registrar pérdida» lado a lado si caben, si no uno bajo otro.
 
 ## Verificar
 
