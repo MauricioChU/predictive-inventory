@@ -84,11 +84,14 @@ function alCancelarNativo(evento: Event) {
 <template>
   <dialog
     ref="dialogo"
-    class="dialogo-confirmacion"
+    class="dialogo-confirmacion dialogo-animado"
+    :inert="!abierto"
+    :aria-hidden="abierto ? undefined : 'true'"
     :aria-labelledby="idTitulo"
     :aria-describedby="idMensaje"
     @cancel="alCancelarNativo"
   >
+    <!-- Mientras se va (animación de salida) ya no cuenta para teclado ni lector: inert + aria-hidden. -->
     <!-- Plan 12: "S/ 2.60" o "1 L" nunca se parten en dos líneas (RN-UX-09). -->
     <h2 :id="idTitulo">{{ pegarCifras(titulo) }}</h2>
     <p :id="idMensaje">{{ pegarCifras(mensaje) }}</p>

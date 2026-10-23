@@ -5,7 +5,9 @@ import { rutasDeInicioYAjustes } from './rutas/inicio-y-ajustes'
 import { rutasDeOperaciones } from './rutas/operaciones'
 import { rutasDeProductos } from './rutas/productos'
 import { direccionDeVista } from './direccion-de-vista'
+import { enfocarTituloDeVista } from './foco-de-titulo'
 import { instalarGuardiaDeLaPrimeraVez } from './primera-vez'
+import { esperarSalidaDeVista } from './salida-de-vista'
 
 /**
  * Cada rama de pantallas de la Ola 4 edita SOLO su archivo en `./rutas/`, para que los merges
@@ -26,7 +28,9 @@ const router = createRouter({
   // M6: vuelve al tope al navegar. LayoutApp (S1) volvió a usar el scroll normal del
   // documento (ventana) en vez de un contenedor interno, así que esto ya actúa de verdad
   // (antes, con <main> desplazándose internamente, esta opción no tenía ningún efecto).
-  scrollBehavior(_to, _from, posicionGuardada) {
+  // La vista que se va se desvanece en su sitio: se espera a que termine para no verla saltar.
+  async scrollBehavior(_to, _from, posicionGuardada) {
+    await esperarSalidaDeVista()
     return posicionGuardada ?? { top: 0 }
   },
 })
@@ -46,14 +50,10 @@ router.afterEach((to, from) => {
   // vista que sale no vería). Se fija ANTES de que Vue pinte el cambio.
   document.documentElement.dataset.vistaDireccion = direccionDeVista(to, from)
   void nextTick(() => {
-    // Mientras dura la animación hay dos vistas: el foco va al título de la que entra.
-    const encabezado = document.querySelector<HTMLElement>(
-      '#contenido .cambio-de-vista:not(.cambio-de-vista-leave-active) h1',
-    )
-    const destino = encabezado ?? document.getElementById('contenido')
-    if (!destino) return
-    if (!destino.hasAttribute('tabindex')) destino.setAttribute('tabindex', '-1')
-    destino.focus({ preventScroll: true })
+    // Si la vista vieja se está yendo (out-in), la nueva aún no existe: el foco lo pasa
+    // LayoutApp cuando entra. Si no hay cambio de vista (mismo componente), va al título ya.
+    if (document.querySelector('#contenido .cambio-de-vista-leave-active')) return
+    enfocarTituloDeVista()
   })
 })
 
