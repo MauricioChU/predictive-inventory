@@ -8,7 +8,6 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 - Productos: los filtros ya no ocupan media pantalla. Arriba quedan el buscador y un botón «Filtros» (un ícono con el número de filtros puestos, siempre en la misma fila que el buscador); al tocarlo se abre una hoja con «Mostrar» y la «Categoría» como lista, y abajo «Ver N productos». Lo que tienes filtrado se ve debajo del buscador en chips que se quitan con ✕, en una sola línea (si no caben, se deslizan de lado). «Categorías» queda junto al título (solo el ícono si no cabe).
 - «Agregar producto» abre el formulario en una hoja desde abajo, sin salir de la lista; al guardar, la confirmación se ve en la misma hoja, con un solo título. Tocar «Productos» en la navegación con una hoja abierta la cierra.
-- Al cambiar de pantalla con la navegación, la nueva entra deslizándose desde el lado de la pestaña que tocaste (y la anterior sale hacia el otro); al abrir un detalle entra desde la derecha y al volver, desde la izquierda. Con «reducir movimiento» del sistema no se anima.
 - Al cambiar de pantalla, la anterior se desvanece y la nueva entra con un deslizamiento corto desde el lado de la pestaña que tocaste; al abrir un detalle entra desde la derecha y al volver, desde la izquierda. Con «reducir movimiento» del sistema no se anima.
 - Los avisos de confirmación (archivar, restaurar, cargar datos y otros) ahora aparecen y se van con una animación suave.
 
