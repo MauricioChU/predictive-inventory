@@ -169,6 +169,7 @@ function verLoQueSeAcaba(): void {
         <TarjetaDeCifra
           compacta
           en-linea
+          :alta="!cifrasDeHoy.vendido.detalle"
           titulo="Total vendido"
           :texto-valor="cifrasDeHoy.vendido.valor"
           :texto-detalle="cifrasDeHoy.vendido.detalle"
@@ -176,6 +177,7 @@ function verLoQueSeAcaba(): void {
         <TarjetaDeCifra
           compacta
           en-linea
+          :alta="!cifrasDeHoy.vendido.detalle"
           :titulo="cifrasDeHoy.ganancia.titulo"
           :texto-valor="cifrasDeHoy.ganancia.valor"
           :tono="cifrasDeHoy.ganancia.tono"

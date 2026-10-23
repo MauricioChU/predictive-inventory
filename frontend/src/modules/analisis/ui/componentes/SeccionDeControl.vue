@@ -48,7 +48,7 @@ const idTitulo = useId()
   align-items: center;
   gap: var(--espacio-2);
   margin: 0 0 var(--espacio-3);
-  font-size: 1.2rem;
+  font-size: 1.125rem;
   line-height: 1.25;
 }
 .icono {

@@ -11,6 +11,9 @@ Cómo se arman las pantallas de PAPITO para que todas se sientan de la misma fam
 | Espacios | `--espacio-1` … `--espacio-6` | Sin huecos en blanco: el contenido va seguido; lo fijo (pie, total) va pegado abajo. |
 | Colores | `tokens.css` | Texto 7:1; el color nunca es la única señal (va con texto o ícono). |
 | Cifras | `pegarCifras()` (`shared/ui/texto-sin-cortes.ts`) | "S/ 3.50" y "2 unid." nunca se parten entre renglones. |
+| Encabezado de página | `EncabezadoPagina.vue` | Siempre el mismo: título `h1` con la misma altura en todas las vistas. Una acción al lado del título (p. ej. «Categorías») va en el slot `accion`: su caja no suma alto, el título no se mueve. |
+| Título de sección | clase `.titulo-de-seccion` (`base.css`) | Un solo estilo (1.125 rem, negrita, color de texto) para «Más vendidos», «N productos», Datos, Precios, secciones de Ajustes y Control. No inventar otro tamaño. |
+| Tarjeta de producto | `TarjetaDeProducto.vue`, `AccesosRapidos.vue` | Fondo claro (`--color-fondo`), borde de 2 px (`--color-borde`) y `--radio`; al tocar, fondo suave y borde primario. Lista y grilla se ven igual. |
 | Íconos | `lucide-vue-next` | Siempre con texto (RN-UX-04). Excepciones con nombre accesible: tuerca de Ajustes, flecha ⌄ de las hojas, «Filtros» (siempre) y «Categorías» (cuando no cabe junto al título) en Productos. |
 
 ## Movimiento

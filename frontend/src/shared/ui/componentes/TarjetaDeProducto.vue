@@ -79,9 +79,10 @@ const descripcion = computed(() => {
   inline-size: 100%;
   min-block-size: max(64px, 3.5rem);
   padding: var(--espacio-3);
-  border: 2px solid transparent;
+  /* Mismo tratamiento que los accesos de «Más vendidos»: fondo claro, borde y radio. */
+  border: 2px solid var(--color-borde);
   border-radius: var(--radio);
-  background: var(--color-superficie);
+  background: var(--color-fondo);
   color: var(--color-texto);
   text-align: start;
   cursor: pointer;
