@@ -92,10 +92,11 @@ describe('Inicio', () => {
 
     const { wrapper } = await abrirInicio()
 
-    const cifra = wrapper.get('.tarjeta-de-cifra')
-    expect(cifra.text()).toContain('Hoy ganaste')
-    expect(cifra.text()).toContain('S/ 2.20')
-    expect(cifra.text()).toContain('Vendiste S/ 7.00')
+    const [vendido, ganancia] = wrapper.findAll('.tarjeta-de-cifra')
+    expect(vendido?.text()).toContain('Total vendido')
+    expect(vendido?.text()).toContain('S/ 7.00')
+    expect(ganancia?.text()).toContain('Ganancia real')
+    expect(ganancia?.text()).toContain('S/ 2.20')
   })
 
   it('RN-AN-03: sin ventas hoy lo dice con palabras', async () => {
@@ -104,7 +105,12 @@ describe('Inicio', () => {
 
     const { wrapper } = await abrirInicio()
 
-    expect(wrapper.get('.tarjeta-de-cifra').text()).toContain('Todavía no hay ventas hoy')
+    expect(
+      wrapper
+        .get('.cifras-de-hoy')
+        .text()
+        .match(/Todavía no hay ventas hoy/g),
+    ).toHaveLength(1)
   })
 
   it('RN-AL-06: avisa cuántos productos se acaban y lleva a Productos ya filtrado', async () => {

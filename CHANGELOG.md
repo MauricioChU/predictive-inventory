@@ -6,6 +6,8 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ### Cambiado
 
+- Inicio: ahora muestra dos tarjetas, «Total vendido» (lo cobrado hoy) y debajo «Ganancia real» (lo que ganaste de lo vendido; si perdiste, «Pérdida real»). «Todavía no hay ventas hoy» se dice una sola vez.
+- Llegó mercadería: el aviso de sobrecompra se ve más claro. Título «Esto es más de lo que necesitas» y una fila por producto: su nombre en negrita, cuántas unidades llegan y para cuántos días te alcanzan, y si no necesitabas comprar o cuánto te sugerimos. Los botones siguen siendo «Cambiar cantidad» y «Registrar igual».
 - Productos: los filtros ya no ocupan media pantalla. Arriba quedan el buscador y un botón «Filtros» (un ícono con el número de filtros puestos, siempre en la misma fila que el buscador); al tocarlo se abre una hoja con «Mostrar» y la «Categoría» como lista, y abajo «Ver N productos». Lo que tienes filtrado se ve debajo del buscador en chips que se quitan con ✕, en una sola línea (si no caben, se deslizan de lado). «Categorías» queda junto al título (solo el ícono si no cabe).
 - Productos: el buscador se ve igual que el de Vender («Buscar producto» arriba y el ejemplo «Por ejemplo: lejía» dentro) y el botón de filtros queda alineado con el campo.
 - Detalle de producto más compacto: «Volver» en su fila y el nombre debajo; la foto a la izquierda con «Tienes» y el estado a su derecha; el pronóstico debajo y «Contar stock» y «Registrar pérdida» más arriba, para ver todo sin desplazar.

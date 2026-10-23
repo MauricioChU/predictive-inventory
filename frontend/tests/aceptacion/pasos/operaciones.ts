@@ -397,9 +397,9 @@ export function pasosDeOperaciones(pasos: Pasos): void {
 
   afirmacion(
     pasos,
-    'se avisa {string}',
-    (m: Mundo, aviso: string) => {
-      expect(m.avisos).toContain(aviso)
+    'se avisa de {string}: {string} y {string}',
+    (m: Mundo, nombre: string, primera: string, segunda: string) => {
+      expect(m.filasDeAviso).toContainEqual({ nombre, lineas: [primera, segunda] })
     },
     { revisa: true },
   )

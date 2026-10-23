@@ -143,7 +143,7 @@ export function pantallasDeLaTienda(ids: IdsDeDemostracion): Pantalla[] {
       preparar: async (page) => {
         await agregarAlCarrito(page, 'escoba', 'Escoba de paja')
         await page.getByRole('button', { name: 'Registrar llegada' }).click()
-        await expect(dialogo(page)).toContainText('no se vende hace')
+        await expect(dialogo(page)).toContainText('No se vende hace')
       },
     },
     { nombre: 'Llegó mercadería desde Para comprar', ruta: './recibir?desde=para-comprar' },

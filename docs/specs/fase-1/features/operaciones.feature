@@ -272,7 +272,7 @@ Característica: Operaciones de stock
     Cuando llega mercadería:
       | producto  | cantidad | costo |
       | Lejía 1 L | 110      | 2.40  |
-    Entonces se avisa "Con esto tendrías Lejía 1 L para ~60 días. Te sugerimos ~7 unid."
+    Entonces se avisa de "Lejía 1 L": "Llegan 110 unid. → te alcanzan ~60 días" y "Te sugerimos ~7 unid."
     Y se ofrecen las opciones "Registrar igual, Cambiar cantidad"
 
   @RN-OP-20
@@ -281,7 +281,7 @@ Característica: Operaciones de stock
     Cuando llega mercadería:
       | producto | cantidad | costo |
       | Carbón   | 5        | 2.75  |
-    Entonces se avisa "Con esto tendrías Carbón para ~60 días. Ahora no necesitabas comprar."
+    Entonces se avisa de "Carbón": "Llegan 5 kg → te alcanzan ~60 días" y "No necesitabas comprar"
 
   @RN-OP-20
   Escenario: Avisar cuando se compra un producto parado
@@ -295,7 +295,7 @@ Característica: Operaciones de stock
     Cuando llega mercadería:
       | producto | cantidad | costo |
       | Escoba   | 2        | 6.00  |
-    Entonces se avisa "Escoba no se vende hace 45 días y aún tienes 4 unid."
+    Entonces se avisa de "Escoba": "No se vende hace 45 días" y "Aún tienes 4 unid."
 
   @RN-OP-20
   Escenario: Una compra razonable no genera aviso

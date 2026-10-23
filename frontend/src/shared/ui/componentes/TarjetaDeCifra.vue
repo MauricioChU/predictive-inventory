@@ -14,8 +14,10 @@ const props = withDefaults(
     tono?: 'normal' | 'exito' | 'peligro'
     /** Menos alto (Inicio entra en una pantalla): menos relleno y el detalle más pegado. */
     compacta?: boolean
+    /** Título a la izquierda y cifra a la derecha, en una sola línea (si no caben, una bajo la otra). */
+    enLinea?: boolean
   }>(),
-  { textoDetalle: undefined, tono: 'normal', compacta: false },
+  { textoDetalle: undefined, tono: 'normal', compacta: false, enLinea: false },
 )
 
 const valor = computed(() => pegarCifras(props.textoValor))
@@ -25,7 +27,10 @@ const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.text
 <template>
   <div
     class="tarjeta-de-cifra"
-    :class="[`tarjeta-de-cifra--${tono}`, { 'tarjeta-de-cifra--compacta': compacta }]"
+    :class="[
+      `tarjeta-de-cifra--${tono}`,
+      { 'tarjeta-de-cifra--compacta': compacta, 'tarjeta-de-cifra--en-linea': enLinea },
+    ]"
   >
     <!-- Título y cifra en UN párrafo: el lector de pantalla lee "Hoy ganaste S/ 48.20" de una
          vez, no dos datos sueltos. El espacio explícito los separa también al leerlos. -->
@@ -90,6 +95,16 @@ const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.text
 }
 .tarjeta-de-cifra--compacta .detalle {
   margin-block-start: 0;
+}
+.tarjeta-de-cifra--en-linea .cifra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--espacio-2);
+}
+.tarjeta-de-cifra--en-linea .valor {
+  font-size: 1.4rem;
 }
 .tarjeta-de-cifra--exito {
   border-left-color: var(--color-exito);

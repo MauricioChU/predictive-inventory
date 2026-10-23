@@ -1,7 +1,11 @@
 import type { Instante } from '@/shared/domain/fecha'
 import type { ProductoResumido } from '@/shared/contratos/entre-modulos'
 import type { LineaPedida } from '../domain/carrito'
-import { mensajeCambioDePrecio, mensajeDeSobrecompra } from '../domain/mensajes'
+import {
+  avisoDeSobrecompra,
+  mensajeCambioDePrecio,
+  type AvisoDeSobrecompra,
+} from '../domain/mensajes'
 import { Operacion, type LineaConCosto } from '../domain/operacion'
 import { fusionarLineas, leerCantidad, leerCosto, validarCantidad } from '../domain/reglas'
 import {
@@ -21,9 +25,12 @@ export interface DatosDeIngreso {
   actualizarPreciosDeCompra?: boolean
 }
 
+/** RN-OP-20: el aviso de una línea del ingreso. */
+export type AvisoDeLinea = AvisoDeSobrecompra & { productoId: string }
+
 export type RespuestaDeIngreso =
   | { tipo: 'hecho'; operacionId: string }
-  | { tipo: 'aviso-sobrecompra'; avisos: { productoId: string; mensaje: string }[] }
+  | { tipo: 'aviso-sobrecompra'; avisos: AvisoDeLinea[] }
   | { tipo: 'confirmar-precios'; cambios: { productoId: string; mensaje: string }[] }
 
 /** RN-OP-20: el aviso no bloquea. */
@@ -85,15 +92,15 @@ export async function registrarIngreso(
 async function avisosDeSobrecompra(
   ctx: ContextoDeInventario,
   lineas: readonly LineaDeIngreso[],
-): Promise<{ productoId: string; mensaje: string }[]> {
+): Promise<AvisoDeLinea[]> {
   const { diasMaximosDeCompra } = await ctx.tienda().configuracion()
-  const avisos: { productoId: string; mensaje: string }[] = []
+  const avisos: AvisoDeLinea[] = []
   for (const linea of lineas) {
     const situacion = await ctx.analisis().situacion(linea.productoId)
-    const mensaje =
+    const aviso =
       situacion &&
-      mensajeDeSobrecompra(linea.producto, situacion, linea.cantidad, diasMaximosDeCompra)
-    if (mensaje) avisos.push({ productoId: linea.productoId, mensaje })
+      avisoDeSobrecompra(linea.producto, situacion, linea.cantidad, diasMaximosDeCompra)
+    if (aviso) avisos.push({ productoId: linea.productoId, ...aviso })
   }
   return avisos
 }

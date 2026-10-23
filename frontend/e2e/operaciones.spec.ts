@@ -319,7 +319,10 @@ test.describe('Llegó mercadería (HU-OP-03, HU-OP-09)', () => {
     await page.getByRole('button', { name: 'Registrar llegada' }).click()
 
     const dialogo = page.getByRole('dialog')
-    await expect(dialogo).toContainText('Escoba no se vende hace 45 días y aún tienes 5 unid.')
+    await expect(dialogo).toContainText('Esto es más de lo que necesitas')
+    await expect(dialogo).toContainText('Escoba')
+    await expect(dialogo).toContainText('No se vende hace 45 días')
+    await expect(dialogo).toContainText('Aún tienes 5 unid.')
     await dialogo.getByRole('button', { name: 'Cambiar cantidad' }).click()
     await expect(dialogo).toBeHidden()
     await expect(lineaDe(page, 'Escoba').getByLabel('Cantidad (unid.)')).toBeFocused()

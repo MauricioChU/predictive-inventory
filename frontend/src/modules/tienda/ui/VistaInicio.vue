@@ -68,16 +68,24 @@ function cerrarMovimientos(): void {
 /** Plan 20: el nombre de la tienda en mayúsculas (el guardado no cambia); sin nombre, solo "Inicio". */
 const encabezado = computed(() => nombreTienda.value.trim().toLocaleUpperCase('es') || 'Inicio')
 
-/** RN-AN-03: la ganancia neta de hoy (o la pérdida, dicha como tal) y las ventas. */
-const cifraDeHoy = computed(() => {
+/**
+ * RN-AN-03: lo cobrado hoy ("Total vendido") y encima la ganancia real: la neta de hoy (o la
+ * pérdida, dicha como tal). "Todavía no hay ventas hoy" se dice una sola vez, en el total.
+ */
+const cifrasDeHoy = computed(() => {
   if (!deHoy.value) return null
   const { ganancia, ventas } = deHoy.value
   const perdio = ganancia.esNegativo()
   return {
-    titulo: perdio ? 'Hoy perdiste' : 'Hoy ganaste',
-    valor: formatearDinero(perdio ? ganancia.negar() : ganancia),
-    detalle: ventas.esCero() ? 'Todavía no hay ventas hoy' : `Vendiste ${formatearDinero(ventas)}`,
-    tono: perdio ? ('peligro' as const) : ('normal' as const),
+    vendido: {
+      valor: formatearDinero(ventas),
+      detalle: ventas.esCero() ? 'Todavía no hay ventas hoy' : undefined,
+    },
+    ganancia: {
+      titulo: perdio ? 'Pérdida real' : 'Ganancia real',
+      valor: formatearDinero(perdio ? ganancia.negar() : ganancia),
+      tono: perdio ? ('peligro' as const) : ('normal' as const),
+    },
   }
 })
 
@@ -157,15 +165,22 @@ function verLoQueSeAcaba(): void {
       la izquierda y lo que hay que hacer a la derecha.
     -->
     <div class="cuerpo" :inert="movimientosAbiertos ? true : undefined">
-      <TarjetaDeCifra
-        v-if="cifraDeHoy"
-        class="cifra"
-        compacta
-        :titulo="cifraDeHoy.titulo"
-        :texto-valor="cifraDeHoy.valor"
-        :texto-detalle="cifraDeHoy.detalle"
-        :tono="cifraDeHoy.tono"
-      />
+      <div v-if="cifrasDeHoy" class="cifra cifras-de-hoy">
+        <TarjetaDeCifra
+          compacta
+          en-linea
+          titulo="Total vendido"
+          :texto-valor="cifrasDeHoy.vendido.valor"
+          :texto-detalle="cifrasDeHoy.vendido.detalle"
+        />
+        <TarjetaDeCifra
+          compacta
+          en-linea
+          :titulo="cifrasDeHoy.ganancia.titulo"
+          :texto-valor="cifrasDeHoy.ganancia.valor"
+          :tono="cifrasDeHoy.ganancia.tono"
+        />
+      </div>
 
       <div v-if="atencion" class="atencion">
         <EstadoVacio
@@ -292,6 +307,12 @@ h1 {
    elemento pegajoso no sale de la caja de su padre). */
 .acciones {
   display: contents;
+}
+/* Las dos cifras de hoy, apiladas, compactas y cada una en una línea (Inicio entra en una pantalla). */
+.cifra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
 }
 /* Celular: "Vender" queda pegado sobre la navegación (--alto-pie, medido en vivo) mientras su
    lugar está más abajo; al llegar a él, sigue en su sitio. El primero de las acciones lleva

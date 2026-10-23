@@ -39,7 +39,7 @@ Cada sección con poca información muestra un mensaje claro en lugar de quedar 
 |---|---|
 | **RN-AN-01** | Los cálculos consideran solo operaciones **no anuladas** y excluyen las anulaciones (RN-OP-17). Los días se cuentan en la zona horaria de la tienda. Un **día completo** es cualquier día anterior a hoy. |
 | **RN-AN-02** | Para un periodo: **Ventas** = suma de importes de venta. **Costo de lo vendido** = suma de costo × cantidad de las ventas. **Ganancia bruta** = ventas − costo de lo vendido. **Pérdidas por merma** = suma de costo × cantidad de las mermas. **Ganancia neta** = ganancia bruta − pérdidas por merma. **Diferencias de conteo** = suma de costo × cantidad (con signo) de los ajustes, mostrada aparte y sin afectar la ganancia. Todo redondeado al céntimo por línea (RN-OP-12). |
-| **RN-AN-03** | **Inicio** muestra la ganancia neta y las ventas de **hoy**. La Torre de control permite elegir el periodo: Hoy, Ayer, Últimos 7 días (incluye hoy) y Últimos 30 días (incluye hoy). |
+| **RN-AN-03** | **Inicio** muestra dos cifras de **hoy**: *Total vendido* (lo cobrado) y, debajo, *Ganancia real* (la ganancia neta; con pérdida, *Pérdida real*). "Todavía no hay ventas hoy" se dice una sola vez, en el total. La Torre de control permite elegir el periodo: Hoy, Ayer, Últimos 7 días (incluye hoy) y Últimos 30 días (incluye hoy). |
 
 ### Predicción
 

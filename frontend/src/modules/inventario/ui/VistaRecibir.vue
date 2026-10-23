@@ -11,6 +11,7 @@ import {
   plural,
 } from '@/shared/domain/formato'
 import { useAnunciador } from '@/shared/ui/anunciador'
+import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
 import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
 import BarraDeTotal from '@/shared/ui/componentes/BarraDeTotal.vue'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
@@ -43,7 +44,9 @@ import { usarDeshacer } from './usar-deshacer'
  */
 type Paso = 'carrito' | 'exito'
 type Aviso = { productoId: string; mensaje: string }
-type Dialogo = { tipo: 'sobrecompra'; avisos: Aviso[] } | { tipo: 'precios'; cambios: Aviso[] }
+type AvisoConFila = Aviso & { nombre: string; lineas: string[] }
+type Dialogo =
+  { tipo: 'sobrecompra'; avisos: AvisoConFila[] } | { tipo: 'precios'; cambios: Aviso[] }
 type Respuestas = Pick<DatosDeIngreso, 'confirmarSobrecompra' | 'actualizarPreciosDeCompra'>
 
 const aplicacion = useAplicacion()
@@ -82,7 +85,7 @@ function nombreDe(productoId: string): string {
 const textoDelDialogo = computed(() => {
   const actual = dialogo.value
   if (!actual) return ''
-  if (actual.tipo === 'sobrecompra') return actual.avisos.map((a) => a.mensaje).join(' ')
+  if (actual.tipo === 'sobrecompra') return ''
   if (actual.cambios.length === 1) return actual.cambios[0]!.mensaje
   return actual.cambios.map((c) => `${nombreDe(c.productoId)}: ${c.mensaje}`).join(' ')
 })
@@ -427,13 +430,20 @@ watch(
 
       <DialogoConfirmacion
         :abierto="dialogo?.tipo === 'sobrecompra'"
-        titulo="Revisa antes de registrar"
-        :mensaje="dialogo?.tipo === 'sobrecompra' ? textoDelDialogo : ''"
+        titulo="Esto es más de lo que necesitas"
         texto-confirmar="Registrar igual"
         texto-cancelar="Cambiar cantidad"
         @confirmar="registrarIgual"
         @cancelar="cambiarCantidad"
-      />
+      >
+        <!-- Una fila por producto: nombre en negrita y, debajo, qué pasa y qué conviene. -->
+        <ul v-if="dialogo?.tipo === 'sobrecompra'" class="avisos-de-compra">
+          <li v-for="a in dialogo.avisos" :key="a.productoId">
+            <strong>{{ pegarCifras(a.nombre) }}</strong>
+            <span v-for="linea in a.lineas" :key="linea">{{ pegarCifras(linea) }}</span>
+          </li>
+        </ul>
+      </DialogoConfirmacion>
       <DialogoConfirmacion
         :abierto="dialogo?.tipo === 'precios'"
         :titulo="tituloDePrecios"
@@ -469,6 +479,27 @@ watch(
 }
 .avisos:not(:empty) {
   margin-bottom: var(--espacio-4);
+}
+.avisos-de-compra {
+  display: grid;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.avisos-de-compra li {
+  display: grid;
+  gap: 0.1em;
+  line-height: 1.3;
+  padding-bottom: var(--espacio-3);
+  border-bottom: 1px solid var(--color-borde);
+}
+.avisos-de-compra li:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.avisos-de-compra span {
+  color: var(--color-texto-suave);
 }
 .accion-exito {
   margin-top: var(--espacio-4);
