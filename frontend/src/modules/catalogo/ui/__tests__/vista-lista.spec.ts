@@ -28,9 +28,30 @@ async function buscar(w: VueWrapper, texto: string) {
   await esperar()
 }
 
-async function elegirEstado(w: VueWrapper, etiqueta: string) {
-  await boton(w, etiqueta).trigger('click')
+/** Abre la hoja de filtros (si no está abierta). */
+async function abrirFiltros(w: VueWrapper) {
+  if (w.find('.hoja-inferior').exists()) return
+  const abrir = w.findAll('button').find((b) => b.text().trim().startsWith('Filtros'))
+  if (!abrir) throw new Error('No hay botón "Filtros"')
+  await abrir.trigger('click')
   await esperar()
+}
+
+/** Elige una opción dentro de la hoja de filtros (abriéndola antes). */
+async function elegirOpcion(w: VueWrapper, etiqueta: string) {
+  await abrirFiltros(w)
+  const opcion = w
+    .findAll('.hoja-inferior [role="radio"]')
+    .find((o) => o.text().trim() === etiqueta)
+  if (!opcion) throw new Error(`No hay una opción "${etiqueta}"`)
+  await opcion.trigger('click')
+  await esperar()
+}
+const elegirEstado = elegirOpcion
+
+/** Los chips de lo activo, debajo del buscador. */
+function chips(w: VueWrapper): string[] {
+  return w.findAll('.chips .chip-texto').map((c) => c.text())
 }
 
 describe('Productos (lista)', () => {
@@ -92,7 +113,10 @@ describe('Productos (lista)', () => {
     expect(w.findAll('button').some((b) => b.text().trim() === 'Agregar producto')).toBe(false)
 
     await boton(w, 'Agregar el primero').trigger('click')
-    await esperarRuta(vista.router, 'producto-nuevo')
+    await esperar()
+    // El formulario abre en una hoja, sin salir de la lista.
+    expect(w.get('.hoja-inferior h2').text()).toBe('Producto nuevo')
+    expect(vista.router.currentRoute.value.name).toBe('productos')
   })
 
   it('cada fila: foto, nombre, stock con unidad, precio y estado con texto (los archivados no)', async () => {
@@ -178,15 +202,23 @@ describe('Productos (lista)', () => {
     ).toHaveLength(1)
     expect(vista.wrapper.find('.accion-principal').exists()).toBe(false)
     await boton(vista.wrapper, 'Agregar producto').trigger('click')
-    await esperarRuta(vista.router, 'producto-nuevo')
-    expect(vista.router.currentRoute.value.query).toEqual({ nombre: 'shampoo' })
+    await esperar()
+    expect(vista.wrapper.get('.hoja-inferior h2').text()).toBe('Producto nuevo')
+    expect(
+      (vista.wrapper.get('.hoja-inferior input[type="text"]').element as HTMLInputElement).value,
+    ).toBe('shampoo')
+    expect(vista.router.currentRoute.value.name).toBe('productos')
   })
 
   it('filtros por estado: Se acaban · Queda poco · Agotados · Archivados', async () => {
     await conProductos()
     vista = await montarVista(app, '/productos')
     const w = vista.wrapper
-    const opciones = w.findAll('[role="radiogroup"] [role="radio"]').map((o) => o.text())
+    await abrirFiltros(w)
+    const opciones = w
+      .get('.hoja-inferior [role="radiogroup"]')
+      .findAll('[role="radio"]')
+      .map((o) => o.text())
     expect(opciones).toEqual(['Todos', 'Se acaban', 'Queda poco', 'Agotados', 'Archivados'])
 
     await elegirEstado(w, 'Se acaban')
@@ -200,22 +232,26 @@ describe('Productos (lista)', () => {
     expect(nombres(w)).toEqual(['Bolsa chica'])
     expect(w.get('.tarjeta-de-producto').text()).toContain('Archivado')
     expect(w.find('.insignia').exists()).toBe(false)
+    expect(chips(w)).toEqual(['Archivados'])
   })
 
   it('RN-CAT-16: /productos?estado=se-acaban abre la lista ya filtrada', async () => {
     await conProductos()
     vista = await montarVista(app, '/productos?estado=se-acaban')
     const w = vista.wrapper
-    expect(w.get('[role="radio"][aria-checked="true"]').text()).toBe('Se acaban')
+    expect(chips(w)).toEqual(['Se acaban'])
+    expect(w.get('.boton-filtros').text()).toContain('Filtros · 1 activo')
     expect(nombres(w).sort()).toEqual(['Carbón vegetal', 'Lejía Tradicional 1 L'])
     await elegirEstado(w, 'Todos')
     expect(nombres(w)).toHaveLength(3)
+    expect(chips(w)).toEqual([])
   })
 
   it('RN-CAT-16: un estado desconocido en la dirección se ignora', async () => {
     await conProductos()
     vista = await montarVista(app, '/productos?estado=otra-cosa')
-    expect(vista.wrapper.get('[role="radio"][aria-checked="true"]').text()).toBe('Todos')
+    expect(chips(vista.wrapper)).toEqual([])
+    expect(vista.wrapper.get('.boton-filtros').text()).toBe('Filtros')
   })
 
   it('un filtro sin productos lo explica y "Ver todos" lo quita', async () => {
@@ -227,26 +263,45 @@ describe('Productos (lista)', () => {
     await boton(w, 'Ver todos').trigger('click')
     await esperar()
     expect(nombres(w)).toEqual(['Escoba'])
-    expect(w.get('[role="radio"][aria-checked="true"]').text()).toBe('Todos')
+    expect(chips(w)).toEqual([])
   })
 
-  it('filtro por categoría: se abre con un botón y la elegida se ve en el botón', async () => {
+  it('filtro por categoría: lista tocable en la hoja; la elegida queda como chip quitable', async () => {
     await conProductos()
     vista = await montarVista(app, '/productos')
     const w = vista.wrapper
-    const abrir = boton(w, 'Categoría: Todas')
-    expect(abrir.attributes('aria-expanded')).toBe('false')
-    await abrir.trigger('click')
-    expect(abrir.attributes('aria-expanded')).toBe('true')
-    const categorias = w.findAll('.filtro-de-categoria [role="radio"]').map((o) => o.text())
+    expect(w.find('.hoja-inferior').exists()).toBe(false)
+    await abrirFiltros(w)
+    const grupos = w.findAll('.hoja-inferior [role="radiogroup"]')
+    const categorias = grupos[1]!.findAll('[role="radio"]').map((o) => o.text())
     expect(categorias[0]).toBe('Todas las categorías')
     expect(categorias.at(-1)).toBe('Otros')
 
-    await boton(w, 'Carbón y combustibles').trigger('click')
-    await esperar()
+    await elegirOpcion(w, 'Carbón y combustibles')
     expect(nombres(w)).toEqual(['Carbón vegetal'])
-    expect(boton(w, 'Categoría: Carbón y combustibles').attributes('aria-expanded')).toBe('false')
-    expect(w.findAll('.filtro-de-categoria [role="radio"]')).toHaveLength(0)
+    expect(chips(w)).toEqual(['Carbón y combustibles'])
+    expect(w.get('.boton-filtros').text()).toContain('Filtros · 1 activo')
+    // El botón de abajo dice cuántos productos se ven.
+    expect(w.get('.hoja-inferior .pie').text()).toBe('Ver 1 producto')
+
+    // Cerrar la hoja y quitar el chip: vuelve a todos.
+    await w.get('.hoja-inferior .pie button').trigger('click')
+    await esperar()
+    expect(w.find('.hoja-inferior').exists()).toBe(false)
+    await w.get('.chips .chip').trigger('click')
+    await esperar()
+    expect(nombres(w)).toHaveLength(3)
+    expect(chips(w)).toEqual([])
+  })
+
+  it('con los dos filtros puestos el botón dice "Filtros · 2" y hay dos chips', async () => {
+    await conProductos()
+    vista = await montarVista(app, '/productos')
+    const w = vista.wrapper
+    await elegirOpcion(w, 'Se acaban')
+    await elegirOpcion(w, 'Carbón y combustibles')
+    expect(w.get('.boton-filtros').text()).toContain('Filtros · 2 activos')
+    expect(chips(w)).toEqual(['Se acaban', 'Carbón y combustibles'])
   })
 
   it('tocar un producto abre su detalle; "Agregar producto" abre el formulario', async () => {
@@ -261,8 +316,12 @@ describe('Productos (lista)', () => {
     await vista.router.push('/productos')
     await esperar()
     await boton(vista.wrapper, 'Agregar producto').trigger('click')
-    await esperarRuta(vista.router, 'producto-nuevo')
-    expect(vista.router.currentRoute.value.query).toEqual({})
+    await esperar()
+    // "Agregar producto" abre la hoja (no cambia de pantalla), sin encabezado propio del formulario.
+    expect(vista.router.currentRoute.value.name).toBe('productos')
+    expect(vista.wrapper.get('.hoja-inferior h2').text()).toBe('Producto nuevo')
+    expect(vista.wrapper.findAll('.hoja-inferior h1')).toHaveLength(0)
+    expect(vista.wrapper.find('.hoja-inferior form').exists()).toBe(true)
   })
 
   async function filtrarYSalir(w: VueWrapper) {
@@ -273,7 +332,7 @@ describe('Productos (lista)', () => {
   function filtrosPuestos(w: VueWrapper) {
     return {
       texto: (w.get('input[type="search"]').element as HTMLInputElement).value,
-      estado: w.get('[role="radio"][aria-checked="true"]').text(),
+      chips: chips(w),
       productos: nombres(w).length,
     }
   }
@@ -289,7 +348,7 @@ describe('Productos (lista)', () => {
     expect((vista.wrapper.get('input[type="search"]').element as HTMLInputElement).value).toBe(
       'lejia',
     )
-    expect(vista.wrapper.get('[role="radio"][aria-checked="true"]').text()).toBe('Queda poco')
+    expect(chips(vista.wrapper)).toEqual(['Queda poco'])
     expect(nombres(vista.wrapper)).toEqual(['Lejía Tradicional 1 L'])
   })
 
@@ -301,18 +360,37 @@ describe('Productos (lista)', () => {
     await esperarRuta(vista.router, 'producto')
     await vista.router.push('/productos')
     await esperar()
-    expect(filtrosPuestos(vista.wrapper)).toEqual({ texto: '', estado: 'Todos', productos: 3 })
+    expect(filtrosPuestos(vista.wrapper)).toEqual({ texto: '', chips: [], productos: 3 })
   })
 
-  it('después de crear un producto la lista empieza sin filtros (que no lo escondan)', async () => {
+  it('después de guardar un producto nuevo en la hoja la lista deja los filtros (que no lo escondan)', async () => {
     await conProductos()
     vista = await montarVista(app, '/productos', { historial: 'web' })
-    await filtrarYSalir(vista.wrapper)
-    await boton(vista.wrapper, 'Agregar producto').trigger('click')
-    await esperarRuta(vista.router, 'producto-nuevo')
-    vista.router.back()
-    await esperarRuta(vista.router, 'productos')
-    expect(filtrosPuestos(vista.wrapper)).toEqual({ texto: '', estado: 'Todos', productos: 3 })
+    const w = vista.wrapper
+    await elegirEstado(w, 'Queda poco')
+    await w.get('.hoja-inferior .pie button').trigger('click')
+    await esperar()
+    await boton(w, 'Agregar producto').trigger('click')
+    await esperar()
+    await w.get('.hoja-inferior input[type="text"]').setValue('Cera para pisos')
+    const categoria = w
+      .findAll('.hoja-inferior [role="radio"]')
+      .find((o) => o.text().trim() === 'Otros')!
+    await categoria.trigger('click')
+    const numeros = w.findAll(
+      '.hoja-inferior input[inputmode="decimal"], .hoja-inferior input[type="number"]',
+    )
+    expect(numeros.length).toBeGreaterThan(1)
+    await numeros[0]!.setValue('5')
+    await numeros[1]!.setValue('8')
+    await w.get('.hoja-inferior form').trigger('submit')
+    await esperar()
+    await esperar()
+    expect(w.get('.hoja-inferior').text()).toContain('Producto guardado')
+    expect(chips(w)).toEqual([])
+    expect(w.findAll('.hoja-inferior button').some((b) => b.text().includes('Agregar otro'))).toBe(
+      true,
+    )
   })
 
   it('"Categorías" abre la pantalla de categorías', async () => {
