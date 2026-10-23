@@ -64,6 +64,10 @@ Para registrar algo con varias líneas (Vender, Llegó mercadería).
 - − / + con *Quitar* al lado. En Vender el + se detiene en el stock.
 - Formularios en línea (cambiar precio, otro precio) con *Guardar* y *Cancelar*; mientras están abiertos, *Quitar* se oculta.
 
+## Diálogo con lista — `DialogoConfirmacion.vue` con slot
+
+Cuando hay varios productos que revisar (aviso de sobrecompra en Llegó mercadería), el diálogo no junta todo en un párrafo: sin `mensaje`, el slot lleva una lista, **una fila por producto** (nombre en negrita y debajo, en color suave, una o dos frases cortas con `pegarCifras`), separadas por una raya fina. El título dice el hecho en tono amable y los dos botones (cancelar y confirmar) quedan iguales, apilados.
+
 ## Fila de aviso — `FilaDeAviso.vue`
 
 Para avisos que no deben alargar la pantalla (Inicio).

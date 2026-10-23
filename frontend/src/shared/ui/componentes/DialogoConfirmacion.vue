@@ -6,7 +6,8 @@ const props = withDefaults(
   defineProps<{
     abierto: boolean
     titulo: string
-    mensaje: string
+    /** El texto del diálogo. Con el slot por defecto (contenido propio, p. ej. una lista) puede ir vacío. */
+    mensaje?: string
     textoConfirmar: string
     textoCancelar?: string
     peligro?: boolean
@@ -23,7 +24,13 @@ const props = withDefaults(
      */
     cierreNativo?: 'cancelar' | 'cerrar'
   }>(),
-  { textoCancelar: 'Cancelar', peligro: false, enfocar: 'cancelar', cierreNativo: 'cancelar' },
+  {
+    mensaje: '',
+    textoCancelar: 'Cancelar',
+    peligro: false,
+    enfocar: 'cancelar',
+    cierreNativo: 'cancelar',
+  },
 )
 const emit = defineEmits<{ confirmar: []; cancelar: []; cerrar: [] }>()
 
@@ -88,13 +95,17 @@ function alCancelarNativo(evento: Event) {
     :inert="!abierto"
     :aria-hidden="abierto ? undefined : 'true'"
     :aria-labelledby="idTitulo"
-    :aria-describedby="idMensaje"
+    :aria-describedby="mensaje || $slots.default ? idMensaje : undefined"
     @cancel="alCancelarNativo"
   >
     <!-- Mientras se va (animación de salida) ya no cuenta para teclado ni lector: inert + aria-hidden. -->
     <!-- Plan 12: "S/ 2.60" o "1 L" nunca se parten en dos líneas (RN-UX-09). -->
     <h2 :id="idTitulo">{{ pegarCifras(titulo) }}</h2>
-    <p :id="idMensaje">{{ pegarCifras(mensaje) }}</p>
+    <p v-if="mensaje" :id="idMensaje">{{ pegarCifras(mensaje) }}</p>
+    <!-- Contenido propio (una lista): es la descripción del diálogo. -->
+    <div v-if="$slots.default" :id="idMensaje" class="contenido">
+      <slot />
+    </div>
     <div class="acciones">
       <button ref="botonCancelar" type="button" class="cancelar" @click="emit('cancelar')">
         {{ textoCancelar }}
@@ -130,6 +141,9 @@ h2 {
 p {
   margin: 0 0 var(--espacio-5);
   color: var(--color-texto-suave);
+}
+.contenido {
+  margin: 0 0 var(--espacio-5);
 }
 .acciones {
   display: flex;

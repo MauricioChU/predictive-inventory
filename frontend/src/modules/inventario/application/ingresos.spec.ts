@@ -224,6 +224,8 @@ describe('registrarIngreso', () => {
           {
             productoId: 'lejia',
             mensaje: 'Con esto tendrías Lejía 1 L para ~60 días. Te sugerimos ~7 unid.',
+            nombre: 'Lejía 1 L',
+            lineas: ['Llegan 110 unid. → te alcanzan ~60 días', 'Te sugerimos ~7 unid.'],
           },
         ],
       })
@@ -246,6 +248,8 @@ describe('registrarIngreso', () => {
           {
             productoId: 'carbon',
             mensaje: 'Con esto tendrías Carbón para ~60 días. Ahora no necesitabas comprar.',
+            nombre: 'Carbón',
+            lineas: ['Llegan 5 kg → te alcanzan ~60 días', 'No necesitabas comprar'],
           },
         ],
       })
@@ -263,7 +267,12 @@ describe('registrarIngreso', () => {
       expect(respuesta).toEqual({
         tipo: 'aviso-sobrecompra',
         avisos: [
-          { productoId: 'escoba', mensaje: 'Escoba no se vende hace 45 días y aún tienes 4 unid.' },
+          {
+            productoId: 'escoba',
+            mensaje: 'Escoba no se vende hace 45 días y aún tienes 4 unid.',
+            nombre: 'Escoba',
+            lineas: ['No se vende hace 45 días', 'Aún tienes 4 unid.'],
+          },
         ],
       })
     })
@@ -353,6 +362,8 @@ describe('registrarIngreso', () => {
           {
             productoId: 'lejia',
             mensaje: 'Con esto tendrías Lejía 1 L para ~50 días. Te sugerimos ~7 unid.',
+            nombre: 'Lejía 1 L',
+            lineas: ['Llegan 90 unid. → te alcanzan ~50 días', 'Te sugerimos ~7 unid.'],
           },
         ],
       })

@@ -286,8 +286,14 @@ describe('Llegó mercadería (HU-OP-03)', () => {
       await cantidad(p, 0, '2')
       await registrar(p)
       const dialogo = dialogoAbierto(p)
-      expect(dialogo.get('h2').text()).toBe('Revisa antes de registrar')
-      expect(leer(dialogo.get('p'))).toBe('Escoba no se vende hace 45 días y aún tienes 4 unid.')
+      expect(dialogo.get('h2').text()).toBe('Esto es más de lo que necesitas')
+      const filas = dialogo.findAll('li')
+      expect(filas).toHaveLength(1)
+      expect(leer(filas[0]!.get('strong'))).toBe('Escoba')
+      expect(filas[0]!.findAll('span').map((f) => leer(f))).toEqual([
+        'No se vende hace 45 días',
+        'Aún tienes 4 unid.',
+      ])
       expect(dialogo.findAll('button').map((b) => b.text())).toEqual([
         'Cambiar cantidad',
         'Registrar igual',

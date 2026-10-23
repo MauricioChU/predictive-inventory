@@ -43,8 +43,8 @@ Patrones de diseño reutilizables (hoja inferior, panel de carrito, fila de avis
 │ BODEGA ROSITA            ⚙  │
 │ LUNES 19 DE OCTUBRE          │
 │ ┌──────────────────────────┐ │
-│ │ Hoy ganaste  S/ 48.20    │ │
-│ │ Vendiste     S/ 162.50   │ │
+│ │ Total vendido S/ 162.50  │ │
+│ │ Ganancia real S/ 48.20   │ │
 │ └──────────────────────────┘ │
 │ ┌ 🟠 4 productos se acaban  ›┐ │
 │                              │
