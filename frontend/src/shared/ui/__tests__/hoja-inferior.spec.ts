@@ -54,4 +54,21 @@ describe('HojaInferior', () => {
     expect(document.activeElement).toBe(boton)
     boton.remove()
   })
+
+  it('el pie queda fuera del cuerpo y su `cerrar` baja la hoja', async () => {
+    const hoja = mount(HojaInferior, {
+      props: { titulo: 'Filtros' },
+      slots: {
+        default: '<p class="dentro">Contenido</p>',
+        pie: '<template #pie="{ cerrar }"><button class="del-pie" @click="cerrar()">Listo</button></template>',
+      },
+      attachTo: document.body,
+    })
+    expect(hoja.find('.cuerpo .del-pie').exists()).toBe(false)
+    await hoja.get('.pie .del-pie').trigger('click')
+    await nextTick()
+    await nextTick()
+    expect(hoja.emitted('cerrar')).toHaveLength(1)
+    hoja.unmount()
+  })
 })

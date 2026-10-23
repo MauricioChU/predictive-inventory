@@ -4,7 +4,7 @@
 // reales y el reloj de Playwright, ver historia-de-demostracion.ts).
 import { expect, type Page } from '@playwright/test'
 import { prepararHistoriaDeDemostracion, type IdsDeDemostracion } from './historia-de-demostracion'
-import { abrir } from './navegacion'
+import { abrir, esperarQueTermineLaAnimacion } from './navegacion'
 import { agregarAlCarrito, cerrarDetalleDeVenta, lineaDelCarrito } from './recorridos'
 import { crearProducto } from './tienda'
 
@@ -149,11 +149,21 @@ export function pantallasDeLaTienda(ids: IdsDeDemostracion): Pantalla[] {
     { nombre: 'Llegó mercadería desde Para comprar', ruta: './recibir?desde=para-comprar' },
     // Productos
     {
-      nombre: 'Productos (buscando, con el filtro de categoría abierto)',
+      nombre: 'Productos (buscando, con la hoja de filtros abierta)',
       ruta: './productos',
       preparar: async (page) => {
         await page.getByLabel('Buscar producto').fill('l')
-        await page.getByRole('button', { name: /^Categoría:/ }).click()
+        await page.getByRole('button', { name: /^Filtros/ }).click()
+        await esperarQueTermineLaAnimacion(page)
+      },
+    },
+    {
+      nombre: 'Productos: hoja de producto nuevo',
+      ruta: './productos',
+      preparar: async (page) => {
+        await page.getByRole('button', { name: 'Agregar producto' }).click()
+        await expect(page.getByRole('heading', { name: 'Producto nuevo' })).toBeVisible()
+        await esperarQueTermineLaAnimacion(page)
       },
     },
     { nombre: 'Detalle de producto (con tendencia)', ruta: `./productos/${lejia}` },

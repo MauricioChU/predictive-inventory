@@ -16,8 +16,10 @@ const props = withDefaults(
     /** Enfoca el campo al aparecer. En Android eso abre el teclado: usarlo solo donde buscar
      * es lo primero que se hace (Vender, ¿Necesito comprar?). */
     autofoco?: boolean
+    /** La etiqueta sigue nombrando el campo para el lector, pero no se ve (con `marcador`). */
+    etiquetaOculta?: boolean
   }>(),
-  { marcador: undefined, autofoco: false },
+  { marcador: undefined, autofoco: false, etiquetaOculta: false },
 )
 const emit = defineEmits<{ 'update:modelValue': [valor: string]; limpiar: [] }>()
 
@@ -107,7 +109,9 @@ defineExpose({ enfocar, vaciar })
 
 <template>
   <div class="buscador-grande">
-    <label :for="id" class="etiqueta">{{ etiqueta }}</label>
+    <label :for="id" class="etiqueta" :class="{ 'solo-lector': etiquetaOculta }">{{
+      etiqueta
+    }}</label>
     <div class="fila">
       <div class="caja">
         <Search aria-hidden="true" class="lupa" />
