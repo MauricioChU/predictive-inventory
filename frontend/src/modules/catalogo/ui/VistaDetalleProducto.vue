@@ -319,15 +319,18 @@ async function cambiarSinPreguntar(id: string, nombre: string, accion: 'archivar
               tamano="grande"
             />
             <div class="stock">
-              <TarjetaDeCifra titulo="Tienes" :texto-valor="textoStock" />
+              <TarjetaDeCifra titulo="Tienes" :texto-valor="textoStock" compacta />
               <InsigniaEstado
                 v-if="producto.activo && detalle"
                 :estado="detalle.situacion.estado"
               />
-              <p v-if="producto.activo && detalle?.textoCobertura" class="cobertura">
-                {{ detalle.textoCobertura }}
-              </p>
-              <p v-if="producto.activo && detalle?.textoVentaDiaria" class="venta-diaria">
+            </div>
+            <div
+              v-if="producto.activo && (detalle?.textoCobertura || detalle?.textoVentaDiaria)"
+              class="pronostico"
+            >
+              <p v-if="detalle?.textoCobertura" class="cobertura">{{ detalle.textoCobertura }}</p>
+              <p v-if="detalle?.textoVentaDiaria" class="venta-diaria">
                 {{ detalle.textoVentaDiaria }}
               </p>
             </div>
@@ -446,7 +449,7 @@ async function cambiarSinPreguntar(id: string, nombre: string, accion: 'archivar
 <style scoped>
 .vista-detalle-producto {
   display: grid;
-  gap: var(--espacio-4);
+  gap: var(--espacio-3);
   min-inline-size: 0;
 }
 .explicacion,
@@ -462,25 +465,30 @@ async function cambiarSinPreguntar(id: string, nombre: string, accion: 'archivar
   min-inline-size: 0;
 }
 .resumen {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--espacio-4);
+  /* Foto a la izquierda, "Tienes" y el estado a su derecha; el pronóstico, debajo y compacto. */
+  display: grid;
+  grid-template-columns: min(30%, 7rem) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--espacio-2) var(--espacio-3);
 }
 .foto {
-  --foto-lado: min(100%, 10rem);
+  --foto-lado: 100%;
 }
 .stock {
   display: grid;
   gap: var(--espacio-2);
   justify-items: start;
-  flex: 1 1 12rem;
   min-inline-size: 0;
+}
+.pronostico {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0;
 }
 .cobertura,
 .venta-diaria {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
 }
 .cobertura {
   font-weight: 700;
@@ -488,10 +496,11 @@ async function cambiarSinPreguntar(id: string, nombre: string, accion: 'archivar
 .acciones-de-stock {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--separacion-toque);
+  gap: var(--espacio-2);
 }
 .acciones-de-stock > * {
-  flex: 1 1 10rem;
+  /* Lado a lado; si no entran sin partir palabras, uno bajo otro. */
+  flex: 1 1 11rem;
 }
 .seccion {
   display: grid;
