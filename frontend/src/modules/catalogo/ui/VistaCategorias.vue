@@ -225,7 +225,7 @@ async function volverACrear(nombre: string) {
 }
 .seccion h2 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.125rem;
 }
 .seccion h2:focus {
   /* Foco programático (tras eliminar), no interactivo: sin anillo. */

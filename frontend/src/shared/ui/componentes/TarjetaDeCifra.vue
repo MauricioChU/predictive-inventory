@@ -16,8 +16,10 @@ const props = withDefaults(
     compacta?: boolean
     /** Título a la izquierda y cifra a la derecha, en una sola línea (si no caben, una bajo la otra). */
     enLinea?: boolean
+    /** Más relleno y cifra más grande (solo si hay alto de sobra): sustituye a la compacta. */
+    alta?: boolean
   }>(),
-  { textoDetalle: undefined, tono: 'normal', compacta: false, enLinea: false },
+  { textoDetalle: undefined, tono: 'normal', compacta: false, enLinea: false, alta: false },
 )
 
 const valor = computed(() => pegarCifras(props.textoValor))
@@ -29,7 +31,11 @@ const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.text
     class="tarjeta-de-cifra"
     :class="[
       `tarjeta-de-cifra--${tono}`,
-      { 'tarjeta-de-cifra--compacta': compacta, 'tarjeta-de-cifra--en-linea': enLinea },
+      {
+        'tarjeta-de-cifra--compacta': compacta,
+        'tarjeta-de-cifra--en-linea': enLinea,
+        'tarjeta-de-cifra--alta': alta,
+      },
     ]"
   >
     <!-- Título y cifra en UN párrafo: el lector de pantalla lee "Hoy ganaste S/ 48.20" de una
@@ -105,6 +111,13 @@ const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.text
 }
 .tarjeta-de-cifra--en-linea .valor {
   font-size: 1.4rem;
+}
+/* Más alta, con la cifra más grande: ocupa el aire que sobra (Inicio con ventas, sin detalle). */
+.tarjeta-de-cifra--alta {
+  padding-block: var(--espacio-3);
+}
+.tarjeta-de-cifra--alta .valor {
+  font-size: 1.5rem;
 }
 .tarjeta-de-cifra--exito {
   border-left-color: var(--color-exito);

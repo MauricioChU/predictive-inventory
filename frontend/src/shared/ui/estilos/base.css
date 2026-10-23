@@ -142,3 +142,13 @@ textarea {
   font-size: 1.25rem;
   color: var(--color-texto-suave);
 }
+
+/* Título de sección (Más vendidos, "10 productos", Datos, Ajustes…): un solo tamaño y estilo en
+   todas las vistas. */
+.titulo-de-seccion {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-texto);
+}
