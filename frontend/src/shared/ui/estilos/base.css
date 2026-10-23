@@ -76,6 +76,39 @@ textarea {
 .aparece {
   animation: aparecer var(--duracion-hoja) var(--curva-hoja-entrar) both;
 }
+/* Diálogos (<dialog> nativo, clase `dialogo-animado`): el fondo se oscurece y la caja crece un
+   poco desde abajo; al cerrar, al revés. Con transiciones (no @keyframes) para que el
+   <dialog> se cierre en el acto —el foco vuelve enseguida a quien corresponda— y el
+   navegador lo mantenga visible mientras se va (`overlay` y `display` discretos). */
+.dialogo-animado,
+.dialogo-animado::backdrop {
+  opacity: 0;
+  transition:
+    opacity var(--duracion-dialogo) ease-in,
+    transform var(--duracion-dialogo) var(--curva-hoja-salir),
+    overlay var(--duracion-dialogo) allow-discrete,
+    display var(--duracion-dialogo) allow-discrete;
+}
+.dialogo-animado {
+  transform: translateY(0.75rem) scale(0.96);
+}
+.dialogo-animado[open],
+.dialogo-animado[open]::backdrop {
+  opacity: 1;
+  transition-timing-function: ease-out, var(--curva-hoja-entrar), ease-out, ease-out;
+}
+.dialogo-animado[open] {
+  transform: none;
+}
+@starting-style {
+  .dialogo-animado[open],
+  .dialogo-animado[open]::backdrop {
+    opacity: 0;
+  }
+  .dialogo-animado[open] {
+    transform: translateY(0.75rem) scale(0.96);
+  }
+}
 .velo-entra {
   animation: velo-aparecer var(--duracion-hoja) ease-out both;
 }
