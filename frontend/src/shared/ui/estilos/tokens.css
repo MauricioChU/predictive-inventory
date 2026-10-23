@@ -41,8 +41,13 @@
   --duracion-hoja: 420ms;
   --curva-hoja-entrar: cubic-bezier(0.22, 1, 0.36, 1);
   --curva-hoja-salir: cubic-bezier(0.55, 0, 0.75, 0.2);
-  /* Cambio de vista (navegación): más corta que la hoja para no frenar al usar la app. */
-  --duracion-vista: 280ms;
+  /* Cambio de vista (navegación): la que se va se desvanece rápido y la nueva entra con un
+     deslizamiento corto; así no frenan al usar la app. */
+  --duracion-vista-sale: 120ms;
+  --duracion-vista: 220ms;
+  --distancia-vista: 28px;
+  /* Diálogos: aparecen con un leve crecer y se van al revés. */
+  --duracion-dialogo: 220ms;
 }
 
 /* RN-UX-01: la base escala todo el diseño (rem). */

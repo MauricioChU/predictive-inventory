@@ -10,7 +10,8 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 - Productos: el buscador se ve igual que el de Vender («Buscar producto» arriba y el ejemplo «Por ejemplo: lejía» dentro) y el botón de filtros queda alineado con el campo.
 - Detalle de producto más compacto: «Volver» en su fila y el nombre debajo; la foto a la izquierda con «Tienes» y el estado a su derecha; el pronóstico debajo y «Contar stock» y «Registrar pérdida» más arriba, para ver todo sin desplazar.
 - «Agregar producto» abre el formulario en una hoja desde abajo, sin salir de la lista; al guardar, la confirmación se ve en la misma hoja, con un solo título. Tocar «Productos» en la navegación con una hoja abierta la cierra.
-- Al cambiar de pantalla con la navegación, la nueva entra deslizándose desde el lado de la pestaña que tocaste (y la anterior sale hacia el otro); al abrir un detalle entra desde la derecha y al volver, desde la izquierda. Con «reducir movimiento» del sistema no se anima.
+- Al cambiar de pantalla, la anterior se desvanece y la nueva entra con un deslizamiento corto desde el lado de la pestaña que tocaste; al abrir un detalle entra desde la derecha y al volver, desde la izquierda. Con «reducir movimiento» del sistema no se anima.
+- Los avisos de confirmación (archivar, restaurar, cargar datos y otros) ahora aparecen y se van con una animación suave.
 
 ## [0.5.2] · 2026-10-22
 
