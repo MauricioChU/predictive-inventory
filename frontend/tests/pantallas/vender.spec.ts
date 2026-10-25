@@ -549,8 +549,13 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     const { app, ids } = await tiendaDePrueba()
     const p = await abrirVender(app)
     await agregarBuscando(p, 'lejia', 'Lejía 1 L')
-    // Con una sola unidad no hay nada que separar (para eso está el precio de la línea).
-    expect(lineas(p)[0]!.find('.otro-precio').exists()).toBe(false)
+    // Con una sola unidad también está, pero sin «¿Cuántos?»: solo a cuánto (cambia el precio de la línea).
+    expect(lineas(p)[0]!.find('.otro-precio').exists()).toBe(true)
+    await boton(lineas(p)[0]!, '¿Vendiste alguno a otro precio?').trigger('click')
+    expect(lineas(p)[0]!.findAll('.separar input')).toHaveLength(1)
+    expect(lineas(p)[0]!.get('.separar').text()).toContain('¿A cuánto lo vendiste?')
+    expect(lineas(p)[0]!.get('.separar').text()).not.toContain('¿Cuántos?')
+    await boton(lineas(p)[0]!.get('.separar'), 'Cancelar').trigger('click')
     await cambiarCantidad(p, 0, '2')
     const linea = () => lineas(p)[0]!
 

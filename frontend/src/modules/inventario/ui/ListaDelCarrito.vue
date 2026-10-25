@@ -50,10 +50,12 @@ watch(
 )
 
 const UNA = Cantidad.deEntero(1)
-/** RN-OP-11: al vender más de una, se puede vender alguna a otro precio. Solo desde la línea
+/** RN-OP-11: al vender, se puede vender alguna (o la única) a otro precio. Solo desde la línea
  * con el precio de siempre (las de precio especial ya son la parte separada). */
 function sePuedePartir(linea: (typeof lineas.value)[number]): boolean {
-  return esVenta.value && !linea.precioCambiado && (linea.cantidadLeida?.mayorQue(UNA) ?? false)
+  return (
+    esVenta.value && !linea.precioCambiado && (linea.cantidadLeida?.mayorOIgualQue(UNA) ?? false)
+  )
 }
 
 const POR_UNIDAD = { UNIDAD: 'c/u', KILO: 'el kg', LITRO: 'el L' } as const
