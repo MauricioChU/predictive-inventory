@@ -83,8 +83,13 @@ const guardandoPrecio = ref(false)
 function pedirCambioDePrecio(linea: (typeof lineas.value)[number], texto: string): void {
   const nuevo = props.carrito.leerPrecioDelProducto(linea.id, texto)
   if (!nuevo) return
-  // El mismo precio que ya tiene el producto: no hay nada que cambiar.
-  if (nuevo.igualA(linea.producto.precioVenta)) return
+  if (nuevo.igualA(linea.producto.precioVenta)) {
+    // Una línea con precio especial vuelve al precio de siempre (se junta con la normal); si ya
+    // está al precio de siempre, no hay nada que cambiar y se dice.
+    if (linea.precioCambiado) props.carrito.cambiarPrecio(linea.id, texto)
+    else anunciador.anunciar('Ya se vende a ese precio')
+    return
+  }
   cambio.value = {
     lineaId: linea.id,
     producto: linea.producto,
@@ -113,10 +118,12 @@ async function confirmarCambioDePrecio(confirmado: boolean): Promise<void> {
       return
     }
     const actual = await aplicacion.catalogo.obtenerProducto(pedido.producto.id)
-    if (actual) props.carrito.aplicarPrecioDelProducto(pedido.lineaId, actual)
-    anunciador.anunciar(
-      `${pedido.producto.nombre} ahora se vende a ${formatearDinero(pedido.nuevo)}`,
-    )
+    if (actual) {
+      props.carrito.aplicarPrecioDelProducto(pedido.lineaId, actual, pedido.antes)
+      anunciador.anunciar(
+        `${pedido.producto.nombre} ahora se vende a ${formatearDinero(pedido.nuevo)}`,
+      )
+    }
     cancelarCambioDePrecio()
   } catch (error) {
     console.error('No se pudo cambiar el precio del producto:', error)

@@ -74,4 +74,16 @@ describe('CarruselDeAvisos', () => {
     expect(carrusel.text()).toContain('4 productos se acaban')
     expect(carrusel.find(SIGUIENTE).exists()).toBe(false)
   })
+
+  it('si bajan a un aviso con el foco en «siguiente», el foco pasa al bloque', async () => {
+    const carrusel = mount(CarruselDeAvisos, {
+      props: { avisos: TRES, etiqueta: 'Avisos' },
+      attachTo: document.body,
+    })
+    ;(carrusel.get(SIGUIENTE).element as HTMLElement).focus()
+    await carrusel.setProps({ avisos: [TRES[0]!] })
+    await carrusel.vm.$nextTick()
+    expect(document.activeElement).toBe(carrusel.get('button.aviso').element)
+    carrusel.unmount()
+  })
 })

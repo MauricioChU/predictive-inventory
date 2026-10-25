@@ -127,6 +127,38 @@ describe('carrito de pantalla', () => {
     ])
   })
 
+  describe('RN-OP-11: el lápiz cambia el precio del producto', () => {
+    const NUEVO = producto('lejia', 'Lejía 1 L', { precioVenta: Dinero.deTexto('4.00') })
+
+    it('la línea tocada y las del precio de siempre toman el precio nuevo; un especial se queda', () => {
+      const carrito = usarCarrito('venta')
+      const normal = carrito.agregar(LEJIA)
+      carrito.cambiarCantidad(normal, '3')
+      carrito.cambiarPrecio(normal, '3.00', '1') // 2 a 3.50 y 1 a 3.00 (especial)
+      carrito.aplicarPrecioDelProducto(normal, NUEVO, LEJIA.precioVenta)
+      const precios = carrito.lineas.value.map((l) => [l.precio.centimos, l.precioCambiado])
+      expect(precios).toEqual([
+        [400, false],
+        [300, true],
+      ])
+    })
+
+    it('si la línea tocada se quitó mientras se guardaba, las demás del producto igual se ponen al día', () => {
+      const carrito = usarCarrito('venta')
+      const normal = carrito.agregar(LEJIA)
+      carrito.cambiarCantidad(normal, '3')
+      carrito.cambiarPrecio(normal, '3.00', '1')
+      const [, especial] = carrito.lineas.value
+      carrito.quitar(especial!.id)
+      carrito.aplicarPrecioDelProducto(especial!.id, NUEVO, LEJIA.precioVenta)
+      const [unica] = carrito.lineas.value
+      expect(carrito.lineas.value).toHaveLength(1)
+      expect(unica!.precio.centimos).toBe(400)
+      expect(unica!.producto.precioVenta.centimos).toBe(400)
+      expect(unica!.precioCambiado).toBe(false)
+    })
+  })
+
   describe('RN-OP-11: precio distinto para parte de las unidades', () => {
     function conCinco() {
       const carrito = usarCarrito('venta')

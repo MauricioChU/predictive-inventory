@@ -311,13 +311,12 @@ export function usarCarrito(concepto: Concepto) {
      * nuevo (sin marca de «Precio especial») y también las del mismo producto que llevaban el
      * precio de siempre; un precio especial de otra línea se queda. Las líneas iguales se juntan.
      */
-    aplicarPrecioDelProducto(id: string, actual: ProductoVista): void {
-      const tocada = buscar(id)
-      if (!tocada) return
-      const anterior = tocada.producto.precioVenta
+    aplicarPrecioDelProducto(lineaId: string, actual: ProductoVista, anterior: Dinero): void {
+      // Por producto, no por línea: si la línea tocada se quitó mientras se guardaba, las demás
+      // del mismo producto igual se ponen al día.
       for (const linea of lineas.value) {
         if (linea.producto.id !== actual.id) continue
-        if (linea.id === id || linea.precio.igualA(anterior)) linea.precio = actual.precioVenta
+        if (linea.id === lineaId || linea.precio.igualA(anterior)) linea.precio = actual.precioVenta
         linea.producto = actual
       }
       juntarIguales()

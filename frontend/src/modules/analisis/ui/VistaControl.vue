@@ -183,6 +183,11 @@ const semana = computed(() => {
   }
 })
 
+/** Solo la métrica elegida (Ventas o Ganancia): un gráfico a la vez. */
+const filasDeSemana = computed(
+  () => semana.value?.filas.filter((f) => f.concepto === metricaDeSemana.value) ?? [],
+)
+
 const mejorDia = computed(() => {
   const m = mostrado.value?.torre.mejorDia
   if (!m) return null
@@ -359,11 +364,7 @@ function irA(nombre: 'alquiler-del-local'): void {
                 etiqueta="Qué comparar"
                 etiqueta-oculta
               />
-              <div
-                v-for="fila in semana.filas.filter((f) => f.concepto === metricaDeSemana)"
-                :key="fila.concepto"
-                class="comparacion"
-              >
+              <div v-for="fila in filasDeSemana" :key="fila.concepto" class="comparacion">
                 <h3>{{ fila.concepto }}</h3>
                 <p class="cambio" :class="`cambio--${fila.cambio.tono}`">
                   <span class="flecha" aria-hidden="true">{{ fila.cambio.flecha }}</span>

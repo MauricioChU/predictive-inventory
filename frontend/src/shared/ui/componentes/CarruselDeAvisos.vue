@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { ChevronRight, CircleCheck, Info, TriangleAlert } from 'lucide-vue-next'
 import { pegarCifras } from '../texto-sin-cortes'
 
@@ -30,10 +30,17 @@ const actual = computed(() => props.avisos[indice.value])
 const siguienteNumero = computed(() => ((indice.value + 1) % props.avisos.length) + 1)
 
 // Si hay menos avisos que antes, no se queda en uno que ya no existe.
+const refRaiz = ref<HTMLElement>()
 watch(
   () => props.avisos.length,
-  (total) => {
+  async (total) => {
     if (posicion.value >= total) posicion.value = Math.max(0, total - 1)
+    // Si queda un solo aviso, «siguiente» desaparece: el foco no se pierde, va al bloque.
+    const teniaFoco = refRaiz.value?.querySelector('.paso') === document.activeElement
+    if (total <= 1 && teniaFoco) {
+      await nextTick()
+      refRaiz.value?.querySelector<HTMLElement>('button.aviso')?.focus()
+    }
   },
 )
 
@@ -59,6 +66,8 @@ function alSoltar(evento: PointerEvent): void {
   inicioX = null
   if (Math.abs(dx) > 48 && Math.abs(dx) > 2 * Math.abs(dy)) {
     deslizo = true
+    // Si el navegador no suelta el «click» (soltó fuera del bloque), no queda armado para el próximo toque.
+    setTimeout(() => (deslizo = false), 400)
     mover(dx < 0 ? 1 : -1)
   }
 }
@@ -71,6 +80,7 @@ function alTocarAviso(): void {
 <template>
   <section
     v-if="actual"
+    ref="refRaiz"
     class="carrusel"
     :class="[`carrusel--${actual.tono}`, { 'carrusel--varios': varios }]"
     aria-roledescription="carrusel"

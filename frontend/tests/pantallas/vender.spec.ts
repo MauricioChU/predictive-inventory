@@ -569,6 +569,38 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     expect(total(p)).toBe('S/ 3.50')
   })
 
+  it('RN-OP-11: el lápiz con el precio de siempre devuelve a la normalidad una línea con precio especial; sin especial, avisa', async () => {
+    const { app, ids } = await tiendaDePrueba()
+    const p = await abrirVender(app)
+    await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+    await cambiarCantidad(p, 0, '3')
+    await boton(lineas(p)[0]!, '¿Vendiste alguno a otro precio?').trigger('click')
+    const [cuantos, precio] = lineas(p)[0]!.findAll('.separar input')
+    await cuantos!.setValue('1')
+    await precio!.setValue('3.00')
+    await boton(lineas(p)[0]!, 'Guardar').trigger('click')
+    await esperarDatos(app)
+    expect(lineas(p)).toHaveLength(2)
+
+    // El lápiz de la línea especial con S/ 3.50 (el precio del producto): vuelve y se junta.
+    await lineas(p)[1]!.get('.precio-tocable').trigger('click')
+    await lineas(p)[1]!.get('.edicion-precio input').setValue('3.50')
+    await boton(lineas(p)[1]!, 'Guardar precio').trigger('click')
+    await esperarDatos(app)
+    expect(p.w.find('dialog[open]').exists()).toBe(false)
+    expect(lineas(p)).toHaveLength(1)
+    expect(lineas(p)[0]!.text()).not.toContain('Precio especial')
+    expect(total(p)).toBe('S/ 10.50')
+
+    // Sin especial: no hay diálogo ni cambio; el producto sigue igual.
+    await lineas(p)[0]!.get('.precio-tocable').trigger('click')
+    await lineas(p)[0]!.get('.edicion-precio input').setValue('3.50')
+    await boton(lineas(p)[0]!, 'Guardar precio').trigger('click')
+    await esperarDatos(app)
+    expect(p.w.find('dialog[open]').exists()).toBe(false)
+    expect((await app.catalogo.obtenerProducto(ids.lejia))?.precioVenta.centimos).toBe(350)
+  })
+
   it('RN-CAT-05 / RN-UX-08: si el precio nuevo deja pérdida, el catálogo lo pide y se confirma otra vez', async () => {
     const { app, ids } = await tiendaDePrueba()
     const p = await abrirVender(app)

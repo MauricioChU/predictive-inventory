@@ -106,6 +106,8 @@ onMounted(() => {
 }
 /* Se desplaza de lado dentro del bloque; el borde de foco se ve (zona de 48 px no aplica: no es un botón). */
 .region {
+  /* Referencia de offsetLeft para centrar la columna destacada al abrir. */
+  position: relative;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   padding-block-end: var(--espacio-1);
