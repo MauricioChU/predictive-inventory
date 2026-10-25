@@ -347,6 +347,48 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     await expect(page.getByRole('button', { name: /^Movimientos/ })).toBeVisible()
   })
 
+  test('360×740 Grande: el carrusel va justo encima de los botones y las cifras llenan el alto libre, sin huecos', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
+    await prepararInicioConTresAvisos(page, 'GRANDE', 360)
+    const cajas = await page.evaluate(() => {
+      const caja = (sel: string) => document.querySelector(sel)!.getBoundingClientRect()
+      return {
+        cifras: caja('.cifras-de-hoy'),
+        carrusel: caja('.carrusel'),
+        vender: caja('.vender-fijo button'),
+        controles: caja('.carrusel .controles'),
+        fila: caja('.carrusel .fila-de-aviso'),
+      }
+    })
+    // El carrusel está pegado sobre "Vender" (solo el aire de la franja de la barra fija) y las cifras, sobre el carrusel.
+    expect(cajas.vender.top - cajas.carrusel.bottom, 'carrusel sobre Vender').toBeLessThanOrEqual(24)
+    expect(cajas.vender.top - cajas.carrusel.bottom, 'carrusel no tapa Vender').toBeGreaterThanOrEqual(0)
+    expect(cajas.carrusel.top - cajas.cifras.bottom, 'cifras sobre el carrusel, sin hueco').toBeLessThanOrEqual(24)
+    // Los controles están DENTRO de la tarjeta del aviso.
+    expect(cajas.controles.bottom).toBeLessThanOrEqual(cajas.carrusel.bottom)
+    expect(cajas.controles.top).toBeGreaterThanOrEqual(cajas.fila.bottom - 1)
+  })
+
+  test('360×740 Grande, sin ventas y con un aviso: una pantalla, aviso encima de los botones, sin controles', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
+    await usarLetra(page, 'GRANDE')
+    await page.setViewportSize({ width: 360, height: 740 })
+    await abrirTiendaLista(page, './ajustes')
+    await crearProducto(page, { nombre: 'Carbón', compra: '2.75', venta: '4.00', stock: '0' })
+    await abrir(page, './')
+    await expect(page.getByText('1 agotado', { exact: true })).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(740)
+    await expect(page.locator('.carrusel .controles')).toHaveCount(0)
+    const carrusel = (await page.locator('.carrusel').boundingBox())!
+    const vender = (await page.locator('.vender-fijo button').boundingBox())!
+    expect(vender.y - (carrusel.y + carrusel.height)).toBeLessThanOrEqual(24)
+  })
+
   test('360×740 Grande, con ventas: "Total vendido" es mucho más grande que "Ganancia real"', async ({
     page,
   }, testInfo) => {
@@ -479,7 +521,7 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
 })
 
 test.describe('Inicio en PC (1280 px): el orden de lectura es el del código (WCAG 1.3.2 / 2.4.3)', () => {
-  test('cifras y aviso a la izquierda, acciones a la derecha', async ({
+  test('cifras a la izquierda; a la derecha, los avisos encima de las acciones', async ({
     page,
   }, testInfo) => {
     test.skip(testInfo.project.name !== 'pc', 'La disposición en columnas es de PC')
@@ -492,21 +534,20 @@ test.describe('Inicio en PC (1280 px): el orden de lectura es el del código (WC
       return medida!
     }
     const cifra = await caja('.cifra')
-    const atencion = await caja('.atencion')
     const acciones = await caja('.acciones')
+    const atencion = (await page.locator('#contenido .cuerpo > .acciones > .atencion').boundingBox())!
+    const vender = (await page.locator('#contenido .vender-fijo').boundingBox())!
 
-    // Arriba, en dos columnas: cifras sobre el aviso a la izquierda, acciones a la derecha.
-    expect(atencion.y).toBeGreaterThanOrEqual(cifra.y + cifra.height - 1)
-    expect(Math.abs(atencion.x - cifra.x)).toBeLessThanOrEqual(1)
+    // Arriba, en dos columnas: cifras a la izquierda; a la derecha, los avisos y debajo las acciones.
     expect(acciones.x).toBeGreaterThanOrEqual(cifra.x + cifra.width - 1)
     expect(Math.abs(acciones.y - cifra.y)).toBeLessThanOrEqual(1)
+    expect(atencion.x).toBeGreaterThanOrEqual(cifra.x + cifra.width - 1)
+    expect(vender.y).toBeGreaterThanOrEqual(atencion.y + atencion.height - 1)
 
     // Y el código va en ese mismo orden.
     const ordenEnElCodigo = await page.evaluate(() =>
-      ['.cifra', '.atencion', '.acciones'].map((selector) =>
-        Array.from(document.querySelectorAll('#contenido .cuerpo > *')).indexOf(
-          document.querySelector(`#contenido .cuerpo > ${selector}`)!,
-        ),
+      ['#contenido .cuerpo > .cifra', '#contenido .atencion', '#contenido .vender-fijo'].map((selector) =>
+        Array.from(document.querySelectorAll('#contenido .cuerpo *')).indexOf(document.querySelector(selector)!),
       ),
     )
     expect(ordenEnElCodigo).toEqual([...ordenEnElCodigo].sort((a, b) => a - b))

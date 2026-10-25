@@ -14,7 +14,9 @@ export interface AvisoDelCarrusel {
 /**
  * Avisos en un espacio reservado: uno a la vez, con ‹ › y "1 de 3" siempre a la vista (RN-UX-05:
  * no hace falta deslizar, aunque deslizar de lado también funciona). Con un solo aviso es solo la
- * fila, sin controles. Con varios, el alto es fijo: cambiar de aviso no mueve lo de abajo.
+ * fila, sin controles. Con varios, el aviso y sus controles (‹ puntos ›) son UNA tarjeta: el
+ * marco y el fondo envuelven la fila y, debajo, la tira de puntos. El alto es fijo: cambiar de
+ * aviso no mueve lo de abajo.
  */
 const props = defineProps<{ avisos: AvisoDelCarrusel[]; etiqueta: string }>()
 const emit = defineEmits<{ accion: [id: string] }>()
@@ -56,7 +58,7 @@ function alSoltar(evento: PointerEvent): void {
   <section
     v-if="actual"
     class="carrusel"
-    :class="{ 'carrusel--varios': varios }"
+    :class="[`carrusel--${actual.tono}`, { 'carrusel--varios': varios }]"
     aria-roledescription="carrusel"
     :aria-label="etiqueta"
   >
@@ -70,6 +72,7 @@ function alSoltar(evento: PointerEvent): void {
       <Transition name="aviso" mode="out-in">
         <FilaDeAviso
           :key="actual.id"
+          :plana="varios"
           :tono="actual.tono"
           :texto="actual.texto"
           :texto-accion="actual.textoAccion"
@@ -77,7 +80,7 @@ function alSoltar(evento: PointerEvent): void {
         />
       </Transition>
     </div>
-    <!-- Fila delgada (≈ 24 px visibles): ‹ puntos ›. Cada uno es tocable con una zona de 48 px de
+    <!-- Tira delgada (≈ 20 px visibles) dentro de la tarjeta: ‹ puntos ›. Cada uno es tocable con una zona de 48 px de
          alto que sale por ::after, sin agrandar la fila. -->
     <div v-if="varios" class="controles">
       <button type="button" class="paso" aria-label="Aviso anterior" @click="mover(-1)">
@@ -106,8 +109,27 @@ function alSoltar(evento: PointerEvent): void {
 
 <style scoped>
 .carrusel {
+  --tono: var(--color-primario);
+  --tono-suave: var(--color-primario-suave);
   display: flex;
   flex-direction: column;
+}
+.carrusel--atencion {
+  --tono: var(--color-advertencia);
+  --tono-suave: var(--color-advertencia-suave);
+}
+.carrusel--exito {
+  --tono: var(--color-exito);
+  --tono-suave: var(--color-exito-suave);
+}
+/* Varios avisos: una sola tarjeta (marco, borde grueso a la izquierda y fondo del tono) que
+   envuelve el aviso y la tira de puntos; los puntos no flotan solos debajo. */
+.carrusel--varios {
+  border: 2px solid var(--tono);
+  border-inline-start-width: 5px;
+  border-radius: var(--radio);
+  background: var(--tono-suave);
+  color: var(--color-texto);
 }
 .carrusel--varios .aviso-actual {
   touch-action: pan-y;
@@ -123,7 +145,10 @@ function alSoltar(evento: PointerEvent): void {
   align-items: center;
   justify-content: center;
   gap: 0;
-  block-size: 24px;
+  block-size: 20px;
+  /* Un hilo suave separa el aviso de los puntos, dentro de la misma tarjeta. */
+  margin-inline: var(--espacio-2);
+  border-block-start: 1px solid color-mix(in srgb, var(--tono) 35%, transparent);
 }
 .puntos {
   display: flex;
@@ -134,17 +159,18 @@ function alSoltar(evento: PointerEvent): void {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Cajas reales de 48 × 48 px; los márgenes negativos hacen que la fila siga midiendo ~24 px
-     (sobresalen 18 px arriba y 6 abajo: no tocan «Vender» ni suman alto; la fila del aviso va encima y conserva toda su flecha). */
+  /* Cajas reales de 48 × 48 px; los márgenes negativos hacen que la tira siga midiendo ~20 px
+     (sobresalen 22 px arriba y 6 abajo: no suman alto; la fila del aviso va encima y conserva toda su flecha). */
   inline-size: var(--alto-toque);
   block-size: var(--alto-toque);
-  margin-block: -18px -6px;
+  margin-block: -22px -6px;
   /* Las cajas se pisan por los lados para que la fila sea angosta; la zona efectiva queda en ~28 px. */
   margin-inline: -10px;
-  padding: 0;
+  /* El dibujo queda centrado en la tira (20 px) aunque la caja de 48 px sobresalga más arriba que abajo. */
+  padding: 16px 0 0;
   border: none;
   background: none;
-  color: var(--color-primario);
+  color: var(--tono);
   cursor: pointer;
   /* Si hay una barra pegada abajo (Inicio: «Vender»), enfocar un control no lo deja debajo de ella. */
   scroll-margin-block-end: calc(var(--alto-boton-principal) + 5 * var(--espacio-2));
@@ -157,13 +183,13 @@ function alSoltar(evento: PointerEvent): void {
 .marca {
   inline-size: 0.6rem;
   block-size: 0.6rem;
-  border: 2px solid var(--color-primario);
+  border: 2px solid var(--tono);
   border-radius: 999px;
 }
 .marca--actual {
   inline-size: 0.85rem;
   block-size: 0.85rem;
-  background: var(--color-primario);
+  background: var(--tono);
 }
 /* Cambio de aviso: el que se va se aclara y el nuevo entra con un fundido corto. */
 .aviso-enter-active,

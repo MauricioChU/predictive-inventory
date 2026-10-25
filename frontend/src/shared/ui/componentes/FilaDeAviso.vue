@@ -15,8 +15,10 @@ const props = withDefaults(
     texto: string
     /** Nombre accesible del botón; sin él la fila no es tocable. */
     textoAccion?: string
+    /** Sin marco ni fondo propios: va dentro de otra tarjeta que ya los pone (carrusel). */
+    plana?: boolean
   }>(),
-  { textoAccion: undefined },
+  { textoAccion: undefined, plana: false },
 )
 const emit = defineEmits<{ accion: [] }>()
 
@@ -25,7 +27,7 @@ const icono = computed(() => ICONOS[props.tono])
 </script>
 
 <template>
-  <div class="fila-de-aviso" :class="`fila-de-aviso--${tono}`">
+  <div class="fila-de-aviso" :class="[`fila-de-aviso--${tono}`, { 'fila-de-aviso--plana': plana }]">
     <component :is="icono" aria-hidden="true" class="icono" />
     <p class="texto">{{ pegarCifras(texto) }}</p>
     <button
@@ -62,6 +64,12 @@ const icono = computed(() => ICONOS[props.tono])
 .fila-de-aviso--exito {
   --tono: var(--color-exito);
   --tono-suave: var(--color-exito-suave);
+}
+.fila-de-aviso--plana {
+  border: none;
+  background: none;
+  border-radius: 0;
+  padding-inline-start: var(--espacio-2);
 }
 .icono {
   inline-size: 1.25rem;

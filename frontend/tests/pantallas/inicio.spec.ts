@@ -214,7 +214,7 @@ describe('Inicio', () => {
     }
   })
 
-  it('orden: encabezado, fecha, cifras, aviso y al final las acciones', async () => {
+  it('orden: encabezado, fecha, cifras, y abajo los avisos justo encima de las acciones', async () => {
     await tiendaLista()
     await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '0' })
     const { wrapper } = await abrirInicio()
@@ -229,8 +229,8 @@ describe('Inicio', () => {
       posicion('class="saludo"'),
       posicion('class="fecha-de-hoy"'),
       posicion('tarjeta-de-cifra'),
-      posicion('fila-de-aviso--atencion'),
       posicion('class="acciones"'),
+      posicion('fila-de-aviso--atencion'),
       posicion('class="enlace-movimientos"'),
     ]
     expect(orden).toEqual([...orden].sort((a, b) => a - b))

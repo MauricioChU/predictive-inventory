@@ -32,6 +32,16 @@ describe('CarruselDeAvisos', () => {
     expect(carrusel.text()).toContain('Todo en orden')
   })
 
+  it('con varios, el aviso y los controles son una sola tarjeta (el aviso va sin marco propio)', () => {
+    const carrusel = mount(CarruselDeAvisos, { props: { avisos: TRES, etiqueta: 'Avisos' } })
+    expect(carrusel.get('section').classes()).toContain('carrusel--varios')
+    expect(carrusel.get('section').classes()).toContain('carrusel--atencion')
+    expect(carrusel.get('section .fila-de-aviso').classes()).toContain('fila-de-aviso--plana')
+    expect(carrusel.find('section .controles').exists()).toBe(true)
+    const uno = mount(CarruselDeAvisos, { props: { avisos: [TRES[0]!], etiqueta: 'Avisos' } })
+    expect(uno.get('.fila-de-aviso').classes()).not.toContain('fila-de-aviso--plana')
+  })
+
   it('los puntos son botones "Aviso N de M" que llevan a ese aviso; el actual va marcado', async () => {
     const carrusel = mount(CarruselDeAvisos, { props: { avisos: TRES, etiqueta: 'Avisos' } })
     const puntos = carrusel.findAll('.punto')

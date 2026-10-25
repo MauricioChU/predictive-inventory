@@ -201,10 +201,11 @@ function ir(nombre: PantallaDeOtraRama): void {
     />
 
     <!--
-      Inicio es para vender (plan 19). Celular: encabezado → fecha → lo de hoy (cifras y lo
-      que se acaba) → espacio libre → las acciones, pegadas abajo, al alcance del pulgar (si el
-      contenido es más alto que la pantalla, todo fluye sin taparse). PC: lo que hay que saber a
-      la izquierda y lo que hay que hacer a la derecha.
+      Inicio es para vender (plan 19). Celular: encabezado → fecha → lo de hoy (las cifras crecen
+      para llenar el alto libre) → los avisos → las acciones, todo pegado abajo, al alcance del
+      pulgar (si el contenido es más alto que la pantalla, todo fluye sin taparse). Los avisos van
+      justo encima de los botones, como parte de esa zona. PC: las cifras a la izquierda y, a la
+      derecha, los avisos y las acciones.
     -->
     <div class="cuerpo" :inert="movimientosAbiertos ? true : undefined">
       <div v-if="cifrasDeHoy" class="cifra cifras-de-hoy">
@@ -225,19 +226,19 @@ function ir(nombre: PantallaDeOtraRama): void {
         />
       </div>
 
-      <div v-if="atencion" class="atencion">
-        <EstadoVacio
-          v-if="hayProductos === false"
-          titulo="Aún no tienes productos"
-          descripcion="Agrégalos para llevar tu stock y saber qué comprar."
-          accion="Agregar el primero"
-          @accion="ir('producto-nuevo')"
-        />
-        <!-- Un aviso a la vez, en un espacio reservado, con ‹ › si hay varios. -->
-        <CarruselDeAvisos v-else :avisos="avisos" etiqueta="Avisos" @accion="alTocarAviso" />
-      </div>
-
       <div class="acciones">
+        <div v-if="atencion" class="atencion">
+          <EstadoVacio
+            v-if="hayProductos === false"
+            titulo="Aún no tienes productos"
+            descripcion="Agrégalos para llevar tu stock y saber qué comprar."
+            accion="Agregar el primero"
+            @accion="ir('producto-nuevo')"
+          />
+          <!-- Un aviso a la vez, en un espacio reservado, con ‹ › si hay varios. -->
+          <CarruselDeAvisos v-else :avisos="avisos" etiqueta="Avisos" @accion="alTocarAviso" />
+        </div>
+
         <div class="vender-fijo">
           <BotonPrincipal texto="Vender" :icono="ShoppingCart" @click="ir('vender')" />
         </div>
@@ -344,11 +345,24 @@ h1 {
 .acciones {
   display: contents;
 }
-/* Las dos cifras de hoy, apiladas, compactas y cada una en una línea (Inicio entra en una pantalla). */
+/* Las dos cifras de hoy, apiladas. Crecen para llenar el alto que queda libre (sin huecos en
+   blanco): la principal se lleva más y las dos centran su contenido. */
 .cifra {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: var(--espacio-1);
+  gap: var(--espacio-2);
+}
+.cifra :deep(.tarjeta-de-cifra) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.cifra :deep(.tarjeta-de-cifra--principal) {
+  flex: 2;
+}
+.cifra :deep(.tarjeta-de-cifra--compacta) {
+  flex: 1;
 }
 /* Celular: "Vender" queda pegado sobre la navegación (--alto-pie, medido en vivo) mientras su
    lugar está más abajo; al llegar a él, sigue en su sitio. El primero de las acciones lleva
@@ -368,16 +382,18 @@ h1 {
 }
 /* Lo enfocado con el teclado no queda debajo de "Vender" pegado (WCAG 2.4.11)... */
 .vista-inicio :is(a, button) {
-  scroll-margin-bottom: calc(var(--alto-boton-principal) + 2 * var(--espacio-2));
+  scroll-margin-bottom: calc(
+    var(--alto-pie, 0px) + var(--alto-boton-principal) + 2 * var(--espacio-2)
+  );
 }
 /* ...salvo el propio "Vender": ya está a la vista, enfocarlo no mueve la página. */
 .vender-fijo button {
   scroll-margin-bottom: 0;
 }
 
-/* PC, en el mismo orden que el código (WCAG 1.3.2 / 2.4.3): las cifras y el aviso a la izquierda
-   y las acciones a la derecha. Sin filas vacías: la separación es el margen de cada bloque, no
-   el espacio entre filas. */
+/* PC, en el mismo orden que el código (WCAG 1.3.2 / 2.4.3): las cifras a la izquierda y, a la
+   derecha, los avisos y las acciones. Sin filas vacías: la separación es el margen de cada
+   bloque, no el espacio entre filas. */
 @media (min-width: 1024px) {
   .vista-inicio {
     min-height: auto;
@@ -385,18 +401,17 @@ h1 {
   .cuerpo {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      'cifra acciones'
-      'atencion acciones';
+    grid-template-areas: 'cifra acciones';
     align-items: start;
     gap: 0 var(--espacio-6);
   }
   .cifra {
     grid-area: cifra;
+    flex: none;
   }
-  .atencion {
-    grid-area: atencion;
+  .cifra :deep(.tarjeta-de-cifra--principal),
+  .cifra :deep(.tarjeta-de-cifra--compacta) {
+    flex: none;
   }
   .acciones {
     grid-area: acciones;
@@ -405,7 +420,6 @@ h1 {
     gap: var(--espacio-3);
   }
   .cifra,
-  .atencion,
   .acciones {
     margin-bottom: var(--espacio-4);
   }
