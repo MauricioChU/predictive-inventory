@@ -361,6 +361,29 @@ h1 {
 .cifra :deep(.tarjeta-de-cifra--compacta) {
   flex: 1;
 }
+/* «Total vendido»: la etiqueta arriba a la izquierda y el MONTO centrado en el alto libre de la
+   tarjeta, mucho más grande y escalando con ella (el monto entero nunca se parte ni se sale: el
+   tope por ancho es el mismo cálculo que TarjetaDeCifra, ~0.62 em por carácter). */
+.cifra :deep(.tarjeta-de-cifra--principal .cifra) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.cifra :deep(.tarjeta-de-cifra--principal .valor) {
+  margin-block: auto;
+  line-height: 1;
+  white-space: nowrap;
+  font-size: max(1.25rem, min(4.5rem, calc(100cqi / (max(var(--caracteres), 1) * 0.7))));
+}
+/* «Ganancia real»: etiqueta a la izquierda y monto a la derecha, ambos centrados en su tarjeta,
+   con el monto más grande y en la misma línea base. */
+.cifra :deep(.tarjeta-de-cifra--compacta) {
+  justify-content: center;
+}
+.cifra :deep(.tarjeta-de-cifra--compacta .valor) {
+  font-size: clamp(1.5rem, 9cqi, 2rem);
+  white-space: nowrap;
+}
 /* Celular: "Vender" queda pegado sobre la navegación (--alto-pie, medido en vivo) mientras su
    lugar está más abajo; al llegar a él, sigue en su sitio. El primero de las acciones lleva
    `margin-top: auto`: todo el bloque queda al fondo del área de contenido. */
