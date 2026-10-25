@@ -65,30 +65,25 @@ Para registrar algo con varias líneas (Vender, Llegó mercadería).
 
 ## Línea de carrito — `FilaDeCarrito.vue` (compacta)
 
-- Foto, nombre e importe en la primera fila; debajo, cuánto queda y el precio por unidad, que es el botón para cambiarlo (subrayado, con lápiz).
+- Foto, nombre e importe en la primera fila; debajo, cuánto queda y el precio por unidad, que es el botón para cambiarlo (subrayado, con lápiz). En Vender, ese lápiz cambia el **precio del producto para siempre** y antes de guardar pregunta con un diálogo («¿Cambiar el precio de Lejía 1 L? Desde ahora se venderá a S/ 4.00 (antes S/ 3.50).» · «Cambiar precio» / «Cancelar»); si deja pérdida, el catálogo pide otra confirmación. «¿Vendiste alguno a otro precio?» es lo que vale solo para esta venta. En Recibir el lápiz de costo no cambia.
 - − / + con *Quitar* al lado. En Vender el + se detiene en el stock.
 - Formularios en línea (cambiar precio, otro precio) con *Guardar* y *Cancelar*; mientras están abiertos, *Quitar* se oculta.
+- «¿Vendiste alguno a otro precio?» también con 1 unidad: sin «¿Cuántos?», solo «¿A cuánto lo vendiste?»; al guardar, cambia el precio de esa línea.
 
 ## Diálogo con lista — `DialogoConfirmacion.vue` con slot
 
 Cuando hay varios productos que revisar (aviso de sobrecompra en Llegó mercadería), el diálogo no junta todo en un párrafo: sin `mensaje`, el slot lleva una lista, **una fila por producto** (nombre en negrita y debajo, en color suave, una o dos frases cortas con `pegarCifras`), separadas por una raya fina. El título dice el hecho en tono amable y los dos botones (cancelar y confirmar) quedan iguales, apilados.
 
-## Fila de aviso — `FilaDeAviso.vue`
-
-Para avisos que no deben alargar la pantalla (Inicio).
-
-- Una fila: ícono + texto corto + flecha (botón con nombre accesible, p. ej. "Ver productos").
-- Varias van en un carrusel (abajo), no apiladas; el detalle va en la pantalla a la que lleva la flecha, no en la fila.
-- Tonos: `atencion`, `info`, `exito` (color + ícono, nunca solo color).
-
 ## Carrusel de avisos — `CarruselDeAvisos.vue`
 
 Cuando puede haber varios avisos y no deben alargar la pantalla (Inicio).
 
-- Un aviso a la vez (`FilaDeAviso`) en una región con nombre («Avisos», `aria-roledescription` «carrusel»).
-- Con 2 o más: debajo una fila delgada (24 px visibles, metida en el hueco que ya hay bajo el carrusel, así no estira la pantalla) con ‹ puntos ›. Cada punto es un botón «Aviso 2 de 3» (actual: punto lleno y más grande, `aria-current`; los demás, un aro) y ‹ › («Aviso anterior» / «Aviso siguiente») dan la vuelta; todos con zona de toque de 48 px de alto que sale por `::after`, sin agrandar la fila. «2 de 3» queda solo para el lector. Deslizar de lado también cambia (extra, nunca lo único: RN-UX-05). El cambio es un fundido corto y el aviso nuevo se anuncia (`aria-live`).
-- Los textos de cada aviso son cortos y entran en un renglón a 360 px con letra Grande («3 agotados», «Queda poco: 3»); el nombre accesible de la flecha es la frase completa («3 productos agotados. Ver productos»).
-- Con un solo aviso: solo la fila, sin controles.
+- En Inicio va **justo encima de los botones de acción** (parte de la zona de abajo); lo de arriba (cifras) crece para llenar el alto libre.
+- Un aviso a la vez en una región con nombre («Avisos», `aria-roledescription` «carrusel»).
+- Un solo bloque (marco, borde grueso a la izquierda y fondo del tono del aviso, que cambia con él). Con acción, **todo el bloque es un botón** (nombre accesible = frase completa) que lleva a su pantalla. Con 2 o más: a la derecha un «1/3» pequeño y, aparte (hermano del bloque, nunca anidado), el botón › de 48 × 48 px reales («Siguiente aviso, 2 de 3») que pasa al siguiente y da la vuelta; **sin tira de puntos**. Deslizar de lado también cambia (extra, nunca lo único: RN-UX-05); tras deslizar no se abre el aviso. El cambio es un fundido corto y el aviso nuevo se anuncia (`aria-live`).
+- Los textos de cada aviso son cortos y entran en un renglón a 360 px con letra Grande («3 agotados», «Queda poco: 3»); el nombre accesible del bloque es la frase completa («3 productos agotados. Ver productos»).
+- Con un solo aviso: solo el bloque tocable (con una flecha decorativa), sin flecha de siguiente ni contador.
+- Tonos: `atencion`, `info`, `exito` (color + ícono, nunca solo color).
 - Cada aviso lleva `id`; la acción emite ese `id`.
 
 ## Cifra principal — `TarjetaDeCifra principal`
@@ -96,13 +91,24 @@ Cuando puede haber varios avisos y no deben alargar la pantalla (Inicio).
 La cifra que una pantalla quiere que se lea primero (Inicio: «Total vendido»).
 
 - Título arriba y la cifra debajo, hasta 2.5 rem (sin partir el monto); la secundaria («Ganancia real») va debajo, compacta y en una línea (`compacta en-linea`, cifra de 1.4 rem). La principal es claramente más grande (≥ 1.6 ×).
-- Sin ventas ni pérdida hoy solo se ve la principal con «Todavía no hay ventas hoy»: así Inicio entra en una pantalla.
+- Sin ventas, «Ganancia real» se ve igual (S/ 0.00) y «Todavía no hay ventas hoy» va en el total. Las dos tarjetas crecen para llenar el alto libre (la principal el doble) con el contenido **arriba**: centrado en una caja alta se veía flotando.
+
+## Estilos de la propuesta Inicio
+
+Marcados «propuesta Inicio»: si el dueño los aprueba, pasan a ser el patrón de las demás pantallas.
+
+- **Tarjeta blanca** — `TarjetaDeCifra blanca`: fondo `--color-fondo`, sombra `--sombra-tarjeta`, radio `--radio-grande` (20 px), sin barra de color a la izquierda; etiqueta normal y monto en negrita.
+- **Franja de aviso** — `CarruselDeAvisos franja`: solo el fondo del tono, esquinas `--radio-grande`, sin marco; «1/3 ›» a la derecha.
+- **Botón pastilla** — `BotonPrincipal pastilla`: `--radio-pastilla`.
+- **Botones en 2 columnas** — `.par-de-botones` / `.boton-par` (VistaInicio): grilla de 2, borde y texto primarios sobre fondo suave, ícono a la izquierda y texto en 2 líneas sin partir palabras; si en un ancho no entra (container query, p. ej. 320 Muy grande), uno bajo otro a todo el ancho.
+- **Fila suave** — `.enlace-movimientos`: ancho completo, fondo `--color-superficie`, texto centrado con chevron.
 
 ## Subvista de ayudas, selector de top y gráfico comparativo — Control
 
 - **Control mide, las ayudas van aparte**: lo que el sistema avisa o sugiere (Atención, Para comprar, Productos parados) vive en `/control/ayuda` (`VistaAyudaInteligente.vue`, con `EncabezadoPagina volver`). Se abre desde un botón al final de Control (ícono, «Ayuda inteligente» y debajo «N cosas para mirar»; en pantallas angostas sin flecha, para que el nombre quepa entero con letra Muy grande).
 - **Dos listas, un bloque**: dos top 5 se alternan con un `SelectorSegmentado` («Más vendidos» / «Más ganancia») en la misma tarjeta; solo se ve una lista a la vez.
-- **Comparar dos períodos**: un `GraficoBarras` por métrica con dos barras (la actual destacada, la anterior), el cambio dicho con palabras encima y el valor escrito en cada barra; el lector de pantalla recibe la tabla.
+- **Comparar dos períodos**: un `GraficoBarras` por métrica con dos barras (la actual destacada, la anterior), el cambio dicho con palabras encima y el valor escrito en cada barra; el lector de pantalla recibe la tabla. Las dos métricas se alternan con un `SelectorSegmentado` («Ventas» / «Ganancia») en el mismo bloque: se ve un gráfico a la vez.
+- **Barras verticales** (`GraficoColumnas.vue`, «Mejor día de la semana»): una columna por día, todas visibles; si no entran, el gráfico se desplaza de lado **por dentro** del bloque (región con nombre que el teclado alcanza; la página no se mueve, RN-UX-09), con la destacada centrada al abrir; valor encima, etiqueta legible debajo (rem), tabla solo-lector.
 
 ## Resumen de lo registrado — `ResumenDeLineas.vue`
 

@@ -99,20 +99,25 @@ test.describe('Torre de control con datos de demostración', () => {
     await expect(mejores.locator('ol')).toHaveCount(1)
     await expect(mejores.locator('h3')).toHaveText('Los que más ganancia dejan')
 
-    // Semana contra semana (RN-AN-12): los mismos textos que el dominio y un gráfico por métrica.
-    await expect(seccion(page, 'Semana contra semana').locator('figure.grafico-barras')).toHaveCount(2)
-    const cambios = seccion(page, 'Semana contra semana').locator('.cambio')
+    // Semana contra semana (RN-AN-12): un selector (Ventas / Ganancia) alterna los dos gráficos, de a uno.
+    const semana = seccion(page, 'Semana contra semana')
     expect(esperado.semana).toHaveLength(2)
-    expect((await cambios.allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim())).toEqual(
-      esperado.semana,
-    )
+    const cambio = async () =>
+      (await semana.locator('.cambio').innerText()).replace(/\s+/g, ' ').trim()
+    await expect(semana.locator('figure.grafico-barras')).toHaveCount(1)
+    expect(await cambio()).toBe(esperado.semana[0])
+    await semana.getByRole('radio', { name: 'Ganancia' }).click()
+    await expect(semana.locator('figure.grafico-barras')).toHaveCount(1)
+    expect(await cambio()).toBe(esperado.semana[1])
+    await semana.getByRole('radio', { name: 'Ventas' }).click()
+    expect(await cambio()).toBe(esperado.semana[0])
 
-    // Mejor día (RN-AN-13): sábado, marcado en el gráfico.
+    // Mejor día (RN-AN-13): sábado, marcado en el gráfico de barras verticales.
     expect(esperado.mejorDia).toBe('sábado')
     const mejorDia = seccion(page, 'Mejor día de la semana')
     await expect(mejorDia).toContainText('Tu mejor día es el sábado')
-    await expect(mejorDia.locator('.fila--destacada .etiqueta')).toHaveText('Sábado')
-    await expect(mejorDia.locator('.grafico-barras .fila')).toHaveCount(7)
+    await expect(mejorDia.locator('.columna--destacada .etiqueta')).toHaveText('Sábado')
+    await expect(mejorDia.locator('.grafico-columnas .columna')).toHaveCount(7)
 
     // Ayuda inteligente: el botón del final lleva a Atención, Para comprar y Productos parados.
     await page.getByRole('link', { name: /^Ayuda inteligente/ }).click()

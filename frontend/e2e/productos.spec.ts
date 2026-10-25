@@ -158,7 +158,7 @@ test.describe('Productos: flujos críticos', () => {
     await expect.poll(async () => (await nombresEnLaLista(page)).sort()).toEqual(['Escoba'])
 
     await abrir(page, './')
-    await page.getByRole('button', { name: 'Aviso siguiente' }).click()
+    await page.getByRole('button', { name: 'Siguiente aviso, 2 de 2' }).click()
     await expect(page.getByText('Queda poco: 1', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Queda poco de 1 producto. Ver productos' }).click()
     await expect(page).toHaveURL(/\/productos\?estado=queda-poco$/)

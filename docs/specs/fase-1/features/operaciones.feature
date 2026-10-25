@@ -117,7 +117,14 @@ Característica: Operaciones de stock
     Y la ganancia de la venta es "S/ 4.63"
 
   @RN-OP-11
-  Escenario: Cambiar el precio solo para una venta
+  Escenario: Cambiar el precio del producto desde Vender lo cambia para siempre
+    Cuando cambio el precio de venta de "Lejía 1 L" a "4.00"
+    Y vendo "2" de "Lejía 1 L"
+    Entonces el producto "Lejía 1 L" tiene precio de venta "4.00"
+    Y el total de la venta es "S/ 8.00"
+
+  @RN-OP-11
+  Escenario: Vender a otro precio vale solo para esa venta
     Cuando vendo "2" de "Lejía 1 L" a precio especial "3.00"
     Entonces el total de la venta es "S/ 6.00"
     Y la ganancia de la venta es "S/ 1.20"

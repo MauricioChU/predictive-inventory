@@ -35,6 +35,30 @@ describe('FilaDeCarrito', () => {
     expect(textoReferido(grupo.element, 'aria-labelledby')).toBe('Lejía Clorox 1 L')
   })
 
+  it('RN-OP-11: con una sola unidad, "otro precio" no pregunta cuántos: pide a cuánto y emite separar con 1', async () => {
+    const w = mount(FilaDeCarrito, {
+      props: {
+        ...LINEA,
+        cantidad: '1',
+        compacta: true,
+        precioEditable: true,
+        puedeSeparar: true,
+        maximoSeparar: 1,
+        valorPrecio: '4.50',
+      },
+      attachTo: document.body,
+    })
+    await boton(w, '¿Vendiste alguno a otro precio?').trigger('click')
+    await flushPromises()
+    const campos = w.findAll('.separar input')
+    expect(campos).toHaveLength(1)
+    expect(w.get('.separar').text()).toContain('¿A cuánto lo vendiste?')
+    expect(w.get('.separar').text()).not.toContain('¿Cuántos?')
+    await campos[0]!.setValue('5.20')
+    await boton(w, 'Guardar').trigger('click')
+    expect(w.emitted('separar')).toEqual([['1', '5.20']])
+  })
+
   it('plan 20 (RN-OP-22): con textoQuedan muestra cuánto queda tras la venta; sin él, no muestra nada', async () => {
     const w = mount(FilaDeCarrito, { props: { ...LINEA, textoQuedan: 'Quedan 8 unid.' } })
     expect(w.get('.quedan').text()).toBe('Quedan 8 unid.')
