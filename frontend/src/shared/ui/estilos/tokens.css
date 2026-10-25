@@ -30,6 +30,10 @@
   --espacio-6: 2rem;
   --radio: 14px;
   --radio-chico: 10px;
+  /* Propuesta Inicio: tarjeta blanca con sombra suave y pastilla. */
+  --radio-grande: 20px;
+  --radio-pastilla: 999px;
+  --sombra-tarjeta: 0 2px 10px rgb(18 26 24 / 0.12);
   /* Medidas táctiles absolutas: no bajan aunque la letra sea Normal (RN-UX-02). */
   --alto-toque: max(48px, 2.5rem);
   --alto-boton-principal: max(56px, 3rem);

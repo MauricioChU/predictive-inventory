@@ -18,7 +18,12 @@ export interface AvisoDelCarrusel {
  * vuelta al final (RN-UX-05: no hace falta deslizar, aunque deslizar de lado también funciona).
  * Con un solo aviso no hay flecha ni contador. El alto es fijo: cambiar de aviso no mueve lo de abajo.
  */
-const props = defineProps<{ avisos: AvisoDelCarrusel[]; etiqueta: string }>()
+const props = defineProps<{
+  avisos: AvisoDelCarrusel[]
+  etiqueta: string
+  /** Propuesta Inicio: franja suave a todo el ancho, sin marco ni borde grueso. */
+  franja?: boolean
+}>()
 const emit = defineEmits<{ accion: [id: string] }>()
 
 const ICONOS = { atencion: TriangleAlert, info: Info, exito: CircleCheck } as const
@@ -82,7 +87,10 @@ function alTocarAviso(): void {
     v-if="actual"
     ref="refRaiz"
     class="carrusel"
-    :class="[`carrusel--${actual.tono}`, { 'carrusel--varios': varios }]"
+    :class="[
+      `carrusel--${actual.tono}`,
+      { 'carrusel--varios': varios, 'carrusel--franja': franja },
+    ]"
     aria-roledescription="carrusel"
     :aria-label="etiqueta"
   >
@@ -142,6 +150,15 @@ function alTocarAviso(): void {
 .carrusel--exito {
   --tono: var(--color-exito);
   --tono-suave: var(--color-exito-suave);
+}
+/* Franja: solo el fondo del tono, esquinas grandes. */
+.carrusel--franja .tarjeta {
+  border: none;
+  border-radius: var(--radio-grande);
+  padding-inline-start: var(--espacio-2);
+}
+.carrusel--franja .aviso--tocable {
+  border-radius: var(--radio-grande);
 }
 /* Un solo bloque: marco, borde grueso a la izquierda y fondo del tono del aviso. */
 .tarjeta {

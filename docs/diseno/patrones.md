@@ -93,6 +93,16 @@ La cifra que una pantalla quiere que se lea primero (Inicio: «Total vendido»).
 - Título arriba y la cifra debajo, hasta 2.5 rem (sin partir el monto); la secundaria («Ganancia real») va debajo, compacta y en una línea (`compacta en-linea`, cifra de 1.4 rem). La principal es claramente más grande (≥ 1.6 ×).
 - Sin ventas, «Ganancia real» se ve igual (S/ 0.00) y «Todavía no hay ventas hoy» va en el total. Las dos tarjetas crecen para llenar el alto libre (la principal el doble) con el contenido **arriba**: centrado en una caja alta se veía flotando.
 
+## Estilos de la propuesta Inicio
+
+Marcados «propuesta Inicio»: si el dueño los aprueba, pasan a ser el patrón de las demás pantallas.
+
+- **Tarjeta blanca** — `TarjetaDeCifra blanca`: fondo `--color-fondo`, sombra `--sombra-tarjeta`, radio `--radio-grande` (20 px), sin barra de color a la izquierda; etiqueta normal y monto en negrita.
+- **Franja de aviso** — `CarruselDeAvisos franja`: solo el fondo del tono, esquinas `--radio-grande`, sin marco; «1/3 ›» a la derecha.
+- **Botón pastilla** — `BotonPrincipal pastilla`: `--radio-pastilla`.
+- **Botones en 2 columnas** — `.par-de-botones` / `.boton-par` (VistaInicio): grilla de 2, borde y texto primarios sobre fondo suave, ícono arriba a la izquierda y texto en 2 líneas sin partir palabras.
+- **Fila suave** — `.enlace-movimientos`: ancho completo, fondo `--color-superficie`, texto centrado con chevron.
+
 ## Subvista de ayudas, selector de top y gráfico comparativo — Control
 
 - **Control mide, las ayudas van aparte**: lo que el sistema avisa o sugiere (Atención, Para comprar, Productos parados) vive en `/control/ayuda` (`VistaAyudaInteligente.vue`, con `EncabezadoPagina volver`). Se abre desde un botón al final de Control (ícono, «Ayuda inteligente» y debajo «N cosas para mirar»; en pantallas angostas sin flecha, para que el nombre quepa entero con letra Muy grande).

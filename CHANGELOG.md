@@ -6,6 +6,7 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ### Cambiado
 
+- Inicio (propuesta): nueva distribución como el dibujo: nombre grande con la fecha pequeña debajo, «Total vendido» y «Ganancia real» en tarjetas blancas con sombra, el aviso como franja suave con «1/3 ›», «Vender» en pastilla, «Llegó mercadería» y «¿Necesito comprar?» lado a lado y «Movimientos ›» como fila suave.
 - Vender: el lápiz del precio por unidad cambia el precio del producto para siempre. Antes de guardar pregunta «¿Cambiar el precio de Lejía 1 L? Desde ahora se venderá a S/ 4.00 (antes S/ 3.50).»; si el precio deja pérdida, pide una segunda confirmación diciendo cuánto se pierde. La línea toma el precio nuevo, sin «Precio especial». «¿Vendiste alguno a otro precio?» sigue siendo solo para esa venta.
 - Control: «N cosas para mirar» cuenta productos distintos (un producto agotado y parado cuenta una vez).
 - Inicio: los avisos van justo encima de los botones (Vender, Llegó mercadería, ¿Necesito comprar?) y arriba «Total vendido» y «Ganancia real» crecen para llenar el espacio libre; «Ganancia real» se ve siempre, también sin ventas (S/ 0.00). El aviso es un solo bloque: tocarlo entero lleva a su pantalla y, con varios, una flecha › a la derecha (con «1/3») pasa al siguiente; ya no hay puntos debajo.

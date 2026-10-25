@@ -8,12 +8,15 @@ withDefaults(
     variante?: 'primario' | 'secundario' | 'peligro'
     deshabilitado?: boolean
     tipo?: 'button' | 'submit'
+    /** Propuesta Inicio: botón muy redondeado (pastilla). */
+    pastilla?: boolean
   }>(),
   {
     icono: undefined,
     variante: 'primario',
     deshabilitado: false,
     tipo: 'button',
+    pastilla: false,
   },
 )
 const emit = defineEmits<{ click: [evento: MouseEvent] }>()
@@ -23,7 +26,7 @@ const emit = defineEmits<{ click: [evento: MouseEvent] }>()
   <button
     :type="tipo"
     class="boton-principal"
-    :class="`boton-principal--${variante}`"
+    :class="[`boton-principal--${variante}`, { 'boton-principal--pastilla': pastilla }]"
     :disabled="deshabilitado"
     @click="emit('click', $event)"
   >
@@ -65,6 +68,9 @@ const emit = defineEmits<{ click: [evento: MouseEvent] }>()
 .boton-principal--peligro {
   background: var(--color-peligro);
   color: var(--color-primario-texto);
+}
+.boton-principal--pastilla {
+  border-radius: var(--radio-pastilla);
 }
 .icono {
   width: 1.5em;

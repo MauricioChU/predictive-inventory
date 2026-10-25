@@ -20,6 +20,8 @@ const props = withDefaults(
     alta?: boolean
     /** La cifra principal de una pantalla (Inicio: lo vendido hoy): título arriba y la cifra mucho más grande. */
     principal?: boolean
+    /** Propuesta Inicio: tarjeta blanca con sombra suave, sin la barra de color a la izquierda. */
+    blanca?: boolean
   }>(),
   {
     textoDetalle: undefined,
@@ -28,6 +30,7 @@ const props = withDefaults(
     enLinea: false,
     alta: false,
     principal: false,
+    blanca: false,
   },
 )
 
@@ -45,6 +48,7 @@ const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.text
         'tarjeta-de-cifra--en-linea': enLinea,
         'tarjeta-de-cifra--alta': alta,
         'tarjeta-de-cifra--principal': principal,
+        'tarjeta-de-cifra--blanca': blanca,
       },
     ]"
   >
@@ -149,6 +153,17 @@ const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.text
   margin-block-start: var(--espacio-1);
   /* Pegado a la cifra: sin ventas hoy Inicio muestra las tres líneas y debe seguir entrando. */
   line-height: 1.2;
+}
+.tarjeta-de-cifra--blanca {
+  padding: var(--espacio-3) var(--espacio-4);
+  border-left: none;
+  border-radius: var(--radio-grande);
+  background: var(--color-fondo);
+  box-shadow: var(--sombra-tarjeta);
+}
+.tarjeta-de-cifra--blanca .titulo {
+  font-weight: 400;
+  color: var(--color-texto);
 }
 .tarjeta-de-cifra--exito {
   border-left-color: var(--color-exito);

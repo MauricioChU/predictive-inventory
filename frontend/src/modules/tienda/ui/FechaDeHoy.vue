@@ -42,8 +42,8 @@ onBeforeUnmount(() => document.removeEventListener('visibilitychange', alVolverA
 .fecha-de-hoy {
   margin: 0;
   color: var(--color-texto-suave);
-  font-size: 1.125rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
 }
 </style>
