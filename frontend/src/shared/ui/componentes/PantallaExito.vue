@@ -135,6 +135,16 @@ onUnmounted(() => {
      registrado se achica y se desplaza por dentro en vez de alargar la página. */
   block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--relleno-bloque, var(--espacio-4)));
 }
+/* Pantalla baja (celular en horizontal): el alto fijo no alcanza para ✓, título, resumen y botón;
+   la pantalla crece con su contenido y la página se desplaza (el resumen sigue en 4 líneas). */
+@media (max-height: 520px) {
+  .pantalla-exito--al-centro {
+    block-size: auto;
+    min-block-size: calc(
+      100dvh - var(--alto-pie, 0px) - 2 * var(--relleno-bloque, var(--espacio-4))
+    );
+  }
+}
 .icono {
   flex: none;
   width: 4.5rem;
