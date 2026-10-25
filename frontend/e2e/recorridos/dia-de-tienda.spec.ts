@@ -38,7 +38,7 @@ async function esperarCifrasDeInicio(page: Page, cifras: string): Promise<void> 
 /** El resumen de Control (Hoy) dice exactamente estas cifras. */
 async function esperarCifrasDeControl(page: Page, cifras: string): Promise<void> {
   await irA(page, 'Control')
-  await esperarTexto(page.locator('#contenido section .tarjeta-de-cifra'), cifras)
+  await esperarTexto(page.locator('#contenido section .cifras-principales'), cifras)
 }
 
 /** El detalle del producto dice cuánto hay ("Tienes 7 unid."). */
@@ -111,13 +111,14 @@ test.describe('Recorrido: un día de tienda', () => {
     })
 
     await test.step('4. Para comprar → Registrar llegada, con un precio nuevo (RN-AN-08, RN-OP-14)', async () => {
-      // El aviso de Inicio lleva a Productos ya filtrado (RN-AL-06, RN-CAT-16); Para comprar
-      // se abre desde Control.
-      await expect(page.getByText('1 producto se acaba')).toBeVisible()
-      await page.getByRole('button', { name: 'Ver productos' }).click()
+      // El aviso de Inicio lleva a Productos ya filtrado (RN-AL-06a, RN-CAT-16); Para comprar
+      // se abre desde Control → Ayuda inteligente.
+      await expect(page.getByText('Queda poco: 1', { exact: true })).toBeVisible()
+      await page.getByRole('button', { name: 'Queda poco de 1 producto. Ver productos' }).click()
       await expect(h1(page)).toHaveText('Productos')
-      await expect(page).toHaveURL(/\/productos\?estado=se-acaban$/)
+      await expect(page).toHaveURL(/\/productos\?estado=queda-poco$/)
       await irA(page, 'Control')
+      await page.getByRole('link', { name: /^Ayuda inteligente/ }).click()
       await page.getByRole('button', { name: 'Ver la lista para comprar' }).click()
       await expect(h1(page)).toHaveText('Para comprar')
       const linea = page.locator('#contenido').getByRole('group', { name: JABON })
@@ -168,19 +169,18 @@ test.describe('Recorrido: un día de tienda', () => {
       await venderPorPantalla(page, [{ buscado: 'jabon', nombre: JABON, cantidad: 1 }], 'S/ 2.00')
       await esperarCifrasDeInicio(page, 'Total vendido S/ 18.50 Ganancia real S/ 4.00')
 
-      await esperarCifrasDeControl(page, 'Hoy ganaste S/ 4.00 Vendiste S/ 18.50')
+      await esperarCifrasDeControl(page, 'Total vendido S/ 18.50 Ganancia real S/ 4.00')
       const resumen = page.getByRole('region', { name: 'Resumen', exact: true })
       await expect(resumen.locator('.fila-de-dato')).toHaveText(
         [
-          'Ventas S/ 18.50',
           'Costo de lo vendido S/ 12.10',
-          'Pérdidas (se dañó, se derramó o se venció) S/ 2.40',
+          'Pérdidas S/ 2.40',
           'Diferencias de conteo -S/ 1.30',
         ].map(exactoComoSeLee),
         { useInnerText: true },
       )
-      // Más vendidos: Lejía y Jabón en 2 ventas cada uno; Lejía vendió más en soles.
-      const masVendidos = page.getByRole('region', { name: 'Más vendidos', exact: true })
+      // Lo que más se vende: Lejía y Jabón en 2 ventas cada uno; Lejía vendió más en soles.
+      const masVendidos = page.getByRole('region', { name: 'Tus mejores productos', exact: true })
       await expect(masVendidos.locator('ol').first().locator('li').first()).toContainText(LEJIA)
     })
 
@@ -214,7 +214,7 @@ test.describe('Recorrido: un día de tienda', () => {
       await esperarStockEnElDetalle(page, 'lejia', LEJIA, 'Tienes 7 unid.')
       await esperarStockEnElDetalle(page, 'jabon', JABON, 'Tienes 9 unid.')
       await esperarCifrasDeInicio(page, 'Total vendido S/ 9.00 Ganancia real S/ 0.50')
-      await esperarCifrasDeControl(page, 'Hoy ganaste S/ 0.50 Vendiste S/ 9.00')
+      await esperarCifrasDeControl(page, 'Total vendido S/ 9.00 Ganancia real S/ 0.50')
     })
 
     // Plan 16, ítem 5: nada de lo que se vio en el día usa palabras que la guía manda evitar.

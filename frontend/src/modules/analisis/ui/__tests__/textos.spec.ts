@@ -3,6 +3,7 @@ import { Dinero } from '@/shared/domain/dinero'
 import { instanteLocal } from '@/shared/domain/fecha'
 import {
   OPCIONES_DE_MAS_VENDIDOS,
+  OPCIONES_DE_TOP,
   OPCIONES_DE_PERIODO,
   partesDelCambio,
   textoCostoUnitario,
@@ -13,7 +14,6 @@ import {
   textoSinVentas,
   textoVeces,
   textoUltimaLlegada,
-  tituloDeGanancia,
   tonoDeRespuesta,
 } from '../textos'
 
@@ -36,11 +36,11 @@ describe('Control: textos de la pantalla', () => {
     ])
   })
 
-  it('la ganancia del periodo se dice con palabras de la tienda, y una pérdida se dice como tal', () => {
-    expect(tituloDeGanancia('HOY', soles('48.20'))).toBe('Hoy ganaste')
-    expect(tituloDeGanancia('AYER', soles('0'))).toBe('Ayer ganaste')
-    expect(tituloDeGanancia('7_DIAS', soles('-2.40'))).toBe('En 7 días perdiste')
-    expect(tituloDeGanancia('30_DIAS', soles('1'))).toBe('En 30 días ganaste')
+  it('el top 5 se alterna entre "Más vendidos" y "Más ganancia"', () => {
+    expect(OPCIONES_DE_TOP.map((o) => [o.valor, o.etiqueta])).toEqual([
+      ['VECES', 'Más vendidos'],
+      ['GANANCIA', 'Más ganancia'],
+    ])
   })
 
   it('RN-UX-10: un periodo sin ventas lo dice ("Todavía no hay ventas esta semana")', () => {

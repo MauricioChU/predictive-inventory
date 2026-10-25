@@ -77,14 +77,29 @@ function alSoltar(evento: PointerEvent): void {
         />
       </Transition>
     </div>
+    <!-- Fila delgada (≈ 24 px visibles): ‹ puntos ›. Cada uno es tocable con una zona de 48 px de
+         alto que sale por ::after, sin agrandar la fila. -->
     <div v-if="varios" class="controles">
       <button type="button" class="paso" aria-label="Aviso anterior" @click="mover(-1)">
         <ChevronLeft aria-hidden="true" class="icono-paso" />
       </button>
-      <p class="posicion">{{ posicion + 1 }} de {{ avisos.length }}</p>
+      <div class="puntos">
+        <button
+          v-for="(aviso, indice) in avisos"
+          :key="aviso.id"
+          type="button"
+          class="punto"
+          :aria-label="`Aviso ${indice + 1} de ${avisos.length}`"
+          :aria-current="indice === posicion ? 'true' : undefined"
+          @click="posicion = indice"
+        >
+          <span class="marca" :class="{ 'marca--actual': indice === posicion }" />
+        </button>
+      </div>
       <button type="button" class="paso" aria-label="Aviso siguiente" @click="mover(1)">
         <ChevronRight aria-hidden="true" class="icono-paso" />
       </button>
+      <p class="solo-lector">{{ posicion + 1 }} de {{ avisos.length }}</p>
     </div>
   </section>
 </template>
@@ -93,49 +108,62 @@ function alSoltar(evento: PointerEvent): void {
 .carrusel {
   display: flex;
   flex-direction: column;
-  gap: var(--espacio-1);
 }
 .carrusel--varios .aviso-actual {
-  /* Alto reservado: el aviso llena el espacio y cambiar de uno a otro no mueve nada. */
-  block-size: 4.5rem;
   touch-action: pan-y;
 }
 .aviso-actual {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-}
-.aviso-actual :deep(.fila-de-aviso) {
-  flex: 1;
 }
 .controles {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--espacio-3);
+  gap: 0;
+  block-size: 24px;
 }
-.posicion {
-  min-inline-size: 5rem;
-  margin: 0;
-  color: var(--color-texto);
-  font-weight: 700;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
+.puntos {
+  display: flex;
+  align-items: center;
 }
-.paso {
+.paso,
+.punto {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-inline-size: var(--alto-toque);
-  min-block-size: var(--alto-toque);
-  border: 2px solid var(--color-borde);
-  border-radius: var(--radio-chico);
-  background: var(--color-fondo);
+  /* Cajas reales de 48 × 48 px; los márgenes negativos hacen que la fila siga midiendo ~24 px
+     (sobresalen 18 px arriba y 6 abajo: no tocan «Vender» ni suman alto; la fila del aviso va encima y conserva toda su flecha). */
+  inline-size: var(--alto-toque);
+  block-size: var(--alto-toque);
+  margin-block: -18px -6px;
+  /* Las cajas se pisan por los lados para que la fila sea angosta; la zona efectiva queda en ~28 px. */
+  margin-inline: -10px;
+  padding: 0;
+  border: none;
+  background: none;
   color: var(--color-primario);
   cursor: pointer;
+  /* Si hay una barra pegada abajo (Inicio: «Vender»), enfocar un control no lo deja debajo de ella. */
+  scroll-margin-block-end: calc(var(--alto-boton-principal) + 5 * var(--espacio-2));
 }
 .icono-paso {
-  inline-size: 1.5rem;
-  block-size: 1.5rem;
+  inline-size: 24px;
+  block-size: 24px;
+}
+/* El actual es un punto lleno y más grande; los demás, un aro: no depende solo del color. */
+.marca {
+  inline-size: 0.6rem;
+  block-size: 0.6rem;
+  border: 2px solid var(--color-primario);
+  border-radius: 999px;
+}
+.marca--actual {
+  inline-size: 0.85rem;
+  block-size: 0.85rem;
+  background: var(--color-primario);
 }
 /* Cambio de aviso: el que se va se aclara y el nuevo entra con un fundido corto. */
 .aviso-enter-active,

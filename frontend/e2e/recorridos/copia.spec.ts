@@ -47,7 +47,7 @@ async function loQueSeVe(page: Page): Promise<LoQueSeVe> {
   await page.getByRole('button', { name: 'Cerrar' }).click()
   await expect(page.locator('#contenido .hoja')).toHaveCount(0)
   await irA(page, 'Control')
-  await expect(page.getByRole('heading', { level: 2, name: 'Productos parados' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 2, name: 'Mejor día de la semana' })).toBeVisible()
   const control = await textoVisible(page, '#contenido')
   return { inicio, productos, fotos, detalle, historial, control, letra }
 }

@@ -16,6 +16,14 @@ export const OPCIONES_DE_PERIODO: readonly { valor: Periodo; etiqueta: string }[
   { valor: '30_DIAS', etiqueta: '30 días' },
 ]
 
+/** Cuál de los dos top 5 se ve (RN-AN-09): lo que más se vende o lo que más ganancia deja. */
+export type TipoDeTop = 'VECES' | 'GANANCIA'
+
+export const OPCIONES_DE_TOP: readonly { valor: TipoDeTop; etiqueta: string }[] = [
+  { valor: 'VECES', etiqueta: 'Más vendidos' },
+  { valor: 'GANANCIA', etiqueta: 'Más ganancia' },
+]
+
 export type PeriodoDeMasVendidos = 7 | 30
 
 /** RN-AN-09. */
@@ -26,18 +34,6 @@ export const OPCIONES_DE_MAS_VENDIDOS: readonly {
   { valor: 7, etiqueta: '7 días' },
   { valor: 30, etiqueta: '30 días' },
 ]
-
-const CUANDO: Record<Periodo, string> = {
-  HOY: 'Hoy',
-  AYER: 'Ayer',
-  '7_DIAS': 'En 7 días',
-  '30_DIAS': 'En 30 días',
-}
-
-/** "Hoy ganaste" (como Inicio); con ganancia neta negativa, "Hoy perdiste". */
-export function tituloDeGanancia(periodo: Periodo, gananciaNeta: Dinero): string {
-  return `${CUANDO[periodo]} ${gananciaNeta.esNegativo() ? 'perdiste' : 'ganaste'}`
-}
 
 const SIN_VENTAS: Record<Periodo, string> = {
   HOY: 'Todavía no hay ventas hoy',

@@ -54,6 +54,7 @@ export const PANTALLAS_VACIAS: readonly Pantalla[] = [
   { nombre: 'Vender sin productos', ruta: './vender' },
   { nombre: 'Historial vacío', ruta: './historial' },
   { nombre: 'Control sin datos', ruta: './control' },
+  { nombre: 'Ayuda inteligente sin datos', ruta: './control/ayuda' },
   { nombre: 'Para comprar vacío', ruta: './control/para-comprar' },
   { nombre: 'Contar todo sin productos', ruta: './contar' },
   { nombre: 'Producto que no existe', ruta: './productos/no-existe' },
@@ -254,6 +255,7 @@ export function pantallasDeLaTienda(ids: IdsDeDemostracion): Pantalla[] {
     },
     // Control
     { nombre: 'Control', ruta: './control' },
+    { nombre: 'Ayuda inteligente', ruta: './control/ayuda' },
     { nombre: 'Para comprar', ruta: './control/para-comprar' },
     {
       nombre: '¿Necesito comprar? (con respuesta)',

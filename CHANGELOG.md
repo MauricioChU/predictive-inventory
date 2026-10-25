@@ -6,6 +6,10 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ### Cambiado
 
+- Control ahora es para medir. «Resumen» se ve como Inicio («Total vendido» grande y «Ganancia real» debajo, con los mismos nombres en Hoy, Ayer, 7 y 30 días) y «Pérdidas» ya no lleva paréntesis. «Lo que más se vende» y «Lo que más ganancia deja» son un solo bloque, «Tus mejores productos», con un selector «Más vendidos» / «Más ganancia». «Semana contra semana» se ve en un gráfico de barras.
+- Nueva pantalla «Ayuda inteligente» (botón al final de Control, con cuántas cosas hay que mirar): ahí están «Atención», «Para comprar» y «Productos parados», que salieron de Control.
+- Inicio: el carrusel de avisos muestra una tarjeta por cada cosa de Atención («N agotados», «Queda poco: N» y «N precios para revisar», cortas para entrar en un renglón), cada una con su flecha a Productos ya filtrado o a Ayuda inteligente.
+- Inicio: «Total vendido» es la cifra principal (mucho más grande) y «Ganancia real» queda más chica debajo; sin ventas solo se ve el total con «Todavía no hay ventas hoy». Los avisos van en un carrusel: uno a la vez, con ‹ puntos › en una fila delgada que no estira la pantalla (también se puede deslizar); con uno solo no hay controles.
 - Vender: la confirmación «Venta registrada» y el panel de venta abierto ya no muestran la barra de desplazamiento de la página cuando todo entra en la pantalla (celular y PC). Con muchos productos, la tarjeta de lo vendido se achica y se desplaza por dentro en vez de alargar la página.
 - «¿Vendiste alguno a otro precio?» y «Cambiar precio» se abren más suave: la caja crece despacio y el contenido se aclara y baja un poco un instante después; al cerrar, el contenido se va primero y todo se recoge más rápido. Lo de abajo se desliza sin saltos.
 - Inicio: «Total vendido» es la cifra principal (mucho más grande) y «Ganancia real» queda más chica debajo; sin ventas solo se ve el total con «Todavía no hay ventas hoy». Los avisos van en un carrusel: uno a la vez, con botones ‹ › y «1 de 3» (también se puede deslizar); con uno solo no hay controles.
