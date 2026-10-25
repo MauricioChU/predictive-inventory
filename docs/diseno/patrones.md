@@ -100,7 +100,7 @@ Marcados «propuesta Inicio»: si el dueño los aprueba, pasan a ser el patrón 
 - **Tarjeta blanca** — `TarjetaDeCifra blanca`: fondo `--color-fondo`, sombra `--sombra-tarjeta`, radio `--radio-grande` (20 px), sin barra de color a la izquierda; etiqueta normal y monto en negrita.
 - **Franja de aviso** — `CarruselDeAvisos franja`: solo el fondo del tono, esquinas `--radio-grande`, sin marco; «1/3 ›» a la derecha.
 - **Botón pastilla** — `BotonPrincipal pastilla`: `--radio-pastilla`.
-- **Botones en 2 columnas** — `.par-de-botones` / `.boton-par` (VistaInicio): grilla de 2, borde y texto primarios sobre fondo suave, ícono arriba a la izquierda y texto en 2 líneas sin partir palabras.
+- **Botones en 2 columnas** — `.par-de-botones` / `.boton-par` (VistaInicio): grilla de 2, borde y texto primarios sobre fondo suave, ícono a la izquierda y texto en 2 líneas sin partir palabras; si en un ancho no entra (container query, p. ej. 320 Muy grande), uno bajo otro a todo el ancho.
 - **Fila suave** — `.enlace-movimientos`: ancho completo, fondo `--color-superficie`, texto centrado con chevron.
 
 ## Subvista de ayudas, selector de top y gráfico comparativo — Control

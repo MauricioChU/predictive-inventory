@@ -241,14 +241,16 @@ function ir(nombre: PantallaDeOtraRama): void {
           <BotonPrincipal pastilla texto="Vender" :icono="ShoppingCart" @click="ir('vender')" />
         </div>
         <div class="par-de-botones">
-          <button type="button" class="boton-par" @click="ir('recibir')">
-            <PackagePlus aria-hidden="true" class="icono" />
-            <span>Llegó mercadería</span>
-          </button>
-          <button type="button" class="boton-par" @click="ir('necesito-comprar')">
-            <CircleHelp aria-hidden="true" class="icono" />
-            <span>¿Necesito comprar?</span>
-          </button>
+          <div class="par-grilla">
+            <button type="button" class="boton-par" @click="ir('recibir')">
+              <PackagePlus aria-hidden="true" class="icono" />
+              <span>Llegó mercadería</span>
+            </button>
+            <button type="button" class="boton-par" @click="ir('necesito-comprar')">
+              <CircleHelp aria-hidden="true" class="icono" />
+              <span>¿Necesito comprar?</span>
+            </button>
+          </div>
         </div>
         <button
           ref="refMovimientos"
@@ -328,28 +330,41 @@ h1 {
 }
 /* Propuesta Inicio: dos botones secundarios lado a lado, ícono y texto (hasta 2 líneas). */
 .par-de-botones {
+  container-type: inline-size;
+}
+.par-grilla {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--espacio-2);
+  gap: var(--espacio-3);
 }
 .boton-par {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
+  align-items: center;
+  justify-content: flex-start;
   gap: var(--espacio-1);
   min-height: var(--alto-boton-principal);
-  padding: var(--espacio-2);
+  padding: var(--espacio-1);
   border: 2px solid var(--color-primario);
   border-radius: var(--radio);
   background: var(--color-primario-suave);
   color: var(--color-primario);
   font: inherit;
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.2;
   text-align: start;
   cursor: pointer;
+}
+/* Ícono algo más chico para que «mercadería» entre entera junto a él. */
+.boton-par .icono {
+  width: 1.1em;
+  height: 1.1em;
+}
+/* Si ni así entra «mercadería» sin partirse (letra Muy grande en 320 px), uno bajo otro. */
+@container (max-width: 14rem) {
+  .par-grilla {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .icono {
   width: 1.25em;
