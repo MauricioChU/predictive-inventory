@@ -330,6 +330,23 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     await expect(page.getByRole('button', { name: /^Movimientos/ })).toBeVisible()
   })
 
+  test('360×740 Grande, con ventas: Inicio entra en una pantalla y "Total vendido" es mucho más grande que "Ganancia real"', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
+    await usarLetra(page, 'GRANDE')
+    await page.setViewportSize({ width: 360, height: 740 })
+    await abrirTiendaLista(page, './ajustes')
+    const lejia = await crearProducto(page, { nombre: 'Lejía 1 L', compra: '2.40', venta: '3.50', minimo: '3', stock: '2' })
+    await vender(page, lejia, '1')
+    await abrir(page, './')
+    await expect(page.getByText('1 producto se acaba')).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollHeight), 'sin desplazar').toBeLessThanOrEqual(740)
+    const tamano = (texto: string) =>
+      page.locator('.cifras-de-hoy .valor', { hasText: texto }).evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
+    expect(await tamano('S/ 3.50')).toBeGreaterThanOrEqual(1.6 * (await tamano('S/ 1.10')))
+  })
+
   test('Movimientos abre una hoja con filtros de fecha, deja lo de atrás inerte y devuelve el foco', async ({
     page,
   }) => {

@@ -5,6 +5,7 @@ import type { Unidad } from '@/shared/domain/cantidad'
 import { SIMBOLO_DE_UNIDAD } from '@/shared/domain/formato'
 import Boton from './Boton.vue'
 import CampoNumero from './CampoNumero.vue'
+import DespliegueAnimado from './DespliegueAnimado.vue'
 import FotoDeProducto from './FotoDeProducto.vue'
 
 const props = withDefaults(
@@ -333,42 +334,43 @@ function alPresionarEnter(evento: KeyboardEvent) {
         <Tag aria-hidden="true" class="icono-accion" />
         <span>¿Vendiste alguno a otro precio?</span>
       </button>
-      <div
-        v-if="separando"
-        ref="refSeparar"
-        class="edicion-precio separar"
-        role="group"
-        :aria-label="`Otro precio para algunos de ${nombre}`"
-        @keydown.esc.stop="cancelarSeparar"
-        @keydown.enter="alPresionarEnterAlSeparar"
-      >
-        <p class="titulo-separar">¿Vendiste alguno a otro precio?</p>
-        <CampoNumero
-          v-model="cuantos"
-          :etiqueta="`¿Cuántos? (de ${maximoSeparar ?? cantidad})`"
-          :decimales="!porUnidades"
-          :minimo="minimo"
-          :maximo="maximoSeparar"
-          :error="errorCuantos"
-        />
-        <CampoNumero
-          v-model="precioSeparado"
-          etiqueta="¿A cuánto cada uno? (S/)"
-          decimales
-          :error="errorPrecio"
-        />
-        <div class="acciones">
-          <Boton
-            class="accion"
-            texto="Guardar"
-            variante="primario"
-            :icono="Check"
-            :deshabilitado="Boolean(errorCuantosLocal)"
-            @click="guardarSeparar"
+      <DespliegueAnimado :abierto="separando">
+        <div
+          ref="refSeparar"
+          class="edicion-precio separar"
+          role="group"
+          :aria-label="`Otro precio para algunos de ${nombre}`"
+          @keydown.esc.stop="cancelarSeparar"
+          @keydown.enter="alPresionarEnterAlSeparar"
+        >
+          <p class="titulo-separar">¿Vendiste alguno a otro precio?</p>
+          <CampoNumero
+            v-model="cuantos"
+            :etiqueta="`¿Cuántos? (de ${maximoSeparar ?? cantidad})`"
+            :decimales="!porUnidades"
+            :minimo="minimo"
+            :maximo="maximoSeparar"
+            :error="errorCuantos"
           />
-          <Boton class="accion" texto="Cancelar" @click="cancelarSeparar" />
+          <CampoNumero
+            v-model="precioSeparado"
+            etiqueta="¿A cuánto cada uno? (S/)"
+            decimales
+            :error="errorPrecio"
+          />
+          <div class="acciones">
+            <Boton
+              class="accion"
+              texto="Guardar"
+              variante="primario"
+              :icono="Check"
+              :deshabilitado="Boolean(errorCuantosLocal)"
+              @click="guardarSeparar"
+            />
+            <Boton class="accion" texto="Cancelar" @click="cancelarSeparar" />
+          </div>
         </div>
-      </div>
+      </DespliegueAnimado>
     </template>
 
     <template v-else>
@@ -450,26 +452,32 @@ function alPresionarEnter(evento: KeyboardEvent) {
 
     <!-- Escape cierra solo esta edición (.stop): no llega al panel de venta, que con Escape se
          cerraría entero. -->
-    <div
-      v-if="editando"
-      :id="idEdicion"
-      ref="refEdicion"
-      class="edicion-precio"
-      @keydown.esc.stop="cancelar"
-      @keydown.enter="alPresionarEnter"
-    >
-      <CampoNumero v-model="precioNuevo" :etiqueta="textos.nuevo" decimales :error="errorPrecio" />
-      <div class="acciones">
-        <Boton
-          class="accion"
-          :texto="textos.guardar"
-          variante="primario"
-          :icono="Check"
-          @click="guardar"
+    <DespliegueAnimado :abierto="editando">
+      <div
+        :id="idEdicion"
+        ref="refEdicion"
+        class="edicion-precio"
+        @keydown.esc.stop="cancelar"
+        @keydown.enter="alPresionarEnter"
+      >
+        <CampoNumero
+          v-model="precioNuevo"
+          :etiqueta="textos.nuevo"
+          decimales
+          :error="errorPrecio"
         />
-        <Boton class="accion" texto="Cancelar" @click="cancelar" />
+        <div class="acciones">
+          <Boton
+            class="accion"
+            :texto="textos.guardar"
+            variante="primario"
+            :icono="Check"
+            @click="guardar"
+          />
+          <Boton class="accion" texto="Cancelar" @click="cancelar" />
+        </div>
       </div>
-    </div>
+    </DespliegueAnimado>
   </div>
 </template>
 
