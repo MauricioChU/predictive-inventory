@@ -46,7 +46,7 @@ Patrones de diseño reutilizables (hoja inferior, panel de carrito, fila de avis
 │ │ Total vendido S/ 162.50  │ │
 │ │ Ganancia real S/ 48.20   │ │
 │ └──────────────────────────┘ │
-│ ┌ 🟠 4 productos se acaban  ›┐ │
+│ ┌ 🟠 2 productos agotados   ›┐ │
 │                              │
 │   (espacio libre)            │
 │ [ 🛒  VENDER               ] │
@@ -57,7 +57,7 @@ Patrones de diseño reutilizables (hoja inferior, panel de carrito, fila de avis
 │ Inicio Vender Recibir Prod. Control │
 └──────────────────────────────┘
 ```
-El encabezado es el **nombre de la tienda en mayúsculas**, sin saludo ni emoji (si no hay nombre, el encabezado dice *Inicio*), y a la derecha la tuerca de *Ajustes*. Debajo va la **fecha en mayúsculas**, sin hora (el celular ya la muestra); es la fecha de la tienda (Lima) y, si la medianoche pasa con la app abierta, se pone al día al volver a la app. Las acciones quedan **abajo, sobre la navegación**, al alcance del pulgar; **Inicio entra en una sola pantalla** (360 × 740 con letra Grande, sin desplazar): **«Total vendido» es la cifra principal** (letra mucho más grande) y «Ganancia real» va debajo, más chica (sin ventas ni pérdida solo se ve el total); los avisos van en un **carrusel** de uno a la vez (fila compacta; con varios, botones ‹ › y «1 de 3» siempre visibles y alto reservado; deslizar es un extra; con uno solo, sin controles). Si el contenido es más alto que la pantalla (letra Muy grande, 320 px), todo fluye hacia abajo sin taparse.
+El encabezado es el **nombre de la tienda en mayúsculas**, sin saludo ni emoji (si no hay nombre, el encabezado dice *Inicio*), y a la derecha la tuerca de *Ajustes*. Debajo va la **fecha en mayúsculas**, sin hora (el celular ya la muestra); es la fecha de la tienda (Lima) y, si la medianoche pasa con la app abierta, se pone al día al volver a la app. Las acciones quedan **abajo, sobre la navegación**, al alcance del pulgar; **Inicio entra en una sola pantalla** (360 × 740 con letra Grande, sin desplazar): **«Total vendido» es la cifra principal** (letra mucho más grande) y «Ganancia real» va debajo, más chica (sin ventas ni pérdida solo se ve el total); los avisos van en un **carrusel** de uno a la vez, una tarjeta por cada cosa de *Atención*: «N productos agotados» y «Queda poco de N productos» (abren *Productos* ya filtrado) y «N precios para revisar» (abre *Ayuda inteligente*); sin ninguno, «Todo en orden» (fila compacta; con varios, botones ‹ › y «1 de 3» siempre visibles y alto reservado; deslizar es un extra; con uno solo, sin controles). Si el contenido es más alto que la pantalla (letra Muy grande, 320 px), todo fluye hacia abajo sin taparse.
 
 ### Vender
 ```
@@ -101,7 +101,7 @@ Lista con el buscador y, a su lado, el botón **Filtros** (solo ícono, con un n
 **Agregar producto** (botón fijo de abajo, o «Agregar el primero») abre el formulario de **Producto nuevo** en una **hoja inferior** a toda la pantalla, sin salir de la lista (con lo buscado ya escrito como nombre, si no se encontró). Al guardar, la confirmación («Producto guardado», con *Agregar otro producto* y *Ver producto*) se ve dentro de la hoja; la lista deja los filtros (para que no escondan lo nuevo) y se vuelve a leer al cerrar. La pantalla `/productos/nuevo` sigue para los otros accesos (Primera vez, enlaces, otras listas).
 
 ### Control (Torre de control)
-Tarjetas apiladas en el orden de [04](04-torre-de-control.md); desde 768 px en dos columnas.
+Control sirve para **medir**: tarjetas apiladas en el orden de [04](04-torre-de-control.md); desde 768 px en dos columnas. *Resumen* usa el mismo patrón que Inicio (**Total vendido** grande y **Ganancia real** debajo, con los mismos rótulos para cualquier periodo). *Tus mejores productos* es un solo bloque con un selector «Más vendidos» / «Más ganancia» (y 7 o 30 días). *Semana contra semana* es un gráfico de dos barras por métrica (esta semana y la anterior, con su valor escrito y una tabla para el lector de pantalla). Al final, el botón **Ayuda inteligente** (con cuántas cosas hay que mirar) abre `/control/ayuda`, donde viven *Atención*, *Para comprar* y *Productos parados*.
 
 La tarjeta **Alquiler del local** (RN-AN-19), en sus dos estados configurados:
 ```

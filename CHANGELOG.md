@@ -6,6 +6,9 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ### Cambiado
 
+- Control ahora es para medir. «Resumen» se ve como Inicio («Total vendido» grande y «Ganancia real» debajo, con los mismos nombres en Hoy, Ayer, 7 y 30 días) y «Pérdidas» ya no lleva paréntesis. «Lo que más se vende» y «Lo que más ganancia deja» son un solo bloque, «Tus mejores productos», con un selector «Más vendidos» / «Más ganancia». «Semana contra semana» se ve en un gráfico de barras.
+- Nueva pantalla «Ayuda inteligente» (botón al final de Control, con cuántas cosas hay que mirar): ahí están «Atención», «Para comprar» y «Productos parados», que salieron de Control.
+- Inicio: el carrusel de avisos muestra una tarjeta por cada cosa de Atención («N productos agotados», «Queda poco de N productos» y «N precios para revisar»), cada una con su flecha a Productos ya filtrado o a Ayuda inteligente.
 - Inicio: «Total vendido» es la cifra principal (mucho más grande) y «Ganancia real» queda más chica debajo; sin ventas solo se ve el total con «Todavía no hay ventas hoy». Los avisos van en un carrusel: uno a la vez, con botones ‹ › y «1 de 3» (también se puede deslizar); con uno solo no hay controles.
 - «¿Vendiste alguno a otro precio?» y «Cambiar precio» se despliegan y se recogen con animación (sin movimiento si el sistema pide reducirlo).
 - La confirmación de Vender y de Llegó mercadería muestra como mucho 4 productos; si hay más, la tarjeta se desplaza por dentro con la pista «y N más».

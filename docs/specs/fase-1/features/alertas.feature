@@ -119,12 +119,12 @@ Característica: Alertas de stock
     Y el botón "Control" muestra el número "2"
 
   @RN-AL-06
-  Escenario: El aviso de Inicio lleva a Productos ya filtrado
+  Escenario: El aviso de agotados de Inicio lleva a Productos ya filtrado
     Dado los productos:
       | nombre    | categoría | unidad | compra | venta | mínimo | stock |
       | Lejía 1 L | Otros     | UNIDAD | 2.40   | 3.50  | 3      | 0     |
     Cuando abro la app
-    Entonces el botón del aviso de Inicio abre "Productos filtrado por Se acaban"
+    Entonces el botón del aviso de Inicio abre "Productos filtrado por Agotados"
 
   @RN-AL-06
   Escenario: Sin permiso, los avisos quedan dentro de la app

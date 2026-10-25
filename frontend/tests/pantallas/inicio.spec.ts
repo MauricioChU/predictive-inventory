@@ -113,21 +113,38 @@ describe('Inicio', () => {
     ).toHaveLength(1)
   })
 
-  it('RN-AL-06: avisa cuántos productos se acaban y lleva a Productos ya filtrado', async () => {
+  it('RN-AL-06a: avisa por separado lo agotado y lo que queda poco, y cada aviso lleva a Productos ya filtrado', async () => {
     await tiendaLista()
     await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '0' })
     await crearProductoDePrueba(app, { ...CARBON, stockInicial: '2' })
     const { wrapper, router } = await abrirInicio()
 
-    const aviso = wrapper.get('.fila-de-aviso--atencion')
-    expect(aviso.text()).toContain('2 productos se acaban')
-    // Fila compacta: sin el subtítulo "1 agotado y 1 por acabarse".
-    expect(aviso.text()).not.toContain('agotado')
-
-    await botonCon('Ver productos').trigger('click')
+    // Un aviso por tarjeta, con "1 de 2" y ‹ ›.
+    expect(wrapper.get('.fila-de-aviso--atencion').text()).toContain('1 producto agotado')
+    expect(wrapper.text()).toContain('1 de 2')
+    await botonCon('Ver agotados').trigger('click')
     await esperarPantalla()
     expect(router.currentRoute.value.name).toBe('productos')
-    expect(router.currentRoute.value.query).toEqual({ estado: 'se-acaban' })
+    expect(router.currentRoute.value.query).toEqual({ estado: 'agotados' })
+
+    await router.push('/')
+    await esperarPantalla()
+    await botonCon('Aviso siguiente').trigger('click')
+    expect(wrapper.get('.fila-de-aviso--atencion').text()).toContain('Queda poco de 1 producto')
+    await botonCon('Ver lo que queda poco').trigger('click')
+    await esperarPantalla()
+    expect(router.currentRoute.value.query).toEqual({ estado: 'queda-poco' })
+  })
+
+  it('RN-AL-06a: un precio igual o menor que el costo es un aviso que lleva a Ayuda inteligente', async () => {
+    await tiendaLista()
+    await crearProductoDePrueba(app, { ...LEJIA, venta: '2.00', stockInicial: '10' })
+    const { wrapper, router } = await abrirInicio()
+
+    expect(wrapper.get('.fila-de-aviso--atencion').text()).toContain('1 precio para revisar')
+    await botonCon('Ver precios para revisar').trigger('click')
+    await esperarPantalla()
+    expect(router.currentRoute.value.name).toBe('ayuda-inteligente')
   })
 
   it('RN-AL-06: si nada se acaba, lo dice', async () => {

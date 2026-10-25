@@ -130,7 +130,7 @@ test.describe('Los textos de la spec, exactos', () => {
     await abrir(page, `./productos/${ids['Ambientador Glade']}`)
     await expect(page.locator('#contenido')).toContainText('Sin ventas en las últimas 4 semanas')
 
-    await abrir(page, './control')
+    await abrir(page, './control/ayuda')
     await expect(page.getByRole('region', { name: 'Productos parados' })).toContainText(
       'Ponlo a la vista u ofrécelo con descuento',
     )

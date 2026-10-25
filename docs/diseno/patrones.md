@@ -96,6 +96,12 @@ La cifra que una pantalla quiere que se lea primero (Inicio: «Total vendido»).
 - Título arriba y la cifra debajo, hasta 2.5 rem (sin partir el monto); la secundaria («Ganancia real») va debajo, compacta y en una línea (`compacta en-linea`, cifra de 1.4 rem). La principal es claramente más grande (≥ 1.6 ×).
 - Sin ventas ni pérdida hoy solo se ve la principal con «Todavía no hay ventas hoy»: así Inicio entra en una pantalla.
 
+## Subvista de ayudas, selector de top y gráfico comparativo — Control
+
+- **Control mide, las ayudas van aparte**: lo que el sistema avisa o sugiere (Atención, Para comprar, Productos parados) vive en `/control/ayuda` (`VistaAyudaInteligente.vue`, con `EncabezadoPagina volver`). Se abre desde un botón al final de Control (ícono, «Ayuda inteligente» y debajo «N cosas para mirar»; en pantallas angostas sin flecha, para que el nombre quepa entero con letra Muy grande).
+- **Dos listas, un bloque**: dos top 5 se alternan con un `SelectorSegmentado` («Más vendidos» / «Más ganancia») en la misma tarjeta; solo se ve una lista a la vez.
+- **Comparar dos períodos**: un `GraficoBarras` por métrica con dos barras (la actual destacada, la anterior), el cambio dicho con palabras encima y el valor escrito en cada barra; el lector de pantalla recibe la tabla.
+
 ## Resumen de lo registrado — `ResumenDeLineas.vue`
 
 - A la vista, como mucho 4 líneas (alto medido, aunque un nombre ocupe dos renglones). Con más, la tarjeta se desplaza **por dentro** (`overscroll-behavior: contain`: la página no se mueve), es una región con nombre («Lo que vendiste: 7 productos») que el teclado alcanza (Tab, flechas) y abajo hay una pista: degradado y «y N más ⌄» que pasa a «Ya viste todo» al llegar al final.

@@ -140,7 +140,7 @@ test.describe('Productos: flujos críticos', () => {
     await expect.poll(() => nombresEnLaLista(page)).toEqual(['Lejía Tradicional 2 L'])
   })
 
-  test('el aviso de Inicio abre Productos filtrado por "Se acaban" (RN-AL-06, RN-CAT-16)', async ({ page }) => {
+  test('los avisos de Inicio abren Productos filtrado por "Agotados" y por "Queda poco" (RN-AL-06a, RN-CAT-16)', async ({ page }) => {
     await abrirTiendaLista(page, './productos')
     await crearProductos(page, [
       ...LEJIAS,
@@ -148,14 +148,22 @@ test.describe('Productos: flujos críticos', () => {
     ])
     await abrir(page, './')
 
-    await expect(page.getByText('2 productos se acaban')).toBeVisible()
-    await page.getByRole('button', { name: 'Ver productos' }).click()
+    // Un aviso por tarjeta: primero lo agotado, con ‹ › para pasar a lo que queda poco.
+    await expect(page.getByText('1 producto agotado')).toBeVisible()
+    await page.getByRole('button', { name: 'Ver agotados' }).click()
 
     await expect(page.getByRole('heading', { level: 1, name: 'Productos' })).toBeVisible()
-    await expect(page).toHaveURL(/\/productos\?estado=se-acaban$/)
-    await expect(page.getByRole('button', { name: 'Quitar filtro Se acaban' })).toBeVisible()
-    // Solo lo agotado y lo que queda poco; lo que tiene stock no sale.
-    await expect.poll(async () => (await nombresEnLaLista(page)).sort()).toEqual(['Escoba', 'Lejía Tradicional 2 L'])
+    await expect(page).toHaveURL(/\/productos\?estado=agotados$/)
+    await expect(page.getByRole('button', { name: 'Quitar filtro Agotados' })).toBeVisible()
+    await expect.poll(async () => (await nombresEnLaLista(page)).sort()).toEqual(['Escoba'])
+
+    await abrir(page, './')
+    await page.getByRole('button', { name: 'Aviso siguiente' }).click()
+    await expect(page.getByText('Queda poco de 1 producto')).toBeVisible()
+    await page.getByRole('button', { name: 'Ver lo que queda poco' }).click()
+    await expect(page).toHaveURL(/\/productos\?estado=queda-poco$/)
+    await expect(page.getByRole('button', { name: 'Quitar filtro Queda poco' })).toBeVisible()
+    await expect.poll(async () => (await nombresEnLaLista(page)).sort()).toEqual(['Lejía Tradicional 2 L'])
 
     await page.getByRole('button', { name: /^Filtros/ }).click()
     await page.getByRole('radio', { name: 'Todos' }).click()

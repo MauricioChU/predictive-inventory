@@ -9,6 +9,7 @@ describe('rutas de Control', () => {
 
   it.each([
     ['control', '/control', 'Control'],
+    ['ayuda-inteligente', '/control/ayuda', 'Ayuda inteligente'],
     ['para-comprar', '/control/para-comprar', 'Para comprar'],
     ['necesito-comprar', '/control/necesito-comprar', '¿Necesito comprar?'],
   ])('"%s" está en %s con el título "%s"', (nombre, camino, titulo) => {

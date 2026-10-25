@@ -11,7 +11,8 @@ import {
 } from 'lucide-vue-next'
 import { useEstadoGlobal } from '@/app/estado-global'
 import { useAplicacion } from '@/app/proveer-aplicacion'
-import { RUTA_SE_ACABAN, type ResumenDeAtencion } from '@/modules/alertas'
+import { preciosParaRevisar } from '@/modules/analisis'
+import { RUTA_AGOTADOS, RUTA_QUEDA_POCO, type ResumenDeAtencion } from '@/modules/alertas'
 import { HojaDeMovimientos } from '@/modules/inventario'
 import type { Dinero } from '@/shared/domain/dinero'
 import { formatearDinero, plural } from '@/shared/domain/formato'
@@ -33,6 +34,8 @@ const route = useRoute()
 const nombreTienda = ref('')
 const deHoy = ref<{ ganancia: Dinero; ventas: Dinero } | null>(null)
 const atencion = ref<ResumenDeAtencion | null>(null)
+/** Productos activos que se venden a su costo o por debajo (RN-AN-10). */
+const preciosARevisar = ref(0)
 /** `null` mientras se lee. */
 const hayProductos = ref<boolean | null>(null)
 const fallo = ref(false)
@@ -94,36 +97,53 @@ const cifrasDeHoy = computed(() => {
   }
 })
 
-/** RN-AL-06a: "4 productos se acaban" (agotados + por acabarse). */
-const tituloDeAtencion = computed(() => {
-  const n = atencion.value?.contador ?? 0
-  return `${n} ${plural(n, 'producto se acaba', 'productos se acaban')}`
-})
-
 /**
- * Los avisos de Inicio, de uno en uno en un carrusel. Hoy hay uno (lo que se acaba, o "todo en
- * orden"); los que vengan se suman aquí y se ven con ‹ ›.
+ * Los avisos de Inicio, de uno en uno en un carrusel: los mismos de Atención en Control, cada uno con
+ * su cantidad y su flecha a la pantalla que corresponde (RN-AL-06a). Sin ninguno, "Todo en orden".
  */
 const avisos = computed<AvisoDelCarrusel[]>(() => {
   if (!atencion.value) return []
-  return atencion.value.contador > 0
-    ? [
-        {
-          id: 'se-acaban',
-          tono: 'atencion',
-          texto: tituloDeAtencion.value,
-          textoAccion: 'Ver productos',
-        },
-      ]
+  const { agotados, porAcabarse } = atencion.value
+  const lista: AvisoDelCarrusel[] = []
+  if (agotados > 0)
+    lista.push({
+      id: 'agotados',
+      tono: 'atencion',
+      texto: `${agotados} ${plural(agotados, 'producto agotado', 'productos agotados')}`,
+      textoAccion: 'Ver agotados',
+    })
+  if (porAcabarse > 0)
+    lista.push({
+      id: 'queda-poco',
+      tono: 'atencion',
+      texto: `Queda poco de ${porAcabarse} ${plural(porAcabarse, 'producto', 'productos')}`,
+      textoAccion: 'Ver lo que queda poco',
+    })
+  if (preciosARevisar.value > 0)
+    lista.push({
+      id: 'precios',
+      tono: 'atencion',
+      texto: `${preciosARevisar.value} ${plural(preciosARevisar.value, 'precio para revisar', 'precios para revisar')}`,
+      textoAccion: 'Ver precios para revisar',
+    })
+  return lista.length > 0
+    ? lista
     : [{ id: 'todo-en-orden', tono: 'exito', texto: atencion.value.texto }]
 })
 
 function alTocarAviso(id: string): void {
-  if (id === 'se-acaban') verLoQueSeAcaba()
+  if (id === 'agotados') void router.push(RUTA_AGOTADOS)
+  else if (id === 'queda-poco') void router.push(RUTA_QUEDA_POCO)
+  else if (id === 'precios') void router.push({ name: 'ayuda-inteligente' })
 }
 
 async function cargarAtencion(): Promise<void> {
-  atencion.value = await aplicacion.alertas.resumenDeAtencion()
+  const [resumen, productos] = await Promise.all([
+    aplicacion.alertas.resumenDeAtencion(),
+    aplicacion.catalogo.consultable.productos({ soloActivos: true }),
+  ])
+  atencion.value = resumen
+  preciosARevisar.value = preciosParaRevisar(productos).length
 }
 
 async function cargar(): Promise<void> {
@@ -159,11 +179,6 @@ watch(
 
 function ir(nombre: PantallaDeOtraRama): void {
   void router.push(haciaPantalla(router, nombre))
-}
-
-/** RN-AL-06a: el aviso abre Productos ya filtrado por "Se acaban" (RN-CAT-16). */
-function verLoQueSeAcaba(): void {
-  void router.push(RUTA_SE_ACABAN)
 }
 </script>
 

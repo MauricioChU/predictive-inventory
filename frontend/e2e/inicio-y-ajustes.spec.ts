@@ -270,9 +270,8 @@ test.describe('Inicio', () => {
     await expect(cifra).toContainText('S/ 7.00')
     await expect(cifra).toContainText('Ganancia real')
     await expect(cifra).toContainText('S/ 2.20')
-    await expect(page.getByText('1 producto se acaba')).toBeVisible()
-    await expect(page.getByText('1 agotado')).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Ver productos' })).toBeVisible()
+    await expect(page.getByText('1 producto agotado')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Ver agotados' })).toBeVisible()
 
     for (const texto of ['Resumen del día', 'guardas una copia', 'pagas el local', 'Instala la app en tu celular']) {
       await expect(page.getByText(texto)).toHaveCount(0)
@@ -288,7 +287,7 @@ async function abrirInicioCompleto(page: Page, letra: 'GRANDE' | 'MUY_GRANDE', a
   await crearProducto(page, { nombre: 'Lejía 1 L', compra: '2.40', venta: '3.50', minimo: '3', stock: '2' })
   await crearProducto(page, { nombre: 'Carbón', compra: '2.75', venta: '4.00', stock: '0' })
   await abrir(page, './')
-  await expect(page.getByText('2 productos se acaban')).toBeVisible()
+  await expect(page.getByText('1 producto agotado')).toBeVisible()
   await page.evaluate(() => document.fonts.ready)
 }
 
@@ -321,11 +320,18 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     page,
   }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
-    await abrirInicioCompleto(page, 'GRANDE', 360, 740)
+    // Con un solo aviso no hay controles del carrusel: Inicio entra en una pantalla. Con varios
+    // se reserva su alto y ‹ ›, y el contenido fluye si hace falta.
+    await usarLetra(page, 'GRANDE')
+    await page.setViewportSize({ width: 360, height: 740 })
+    await abrirTiendaLista(page, './ajustes')
+    await crearProducto(page, { nombre: 'Carbón', compra: '2.75', venta: '4.00', stock: '0' })
+    await abrir(page, './')
+    await expect(page.getByText('1 producto agotado')).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
     expect(await page.evaluate(() => document.documentElement.scrollHeight), 'sin desplazar').toBeLessThanOrEqual(740)
     const fila = page.locator('.fila-de-aviso')
-    await expect(fila).toContainText('2 productos se acaban')
-    await expect(fila).not.toContainText('agotado')
+    await expect(fila).toContainText('1 producto agotado')
     expect((await fila.boundingBox())!.height, 'una sola línea').toBeLessThan(60)
     await expect(page.getByRole('button', { name: /^Movimientos/ })).toBeVisible()
   })
@@ -340,7 +346,7 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     const lejia = await crearProducto(page, { nombre: 'Lejía 1 L', compra: '2.40', venta: '3.50', minimo: '3', stock: '2' })
     await vender(page, lejia, '1')
     await abrir(page, './')
-    await expect(page.getByText('1 producto se acaba')).toBeVisible()
+    await expect(page.getByText('Queda poco de 1 producto')).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollHeight), 'sin desplazar').toBeLessThanOrEqual(740)
     const tamano = (texto: string) =>
       page.locator('.cifras-de-hoy .valor', { hasText: texto }).evaluate((el) => parseFloat(getComputedStyle(el).fontSize))

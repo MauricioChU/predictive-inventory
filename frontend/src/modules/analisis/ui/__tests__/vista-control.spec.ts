@@ -45,33 +45,43 @@ async function elegir(s: DOMWrapper<Element>, opcion: string): Promise<void> {
 }
 
 describe('Control (Torre de control)', () => {
-  it('04-torre-de-control: muestra las ocho secciones en el orden de la spec (Alquiler del local, segunda), con el título Control', async () => {
+  it('04-torre-de-control: muestra las cinco secciones en el orden de la spec (Alquiler del local, segunda), con el título Control', async () => {
     const { envoltura } = await abrirControl(new TiendaDePrueba())
     expect(texto(envoltura.get('h1'))).toBe('Control')
     expect(envoltura.findAll('section h2').map(texto)).toEqual([
       'Resumen',
       'Alquiler del local',
-      'Atención',
-      'Para comprar',
-      'Más vendidos',
+      'Tus mejores productos',
       'Semana contra semana',
       'Mejor día de la semana',
-      'Productos parados',
     ])
   })
 
-  it('RN-AN-19: con "No pago, el local es mío" la tarjeta no se muestra y quedan las siete secciones', async () => {
+  it('04-torre-de-control: al final hay un botón "Ayuda inteligente" con cuántas cosas mirar, que abre su subvista', async () => {
+    const tienda = new TiendaDePrueba()
+    await tienda.producto({ ...LEJIA, stockInicial: '20' }, '2026-10-01 08:00')
+    await tienda.producto(BOLSAS)
+    await tienda.producto({ ...JABON, stockInicial: '2' })
+    await tienda.producto({ ...CERA_ROJA, stockInicial: '10' })
+    const { envoltura, router } = await abrirControl(tienda)
+    // Agotado + queda poco + precio para revisar: 3 cosas. Atención, Para comprar y Parados ya no están aquí.
+    const enlace = envoltura.get('a.ayuda')
+    expect(texto(enlace)).toBe('Ayuda inteligente 3 cosas para mirar')
+    expect(envoltura.findAll('section h2').map(texto)).not.toContain('Atención')
+    await enlace.trigger('click')
+    await esperarCarga()
+    expect(router.currentRoute.value.name).toBe('ayuda-inteligente')
+  })
+
+  it('RN-AN-19: con "No pago, el local es mío" la tarjeta no se muestra y quedan las cuatro secciones', async () => {
     const tienda = new TiendaDePrueba()
     await tienda.app.tienda.actualizarConfiguracion({ alquilerDelLocal: { tipo: 'NO_PAGA' } })
     const { envoltura } = await abrirControl(tienda)
     expect(envoltura.findAll('section h2').map(texto)).toEqual([
       'Resumen',
-      'Atención',
-      'Para comprar',
-      'Más vendidos',
+      'Tus mejores productos',
       'Semana contra semana',
       'Mejor día de la semana',
-      'Productos parados',
     ])
   })
 
@@ -171,30 +181,30 @@ describe('Control (Torre de control)', () => {
       const { envoltura } = await abrirControl(await tiendaDelResumen())
       const resumen = seccion(envoltura, 'Resumen')
       expect(texto(resumen.get('[role="radio"][aria-checked="true"]'))).toBe('Hoy')
-      expect(texto(resumen.get('.tarjeta-de-cifra'))).toBe('Hoy ganaste S/ 2.00 Vendiste S/ 14.00')
+      // Como Inicio: lo cobrado (principal) y debajo la ganancia real.
+      expect(resumen.findAll('.tarjeta-de-cifra').map(texto)).toEqual([
+        'Total vendido S/ 14.00',
+        'Ganancia real S/ 2.00',
+      ])
       expect(resumen.findAll('.cifras .fila-de-dato').map(texto)).toEqual([
-        'Ventas S/ 14.00',
         'Costo de lo vendido S/ 9.60',
-        'Pérdidas (se dañó, se derramó o se venció) S/ 2.40',
+        'Pérdidas S/ 2.40',
       ])
       const aparte = resumen.get('.aparte')
       expect(texto(aparte.get('.fila-de-dato'))).toBe('Diferencias de conteo -S/ 2.40')
       expect(texto(aparte)).toContain('No cambia la ganancia')
     })
 
-    it('RN-AN-03: al elegir otro periodo cambian las cifras', async () => {
+    it('RN-AN-03: al elegir otro periodo cambian las cifras, con los mismos rótulos', async () => {
       const { envoltura } = await abrirControl(await tiendaDelResumen())
       const resumen = seccion(envoltura, 'Resumen')
+      const cifras = () => resumen.findAll('.tarjeta-de-cifra').map(texto)
       await elegir(resumen, 'Ayer')
-      expect(texto(resumen.get('.tarjeta-de-cifra'))).toBe('Ayer ganaste S/ 2.20 Vendiste S/ 7.00')
+      expect(cifras()).toEqual(['Total vendido S/ 7.00', 'Ganancia real S/ 2.20'])
       await elegir(resumen, '7 días')
-      expect(texto(resumen.get('.tarjeta-de-cifra'))).toBe(
-        'En 7 días ganaste S/ 4.20 Vendiste S/ 21.00',
-      )
+      expect(cifras()).toEqual(['Total vendido S/ 21.00', 'Ganancia real S/ 4.20'])
       await elegir(resumen, '30 días')
-      expect(texto(resumen.get('.tarjeta-de-cifra'))).toBe(
-        'En 30 días ganaste S/ 4.20 Vendiste S/ 21.00',
-      )
+      expect(cifras()).toEqual(['Total vendido S/ 21.00', 'Ganancia real S/ 4.20'])
     })
 
     it('una pérdida se dice como pérdida, y un periodo sin ventas lo dice', async () => {
@@ -202,136 +212,22 @@ describe('Control (Torre de control)', () => {
       await tienda.producto({ ...LEJIA, stockInicial: '20' }, '2026-08-01 08:00')
       await tienda.merma('Lejía 1 L', '1')
       const { envoltura } = await abrirControl(tienda)
-      const cifra = seccion(envoltura, 'Resumen').get('.tarjeta-de-cifra')
-      expect(texto(cifra)).toBe('Hoy perdiste S/ 2.40 Todavía no hay ventas hoy')
-      expect(cifra.classes()).toContain('tarjeta-de-cifra--peligro')
+      const cifras = seccion(envoltura, 'Resumen').findAll('.tarjeta-de-cifra')
+      expect(cifras.map(texto)).toEqual([
+        'Total vendido S/ 0.00 Todavía no hay ventas hoy',
+        'Pérdida real S/ 2.40',
+      ])
+      expect(cifras[1]!.classes()).toContain('tarjeta-de-cifra--peligro')
+    })
+
+    it('sin ventas ni pérdidas solo se ve el total, con "Todavía no hay ventas hoy"', async () => {
+      const { envoltura } = await abrirControl(new TiendaDePrueba())
+      const cifras = seccion(envoltura, 'Resumen').findAll('.tarjeta-de-cifra')
+      expect(cifras.map(texto)).toEqual(['Total vendido S/ 0.00 Todavía no hay ventas hoy'])
     })
   })
 
-  describe('Atención', () => {
-    async function tiendaConAtencion() {
-      const tienda = new TiendaDePrueba()
-      await tienda.producto({ ...LEJIA, stockInicial: '20' }, '2026-10-01 08:00')
-      await tienda.producto(BOLSAS)
-      await tienda.producto({ ...JABON, stockInicial: '2' })
-      await tienda.producto({ ...CERA_ROJA, stockInicial: '10' })
-      return tienda
-    }
-
-    it('cada grupo dice cuántos productos tiene y abre su lista', async () => {
-      const tienda = await tiendaConAtencion()
-      const { envoltura } = await abrirControl(tienda)
-      const atencion = seccion(envoltura, 'Atención')
-      const botones = atencion.findAll('button[aria-expanded]')
-      expect(botones.map(texto)).toEqual([
-        'Agotados 1 producto',
-        'Queda poco 1 producto',
-        'Precios para revisar 1 producto',
-      ])
-      expect(botones.map((b) => b.attributes('aria-expanded'))).toEqual(['false', 'false', 'false'])
-
-      await botones[0]!.trigger('click')
-      expect(botones[0]!.attributes('aria-expanded')).toBe('true')
-      const agotados = atencion.get(`#${botones[0]!.attributes('aria-controls')}`)
-      expect(agotados.isVisible()).toBe(true)
-      expect(agotados.findAll('li').map(texto)).toEqual(['Bolsas Agotado'])
-      // Cada producto abre su detalle (ruta `producto`, rama 11).
-      expect(agotados.get('a').attributes('href')).toBe(`/productos/${tienda.id('Bolsas')}`)
-
-      await botones[1]!.trigger('click')
-      const porAcabarse = atencion.get(`#${botones[1]!.attributes('aria-controls')}`)
-      expect(porAcabarse.findAll('li').map(texto)).toEqual(['Jabón Quedan 2 unid.'])
-
-      await botones[2]!.trigger('click')
-      const precios = atencion.get(`#${botones[2]!.attributes('aria-controls')}`)
-      expect(precios.findAll('li').map(texto)).toEqual(['Cera roja Pierdes S/ 0.50 por unidad'])
-
-      await botones[0]!.trigger('click')
-      expect(botones[0]!.attributes('aria-expanded')).toBe('false')
-      expect(agotados.isVisible()).toBe(false)
-    })
-
-    it('mientras no exista el detalle del producto (rama 11), la lista no enlaza', async () => {
-      const { envoltura } = await abrirControl(await tiendaConAtencion(), false)
-      const atencion = seccion(envoltura, 'Atención')
-      const agotados = atencion.findAll('button[aria-expanded]')[0]!
-      await agotados.trigger('click')
-      const lista = atencion.get(`#${agotados.attributes('aria-controls')}`)
-      expect(atencion.find('a').exists()).toBe(false)
-      expect(lista.findAll('li').map(texto)).toEqual(['Bolsas Agotado'])
-    })
-
-    it('un grupo sin productos dice "Ninguno" y no es un botón', async () => {
-      const tienda = new TiendaDePrueba()
-      await tienda.producto({ ...LEJIA, stockInicial: '20' })
-      const { envoltura } = await abrirControl(tienda)
-      const atencion = seccion(envoltura, 'Atención')
-      expect(atencion.findAll('button').length).toBe(0)
-      expect(atencion.findAll('.fila-de-atencion').map(texto)).toEqual([
-        'Agotados Ninguno',
-        'Queda poco Ninguno',
-        'Precios para revisar Ninguno',
-      ])
-    })
-  })
-
-  describe('Para comprar', () => {
-    it('RN-AN-07 / RN-AN-08: resume la lista con su total y abre "Para comprar" y "¿Necesito comprar?"', async () => {
-      const tienda = new TiendaDePrueba()
-      await tienda.producto(BOLSAS)
-      await tienda.producto({ ...JABON, stockInicial: '2' })
-      const { envoltura, router } = await abrirControl(tienda)
-      const paraComprar = seccion(envoltura, 'Para comprar')
-      expect(paraComprar.findAll('.fila-de-dato').map(texto)).toEqual([
-        'Bolsas 1 unid.',
-        'Jabón 4 unid.',
-        'Total estimado S/ 4.85',
-      ])
-      expect(texto(paraComprar.get('.cuantos'))).toBe('2 productos')
-
-      // Se busca de nuevo cada vez: al volver a Control la pantalla se monta otra vez.
-      const boton = (nombre: string) =>
-        seccion(envoltura, 'Para comprar')
-          .findAll('button')
-          .find((b) => texto(b) === nombre)!
-      await boton('Ver la lista para comprar').trigger('click')
-      await esperarCarga()
-      expect(router.currentRoute.value.name).toBe('para-comprar')
-
-      await router.push('/control')
-      await esperarCarga()
-      await boton('¿Necesito comprar?').trigger('click')
-      await esperarCarga()
-      expect(router.currentRoute.value.name).toBe('necesito-comprar')
-    })
-
-    it('RN-UX-10: sin nada que comprar lo dice, y "¿Necesito comprar?" sigue a mano', async () => {
-      const tienda = new TiendaDePrueba()
-      await tienda.producto({ ...LEJIA, stockInicial: '20' })
-      const { envoltura } = await abrirControl(tienda)
-      const paraComprar = seccion(envoltura, 'Para comprar')
-      expect(texto(paraComprar)).toContain('No hace falta comprar nada por ahora')
-      expect(paraComprar.findAll('button').map(texto)).toEqual(['¿Necesito comprar?'])
-    })
-
-    it('la lista larga se resume en los tres primeros y cuántos más hay', async () => {
-      const tienda = new TiendaDePrueba()
-      for (const nombre of ['Producto A', 'Producto B', 'Producto C', 'Producto D', 'Producto E']) {
-        await tienda.producto({ nombre, compra: '1.00', venta: '2.00', minimo: '1' })
-      }
-      const { envoltura } = await abrirControl(tienda)
-      const paraComprar = seccion(envoltura, 'Para comprar')
-      expect(paraComprar.findAll('.fila-de-dato').map(texto)).toEqual([
-        'Producto A 2 unid.',
-        'Producto B 2 unid.',
-        'Producto C 2 unid.',
-        'Total estimado S/ 10.00',
-      ])
-      expect(texto(paraComprar.get('.mas'))).toBe('y 2 más')
-    })
-  })
-
-  describe('Más vendidos', () => {
+  describe('Tus mejores productos', () => {
     it('RN-AN-09: por veces vendido y por ganancia, con la cantidad vendida', async () => {
       const tienda = new TiendaDePrueba()
       for (const p of [LEJIA, CARBON, JABON]) {
@@ -349,23 +245,29 @@ describe('Control (Torre de control)', () => {
       await tienda.vender('Jabón', '10', '2026-09-20 12:00')
 
       const { envoltura } = await abrirControl(tienda)
-      const masVendidos = seccion(envoltura, 'Más vendidos')
-      const listas = () => masVendidos.findAll('ol').map((ol) => ol.findAll('li').map(texto))
-      expect(masVendidos.findAll('h3').map(texto)).toEqual([
-        'Los que más se venden',
-        'Los que más ganancia dejan',
-      ])
-      expect(listas()).toEqual([
-        ['Lejía 1 L 5 veces · 5 unid.', 'Jabón 3 veces · 3 unid.', 'Carbón 2 veces · 10 kg'],
-        [
-          'Carbón S/ 12.50 de ganancia · 10 kg',
-          'Lejía 1 L S/ 5.50 de ganancia · 5 unid.',
-          'Jabón S/ 2.40 de ganancia · 3 unid.',
-        ],
+      const masVendidos = seccion(envoltura, 'Tus mejores productos')
+      // Un solo bloque y una sola lista a la vez: un selector alterna entre los dos top 5.
+      const lista = () => masVendidos.findAll('ol li').map(texto)
+      expect(masVendidos.findAll('ol')).toHaveLength(1)
+      expect(texto(masVendidos.get('h3'))).toBe('Los que más se venden')
+      expect(lista()).toEqual([
+        'Lejía 1 L 5 veces · 5 unid.',
+        'Jabón 3 veces · 3 unid.',
+        'Carbón 2 veces · 10 kg',
       ])
 
+      await elegir(masVendidos, 'Más ganancia')
+      expect(masVendidos.findAll('ol')).toHaveLength(1)
+      expect(texto(masVendidos.get('h3'))).toBe('Los que más ganancia dejan')
+      expect(lista()).toEqual([
+        'Carbón S/ 12.50 de ganancia · 10 kg',
+        'Lejía 1 L S/ 5.50 de ganancia · 5 unid.',
+        'Jabón S/ 2.40 de ganancia · 3 unid.',
+      ])
+
+      await elegir(masVendidos, 'Más vendidos')
       await elegir(masVendidos, '30 días')
-      expect(listas()[0]).toEqual([
+      expect(lista()).toEqual([
         'Lejía 1 L 5 veces · 5 unid.',
         'Jabón 4 veces · 13 unid.',
         'Carbón 2 veces · 10 kg',
@@ -374,7 +276,7 @@ describe('Control (Torre de control)', () => {
 
     it('RN-UX-10: sin ventas, "Todavía no hay ventas esta semana" (o en los últimos 30 días)', async () => {
       const { envoltura } = await abrirControl(new TiendaDePrueba())
-      const masVendidos = seccion(envoltura, 'Más vendidos')
+      const masVendidos = seccion(envoltura, 'Tus mejores productos')
       expect(masVendidos.find('ol').exists()).toBe(false)
       expect(texto(masVendidos)).toContain('Todavía no hay ventas esta semana')
       await elegir(masVendidos, '30 días')
@@ -403,10 +305,22 @@ describe('Control (Torre de control)', () => {
       const { envoltura } = await abrirControl(await tiendaConDosSemanas())
       const semana = seccion(envoltura, 'Semana contra semana')
       const comparaciones = semana.findAll('.comparacion')
-      expect(comparaciones.map(texto)).toEqual([
-        'Ventas ▲ 20 % más Esta semana S/ 24.00 Semana anterior S/ 20.00',
-        'Ganancia neta ▼ 10 % menos Esta semana S/ 9.00 Semana anterior S/ 10.00',
+      // Cada métrica: el cambio dicho con palabras y un gráfico de dos barras (esta semana y la anterior).
+      expect(comparaciones.map((c) => texto(c.get('.cambio')))).toEqual([
+        '▲ 20 % más',
+        '▼ 10 % menos',
       ])
+      expect(comparaciones.map((c) => c.findAll('.fila').map(texto))).toEqual([
+        ['Esta semana S/ 24.00', 'Semana anterior S/ 20.00'],
+        ['Esta semana S/ 9.00', 'Semana anterior S/ 10.00'],
+      ])
+      // Accesible: cada gráfico trae su tabla para el lector de pantalla, y la semana actual se
+      // marca además del color (borde).
+      expect(comparaciones[0]!.findAll('table tbody tr').map(texto)).toEqual([
+        'Esta semana (destacada) S/ 24.00',
+        'Semana anterior S/ 20.00',
+      ])
+      expect(comparaciones.map((c) => c.findAll('.fila--destacada').length)).toEqual([1, 1])
       // La flecha se ve pero no se lee: el texto ya dice "más" o "menos" (RN-UX-04).
       const flechas = semana.findAll('.flecha')
       expect(flechas.map((f) => [f.text(), f.attributes('aria-hidden')])).toEqual([
@@ -445,39 +359,6 @@ describe('Control (Torre de control)', () => {
       const mejorDia = seccion(envoltura, 'Mejor día de la semana')
       expect(texto(mejorDia)).toContain('Necesito al menos 2 semanas de ventas para saberlo')
       expect(mejorDia.find('figure').exists()).toBe(false)
-    })
-  })
-
-  describe('Productos parados', () => {
-    it('RN-AN-11: el dinero parado en cada uno, el total y la sugerencia fija', async () => {
-      const tienda = new TiendaDePrueba()
-      const escoba = { nombre: 'Escoba', compra: '6.00', venta: '9.00', minimo: '1' }
-      const trapeador = { nombre: 'Trapeador', compra: '8.00', venta: '12.00', minimo: '1' }
-      const recogedor = { nombre: 'Recogedor', compra: '3.00', venta: '5.00', minimo: '1' }
-      await tienda.producto({ ...escoba, stockInicial: '5' }, '2026-07-17 08:00')
-      await tienda.vender('Escoba', '1', '2026-08-31 10:00')
-      await tienda.producto({ ...trapeador, stockInicial: '2' }, '2026-09-05 08:00')
-      await tienda.producto({ ...recogedor, stockInicial: '3' }, '2026-10-05 08:00')
-      await tienda.producto({ ...LEJIA, stockInicial: '20' }, '2026-08-01 08:00')
-      await tienda.vender('Lejía 1 L', '1', '2026-10-14 10:00')
-
-      const { envoltura } = await abrirControl(tienda)
-      const parados = seccion(envoltura, 'Productos parados')
-      expect(parados.findAll('li').map(texto)).toEqual([
-        'Escoba S/ 24.00 No se vende hace 45 días · tienes 4 unid.',
-        'Trapeador S/ 16.00 No se vende hace 40 días · tienes 2 unid.',
-      ])
-      expect(texto(parados.get('.total'))).toBe('Total de dinero parado S/ 40.00')
-      expect(texto(parados.get('.aviso-en-pagina'))).toBe(
-        'Ponlo a la vista u ofrécelo con descuento',
-      )
-    })
-
-    it('RN-UX-10: sin productos parados lo dice', async () => {
-      const { envoltura } = await abrirControl(new TiendaDePrueba())
-      const parados = seccion(envoltura, 'Productos parados')
-      expect(texto(parados)).toContain('Ningún producto está parado')
-      expect(parados.find('.aviso-en-pagina').exists()).toBe(false)
     })
   })
 })

@@ -84,6 +84,7 @@ async function abrirParaComprar(page: Page): Promise<void> {
   await abrir(page, './')
   await prepararTienda(page, PRODUCTOS)
   await page.getByRole('link', { name: 'Control' }).click()
+  await page.getByRole('link', { name: /^Ayuda inteligente/ }).click()
   await page.getByRole('button', { name: 'Ver la lista para comprar' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Para comprar' })).toBeVisible()
 }

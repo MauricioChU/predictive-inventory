@@ -4,6 +4,9 @@ import { formatearCantidad } from '@/shared/domain/formato'
 
 /** Ruta de Productos ya filtrado por "Se acaban" (RN-AL-06, RN-AL-07, RN-CAT-16). */
 export const RUTA_SE_ACABAN = '/productos?estado=se-acaban'
+/** Los avisos de Inicio abren Productos ya filtrado (RN-CAT-16). */
+export const RUTA_AGOTADOS = '/productos?estado=agotados'
+export const RUTA_QUEDA_POCO = '/productos?estado=queda-poco'
 
 /** Ruta de la pantalla de un producto (adonde apunta un aviso individual). */
 export function rutaDeProducto(productoId: string): string {

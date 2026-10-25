@@ -19,7 +19,10 @@ export type FiltroDeEstado = 'TODOS' | 'SE_ACABAN' | 'POR_ACABARSE' | 'AGOTADO' 
 
 /** RN-CAT-16: lo que dice `?estado=` en la dirección de Productos para abrirla ya filtrada. */
 export function estadoDeLaDireccion(pedido: unknown): FiltroDeEstado | undefined {
-  return pedido === 'se-acaban' ? 'SE_ACABAN' : undefined
+  if (pedido === 'se-acaban') return 'SE_ACABAN'
+  if (pedido === 'agotados') return 'AGOTADO'
+  if (pedido === 'queda-poco') return 'POR_ACABARSE'
+  return undefined
 }
 
 export const OPCIONES_DE_ESTADO: readonly { valor: FiltroDeEstado; etiqueta: string }[] = [
