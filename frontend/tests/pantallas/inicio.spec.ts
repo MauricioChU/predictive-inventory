@@ -120,9 +120,9 @@ describe('Inicio', () => {
     const { wrapper, router } = await abrirInicio()
 
     // Un aviso por tarjeta, con "1 de 2" y ‹ ›.
-    expect(wrapper.get('.fila-de-aviso--atencion').text()).toContain('1 producto agotado')
+    expect(wrapper.get('.fila-de-aviso--atencion').text()).toContain('1 agotado')
     expect(wrapper.text()).toContain('1 de 2')
-    await botonCon('Ver agotados').trigger('click')
+    await botonCon('1 producto agotado. Ver productos').trigger('click')
     await esperarPantalla()
     expect(router.currentRoute.value.name).toBe('productos')
     expect(router.currentRoute.value.query).toEqual({ estado: 'agotados' })
@@ -130,8 +130,8 @@ describe('Inicio', () => {
     await router.push('/')
     await esperarPantalla()
     await botonCon('Aviso siguiente').trigger('click')
-    expect(wrapper.get('.fila-de-aviso--atencion').text()).toContain('Queda poco de 1 producto')
-    await botonCon('Ver lo que queda poco').trigger('click')
+    expect(wrapper.get('.fila-de-aviso--atencion').text()).toContain('Queda poco: 1')
+    await botonCon('Queda poco de 1 producto. Ver productos').trigger('click')
     await esperarPantalla()
     expect(router.currentRoute.value.query).toEqual({ estado: 'queda-poco' })
   })
@@ -142,7 +142,7 @@ describe('Inicio', () => {
     const { wrapper, router } = await abrirInicio()
 
     expect(wrapper.get('.fila-de-aviso--atencion').text()).toContain('1 precio para revisar')
-    await botonCon('Ver precios para revisar').trigger('click')
+    await botonCon('1 precio para revisar. Ver ayuda inteligente').trigger('click')
     await esperarPantalla()
     expect(router.currentRoute.value.name).toBe('ayuda-inteligente')
   })

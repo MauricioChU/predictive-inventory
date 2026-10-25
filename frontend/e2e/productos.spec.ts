@@ -149,8 +149,8 @@ test.describe('Productos: flujos críticos', () => {
     await abrir(page, './')
 
     // Un aviso por tarjeta: primero lo agotado, con ‹ › para pasar a lo que queda poco.
-    await expect(page.getByText('1 producto agotado')).toBeVisible()
-    await page.getByRole('button', { name: 'Ver agotados' }).click()
+    await expect(page.getByText('1 agotado', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: '1 producto agotado. Ver productos' }).click()
 
     await expect(page.getByRole('heading', { level: 1, name: 'Productos' })).toBeVisible()
     await expect(page).toHaveURL(/\/productos\?estado=agotados$/)
@@ -159,8 +159,8 @@ test.describe('Productos: flujos críticos', () => {
 
     await abrir(page, './')
     await page.getByRole('button', { name: 'Aviso siguiente' }).click()
-    await expect(page.getByText('Queda poco de 1 producto')).toBeVisible()
-    await page.getByRole('button', { name: 'Ver lo que queda poco' }).click()
+    await expect(page.getByText('Queda poco: 1', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Queda poco de 1 producto. Ver productos' }).click()
     await expect(page).toHaveURL(/\/productos\?estado=queda-poco$/)
     await expect(page.getByRole('button', { name: 'Quitar filtro Queda poco' })).toBeVisible()
     await expect.poll(async () => (await nombresEnLaLista(page)).sort()).toEqual(['Lejía Tradicional 2 L'])

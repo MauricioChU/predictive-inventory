@@ -85,8 +85,9 @@ Para avisos que no deben alargar la pantalla (Inicio).
 Cuando puede haber varios avisos y no deben alargar la pantalla (Inicio).
 
 - Un aviso a la vez (`FilaDeAviso`) en una región con nombre («Avisos», `aria-roledescription` «carrusel»).
-- Con 2 o más: alto reservado (4.5 rem, el aviso lo llena) y debajo ‹ «1 de 3» › siempre visibles, de 48 px y con nombre accesible («Aviso anterior» / «Aviso siguiente»); dan la vuelta. Deslizar de lado también cambia (extra, nunca lo único: RN-UX-05). El cambio es un fundido corto y el aviso nuevo se anuncia (`aria-live`).
-- Con un solo aviso: solo la fila, sin controles ni alto reservado.
+- Con 2 o más: debajo una fila delgada (24 px visibles, metida en el hueco que ya hay bajo el carrusel, así no estira la pantalla) con ‹ puntos ›. Cada punto es un botón «Aviso 2 de 3» (actual: punto lleno y más grande, `aria-current`; los demás, un aro) y ‹ › («Aviso anterior» / «Aviso siguiente») dan la vuelta; todos con zona de toque de 48 px de alto que sale por `::after`, sin agrandar la fila. «2 de 3» queda solo para el lector. Deslizar de lado también cambia (extra, nunca lo único: RN-UX-05). El cambio es un fundido corto y el aviso nuevo se anuncia (`aria-live`).
+- Los textos de cada aviso son cortos y entran en un renglón a 360 px con letra Grande («3 agotados», «Queda poco: 3»); el nombre accesible de la flecha es la frase completa («3 productos agotados. Ver productos»).
+- Con un solo aviso: solo la fila, sin controles.
 - Cada aviso lleva `id`; la acción emite ese `id`.
 
 ## Cifra principal — `TarjetaDeCifra principal`

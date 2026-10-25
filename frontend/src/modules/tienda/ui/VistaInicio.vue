@@ -109,22 +109,22 @@ const avisos = computed<AvisoDelCarrusel[]>(() => {
     lista.push({
       id: 'agotados',
       tono: 'atencion',
-      texto: `${agotados} ${plural(agotados, 'producto agotado', 'productos agotados')}`,
-      textoAccion: 'Ver agotados',
+      texto: `${agotados} ${plural(agotados, 'agotado', 'agotados')}`,
+      textoAccion: `${agotados} ${plural(agotados, 'producto agotado', 'productos agotados')}. Ver productos`,
     })
   if (porAcabarse > 0)
     lista.push({
       id: 'queda-poco',
       tono: 'atencion',
-      texto: `Queda poco de ${porAcabarse} ${plural(porAcabarse, 'producto', 'productos')}`,
-      textoAccion: 'Ver lo que queda poco',
+      texto: `Queda poco: ${porAcabarse}`,
+      textoAccion: `Queda poco de ${porAcabarse} ${plural(porAcabarse, 'producto', 'productos')}. Ver productos`,
     })
   if (preciosARevisar.value > 0)
     lista.push({
       id: 'precios',
       tono: 'atencion',
       texto: `${preciosARevisar.value} ${plural(preciosARevisar.value, 'precio para revisar', 'precios para revisar')}`,
-      textoAccion: 'Ver precios para revisar',
+      textoAccion: `${preciosARevisar.value} ${plural(preciosARevisar.value, 'precio para revisar', 'precios para revisar')}. Ver ayuda inteligente`,
     })
   return lista.length > 0
     ? lista
@@ -337,7 +337,7 @@ h1 {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--espacio-3);
+  gap: var(--espacio-2);
 }
 /* Celular: sin caja propia, así "Vender" se pega abajo dentro de todo el cuerpo de Inicio (un
    elemento pegajoso no sale de la caja de su padre). */

@@ -113,8 +113,8 @@ test.describe('Recorrido: un día de tienda', () => {
     await test.step('4. Para comprar → Registrar llegada, con un precio nuevo (RN-AN-08, RN-OP-14)', async () => {
       // El aviso de Inicio lleva a Productos ya filtrado (RN-AL-06a, RN-CAT-16); Para comprar
       // se abre desde Control → Ayuda inteligente.
-      await expect(page.getByText('Queda poco de 1 producto')).toBeVisible()
-      await page.getByRole('button', { name: 'Ver lo que queda poco' }).click()
+      await expect(page.getByText('Queda poco: 1', { exact: true })).toBeVisible()
+      await page.getByRole('button', { name: 'Queda poco de 1 producto. Ver productos' }).click()
       await expect(h1(page)).toHaveText('Productos')
       await expect(page).toHaveURL(/\/productos\?estado=queda-poco$/)
       await irA(page, 'Control')

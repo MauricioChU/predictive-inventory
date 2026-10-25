@@ -32,6 +32,20 @@ describe('CarruselDeAvisos', () => {
     expect(carrusel.text()).toContain('Todo en orden')
   })
 
+  it('los puntos son botones "Aviso N de M" que llevan a ese aviso; el actual va marcado', async () => {
+    const carrusel = mount(CarruselDeAvisos, { props: { avisos: TRES, etiqueta: 'Avisos' } })
+    const puntos = carrusel.findAll('.punto')
+    expect(puntos.map((p) => p.attributes('aria-label'))).toEqual([
+      'Aviso 1 de 3',
+      'Aviso 2 de 3',
+      'Aviso 3 de 3',
+    ])
+    expect(puntos.map((p) => p.attributes('aria-current'))).toEqual(['true', undefined, undefined])
+    await puntos[2]!.trigger('click')
+    expect(carrusel.text()).toContain('Todo en orden')
+    expect(carrusel.findAll('.punto')[2]!.attributes('aria-current')).toBe('true')
+  })
+
   it('es una región con nombre y la acción del aviso lleva su id', async () => {
     const carrusel = mount(CarruselDeAvisos, { props: { avisos: TRES, etiqueta: 'Avisos' } })
     expect(carrusel.get('section').attributes('aria-label')).toBe('Avisos')
