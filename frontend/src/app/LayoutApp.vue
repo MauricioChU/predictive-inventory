@@ -209,7 +209,10 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
   max-width: var(--ancho-contenido);
   margin-inline: auto;
   padding-inline: var(--espacio-4);
-  padding-block: var(--espacio-4);
+  /* Relleno de arriba y de abajo de <main>: las pantallas que llenan el alto libre lo restan
+     (2 × esta variable) para no pasarse de la ventana y dejar una barra de desplazamiento. */
+  --relleno-bloque: var(--espacio-4);
+  padding-block: var(--relleno-bloque);
 }
 .contenido {
   position: relative;
@@ -297,7 +300,7 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
     grid-column: 2;
     grid-row: 1;
     max-width: var(--ancho-contenido-pc);
-    padding-block: var(--espacio-6);
+    --relleno-bloque: var(--espacio-6);
   }
   .pie {
     display: contents;
