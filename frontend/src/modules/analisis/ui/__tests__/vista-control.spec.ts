@@ -301,44 +301,51 @@ describe('Control (Torre de control)', () => {
       return tienda
     }
 
-    it('RN-AN-12: compara esta semana con la anterior en ventas y ganancia neta', async () => {
+    it('RN-AN-12: compara esta semana con la anterior en ventas y ganancia neta, un gráfico a la vez', async () => {
       const { envoltura } = await abrirControl(await tiendaConDosSemanas())
       const semana = seccion(envoltura, 'Semana contra semana')
-      const comparaciones = semana.findAll('.comparacion')
+      // Un selector (Ventas / Ganancia) alterna los dos gráficos: se ve uno solo.
+      expect(semana.findAll('[role="radio"]').map(texto)).toEqual(['Ventas', 'Ganancia'])
+      expect(semana.findAll('.comparacion')).toHaveLength(1)
       // Cada métrica: el cambio dicho con palabras y un gráfico de dos barras (esta semana y la anterior).
-      expect(comparaciones.map((c) => texto(c.get('.cambio')))).toEqual([
-        '▲ 20 % más',
-        '▼ 10 % menos',
+      let comparacion = semana.get('.comparacion')
+      expect(texto(comparacion.get('.cambio'))).toBe('▲ 20 % más')
+      expect(comparacion.findAll('.fila').map(texto)).toEqual([
+        'Esta semana S/ 24.00',
+        'Semana anterior S/ 20.00',
       ])
-      expect(comparaciones.map((c) => c.findAll('.fila').map(texto))).toEqual([
-        ['Esta semana S/ 24.00', 'Semana anterior S/ 20.00'],
-        ['Esta semana S/ 9.00', 'Semana anterior S/ 10.00'],
-      ])
-      // Accesible: cada gráfico trae su tabla para el lector de pantalla, y la semana actual se
+      // Accesible: el gráfico trae su tabla para el lector de pantalla, y la semana actual se
       // marca además del color (borde).
-      expect(comparaciones[0]!.findAll('table tbody tr').map(texto)).toEqual([
+      expect(comparacion.findAll('table tbody tr').map(texto)).toEqual([
         'Esta semana (destacada) S/ 24.00',
         'Semana anterior S/ 20.00',
       ])
-      expect(comparaciones.map((c) => c.findAll('.fila--destacada').length)).toEqual([1, 1])
+      expect(comparacion.findAll('.fila--destacada')).toHaveLength(1)
       // La flecha se ve pero no se lee: el texto ya dice "más" o "menos" (RN-UX-04).
-      const flechas = semana.findAll('.flecha')
-      expect(flechas.map((f) => [f.text(), f.attributes('aria-hidden')])).toEqual([
-        ['▲', 'true'],
-        ['▼', 'true'],
+      const flecha = semana.get('.flecha')
+      expect([flecha.text(), flecha.attributes('aria-hidden')]).toEqual(['▲', 'true'])
+      expect(comparacion.get('.cambio').classes()).toContain('cambio--sube')
+
+      await elegir(semana, 'Ganancia')
+      expect(semana.findAll('.comparacion')).toHaveLength(1)
+      comparacion = semana.get('.comparacion')
+      expect(texto(comparacion.get('h3'))).toBe('Ganancia neta')
+      expect(texto(comparacion.get('.cambio'))).toBe('▼ 10 % menos')
+      expect(comparacion.findAll('.fila').map(texto)).toEqual([
+        'Esta semana S/ 9.00',
+        'Semana anterior S/ 10.00',
       ])
-      expect(comparaciones[0]!.get('.cambio').classes()).toContain('cambio--sube')
-      expect(comparaciones[1]!.get('.cambio').classes()).toContain('cambio--baja')
+      expect(comparacion.get('.cambio').classes()).toContain('cambio--baja')
     })
 
-    it('RN-AN-13: marca el mejor día en un gráfico de barras de lunes a domingo', async () => {
+    it('RN-AN-13: marca el mejor día en un gráfico de barras verticales de lunes a domingo', async () => {
       const { envoltura } = await abrirControl(await tiendaConDosSemanas())
       const mejorDia = seccion(envoltura, 'Mejor día de la semana')
       expect(texto(mejorDia)).toContain('Tu mejor día es el sábado')
       // Ronda 1: vale también para una tienda con menos de 8 semanas de historia.
       expect(texto(mejorDia.get('.nota'))).toBe('Promedio por día de la semana, sin contar hoy.')
-      const grafico = mejorDia.get('figure.grafico-barras')
-      expect(grafico.findAll('.fila .etiqueta').map(texto)).toEqual([
+      const grafico = mejorDia.get('figure.grafico-columnas')
+      expect(grafico.findAll('.columna .etiqueta').map(texto)).toEqual([
         'Lunes',
         'Martes',
         'Miércoles',
@@ -347,8 +354,12 @@ describe('Control (Torre de control)', () => {
         'Sábado',
         'Domingo',
       ])
-      expect(texto(grafico.get('.fila--destacada'))).toBe('Sábado S/ 14.67')
-      expect(grafico.findAll('.fila--destacada')).toHaveLength(1)
+      expect(texto(grafico.get('.columna--destacada .etiqueta'))).toBe('Sábado')
+      expect(texto(grafico.get('.columna--destacada .valor'))).toBe('S/ 14.67')
+      expect(grafico.findAll('.columna--destacada')).toHaveLength(1)
+      // Accesible: región con nombre que el teclado alcanza y tabla solo-lector con los siete días.
+      expect(grafico.get('[role="region"]').attributes('tabindex')).toBe('0')
+      expect(grafico.findAll('table tbody tr')).toHaveLength(7)
     })
 
     it('RN-AN-12 / RN-AN-13: sin historia suficiente dice por qué', async () => {

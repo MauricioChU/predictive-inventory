@@ -16,6 +16,7 @@ import Boton from '@/shared/ui/componentes/Boton.vue'
 import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
 import FilaDeDato from '@/shared/ui/componentes/FilaDeDato.vue'
 import GraficoBarras from '@/shared/ui/componentes/GraficoBarras.vue'
+import GraficoColumnas from '@/shared/ui/componentes/GraficoColumnas.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import SelectorSegmentado from '@/shared/ui/componentes/SelectorSegmentado.vue'
 import TarjetaDeCifra from '@/shared/ui/componentes/TarjetaDeCifra.vue'
@@ -45,6 +46,12 @@ const periodo = ref<Periodo>('HOY')
 const periodoMasVendidos = ref<PeriodoDeMasVendidos>(7)
 /** Cuál de los dos top 5 se ve: lo que más se vende o lo que más ganancia deja. */
 const tipoDeTop = ref<TipoDeTop>('VECES')
+/** Cuál de los dos gráficos de «Semana contra semana» se ve: ventas o ganancia. */
+const metricaDeSemana = ref<'Ventas' | 'Ganancia neta'>('Ventas')
+const OPCIONES_DE_SEMANA = [
+  { valor: 'Ventas', etiqueta: 'Ventas' },
+  { valor: 'Ganancia neta', etiqueta: 'Ganancia' },
+] as const
 
 /** Lo que se ve: la torre con los periodos con los que se calculó (no los recién elegidos). */
 interface Mostrado {
@@ -338,7 +345,17 @@ function irA(nombre: 'alquiler-del-local'): void {
               </p>
             </div>
             <template v-else>
-              <div v-for="fila in semana.filas" :key="fila.concepto" class="comparacion">
+              <SelectorSegmentado
+                v-model="metricaDeSemana"
+                :opciones="OPCIONES_DE_SEMANA"
+                etiqueta="Qué comparar"
+                etiqueta-oculta
+              />
+              <div
+                v-for="fila in semana.filas.filter((f) => f.concepto === metricaDeSemana)"
+                :key="fila.concepto"
+                class="comparacion"
+              >
                 <h3>{{ fila.concepto }}</h3>
                 <p class="cambio" :class="`cambio--${fila.cambio.tono}`">
                   <span class="flecha" aria-hidden="true">{{ fila.cambio.flecha }}</span>
@@ -356,7 +373,11 @@ function irA(nombre: 'alquiler-del-local'): void {
             <p v-if="mejorDia.mensaje" class="vacio">{{ mejorDia.mensaje }}</p>
             <template v-else>
               <p class="frase">{{ mejorDia.frase }}</p>
-              <GraficoBarras titulo="Venta promedio por día" :barras="mejorDia.barras" />
+              <GraficoColumnas
+                titulo="Venta promedio por día"
+                descripcion="Venta promedio por día. Se desplaza de lado para ver todos los días"
+                :columnas="mejorDia.barras"
+              />
               <p class="nota">Promedio por día de la semana, sin contar hoy.</p>
             </template>
           </template>
@@ -514,10 +535,6 @@ h3 {
 
 .comparacion {
   padding-bottom: var(--espacio-2);
-}
-.comparacion + .comparacion {
-  padding-top: var(--espacio-2);
-  border-top: 1px solid color-mix(in srgb, var(--color-borde) 30%, transparent);
 }
 .cambio {
   margin: var(--espacio-1) 0;

@@ -23,8 +23,8 @@ Criterios de aceptación ejecutables: [features/torre-de-control.feature](featur
 1. **Resumen**: *Total vendido* (cifra principal), *Ganancia real* (con pérdida, *Pérdida real*), costo de lo vendido, *Pérdidas* y *Diferencias de conteo* del periodo (Hoy · Ayer · 7 días · 30 días).
 2. **Alquiler del local**: cuánto llevas ganado para el próximo pago (RN-AN-17 a RN-AN-19).
 3. **Tus mejores productos**: un solo bloque con un selector entre *Más vendidos* y *Más ganancia* (top 5, RN-AN-09).
-4. **Semana contra semana**: gráfico de barras (esta semana contra la anterior) por métrica.
-5. **Mejor día de la semana**.
+4. **Semana contra semana**: gráfico de barras (esta semana contra la anterior) por métrica; un selector «Ventas» / «Ganancia» muestra uno a la vez.
+5. **Mejor día de la semana**: gráfico de barras verticales, de lunes a domingo, que se desplaza de lado dentro del bloque si no entran.
 6. Botón **Ayuda inteligente** (con el número de cosas por mirar: agotados, por acabarse, precios para revisar y productos parados), que abre una subvista (`/control/ayuda`) con, en este orden:
    - **Atención**: agotados, por acabarse y precios para revisar, con su cantidad. Cada uno abre su lista.
    - **Para comprar**: lista sugerida con costo total.
