@@ -465,7 +465,7 @@ watch(
 .vista-recibir--con-panel {
   display: flex;
   flex-direction: column;
-  min-block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
+  min-block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--relleno-bloque, var(--espacio-4)));
 }
 .vista-recibir--con-panel :deep(.panel-de-venta) {
   margin-block-start: auto;

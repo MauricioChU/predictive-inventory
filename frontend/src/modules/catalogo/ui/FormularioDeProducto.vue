@@ -637,7 +637,7 @@ function verProducto(productoId: string) {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
+  min-block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--relleno-bloque, var(--espacio-4)));
 }
 .en-hoja .exito-centrado {
   min-block-size: 0;

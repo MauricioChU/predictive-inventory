@@ -200,7 +200,7 @@ function despuesDeCargar(): void {
   display: flex;
   flex-direction: column;
   gap: var(--espacio-4);
-  min-height: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
+  min-height: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--relleno-bloque, var(--espacio-4)));
 }
 .explicacion {
   display: flex;
