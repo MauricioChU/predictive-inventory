@@ -6,6 +6,8 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ### Cambiado
 
+- Vender: la confirmación «Venta registrada» y el panel de venta abierto ya no muestran la barra de desplazamiento de la página cuando todo entra en la pantalla (celular y PC). Con muchos productos, la tarjeta de lo vendido se achica y se desplaza por dentro en vez de alargar la página.
+- «¿Vendiste alguno a otro precio?» y «Cambiar precio» se abren más suave: la caja crece despacio y el contenido se aclara y baja un poco un instante después; al cerrar, el contenido se va primero y todo se recoge más rápido. Lo de abajo se desliza sin saltos.
 - Inicio: «Total vendido» es la cifra principal (mucho más grande) y «Ganancia real» queda más chica debajo; sin ventas solo se ve el total con «Todavía no hay ventas hoy». Los avisos van en un carrusel: uno a la vez, con botones ‹ › y «1 de 3» (también se puede deslizar); con uno solo no hay controles.
 - «¿Vendiste alguno a otro precio?» y «Cambiar precio» se despliegan y se recogen con animación (sin movimiento si el sistema pide reducirlo).
 - La confirmación de Vender y de Llegó mercadería muestra como mucho 4 productos; si hay más, la tarjeta se desplaza por dentro con la pista «y N más».

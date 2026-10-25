@@ -49,7 +49,8 @@
   /* Diálogos: aparecen con un leve crecer y se van al revés. */
   --duracion-dialogo: 220ms;
   /* Despliegue: un formulario en línea crece en alto al abrirse y se recoge al cerrarse. */
-  --duracion-despliegue: 280ms;
+  --duracion-despliegue: 320ms;
+  --duracion-despliegue-sale: 220ms;
   --curva-despliegue: cubic-bezier(0.22, 1, 0.36, 1);
 }
 

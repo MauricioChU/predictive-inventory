@@ -94,7 +94,7 @@ onUnmounted(() => {
   align-items: center;
   box-sizing: border-box;
   gap: var(--espacio-3);
-  padding: var(--espacio-6) var(--espacio-4);
+  padding: var(--espacio-4) var(--espacio-4) var(--espacio-3);
   text-align: center;
   color: var(--color-exito);
 }
@@ -129,10 +129,14 @@ onUnmounted(() => {
   font-weight: 400;
 }
 .pantalla-exito--al-centro {
-  justify-content: center;
-  min-block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
+  /* `safe`: si algo no entra, empieza arriba (nunca queda cortado por arriba). */
+  justify-content: safe center;
+  /* Alto fijo = el libre (ventana menos pie y relleno de <main>): así el resumen de lo
+     registrado se achica y se desplaza por dentro en vez de alargar la página. */
+  block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--relleno-bloque, var(--espacio-4)));
 }
 .icono {
+  flex: none;
   width: 4.5rem;
   height: 4.5rem;
   animation: exito-icono var(--duracion-hoja) var(--curva-hoja-entrar) both;

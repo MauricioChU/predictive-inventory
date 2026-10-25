@@ -24,28 +24,44 @@ const lista = ref<HTMLElement | null>(null)
 const altoMaximo = ref<string | null>(null)
 const alFinal = ref(false)
 
+/** Líneas que quedan fuera de la vista por abajo (medido: también cuenta cuando la pantalla es
+ * corta y la tarjeta se achica para que la página no se desplace). */
 const sobran = computed(() => Math.max(0, props.lineas.length - LINEAS_A_LA_VISTA))
-const desborda = computed(() => sobran.value > 0)
-/** Lo que falta por ver debajo: baja al desplazar hasta el final. */
-const faltan = computed(() => (alFinal.value ? 0 : sobran.value))
+const faltan = ref(sobran.value)
+const desborda = computed(() => sobran.value > 0 || faltan.value > 0 || alFinal.value)
 
 function medir(): void {
   const caja = desplazable.value
   const filas = lista.value?.children
-  if (!caja || !filas || filas.length <= LINEAS_A_LA_VISTA) {
+  if (!caja || !filas) return
+  if (filas.length <= LINEAS_A_LA_VISTA) {
     altoMaximo.value = null
-    return
+  } else {
+    const cuarta = filas[LINEAS_A_LA_VISTA - 1] as HTMLElement
+    const relleno = Number.parseFloat(getComputedStyle(caja).paddingBottom) || 0
+    altoMaximo.value = `${cuarta.offsetTop + cuarta.offsetHeight + relleno}px`
   }
-  const cuarta = filas[LINEAS_A_LA_VISTA - 1] as HTMLElement
-  const relleno = Number.parseFloat(getComputedStyle(caja).paddingBottom) || 0
-  altoMaximo.value = `${cuarta.offsetTop + cuarta.offsetHeight + relleno}px`
   void nextTick(revisarFinal)
 }
 
 function revisarFinal(): void {
   const caja = desplazable.value
   if (!caja) return
-  alFinal.value = caja.scrollTop + caja.clientHeight >= caja.scrollHeight - 2
+  if (caja.clientHeight === 0) {
+    // Sin diseño que medir (p. ej. jsdom): se cuenta por las líneas.
+    faltan.value = sobran.value
+    alFinal.value = false
+    return
+  }
+  const filas = lista.value?.children
+  const visibleHasta = caja.scrollTop + caja.clientHeight
+  let fuera = 0
+  for (const fila of Array.from(filas ?? [])) {
+    const f = fila as HTMLElement
+    if (f.offsetTop + f.offsetHeight > visibleHasta + 2) fuera++
+  }
+  faltan.value = fuera
+  alFinal.value = fuera === 0 && caja.scrollHeight > caja.clientHeight + 2
 }
 
 let observador: ResizeObserver | undefined
@@ -108,11 +124,18 @@ watch(
   color: var(--color-texto);
   text-align: start;
   overflow: hidden;
+  /* Dentro de una pantalla de alto fijo (PantallaExito) la tarjeta se achica y se desplaza. */
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
 }
 /* Más de 4 líneas: la tarjeta se desplaza por dentro (la página no) y un degradado abajo avisa
    que hay más; el "y N más" se va al llegar al final. */
 .desplazable {
   position: relative;
+  flex: 1 1 auto;
+  /* Piso al achicarse (pantalla corta): ~una línea y media; con menos contenido, no estira. */
+  min-block-size: min(7rem, max-content);
   padding: var(--espacio-3) var(--espacio-4);
   overflow-y: auto;
   overscroll-behavior: contain;

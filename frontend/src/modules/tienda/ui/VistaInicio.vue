@@ -267,7 +267,7 @@ function verLoQueSeAcaba(): void {
   flex-direction: column;
   gap: var(--espacio-3);
   /* Ocupa el alto que deja libre la navegación (medida en vivo en --alto-pie). */
-  min-height: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
+  min-height: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--relleno-bloque, var(--espacio-4)));
 }
 .saludo {
   display: flex;
