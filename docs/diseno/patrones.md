@@ -65,7 +65,7 @@ Para registrar algo con varias líneas (Vender, Llegó mercadería).
 
 ## Línea de carrito — `FilaDeCarrito.vue` (compacta)
 
-- Foto, nombre e importe en la primera fila; debajo, cuánto queda y el precio por unidad, que es el botón para cambiarlo (subrayado, con lápiz).
+- Foto, nombre e importe en la primera fila; debajo, cuánto queda y el precio por unidad, que es el botón para cambiarlo (subrayado, con lápiz). En Vender, ese lápiz cambia el **precio del producto para siempre** y antes de guardar pregunta con un diálogo («¿Cambiar el precio de Lejía 1 L? Desde ahora se venderá a S/ 4.00 (antes S/ 3.50).» · «Cambiar precio» / «Cancelar»); si deja pérdida, el catálogo pide otra confirmación. «¿Vendiste alguno a otro precio?» es lo que vale solo para esta venta. En Recibir el lápiz de costo no cambia.
 - − / + con *Quitar* al lado. En Vender el + se detiene en el stock.
 - Formularios en línea (cambiar precio, otro precio) con *Guardar* y *Cancelar*; mientras están abiertos, *Quitar* se oculta.
 - «¿Vendiste alguno a otro precio?» también con 1 unidad: sin «¿Cuántos?», solo «¿A cuánto lo vendiste?»; al guardar, cambia el precio de esa línea.
@@ -73,14 +73,6 @@ Para registrar algo con varias líneas (Vender, Llegó mercadería).
 ## Diálogo con lista — `DialogoConfirmacion.vue` con slot
 
 Cuando hay varios productos que revisar (aviso de sobrecompra en Llegó mercadería), el diálogo no junta todo en un párrafo: sin `mensaje`, el slot lleva una lista, **una fila por producto** (nombre en negrita y debajo, en color suave, una o dos frases cortas con `pegarCifras`), separadas por una raya fina. El título dice el hecho en tono amable y los dos botones (cancelar y confirmar) quedan iguales, apilados.
-
-## Fila de aviso — `FilaDeAviso.vue`
-
-Para avisos que no deben alargar la pantalla (Inicio).
-
-- Una fila: ícono + texto corto + flecha (botón con nombre accesible, p. ej. "Ver productos").
-- Varias van en un carrusel (abajo), no apiladas; el detalle va en la pantalla a la que lleva la flecha, no en la fila.
-- Tonos: `atencion`, `info`, `exito` (color + ícono, nunca solo color).
 
 ## Carrusel de avisos — `CarruselDeAvisos.vue`
 
@@ -91,6 +83,7 @@ Cuando puede haber varios avisos y no deben alargar la pantalla (Inicio).
 - Un solo bloque (marco, borde grueso a la izquierda y fondo del tono del aviso, que cambia con él). Con acción, **todo el bloque es un botón** (nombre accesible = frase completa) que lleva a su pantalla. Con 2 o más: a la derecha un «1/3» pequeño y, aparte (hermano del bloque, nunca anidado), el botón › de 48 × 48 px reales («Siguiente aviso, 2 de 3») que pasa al siguiente y da la vuelta; **sin tira de puntos**. Deslizar de lado también cambia (extra, nunca lo único: RN-UX-05); tras deslizar no se abre el aviso. El cambio es un fundido corto y el aviso nuevo se anuncia (`aria-live`).
 - Los textos de cada aviso son cortos y entran en un renglón a 360 px con letra Grande («3 agotados», «Queda poco: 3»); el nombre accesible del bloque es la frase completa («3 productos agotados. Ver productos»).
 - Con un solo aviso: solo el bloque tocable (con una flecha decorativa), sin flecha de siguiente ni contador.
+- Tonos: `atencion`, `info`, `exito` (color + ícono, nunca solo color).
 - Cada aviso lleva `id`; la acción emite ese `id`.
 
 ## Cifra principal — `TarjetaDeCifra principal`

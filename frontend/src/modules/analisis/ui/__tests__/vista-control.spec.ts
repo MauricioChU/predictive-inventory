@@ -57,6 +57,14 @@ describe('Control (Torre de control)', () => {
     ])
   })
 
+  it('04-torre-de-control: «N cosas para mirar» cuenta productos únicos (un agotado con precio para revisar cuenta 1)', async () => {
+    const tienda = new TiendaDePrueba()
+    // Agotado Y con el precio por debajo del costo: dos avisos, un solo producto.
+    await tienda.producto({ nombre: 'Ácido', compra: '3.00', venta: '2.00', minimo: '3' })
+    const { envoltura } = await abrirControl(tienda)
+    expect(texto(envoltura.get('a.ayuda'))).toBe('Ayuda inteligente 1 cosa para mirar')
+  })
+
   it('04-torre-de-control: al final hay un botón "Ayuda inteligente" con cuántas cosas mirar, que abre su subvista', async () => {
     const tienda = new TiendaDePrueba()
     await tienda.producto({ ...LEJIA, stockInicial: '20' }, '2026-10-01 08:00')

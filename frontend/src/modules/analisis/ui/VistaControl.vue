@@ -199,11 +199,19 @@ const mejorDia = computed(() => {
   }
 })
 
-/** Cuántas cosas hay que mirar en Ayuda inteligente (lo que ve el botón del final). */
+/**
+ * Cuántas cosas hay que mirar en Ayuda inteligente (lo que ve el botón del final): productos
+ * ÚNICOS. Un producto agotado y además parado (o con el precio por revisar) cuenta una sola vez.
+ */
 const cosasParaMirar = computed(() => {
   if (!mostrado.value) return 0
-  const { atencion: a, parados } = mostrado.value.torre
-  return a.agotados + a.porAcabarse + a.preciosParaRevisar + parados.productos.length
+  const { productosEnAtencion: a, parados, preciosParaRevisar } = mostrado.value.torre
+  return new Set([
+    ...a.agotados.map((p) => p.productoId),
+    ...a.porAcabarse.map((p) => p.productoId),
+    ...preciosParaRevisar.map((p) => p.productoId),
+    ...parados.productos.map((p) => p.productoId),
+  ]).size
 })
 
 function irA(nombre: 'alquiler-del-local'): void {

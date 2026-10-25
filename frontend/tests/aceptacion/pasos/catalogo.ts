@@ -174,6 +174,15 @@ export function pasosDeCatalogo(pasos: Pasos): void {
     },
   )
 
+  // RN-OP-11: el lápiz del precio en Vender cambia el precio del producto (mismo caso de uso).
+  accion(
+    pasos,
+    'cambio el precio de venta de {string} a {string}',
+    async (m: Mundo, nombre: string, venta: string) => {
+      await editar(m, { productoId: await m.idDe(nombre), precioVenta: venta })
+    },
+  )
+
   accion(
     pasos,
     'cambio el stock mínimo de {string} a {string}',

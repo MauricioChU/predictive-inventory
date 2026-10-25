@@ -257,6 +257,34 @@ test.describe('Panel de venta (RN-OP-22)', () => {
     expect(await stockDe(page, lejia)).toBe(9)
   })
 
+  test('celular: el lápiz del precio cambia el precio del producto para siempre, tras confirmar en un diálogo', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'celular', 'El panel deslizable es de celular (< 1024 px)')
+    await abrirTiendaLista(page, './')
+    const lejia = await crearProducto(page, LEJIA)
+    await abrir(page, './vender')
+    await agregarBuscando(page, 'lejia', 'Lejía 1 L')
+    const linea = lineaDe(page, 'Lejía 1 L').first()
+    await linea.getByRole('button', { name: /^Cambiar precio de Lejía 1 L/ }).click()
+    await linea.getByLabel('Nuevo precio en S/').fill('4.00')
+    await linea.getByRole('button', { name: 'Guardar precio' }).click()
+    const dialogo = page.getByRole('dialog')
+    await expect(dialogo).toContainText('¿Cambiar el precio de Lejía 1 L?')
+    await expect(dialogo).toContainText('Desde ahora se venderá a S/ 4.00 (antes S/ 3.50).')
+    await dialogo.getByRole('button', { name: 'Cambiar precio' }).click()
+    await expect(dialogo).toHaveCount(0)
+    await expect(lineaDe(page, 'Lejía 1 L').getByText('Precio especial')).toHaveCount(0)
+    await expect(totalDeLaVenta(page)).toHaveText('S/ 4.00')
+    await page.getByRole('button', { name: 'Confirmar venta' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Venta registrada' })).toBeVisible()
+    // El catálogo quedó con el precio nuevo: la próxima venta ya sale a S/ 4.00.
+    await abrir(page, './vender')
+    await agregarBuscando(page, 'lejia', 'Lejía 1 L')
+    await expect(totalDeLaVenta(page)).toHaveText('S/ 4.00')
+    expect(lejia).toBeTruthy()
+  })
+
   test('celular: cancelar la última línea deja el bloque cerrado en cero', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'El panel deslizable es de celular (< 1024 px)')
     await abrirTiendaLista(page, './')
