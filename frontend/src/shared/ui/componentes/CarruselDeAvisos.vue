@@ -109,14 +109,12 @@ function alSoltar(evento: PointerEvent): void {
   display: flex;
   flex-direction: column;
 }
-/* La fila de controles aprovecha el hueco que ya hay bajo el carrusel: no estira la pantalla. */
-.carrusel--varios {
-  margin-block-end: calc(-1 * var(--espacio-2));
-}
 .carrusel--varios .aviso-actual {
   touch-action: pan-y;
 }
 .aviso-actual {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
 }
@@ -124,7 +122,7 @@ function alSoltar(evento: PointerEvent): void {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--espacio-2);
+  gap: 0;
   block-size: 24px;
 }
 .puntos {
@@ -133,32 +131,23 @@ function alSoltar(evento: PointerEvent): void {
 }
 .paso,
 .punto {
-  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  block-size: 24px;
+  /* Cajas reales de 48 × 48 px; los márgenes negativos hacen que la fila siga midiendo ~24 px
+     (sobresalen 18 px arriba y 6 abajo: no tocan «Vender» ni suman alto; la fila del aviso va encima y conserva toda su flecha). */
+  inline-size: var(--alto-toque);
+  block-size: var(--alto-toque);
+  margin-block: -18px -6px;
+  /* Las cajas se pisan por los lados para que la fila sea angosta; la zona efectiva queda en ~28 px. */
+  margin-inline: -10px;
   padding: 0;
   border: none;
   background: none;
   color: var(--color-primario);
   cursor: pointer;
   /* Si hay una barra pegada abajo (Inicio: «Vender»), enfocar un control no lo deja debajo de ella. */
-  scroll-margin-block-end: calc(var(--alto-boton-principal) + 3 * var(--espacio-2));
-}
-.paso {
-  inline-size: 2rem;
-}
-.punto {
-  inline-size: 1.75rem;
-}
-/* La zona de toque llega a 48 px de alto sin sumar alto a la fila. */
-.paso::after,
-.punto::after {
-  content: '';
-  position: absolute;
-  inset-inline: 0;
-  inset-block: calc((24px - var(--alto-toque)) / 2);
+  scroll-margin-block-end: calc(var(--alto-boton-principal) + 5 * var(--espacio-2));
 }
 .icono-paso {
   inline-size: 24px;

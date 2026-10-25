@@ -82,11 +82,12 @@ test.describe('RN-SIS-08 / RN-UX-14: en modo avión (build de producción con Se
     await esperarSinErroresDeConexion(page, 'Venta registrada')
 
     await irA(page, 'Control')
-    await expect(page.locator('#contenido section .tarjeta-de-cifra')).toContainText(
-      comoSeLee('Vendiste S/ 10.50'),
+    await expect(page.locator('#contenido section .cifras-principales')).toContainText(
+      comoSeLee('Total vendido S/ 10.50'),
     )
-    // 8 secciones: el Alquiler del local sin configurar también se muestra (RN-AN-19).
-    await expect(page.locator('section h2')).toHaveCount(8)
+    // 5 secciones: el Alquiler del local sin configurar también se muestra (RN-AN-19); Atención,
+    // Para comprar y Productos parados están en Ayuda inteligente.
+    await expect(page.locator('section h2')).toHaveCount(5)
     await esperarSinErroresDeConexion(page, 'Control')
 
     await irA(page, 'Inicio')
