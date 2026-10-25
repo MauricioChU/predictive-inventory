@@ -87,10 +87,10 @@ Para avisos que no deben alargar la pantalla (Inicio).
 Cuando puede haber varios avisos y no deben alargar la pantalla (Inicio).
 
 - En Inicio va **justo encima de los botones de acción** (parte de la zona de abajo); lo de arriba (cifras) crece para llenar el alto libre.
-- Un aviso a la vez (`FilaDeAviso`) en una región con nombre («Avisos», `aria-roledescription` «carrusel»).
-- Con 2 o más, el aviso y sus controles son **una sola tarjeta** (marco, borde grueso a la izquierda y fondo del tono del aviso, que cambia con él): el aviso arriba (`FilaDeAviso plana`, sin marco propio) y debajo, dentro del borde y separada por un hilo, una tira delgada (20 px visibles, así no estira la pantalla) con ‹ puntos ›. Los controles no flotan solos debajo. Cada punto es un botón «Aviso 2 de 3» (actual: punto lleno y más grande, `aria-current`; los demás, un aro) y ‹ › («Aviso anterior» / «Aviso siguiente») dan la vuelta; todos con zona de toque de 48 px de alto que sale por `::after`, sin agrandar la fila. «2 de 3» queda solo para el lector. Deslizar de lado también cambia (extra, nunca lo único: RN-UX-05). El cambio es un fundido corto y el aviso nuevo se anuncia (`aria-live`).
-- Los textos de cada aviso son cortos y entran en un renglón a 360 px con letra Grande («3 agotados», «Queda poco: 3»); el nombre accesible de la flecha es la frase completa («3 productos agotados. Ver productos»).
-- Con un solo aviso: solo la fila, sin controles.
+- Un aviso a la vez en una región con nombre («Avisos», `aria-roledescription` «carrusel»).
+- Un solo bloque (marco, borde grueso a la izquierda y fondo del tono del aviso, que cambia con él). Con acción, **todo el bloque es un botón** (nombre accesible = frase completa) que lleva a su pantalla. Con 2 o más: a la derecha un «1/3» pequeño y, aparte (hermano del bloque, nunca anidado), el botón › de 48 × 48 px reales («Siguiente aviso, 2 de 3») que pasa al siguiente y da la vuelta; **sin tira de puntos**. Deslizar de lado también cambia (extra, nunca lo único: RN-UX-05); tras deslizar no se abre el aviso. El cambio es un fundido corto y el aviso nuevo se anuncia (`aria-live`).
+- Los textos de cada aviso son cortos y entran en un renglón a 360 px con letra Grande («3 agotados», «Queda poco: 3»); el nombre accesible del bloque es la frase completa («3 productos agotados. Ver productos»).
+- Con un solo aviso: solo el bloque tocable (con una flecha decorativa), sin flecha de siguiente ni contador.
 - Cada aviso lleva `id`; la acción emite ese `id`.
 
 ## Cifra principal — `TarjetaDeCifra principal`
@@ -98,7 +98,7 @@ Cuando puede haber varios avisos y no deben alargar la pantalla (Inicio).
 La cifra que una pantalla quiere que se lea primero (Inicio: «Total vendido»).
 
 - Título arriba y la cifra debajo, hasta 2.5 rem (sin partir el monto); la secundaria («Ganancia real») va debajo, compacta y en una línea (`compacta en-linea`, cifra de 1.4 rem). La principal es claramente más grande (≥ 1.6 ×).
-- Sin ventas ni pérdida hoy solo se ve la principal con «Todavía no hay ventas hoy»: así Inicio entra en una pantalla.
+- Sin ventas, «Ganancia real» se ve igual (S/ 0.00) y «Todavía no hay ventas hoy» va en el total. Las dos tarjetas crecen para llenar el alto libre (la principal el doble) con el contenido **arriba**: centrado en una caja alta se veía flotando.
 
 ## Subvista de ayudas, selector de top y gráfico comparativo — Control
 

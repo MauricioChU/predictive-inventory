@@ -330,21 +330,32 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     await page.evaluate(() => document.fonts.ready)
   }
 
-  test('360×740 Grande, con 3 avisos y ventas: Inicio entra en una sola pantalla, el aviso es una fila de una línea y los controles son delgados', async ({
+  test('360×740 Grande, con 3 avisos y ventas: Inicio entra en una sola pantalla, el aviso es un bloque de una línea y la flecha pasa al siguiente', async ({
     page,
   }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
     await prepararInicioConTresAvisos(page, 'GRANDE', 360)
     expect(await page.evaluate(() => document.documentElement.scrollHeight), 'sin desplazar').toBeLessThanOrEqual(740)
-    const fila = page.locator('.fila-de-aviso')
-    expect((await fila.boundingBox())!.height, 'una sola línea').toBeLessThan(60)
-    expect((await page.locator('.carrusel .controles').boundingBox())!.height, 'controles delgados').toBeLessThanOrEqual(26)
-    // Los puntos se tocan (zona de 48 px) y cambian de aviso.
-    await page.getByRole('button', { name: 'Aviso 2 de 3' }).click()
+    expect((await page.locator('.carrusel .aviso').boundingBox())!.height, 'una sola línea').toBeLessThan(60)
+    await expect(page.locator('.carrusel .contador')).toHaveText('1/3')
+    // La flecha es un botón aparte de 48 × 48 px reales; el bloque es otro botón.
+    const paso = page.getByRole('button', { name: 'Siguiente aviso, 2 de 3' })
+    const caja = (await paso.boundingBox())!
+    expect(caja.width).toBeGreaterThanOrEqual(48)
+    expect(caja.height).toBeGreaterThanOrEqual(48)
+    await expect(page.locator('.carrusel .aviso button')).toHaveCount(0)
+    await paso.click()
     await expect(page.getByText('Queda poco: 1', { exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Aviso 3 de 3' }).click()
+    await expect(page.locator('.carrusel .contador')).toHaveText('2/3')
+    await page.getByRole('button', { name: 'Siguiente aviso, 3 de 3' }).click()
     await expect(page.getByText('1 precio para revisar', { exact: true })).toBeVisible()
+    // Da la vuelta al final.
+    await page.getByRole('button', { name: 'Siguiente aviso, 1 de 3' }).click()
+    await expect(page.getByText('1 agotado', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: /^Movimientos/ })).toBeVisible()
+    // Tocar el bloque lleva a su pantalla.
+    await page.getByRole('button', { name: '1 producto agotado. Ver productos' }).click()
+    await expect(page).toHaveURL(/\/productos\?estado=agotados$/)
   })
 
   test('360×740 Grande: el carrusel va justo encima de los botones y las cifras llenan el alto libre, sin huecos', async ({
@@ -358,20 +369,15 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
         cifras: caja('.cifras-de-hoy'),
         carrusel: caja('.carrusel'),
         vender: caja('.vender-fijo button'),
-        controles: caja('.carrusel .controles'),
-        fila: caja('.carrusel .fila-de-aviso'),
       }
     })
     // El carrusel está pegado sobre "Vender" (solo el aire de la franja de la barra fija) y las cifras, sobre el carrusel.
     expect(cajas.vender.top - cajas.carrusel.bottom, 'carrusel sobre Vender').toBeLessThanOrEqual(24)
     expect(cajas.vender.top - cajas.carrusel.bottom, 'carrusel no tapa Vender').toBeGreaterThanOrEqual(0)
-    expect(cajas.carrusel.top - cajas.cifras.bottom, 'cifras sobre el carrusel, sin hueco').toBeLessThanOrEqual(24)
-    // Los controles están DENTRO de la tarjeta del aviso.
-    expect(cajas.controles.bottom).toBeLessThanOrEqual(cajas.carrusel.bottom)
-    expect(cajas.controles.top).toBeGreaterThanOrEqual(cajas.fila.bottom - 1)
+    expect(cajas.carrusel.top - cajas.cifras.bottom, 'cifras sobre el carrusel, sin hueco').toBeLessThanOrEqual(16)
   })
 
-  test('360×740 Grande, sin ventas y con un aviso: una pantalla, aviso encima de los botones, sin controles', async ({
+  test('360×740 Grande, sin ventas y con un aviso: una pantalla, "Ganancia real" a la vista y el aviso sin flecha ni contador', async ({
     page,
   }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'La barra de abajo y la columna única son de celular')
@@ -383,7 +389,10 @@ test.describe('Inicio en celular: la acción principal, a la vista', () => {
     await expect(page.getByText('1 agotado', { exact: true })).toBeVisible()
     await page.evaluate(() => document.fonts.ready)
     expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(740)
-    await expect(page.locator('.carrusel .controles')).toHaveCount(0)
+    await expect(page.locator('.cifras-de-hoy')).toContainText('Ganancia real')
+    await expect(page.locator('.cifras-de-hoy')).toContainText('S/ 0.00')
+    await expect(page.locator('.carrusel .paso')).toHaveCount(0)
+    await expect(page.locator('.carrusel .contador')).toHaveCount(0)
     const carrusel = (await page.locator('.carrusel').boundingBox())!
     const vender = (await page.locator('.vender-fijo button').boundingBox())!
     expect(vender.y - (carrusel.y + carrusel.height)).toBeLessThanOrEqual(24)

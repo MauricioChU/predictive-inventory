@@ -6,7 +6,7 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ### Cambiado
 
-- Inicio: los avisos van justo encima de los botones (Vender, Llegó mercadería, ¿Necesito comprar?) y arriba «Total vendido» y «Ganancia real» crecen para llenar el espacio libre. Con varios avisos, los puntos ‹ ● ○ › quedan dentro de la misma tarjeta del aviso, ya no flotan solos debajo.
+- Inicio: los avisos van justo encima de los botones (Vender, Llegó mercadería, ¿Necesito comprar?) y arriba «Total vendido» y «Ganancia real» crecen para llenar el espacio libre; «Ganancia real» se ve siempre, también sin ventas (S/ 0.00). El aviso es un solo bloque: tocarlo entero lleva a su pantalla y, con varios, una flecha › a la derecha (con «1/3») pasa al siguiente; ya no hay puntos debajo.
 - Vender: «¿Vendiste alguno a otro precio?» también aparece con una sola unidad: solo pregunta «¿A cuánto lo vendiste?» (más bajo o más alto) y cambia el precio de esa línea.
 - Control: «Mejor día de la semana» ahora son barras verticales con los siete días; si no entran en la pantalla, se deslizan de lado dentro del bloque. «Semana contra semana» tiene un selector «Ventas» / «Ganancia» y muestra un gráfico a la vez.
 - Control ahora es para medir. «Resumen» se ve como Inicio («Total vendido» grande y «Ganancia real» debajo, con los mismos nombres en Hoy, Ayer, 7 y 30 días) y «Pérdidas» ya no lleva paréntesis. «Lo que más se vende» y «Lo que más ganancia deja» son un solo bloque, «Tus mejores productos», con un selector «Más vendidos» / «Más ganancia». «Semana contra semana» se ve en un gráfico de barras.

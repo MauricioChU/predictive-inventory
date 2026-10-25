@@ -147,6 +147,8 @@ const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.text
 }
 .tarjeta-de-cifra--principal .detalle {
   margin-block-start: var(--espacio-1);
+  /* Pegado a la cifra: sin ventas hoy Inicio muestra las tres líneas y debe seguir entrando. */
+  line-height: 1.2;
 }
 .tarjeta-de-cifra--exito {
   border-left-color: var(--color-exito);

@@ -82,9 +82,6 @@ const cifrasDeHoy = computed(() => {
   const { ganancia, ventas } = deHoy.value
   const perdio = ganancia.esNegativo()
   return {
-    // Sin ventas ni pérdidas no hay ganancia que mostrar: "Todavía no hay ventas hoy" ya lo dice
-    // y así Inicio sigue entrando en una pantalla.
-    mostrarGanancia: !(ventas.esCero() && ganancia.esCero()),
     vendido: {
       valor: formatearDinero(ventas),
       detalle: ventas.esCero() ? 'Todavía no hay ventas hoy' : undefined,
@@ -217,7 +214,6 @@ function ir(nombre: PantallaDeOtraRama): void {
           :texto-detalle="cifrasDeHoy.vendido.detalle"
         />
         <TarjetaDeCifra
-          v-if="cifrasDeHoy.mostrarGanancia"
           compacta
           en-linea
           :titulo="cifrasDeHoy.ganancia.titulo"
@@ -281,7 +277,7 @@ function ir(nombre: PantallaDeOtraRama): void {
 .vista-inicio {
   display: flex;
   flex-direction: column;
-  gap: var(--espacio-3);
+  gap: var(--espacio-2);
   /* Ocupa el alto que deja libre la navegación (medida en vivo en --alto-pie). */
   min-height: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--relleno-bloque, var(--espacio-4)));
 }
@@ -346,17 +342,18 @@ h1 {
   display: contents;
 }
 /* Las dos cifras de hoy, apiladas. Crecen para llenar el alto que queda libre (sin huecos en
-   blanco): la principal se lleva más y las dos centran su contenido. */
+   blanco): la principal se lleva más; el contenido de cada una va arriba (centrado en una caja
+   alta se veía flotando en un bloque vacío). */
 .cifra {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--espacio-2);
+  gap: var(--espacio-1);
 }
 .cifra :deep(.tarjeta-de-cifra) {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
 }
 .cifra :deep(.tarjeta-de-cifra--principal) {
   flex: 2;

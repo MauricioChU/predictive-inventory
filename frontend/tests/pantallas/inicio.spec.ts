@@ -111,6 +111,10 @@ describe('Inicio', () => {
         .text()
         .match(/Todavía no hay ventas hoy/g),
     ).toHaveLength(1)
+    // «Ganancia real» siempre se ve, también sin ventas.
+    const [, ganancia] = wrapper.findAll('.tarjeta-de-cifra')
+    expect(ganancia?.text()).toContain('Ganancia real')
+    expect(ganancia?.text()).toMatch(/S\/\s0\.00/)
   })
 
   it('RN-AL-06a: avisa por separado lo agotado y lo que queda poco, y cada aviso lleva a Productos ya filtrado', async () => {
@@ -119,9 +123,9 @@ describe('Inicio', () => {
     await crearProductoDePrueba(app, { ...CARBON, stockInicial: '2' })
     const { wrapper, router } = await abrirInicio()
 
-    // Un aviso por tarjeta, con "1 de 2" y ‹ ›.
-    expect(wrapper.get('.fila-de-aviso--atencion').text()).toContain('1 agotado')
-    expect(wrapper.text()).toContain('1 de 2')
+    // Un aviso por tarjeta, con «1/2» y la flecha al siguiente.
+    expect(wrapper.get('.carrusel--atencion').text()).toContain('1 agotado')
+    expect(wrapper.text()).toContain('1/2')
     await botonCon('1 producto agotado. Ver productos').trigger('click')
     await esperarPantalla()
     expect(router.currentRoute.value.name).toBe('productos')
@@ -129,8 +133,8 @@ describe('Inicio', () => {
 
     await router.push('/')
     await esperarPantalla()
-    await botonCon('Aviso siguiente').trigger('click')
-    expect(wrapper.get('.fila-de-aviso--atencion').text()).toContain('Queda poco: 1')
+    await botonCon('Siguiente aviso, 2 de 2').trigger('click')
+    expect(wrapper.get('.carrusel--atencion').text()).toContain('Queda poco: 1')
     await botonCon('Queda poco de 1 producto. Ver productos').trigger('click')
     await esperarPantalla()
     expect(router.currentRoute.value.query).toEqual({ estado: 'queda-poco' })
@@ -141,7 +145,7 @@ describe('Inicio', () => {
     await crearProductoDePrueba(app, { ...LEJIA, venta: '2.00', stockInicial: '10' })
     const { wrapper, router } = await abrirInicio()
 
-    expect(wrapper.get('.fila-de-aviso--atencion').text()).toContain('1 precio para revisar')
+    expect(wrapper.get('.carrusel--atencion').text()).toContain('1 precio para revisar')
     await botonCon('1 precio para revisar. Ver ayuda inteligente').trigger('click')
     await esperarPantalla()
     expect(router.currentRoute.value.name).toBe('ayuda-inteligente')
@@ -154,7 +158,7 @@ describe('Inicio', () => {
     const { wrapper } = await abrirInicio()
 
     expect(wrapper.text()).toContain('Todo bien: no falta nada')
-    expect(wrapper.find('.fila-de-aviso--atencion').exists()).toBe(false)
+    expect(wrapper.find('.carrusel--atencion').exists()).toBe(false)
   })
 
   it('RN-UX-10: sin productos ofrece agregar el primero', async () => {
@@ -230,7 +234,7 @@ describe('Inicio', () => {
       posicion('class="fecha-de-hoy"'),
       posicion('tarjeta-de-cifra'),
       posicion('class="acciones"'),
-      posicion('fila-de-aviso--atencion'),
+      posicion('carrusel--atencion'),
       posicion('class="enlace-movimientos"'),
     ]
     expect(orden).toEqual([...orden].sort((a, b) => a - b))
