@@ -1,13 +1,11 @@
 import type { DOMWrapper, VueWrapper } from '@vue/test-utils'
 import { afterEach, describe, expect, it } from 'vitest'
-import { instanteLocal } from '@/shared/domain/fecha'
 import VistaAyudaInteligente from '../VistaAyudaInteligente.vue'
 import { esperarCarga, montarVista } from '../__pruebas__/montar-vista'
 import { textoLeido } from '../__pruebas__/texto-leido'
 import { TiendaDePrueba } from '../__pruebas__/tienda-de-prueba'
 
 const LEJIA = { nombre: 'Lejía 1 L', compra: '2.40', venta: '3.50', minimo: '3' }
-const CARBON = { nombre: 'Carbón', unidad: 'KILO' as const, compra: '2.75', venta: '4.00' }
 const JABON = { nombre: 'Jabón', compra: '1.20', venta: '2.00', minimo: '3' }
 const BOLSAS = { nombre: 'Bolsas', compra: '0.05', venta: '0.10', minimo: '0' }
 const CERA_ROJA = { nombre: 'Cera roja', compra: '5.00', venta: '4.50', minimo: '2' }
@@ -36,13 +34,6 @@ function seccion(w: VueWrapper, titulo: string): DOMWrapper<Element> {
     .find((s) => s.find('h2').exists() && texto(s.get('h2')) === titulo)
   if (!encontrada) throw new Error(`No está la sección "${titulo}"`)
   return encontrada
-}
-
-async function elegir(s: DOMWrapper<Element>, opcion: string): Promise<void> {
-  const radio = s.findAll('[role="radio"]').find((r) => texto(r) === opcion)
-  if (!radio) throw new Error(`No está la opción "${opcion}"`)
-  await radio.trigger('click')
-  await esperarCarga()
 }
 
 describe('Ayuda inteligente (Atención, Para comprar y Productos parados)', () => {
