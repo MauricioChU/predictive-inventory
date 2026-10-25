@@ -4,6 +4,8 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+## [0.6.0] · 2026-10-25
+
 ### Cambiado
 
 - Inicio (propuesta): nueva distribución como el dibujo: nombre grande con la fecha pequeña debajo, «Total vendido» y «Ganancia real» en tarjetas blancas con sombra, el aviso como franja suave con «1/3 ›», «Vender» en pastilla, «Llegó mercadería» y «¿Necesito comprar?» lado a lado y «Movimientos ›» como fila suave.
