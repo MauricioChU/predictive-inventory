@@ -4,7 +4,7 @@
  * frena al final; el contenido se aclara y baja un poco, y empieza un instante después, cuando la
  * caja ya tiene lugar. Al cerrar, al revés y más rápido: el contenido se va primero y la caja se
  * recoge. Lo de abajo se desliza con la caja, sin saltos. Con `abierto` falso el contenido no
- * existe (sin él en el DOM, sin foco ni lectura). Con "reducir movimiento" del sistema (o sin
+ * existe (sin él en el DOM, sin foco ni lectura). Al terminar de abrir se lleva a la vista (`scrollIntoView` nearest). Con "reducir movimiento" del sistema (o sin
  * Web Animations) pasa al instante.
  * El contenido va en el slot, sin relleno propio en la caja de afuera: la altura se mide en ella.
  */
@@ -31,6 +31,9 @@ function sinMovimiento(el: Element): boolean {
 
 function animar(el: Element, hecho: () => void, entrando: boolean): void {
   if (sinMovimiento(el)) {
+    if (entrando && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ block: 'nearest', behavior: 'auto' })
+    }
     hecho()
     return
   }
@@ -67,7 +70,14 @@ function animar(el: Element, hecho: () => void, entrando: boolean): void {
     caja.style.overflow = ''
     // Al abrir, soltar las animaciones: si el formulario cambia de alto después (un aviso de
     // error), la caja lo sigue y no queda fija en el alto medido.
-    if (entrando) todas.forEach((a) => a.cancel())
+    if (entrando) {
+      todas.forEach((a) => a.cancel())
+      // Ya abierto, se lleva a la vista dentro del área que se desplaza (el panel o la página);
+      // el pie fijo se respeta con su scroll-padding. Sin movimiento: al instante.
+      if (typeof caja.scrollIntoView === 'function') {
+        caja.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      }
+    }
     hecho()
   }
   // `finished` se rechaza si alguna se cancela (el elemento se quitó a la mitad): igual se cierra.
