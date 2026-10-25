@@ -48,6 +48,9 @@
   --distancia-vista: 28px;
   /* Diálogos: aparecen con un leve crecer y se van al revés. */
   --duracion-dialogo: 220ms;
+  /* Despliegue: un formulario en línea crece en alto al abrirse y se recoge al cerrarse. */
+  --duracion-despliegue: 280ms;
+  --curva-despliegue: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* RN-UX-01: la base escala todo el diseño (rem). */

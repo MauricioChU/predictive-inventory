@@ -6,6 +6,9 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ### Cambiado
 
+- Inicio: «Total vendido» es la cifra principal (mucho más grande) y «Ganancia real» queda más chica debajo; sin ventas solo se ve el total con «Todavía no hay ventas hoy». Los avisos van en un carrusel: uno a la vez, con botones ‹ › y «1 de 3» (también se puede deslizar); con uno solo no hay controles.
+- «¿Vendiste alguno a otro precio?» y «Cambiar precio» se despliegan y se recogen con animación (sin movimiento si el sistema pide reducirlo).
+- La confirmación de Vender y de Llegó mercadería muestra como mucho 4 productos; si hay más, la tarjeta se desplaza por dentro con la pista «y N más».
 - Productos se ve de la misma familia que Vender y Llegó mercadería: el título queda a la misma altura (con «Categorías» al lado, sin moverlo), «N productos» tiene el estilo de «Más vendidos» y cada producto de la lista es una tarjeta clara con borde, como los accesos de Vender. Los títulos de sección de Ajustes, Control y el detalle de producto tienen el mismo tamaño.
 - Inicio: las tarjetas «Total vendido» y «Ganancia real» son un poco más altas y con la cifra más grande cuando ya hay ventas (sin ventas quedan compactas), sin que Inicio deje de entrar en una pantalla.
 - Inicio: ahora muestra dos tarjetas, «Total vendido» (lo cobrado hoy) y debajo «Ganancia real» (lo que ganaste de lo vendido; si perdiste, «Pérdida real»). «Todavía no hay ventas hoy» se dice una sola vez.

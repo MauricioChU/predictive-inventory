@@ -17,7 +17,9 @@ import type { Dinero } from '@/shared/domain/dinero'
 import { formatearDinero, plural } from '@/shared/domain/formato'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import EstadoVacio from '@/shared/ui/componentes/EstadoVacio.vue'
-import FilaDeAviso from '@/shared/ui/componentes/FilaDeAviso.vue'
+import CarruselDeAvisos, {
+  type AvisoDelCarrusel,
+} from '@/shared/ui/componentes/CarruselDeAvisos.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import TarjetaDeCifra from '@/shared/ui/componentes/TarjetaDeCifra.vue'
 import FechaDeHoy from './FechaDeHoy.vue'
@@ -69,7 +71,7 @@ function cerrarMovimientos(): void {
 const encabezado = computed(() => nombreTienda.value.trim().toLocaleUpperCase('es') || 'Inicio')
 
 /**
- * RN-AN-03: lo cobrado hoy ("Total vendido") y encima la ganancia real: la neta de hoy (o la
+ * RN-AN-03: lo cobrado hoy ("Total vendido", la cifra principal) y debajo la ganancia real: la neta de hoy (o la
  * pérdida, dicha como tal). "Todavía no hay ventas hoy" se dice una sola vez, en el total.
  */
 const cifrasDeHoy = computed(() => {
@@ -77,6 +79,9 @@ const cifrasDeHoy = computed(() => {
   const { ganancia, ventas } = deHoy.value
   const perdio = ganancia.esNegativo()
   return {
+    // Sin ventas ni pérdidas no hay ganancia que mostrar: "Todavía no hay ventas hoy" ya lo dice
+    // y así Inicio sigue entrando en una pantalla.
+    mostrarGanancia: !(ventas.esCero() && ganancia.esCero()),
     vendido: {
       valor: formatearDinero(ventas),
       detalle: ventas.esCero() ? 'Todavía no hay ventas hoy' : undefined,
@@ -94,6 +99,28 @@ const tituloDeAtencion = computed(() => {
   const n = atencion.value?.contador ?? 0
   return `${n} ${plural(n, 'producto se acaba', 'productos se acaban')}`
 })
+
+/**
+ * Los avisos de Inicio, de uno en uno en un carrusel. Hoy hay uno (lo que se acaba, o "todo en
+ * orden"); los que vengan se suman aquí y se ven con ‹ ›.
+ */
+const avisos = computed<AvisoDelCarrusel[]>(() => {
+  if (!atencion.value) return []
+  return atencion.value.contador > 0
+    ? [
+        {
+          id: 'se-acaban',
+          tono: 'atencion',
+          texto: tituloDeAtencion.value,
+          textoAccion: 'Ver productos',
+        },
+      ]
+    : [{ id: 'todo-en-orden', tono: 'exito', texto: atencion.value.texto }]
+})
+
+function alTocarAviso(id: string): void {
+  if (id === 'se-acaban') verLoQueSeAcaba()
+}
 
 async function cargarAtencion(): Promise<void> {
   atencion.value = await aplicacion.alertas.resumenDeAtencion()
@@ -166,18 +193,17 @@ function verLoQueSeAcaba(): void {
     -->
     <div class="cuerpo" :inert="movimientosAbiertos ? true : undefined">
       <div v-if="cifrasDeHoy" class="cifra cifras-de-hoy">
+        <!-- La cifra principal: lo cobrado hoy, grande; la ganancia real, más chica debajo. -->
         <TarjetaDeCifra
-          compacta
-          en-linea
-          :alta="!cifrasDeHoy.vendido.detalle"
+          principal
           titulo="Total vendido"
           :texto-valor="cifrasDeHoy.vendido.valor"
           :texto-detalle="cifrasDeHoy.vendido.detalle"
         />
         <TarjetaDeCifra
+          v-if="cifrasDeHoy.mostrarGanancia"
           compacta
           en-linea
-          :alta="!cifrasDeHoy.vendido.detalle"
           :titulo="cifrasDeHoy.ganancia.titulo"
           :texto-valor="cifrasDeHoy.ganancia.valor"
           :tono="cifrasDeHoy.ganancia.tono"
@@ -192,15 +218,8 @@ function verLoQueSeAcaba(): void {
           accion="Agregar el primero"
           @accion="ir('producto-nuevo')"
         />
-        <!-- Filas compactas: varias alertas se apilan una bajo otra sin alargar la pantalla. -->
-        <FilaDeAviso
-          v-else-if="atencion.contador > 0"
-          tono="atencion"
-          :texto="tituloDeAtencion"
-          texto-accion="Ver productos"
-          @accion="verLoQueSeAcaba"
-        />
-        <FilaDeAviso v-else tono="exito" :texto="atencion.texto" />
+        <!-- Un aviso a la vez, en un espacio reservado, con ‹ › si hay varios. -->
+        <CarruselDeAvisos v-else :avisos="avisos" etiqueta="Avisos" @accion="alTocarAviso" />
       </div>
 
       <div class="acciones">
@@ -314,7 +333,7 @@ h1 {
 .cifra {
   display: flex;
   flex-direction: column;
-  gap: var(--espacio-2);
+  gap: var(--espacio-1);
 }
 /* Celular: "Vender" queda pegado sobre la navegación (--alto-pie, medido en vivo) mientras su
    lugar está más abajo; al llegar a él, sigue en su sitio. El primero de las acciones lleva

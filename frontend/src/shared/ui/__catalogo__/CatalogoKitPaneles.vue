@@ -12,6 +12,7 @@ import AvisoEnPagina from '../componentes/AvisoEnPagina.vue'
 import BarraDeProgreso from '../componentes/BarraDeProgreso.vue'
 import Boton from '../componentes/Boton.vue'
 import BotonesDeOpcion from '../componentes/BotonesDeOpcion.vue'
+import CarruselDeAvisos, { type AvisoDelCarrusel } from '../componentes/CarruselDeAvisos.vue'
 import FilaDeDato from '../componentes/FilaDeDato.vue'
 import ListaAgrupadaPorDia from '../componentes/ListaAgrupadaPorDia.vue'
 import MensajeDeError from '../componentes/MensajeDeError.vue'
@@ -23,6 +24,17 @@ import TarjetaDeCifra from '../componentes/TarjetaDeCifra.vue'
 // para poder ver (y probar) lo que anuncia RespuestaGrande.
 const anunciador = crearAnunciador()
 provide(CLAVE_ANUNCIADOR, anunciador)
+
+const AVISOS_DEL_CARRUSEL: AvisoDelCarrusel[] = [
+  { id: 'a', tono: 'atencion', texto: '4 productos se acaban', textoAccion: 'Ver productos' },
+  {
+    id: 'b',
+    tono: 'info',
+    texto: 'Hace 9 días que no guardas una copia',
+    textoAccion: 'Guardar copia',
+  },
+  { id: 'c', tono: 'exito', texto: 'Ayer vendiste S/ 162.50 y ganaste S/ 48.20' },
+]
 
 const estado = ref('poco')
 const ESTADOS = [
@@ -153,6 +165,11 @@ const respuestaActual = computed(() => RESPUESTAS[respuesta.value])
         texto-cerrar="Cerrar"
         @cerrar="avisos.resumen = false"
       />
+    </section>
+
+    <section class="seccion" aria-labelledby="catalogo-carrusel-de-avisos">
+      <h2 id="catalogo-carrusel-de-avisos">CarruselDeAvisos</h2>
+      <CarruselDeAvisos :avisos="AVISOS_DEL_CARRUSEL" etiqueta="Avisos" />
     </section>
 
     <section class="seccion" aria-labelledby="catalogo-lista-agrupada-por-dia">

@@ -29,6 +29,7 @@ Una sola familia de animaciones, lentas para que se vea de dónde sale y adónde
 | `al-terminar-animacion.ts` | Para cerrar: el componente pone `hoja-sale` con su `:class` (nunca a mano: Vue la borra) y quita la hoja cuando la animación termina. |
 | `--duracion-vista-sale` (120 ms) + `--duracion-vista` (220 ms) + `--distancia-vista` (28 px) + `.cambio-de-vista-*` (en `LayoutApp.vue`) | Cambio de pantalla en la navegación, en modo `out-in` (nunca hay dos a la vez): la vieja se desvanece rápido en su sitio y la nueva entra con un deslizamiento corto desde el lado hacia el que se va, con fundido. Dirección en `router/direccion-de-vista.ts` (pestañas por orden; hacia adentro = derecha, volver = izquierda; hermanas de igual profundidad = solo fundido), fijada en `<html data-vista-direccion>`. Anima `left` (no `transform`) para que `PanelDeCarrito`/`HojaInferior` (`position: fixed`) no se rompan; `overflow-x: clip` solo mientras dura. El router espera a que la vieja se vaya para llevar la página arriba (`router/salida-de-vista.ts`); el foco va al `h1` de la que entra (`router/foco-de-titulo.ts`). La primera carga no se anima. |
 | `--duracion-dialogo` (220 ms) + `.dialogo-animado` | Diálogos `<dialog>` (`DialogoConfirmacion`): el fondo se oscurece (`::backdrop`) y la caja crece un poco desde abajo; al cerrar, al revés. Con transiciones CSS (`@starting-style`, `overlay`/`display` discretos), no `@keyframes`: el `<dialog>` se cierra en el acto —el foco vuelve enseguida— y el navegador lo mantiene visible mientras se va. Basta ponerle la clase. |
+| `DespliegueAnimado.vue` + `--duracion-despliegue` (280 ms) + `--curva-despliegue` | Despliegue: un formulario en línea (cambiar precio, «¿Vendiste alguno a otro precio?») crece en alto y se aclara al abrirse y se recoge al cerrarse. Con `v-if` interno (cerrado no existe en el DOM), alto medido en el momento (Web Animations); sin Web Animations o con «reducir movimiento», al instante. Meter el formulario en el slot, sin relleno en la caja de afuera. |
 | `TransitionGroup` de líneas | Quitar una línea la desvanece y las de abajo suben; agregar la hace aparecer. |
 
 ## Hoja inferior — `HojaInferior.vue`
@@ -76,8 +77,28 @@ Cuando hay varios productos que revisar (aviso de sobrecompra en Llegó mercader
 Para avisos que no deben alargar la pantalla (Inicio).
 
 - Una fila: ícono + texto corto + flecha (botón con nombre accesible, p. ej. "Ver productos").
-- Varias se apilan una bajo otra; el detalle va en la pantalla a la que lleva la flecha, no en la fila.
+- Varias van en un carrusel (abajo), no apiladas; el detalle va en la pantalla a la que lleva la flecha, no en la fila.
 - Tonos: `atencion`, `info`, `exito` (color + ícono, nunca solo color).
+
+## Carrusel de avisos — `CarruselDeAvisos.vue`
+
+Cuando puede haber varios avisos y no deben alargar la pantalla (Inicio).
+
+- Un aviso a la vez (`FilaDeAviso`) en una región con nombre («Avisos», `aria-roledescription` «carrusel»).
+- Con 2 o más: alto reservado (4.5 rem, el aviso lo llena) y debajo ‹ «1 de 3» › siempre visibles, de 48 px y con nombre accesible («Aviso anterior» / «Aviso siguiente»); dan la vuelta. Deslizar de lado también cambia (extra, nunca lo único: RN-UX-05). El cambio es un fundido corto y el aviso nuevo se anuncia (`aria-live`).
+- Con un solo aviso: solo la fila, sin controles ni alto reservado.
+- Cada aviso lleva `id`; la acción emite ese `id`.
+
+## Cifra principal — `TarjetaDeCifra principal`
+
+La cifra que una pantalla quiere que se lea primero (Inicio: «Total vendido»).
+
+- Título arriba y la cifra debajo, hasta 2.5 rem (sin partir el monto); la secundaria («Ganancia real») va debajo, compacta y en una línea (`compacta en-linea`, cifra de 1.4 rem). La principal es claramente más grande (≥ 1.6 ×).
+- Sin ventas ni pérdida hoy solo se ve la principal con «Todavía no hay ventas hoy»: así Inicio entra en una pantalla.
+
+## Resumen de lo registrado — `ResumenDeLineas.vue`
+
+- A la vista, como mucho 4 líneas (alto medido, aunque un nombre ocupe dos renglones). Con más, la tarjeta se desplaza **por dentro** (`overscroll-behavior: contain`: la página no se mueve), es una región con nombre («Lo que vendiste: 7 productos») que el teclado alcanza (Tab, flechas) y abajo hay una pista: degradado y «y N más ⌄» que pasa a «Ya viste todo» al llegar al final.
 
 ## Confirmación — `PantallaExito.vue`
 
