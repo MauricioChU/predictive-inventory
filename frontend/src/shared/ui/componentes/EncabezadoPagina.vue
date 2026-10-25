@@ -41,6 +41,10 @@ function alVolver() {
       <span>Volver</span>
     </button>
     <h1>{{ titulo }}</h1>
+    <!-- Acción opcional al lado del título (p. ej. «Categorías»): no cambia la altura del encabezado. -->
+    <div v-if="$slots.accion" class="accion">
+      <slot name="accion" />
+    </div>
   </header>
 </template>
 
@@ -73,6 +77,14 @@ h1 {
   font-size: 1.375rem;
   margin: 0;
   overflow-wrap: break-word;
+}
+/* Su caja mide 0 de alto: el botón (48 px) sobresale sin estirar el encabezado, así el título
+   queda a la misma altura que en las demás vistas. */
+.accion {
+  flex: none;
+  display: flex;
+  align-items: center;
+  margin-block: calc(-0.5 * var(--alto-toque));
 }
 .volver {
   flex: none;

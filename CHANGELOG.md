@@ -6,6 +6,8 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ### Cambiado
 
+- Productos se ve de la misma familia que Vender y Llegó mercadería: el título queda a la misma altura (con «Categorías» al lado, sin moverlo), «N productos» tiene el estilo de «Más vendidos» y cada producto de la lista es una tarjeta clara con borde, como los accesos de Vender. Los títulos de sección de Ajustes, Control y el detalle de producto tienen el mismo tamaño.
+- Inicio: las tarjetas «Total vendido» y «Ganancia real» son un poco más altas y con la cifra más grande cuando ya hay ventas (sin ventas quedan compactas), sin que Inicio deje de entrar en una pantalla.
 - Inicio: ahora muestra dos tarjetas, «Total vendido» (lo cobrado hoy) y debajo «Ganancia real» (lo que ganaste de lo vendido; si perdiste, «Pérdida real»). «Todavía no hay ventas hoy» se dice una sola vez.
 - Llegó mercadería: el aviso de sobrecompra se ve más claro. Título «Esto es más de lo que necesitas» y una fila por producto: su nombre en negrita, cuántas unidades llegan y para cuántos días te alcanzan, y si no necesitabas comprar o cuánto te sugerimos. Los botones siguen siendo «Cambiar cantidad» y «Registrar igual».
 - Productos: los filtros ya no ocupan media pantalla. Arriba quedan el buscador y un botón «Filtros» (un ícono con el número de filtros puestos, siempre en la misma fila que el buscador); al tocarlo se abre una hoja con «Mostrar» y la «Categoría» como lista, y abajo «Ver N productos». Lo que tienes filtrado se ve debajo del buscador en chips que se quitan con ✕, en una sola línea (si no caben, se deslizan de lado). «Categorías» queda junto al título (solo el ícono si no cabe).

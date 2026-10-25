@@ -509,7 +509,7 @@ async function cambiarSinPreguntar(id: string, nombre: string, accion: 'archivar
 }
 .seccion h2 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.125rem;
 }
 .acciones-finales {
   display: grid;

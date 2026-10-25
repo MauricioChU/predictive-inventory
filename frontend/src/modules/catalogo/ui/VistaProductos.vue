@@ -249,14 +249,15 @@ function abrirProducto(id: string) {
 
 <template>
   <div class="vista-productos" :style="{ '--alto-accion': `${altoDeLaAccion}px` }">
-    <div class="cabecera" :inert="hojaAbierta ? true : undefined">
-      <EncabezadoPagina titulo="Productos" />
-      <!-- Si no cabe junto al título, queda solo el ícono (el texto sigue para el lector). -->
-      <button type="button" class="ir-a-categorias" @click="router.push({ name: 'categorias' })">
-        <Tags aria-hidden="true" class="icono" />
-        <span class="texto-categorias">Categorías</span>
-      </button>
-    </div>
+    <!-- Si «Categorías» no cabe junto al título, queda solo el ícono (el texto sigue para el lector). -->
+    <EncabezadoPagina class="cabecera" titulo="Productos" :inert="hojaAbierta ? true : undefined">
+      <template #accion>
+        <button type="button" class="ir-a-categorias" @click="router.push({ name: 'categorias' })">
+          <Tags aria-hidden="true" class="icono" />
+          <span class="texto-categorias">Categorías</span>
+        </button>
+      </template>
+    </EncabezadoPagina>
 
     <MensajeDeError v-if="error" :mensaje="error" ayuda="Vuelve a intentarlo en un momento." />
 
@@ -304,7 +305,7 @@ function abrirProducto(id: string) {
           <!-- Región viva siempre presente: anuncia cuántos hay (o por qué no hay) al buscar. -->
           <p
             v-if="hayProductos"
-            class="conteo"
+            class="conteo titulo-de-seccion"
             :class="{ 'solo-lector': filas.length === 0 }"
             role="status"
           >
@@ -358,7 +359,8 @@ function abrirProducto(id: string) {
 <style scoped>
 .vista-productos {
   display: grid;
-  gap: var(--espacio-4);
+  /* Sin separación entre filas: el encabezado queda como en Vender y Recibir. */
+  gap: 0;
   min-inline-size: 0;
 }
 /* WCAG 2.4.11: lo que recibe el foco nunca queda tapado por el botón pegado abajo (su alto
@@ -369,10 +371,8 @@ function abrirProducto(id: string) {
 .cabecera {
   /* Título y "Categorías" en la misma fila: si no caben con su texto, queda solo el ícono. */
   container-type: inline-size;
-  display: flex;
-  align-items: center;
+  flex-wrap: nowrap;
   justify-content: space-between;
-  gap: 0 var(--espacio-3);
 }
 .ir-a-categorias {
   display: inline-flex;
@@ -526,11 +526,6 @@ function abrirProducto(id: string) {
   inline-size: 1rem;
   block-size: 1rem;
   flex: none;
-}
-.conteo {
-  margin: 0;
-  font-weight: 700;
-  color: var(--color-texto-suave);
 }
 .accion-principal {
   position: sticky;
