@@ -177,7 +177,7 @@ onMounted(cargarTodo)
     />
 
     <section v-else-if="accesos.length > 0" class="mas-vendidos" :aria-labelledby="idMasVendidos">
-      <h2 :id="idMasVendidos" class="subtitulo">Más vendidos</h2>
+      <h2 :id="idMasVendidos" class="titulo-de-seccion">Más vendidos</h2>
       <AccesosRapidos :productos="accesos" etiqueta="Más vendidos" @elegir="elegir" />
     </section>
   </div>
@@ -189,8 +189,7 @@ onMounted(cargarTodo)
   grid-template-columns: minmax(0, 1fr);
   gap: var(--espacio-4);
 }
-.subtitulo {
-  margin: 0 0 var(--espacio-2);
-  font-size: 1.125rem;
+.mas-vendidos .titulo-de-seccion {
+  margin-block-end: var(--espacio-2);
 }
 </style>

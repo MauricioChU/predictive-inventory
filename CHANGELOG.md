@@ -4,6 +4,36 @@ Qué cambia en la app en cada versión, en palabras de la tienda. Cómo se numer
 
 ## Sin publicar
 
+## [0.6.0] · 2026-10-25
+
+### Cambiado
+
+- Inicio (propuesta): nueva distribución como el dibujo: nombre grande con la fecha pequeña debajo, «Total vendido» y «Ganancia real» en tarjetas blancas con sombra, el aviso como franja suave con «1/3 ›», «Vender» en pastilla, «Llegó mercadería» y «¿Necesito comprar?» lado a lado y «Movimientos ›» como fila suave.
+- Vender: el lápiz del precio por unidad cambia el precio del producto para siempre. Antes de guardar pregunta «¿Cambiar el precio de Lejía 1 L? Desde ahora se venderá a S/ 4.00 (antes S/ 3.50).»; si el precio deja pérdida, pide una segunda confirmación diciendo cuánto se pierde. La línea toma el precio nuevo, sin «Precio especial». «¿Vendiste alguno a otro precio?» sigue siendo solo para esa venta.
+- Control: «N cosas para mirar» cuenta productos distintos (un producto agotado y parado cuenta una vez).
+- Inicio: los avisos van justo encima de los botones (Vender, Llegó mercadería, ¿Necesito comprar?) y arriba «Total vendido» y «Ganancia real» crecen para llenar el espacio libre; «Ganancia real» se ve siempre, también sin ventas (S/ 0.00). El aviso es un solo bloque: tocarlo entero lleva a su pantalla y, con varios, una flecha › a la derecha (con «1/3») pasa al siguiente; ya no hay puntos debajo.
+- Vender: «¿Vendiste alguno a otro precio?» también aparece con una sola unidad: solo pregunta «¿A cuánto lo vendiste?» (más bajo o más alto) y cambia el precio de esa línea.
+- Control: «Mejor día de la semana» ahora son barras verticales con los siete días; si no entran en la pantalla, se deslizan de lado dentro del bloque. «Semana contra semana» tiene un selector «Ventas» / «Ganancia» y muestra un gráfico a la vez.
+- Control ahora es para medir. «Resumen» se ve como Inicio («Total vendido» grande y «Ganancia real» debajo, con los mismos nombres en Hoy, Ayer, 7 y 30 días) y «Pérdidas» ya no lleva paréntesis. «Lo que más se vende» y «Lo que más ganancia deja» son un solo bloque, «Tus mejores productos», con un selector «Más vendidos» / «Más ganancia». «Semana contra semana» se ve en un gráfico de barras.
+- Nueva pantalla «Ayuda inteligente» (botón al final de Control, con cuántas cosas hay que mirar): ahí están «Atención», «Para comprar» y «Productos parados», que salieron de Control.
+- Inicio: el carrusel de avisos muestra una tarjeta por cada cosa de Atención («N agotados», «Queda poco: N» y «N precios para revisar», cortas para entrar en un renglón), cada una con su flecha a Productos ya filtrado o a Ayuda inteligente.
+- Inicio: «Total vendido» es la cifra principal (mucho más grande) y «Ganancia real» queda más chica debajo; sin ventas solo se ve el total con «Todavía no hay ventas hoy». Los avisos van en un carrusel: uno a la vez, con ‹ puntos › en una fila delgada que no estira la pantalla (también se puede deslizar); con uno solo no hay controles.
+- Vender: la confirmación «Venta registrada» y el panel de venta abierto ya no muestran la barra de desplazamiento de la página cuando todo entra en la pantalla (celular y PC). Con muchos productos, la tarjeta de lo vendido se achica y se desplaza por dentro en vez de alargar la página.
+- «¿Vendiste alguno a otro precio?» y «Cambiar precio» se abren más suave: la caja crece despacio y el contenido se aclara y baja un poco un instante después; al cerrar, el contenido se va primero y todo se recoge más rápido. Lo de abajo se desliza sin saltos.
+- Inicio: «Total vendido» es la cifra principal (mucho más grande) y «Ganancia real» queda más chica debajo; sin ventas solo se ve el total con «Todavía no hay ventas hoy». Los avisos van en un carrusel: uno a la vez, con botones ‹ › y «1 de 3» (también se puede deslizar); con uno solo no hay controles.
+- «¿Vendiste alguno a otro precio?» y «Cambiar precio» se despliegan y se recogen con animación (sin movimiento si el sistema pide reducirlo).
+- La confirmación de Vender y de Llegó mercadería muestra como mucho 4 productos; si hay más, la tarjeta se desplaza por dentro con la pista «y N más».
+- Productos se ve de la misma familia que Vender y Llegó mercadería: el título queda a la misma altura (con «Categorías» al lado, sin moverlo), «N productos» tiene el estilo de «Más vendidos» y cada producto de la lista es una tarjeta clara con borde, como los accesos de Vender. Los títulos de sección de Ajustes, Control y el detalle de producto tienen el mismo tamaño.
+- Inicio: las tarjetas «Total vendido» y «Ganancia real» son un poco más altas y con la cifra más grande cuando ya hay ventas (sin ventas quedan compactas), sin que Inicio deje de entrar en una pantalla.
+- Inicio: ahora muestra dos tarjetas, «Total vendido» (lo cobrado hoy) y debajo «Ganancia real» (lo que ganaste de lo vendido; si perdiste, «Pérdida real»). «Todavía no hay ventas hoy» se dice una sola vez.
+- Llegó mercadería: el aviso de sobrecompra se ve más claro. Título «Esto es más de lo que necesitas» y una fila por producto: su nombre en negrita, cuántas unidades llegan y para cuántos días te alcanzan, y si no necesitabas comprar o cuánto te sugerimos. Los botones siguen siendo «Cambiar cantidad» y «Registrar igual».
+- Productos: los filtros ya no ocupan media pantalla. Arriba quedan el buscador y un botón «Filtros» (un ícono con el número de filtros puestos, siempre en la misma fila que el buscador); al tocarlo se abre una hoja con «Mostrar» y la «Categoría» como lista, y abajo «Ver N productos». Lo que tienes filtrado se ve debajo del buscador en chips que se quitan con ✕, en una sola línea (si no caben, se deslizan de lado). «Categorías» queda junto al título (solo el ícono si no cabe).
+- Productos: el buscador se ve igual que el de Vender («Buscar producto» arriba y el ejemplo «Por ejemplo: lejía» dentro) y el botón de filtros queda alineado con el campo.
+- Detalle de producto más compacto: «Volver» en su fila y el nombre debajo; la foto a la izquierda con «Tienes» y el estado a su derecha; el pronóstico debajo y «Contar stock» y «Registrar pérdida» más arriba, para ver todo sin desplazar.
+- «Agregar producto» abre el formulario en una hoja desde abajo, sin salir de la lista; al guardar, la confirmación se ve en la misma hoja, con un solo título. Tocar «Productos» en la navegación con una hoja abierta la cierra.
+- Al cambiar de pantalla, la anterior se desvanece y la nueva entra con un deslizamiento corto desde el lado de la pestaña que tocaste; al abrir un detalle entra desde la derecha y al volver, desde la izquierda. Con «reducir movimiento» del sistema no se anima.
+- Los avisos de confirmación (archivar, restaurar, cargar datos y otros) ahora aparecen y se van con una animación suave.
+
 ## [0.5.2] · 2026-10-22
 
 ### Cambiado

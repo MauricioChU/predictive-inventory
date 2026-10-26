@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight, Camera, PackagePlus, Save } from 'lucide-vue-next'
 import { useAplicacion } from '@/app/proveer-aplicacion'
@@ -46,10 +46,14 @@ const props = withDefaults(
     nombreInicial?: string
     /** Se carga uno por uno desde Primera vez (plan 14): al guardar se ofrece "Seguir". */
     desdePrimeraVez?: boolean
+    /** Dentro de una hoja inferior (Productos → "Agregar producto"): sin encabezado ni "Volver"
+     * (la hoja ya tiene el suyo), el botón de guardar pegado al fondo de la hoja y, al terminar,
+     * "Ver producto" abre el detalle en vez de reemplazar la pantalla. */
+    enHoja?: boolean
   }>(),
-  { productoId: undefined, nombreInicial: '', desdePrimeraVez: false },
+  { productoId: undefined, nombreInicial: '', desdePrimeraVez: false, enHoja: false },
 )
-const emit = defineEmits<{ agregarOtro: [] }>()
+const emit = defineEmits<{ agregarOtro: []; guardado: [] }>()
 
 /** Mínimo sugerido en el formulario (01-catalogo, modelo de Producto). */
 const STOCK_MINIMO_SUGERIDO = '3'
@@ -100,10 +104,20 @@ type Exito =
   | { tipo: 'editado'; productoId: string; detalle: string }
 const exito = ref<Exito | null>(null)
 
+const refRaiz = ref<HTMLElement>()
 const refFormulario = ref<HTMLFormElement>()
 const refAccion = ref<HTMLElement>()
 /** Alto real del botón pegado abajo: lo que recibe el foco se queda por encima (WCAG 2.4.11). */
 const altoDeLaAccion = usarAltoObservado(refAccion)
+// En una hoja, la confirmación empieza desde arriba (el cuerpo de la hoja es lo que se desplaza).
+watch(exito, (nuevo) => {
+  if (nuevo && nuevo.tipo !== 'editado') emit('guardado')
+  if (!nuevo || !props.enHoja) return
+  void nextTick(() => {
+    const cuerpo = refRaiz.value?.closest('.cuerpo')
+    if (cuerpo) cuerpo.scrollTop = 0
+  })
+})
 let montado = true
 onBeforeUnmount(() => {
   montado = false
@@ -383,6 +397,10 @@ function cambiarElNombre() {
 
 function verProducto(productoId: string) {
   const detalle = router.resolve({ name: 'producto', params: { id: productoId } }).fullPath
+  if (props.enHoja) {
+    void router.push(detalle)
+    return
+  }
   // Si se vino del detalle, se vuelve a él (sin dejar dos veces el detalle en el historial).
   if (router.options.history.state.back === detalle) router.back()
   else void router.replace(detalle)
@@ -390,11 +408,12 @@ function verProducto(productoId: string) {
 </script>
 
 <template>
-  <div class="formulario-de-producto">
+  <div ref="refRaiz" class="formulario-de-producto" :class="{ 'en-hoja': enHoja }">
     <!-- Al centro como todas las confirmaciones, pero con sus botones: se centra el conjunto. -->
     <div v-if="exito" class="exito-centrado">
       <PantallaExito
         :al-centro="false"
+        :titulo-oculto="enHoja"
         :titulo="
           exito.tipo === 'creado'
             ? 'Producto guardado'
@@ -422,7 +441,12 @@ function verProducto(productoId: string) {
             v-if="!desdePrimeraVez"
             texto="Agregar foto"
             :icono="Camera"
-            @click="router.replace({ name: 'producto-editar', params: { id: exito.productoId } })"
+            @click="
+              router[enHoja ? 'push' : 'replace']({
+                name: 'producto-editar',
+                params: { id: exito.productoId },
+              })
+            "
           />
         </template>
         <template v-if="exito.tipo === 'editado'">
@@ -452,7 +476,7 @@ function verProducto(productoId: string) {
     </div>
 
     <template v-else>
-      <EncabezadoPagina :titulo="titulo" volver />
+      <EncabezadoPagina v-if="!enHoja" :titulo="titulo" volver />
 
       <MensajeDeError
         v-if="errorGeneral && cargando"
@@ -613,7 +637,11 @@ function verProducto(productoId: string) {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
+  min-block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--relleno-bloque, var(--espacio-4)));
+}
+.en-hoja .exito-centrado {
+  min-block-size: 0;
+  padding-block: var(--espacio-4);
 }
 .formulario-de-producto {
   display: grid;
@@ -684,5 +712,20 @@ function verProducto(productoId: string) {
 .despues {
   display: grid;
   gap: var(--espacio-3);
+}
+/* En la hoja: el botón queda pegado al fondo de la hoja (que ya está sobre la navegación), en
+   cualquier ancho; absorbe el relleno de abajo del cuerpo para no dejar un hueco. */
+.en-hoja .accion-principal {
+  position: sticky;
+  /* El offset se mide desde el relleno del cuerpo de la hoja: se cancela para quedar al ras. */
+  bottom: calc(-1 * var(--espacio-4));
+  z-index: 5;
+  margin-block-end: calc(-1 * var(--espacio-4));
+  padding-block: var(--espacio-3);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-flotante);
+}
+.en-hoja .campos :deep(:is(button, input, a)) {
+  scroll-margin-bottom: calc(var(--alto-accion, 0px) + var(--espacio-3));
 }
 </style>

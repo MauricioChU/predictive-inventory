@@ -7,7 +7,8 @@ import { nextTick } from 'vue'
  */
 export async function enfocarTitulo(): Promise<void> {
   await nextTick()
-  const titulo = document.querySelector<HTMLElement>('#contenido h1')
+  // El título de la vista en pantalla.
+  const titulo = document.querySelector<HTMLElement>('#contenido .cambio-de-vista h1')
   if (!titulo) return
   if (!titulo.hasAttribute('tabindex')) titulo.setAttribute('tabindex', '-1')
   titulo.focus()

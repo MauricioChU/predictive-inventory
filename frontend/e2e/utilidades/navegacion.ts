@@ -1,5 +1,13 @@
 import { expect, type Page } from '@playwright/test'
 
+/**
+ * Mientras una pantalla entra, la anterior sigue un instante en la página (cambio de vista,
+ * patrones.md → Movimiento): para medir o buscar sin duplicados se espera a que quede una sola.
+ */
+export async function esperarVistaQuieta(page: Page): Promise<void> {
+  await page.waitForFunction(() => document.querySelectorAll('#contenido .cambio-de-vista').length <= 1)
+}
+
 export type Letra = 'NORMAL' | 'GRANDE' | 'MUY_GRANDE'
 
 /** La letra que cada prueba pidió con `usarLetra` (cada prueba tiene su propia página). */
@@ -32,7 +40,7 @@ export async function usarLetra(page: Page, letra: Letra): Promise<void> {
  */
 export async function abrir(page: Page, ruta: string): Promise<void> {
   await page.goto(ruta)
-  await expect(page.locator('[data-app-montada] #contenido h1')).toBeVisible()
+  await expect(page.locator('[data-app-montada] #contenido .cambio-de-vista:not(.cambio-de-vista-leave-active) h1')).toBeVisible()
   const letra = letraPedida.get(page)
   if (letra === undefined) return
   await page.evaluate(async (valor) => {
@@ -41,4 +49,9 @@ export async function abrir(page: Page, ruta: string): Promise<void> {
     await aplicacion.tienda.actualizarConfiguracion({ tamanoDeLetra: valor })
   }, letra)
   await expect(page.locator('html')).toHaveAttribute('data-letra', letra)
+}
+
+/** Espera a que terminen las animaciones de la pantalla (p. ej. una hoja que sube) antes de medir. */
+export async function esperarQueTermineLaAnimacion(page: Page): Promise<void> {
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'))
 }

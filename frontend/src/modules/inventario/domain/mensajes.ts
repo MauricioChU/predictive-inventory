@@ -86,21 +86,38 @@ export type SituacionParaSobrecompra = Pick<
   'stock' | 'prediccion' | 'enListaParaComprar' | 'cantidadSugerida' | 'parado'
 >
 
+/** RN-OP-20: el aviso de una línea: la frase completa y sus partes para la fila del diálogo. */
+export interface AvisoDeSobrecompra {
+  /** La frase completa ("Con esto tendrías … para ~60 días. …"). */
+  mensaje: string
+  nombre: string
+  /** Una o dos frases cortas: "Llegan 100 unid. → te alcanzan ~62 días" y el consejo. */
+  lineas: string[]
+}
+
 /**
  * RN-OP-20: aviso de sobrecompra de una línea de ingreso, con la situación del producto
  * ANTES del ingreso, o null si no hay que avisar. (b) Un producto parado avisa siempre.
  * (a) Si no, con predicción: días = ⌊(stock + compra) ÷ VPD⌋, con VPD = vendido ÷ días
  * válidos (RN-AN-04); avisa si SUPERA el límite configurado.
  */
-export function mensajeDeSobrecompra(
+export function avisoDeSobrecompra(
   producto: { nombre: string; unidad: Unidad },
   situacion: SituacionParaSobrecompra,
   compra: Cantidad,
   diasMaximosDeCompra: number,
-): string | null {
+): AvisoDeSobrecompra | null {
   const { nombre, unidad } = producto
   if (situacion.parado) {
-    return mensajeProductoParado(nombre, situacion.parado.diasSinVender, situacion.stock, unidad)
+    const { diasSinVender } = situacion.parado
+    return {
+      mensaje: mensajeProductoParado(nombre, diasSinVender, situacion.stock, unidad),
+      nombre,
+      lineas: [
+        `No se vende hace ${dias(diasSinVender)}`,
+        `Aún tienes ${formatearCantidad(situacion.stock, unidad)}`,
+      ],
+    }
   }
   const prediccion = situacion.prediccion
   if (!prediccion?.vendido.esPositiva()) return null
@@ -110,7 +127,24 @@ export function mensajeDeSobrecompra(
   )
   if (cobertura <= diasMaximosDeCompra) return null
   const sugerida = situacion.enListaParaComprar ? situacion.cantidadSugerida : null
-  return mensajeCompraExcesiva(nombre, cobertura, unidad, sugerida)
+  return {
+    mensaje: mensajeCompraExcesiva(nombre, cobertura, unidad, sugerida),
+    nombre,
+    lineas: [
+      `Llegan ${formatearCantidad(compra, unidad)} → te alcanzan ~${dias(cobertura)}`,
+      sugerida ? `Te sugerimos ~${formatearCantidad(sugerida, unidad)}` : 'No necesitabas comprar',
+    ],
+  }
+}
+
+/** Solo la frase completa de {@link avisoDeSobrecompra}. */
+export function mensajeDeSobrecompra(
+  producto: { nombre: string; unidad: Unidad },
+  situacion: SituacionParaSobrecompra,
+  compra: Cantidad,
+  diasMaximosDeCompra: number,
+): string | null {
+  return avisoDeSobrecompra(producto, situacion, compra, diasMaximosDeCompra)?.mensaje ?? null
 }
 
 export interface CorreccionDeStock {

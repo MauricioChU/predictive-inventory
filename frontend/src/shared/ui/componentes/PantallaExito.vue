@@ -14,8 +14,11 @@ const props = withDefaults(
     /** RN-OP-18: con esto, el botón Deshacer va arriba a la derecha de la pantalla, con lo que
      * queda de los 10 s. Al vencer, quien la monta lo quita (pasa `undefined`). */
     segundosParaDeshacer?: number
+    /** El título sigue ahí para el lector (y recibe el foco), pero no se ve: lo muestra quien
+     * la contiene (el título de una hoja). */
+    tituloOculto?: boolean
   }>(),
-  { detalle: undefined, alCentro: true, segundosParaDeshacer: undefined },
+  { detalle: undefined, alCentro: true, segundosParaDeshacer: undefined, tituloOculto: false },
 )
 const emit = defineEmits<{ deshacer: [] }>()
 
@@ -74,7 +77,7 @@ onUnmounted(() => {
       <span class="contador" aria-hidden="true">({{ segundosParaDeshacer }})</span>
     </button>
     <CircleCheck aria-hidden="true" class="icono" />
-    <h1 ref="refEncabezado">{{ titulo }}</h1>
+    <h1 ref="refEncabezado" :class="{ 'solo-lector': tituloOculto }">{{ titulo }}</h1>
     <!-- Plan 12: "Total S/ 46.80" nunca se parte (RN-UX-09). -->
     <p v-if="detalle" class="detalle">{{ pegarCifras(detalle) }}</p>
     <slot />
@@ -91,7 +94,7 @@ onUnmounted(() => {
   align-items: center;
   box-sizing: border-box;
   gap: var(--espacio-3);
-  padding: var(--espacio-6) var(--espacio-4);
+  padding: var(--espacio-4) var(--espacio-4) var(--espacio-3);
   text-align: center;
   color: var(--color-exito);
 }
@@ -126,10 +129,24 @@ onUnmounted(() => {
   font-weight: 400;
 }
 .pantalla-exito--al-centro {
-  justify-content: center;
-  min-block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
+  /* `safe`: si algo no entra, empieza arriba (nunca queda cortado por arriba). */
+  justify-content: safe center;
+  /* Alto fijo = el libre (ventana menos pie y relleno de <main>): así el resumen de lo
+     registrado se achica y se desplaza por dentro en vez de alargar la página. */
+  block-size: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--relleno-bloque, var(--espacio-4)));
+}
+/* Pantalla baja (celular en horizontal): el alto fijo no alcanza para ✓, título, resumen y botón;
+   la pantalla crece con su contenido y la página se desplaza (el resumen sigue en 4 líneas). */
+@media (max-height: 520px) {
+  .pantalla-exito--al-centro {
+    block-size: auto;
+    min-block-size: calc(
+      100dvh - var(--alto-pie, 0px) - 2 * var(--relleno-bloque, var(--espacio-4))
+    );
+  }
 }
 .icono {
+  flex: none;
   width: 4.5rem;
   height: 4.5rem;
   animation: exito-icono var(--duracion-hoja) var(--curva-hoja-entrar) both;

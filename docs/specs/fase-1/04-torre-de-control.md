@@ -20,14 +20,17 @@ Criterios de aceptación ejecutables: [features/torre-de-control.feature](featur
 
 ## Secciones de la vista (en este orden)
 
-1. **Resumen**: ventas, ganancia y pérdidas del periodo (Hoy · Ayer · 7 días · 30 días).
+1. **Resumen**: *Total vendido* (cifra principal), *Ganancia real* (con pérdida, *Pérdida real*), costo de lo vendido, *Pérdidas* y *Diferencias de conteo* del periodo (Hoy · Ayer · 7 días · 30 días).
 2. **Alquiler del local**: cuánto llevas ganado para el próximo pago (RN-AN-17 a RN-AN-19).
-3. **Atención**: agotados, por acabarse y precios para revisar, con su cantidad. Cada uno abre su lista.
-4. **Para comprar**: lista sugerida con costo total.
-5. **Más vendidos**.
-6. **Semana contra semana**.
-7. **Mejor día de la semana**.
-8. **Productos parados**.
+3. **Tus mejores productos**: un solo bloque con un selector entre *Más vendidos* y *Más ganancia* (top 5, RN-AN-09).
+4. **Semana contra semana**: gráfico de barras (esta semana contra la anterior) por métrica; un selector «Ventas» / «Ganancia» muestra uno a la vez.
+5. **Mejor día de la semana**: gráfico de barras verticales, de lunes a domingo, que se desplaza de lado dentro del bloque si no entran.
+6. Botón **Ayuda inteligente** (con el número de cosas por mirar: agotados, por acabarse, precios para revisar y productos parados), que abre una subvista (`/control/ayuda`) con, en este orden:
+   - **Atención**: agotados, por acabarse y precios para revisar, con su cantidad. Cada uno abre su lista.
+   - **Para comprar**: lista sugerida con costo total.
+   - **Productos parados**.
+
+Los avisos de *Atención* también llegan a Inicio (RN-AL-06).
 
 Cada sección con poca información muestra un mensaje claro en lugar de quedar vacía: "Todavía no hay ventas esta semana", "Necesito al menos 2 semanas de ventas para saberlo".
 
@@ -39,7 +42,7 @@ Cada sección con poca información muestra un mensaje claro en lugar de quedar 
 |---|---|
 | **RN-AN-01** | Los cálculos consideran solo operaciones **no anuladas** y excluyen las anulaciones (RN-OP-17). Los días se cuentan en la zona horaria de la tienda. Un **día completo** es cualquier día anterior a hoy. |
 | **RN-AN-02** | Para un periodo: **Ventas** = suma de importes de venta. **Costo de lo vendido** = suma de costo × cantidad de las ventas. **Ganancia bruta** = ventas − costo de lo vendido. **Pérdidas por merma** = suma de costo × cantidad de las mermas. **Ganancia neta** = ganancia bruta − pérdidas por merma. **Diferencias de conteo** = suma de costo × cantidad (con signo) de los ajustes, mostrada aparte y sin afectar la ganancia. Todo redondeado al céntimo por línea (RN-OP-12). |
-| **RN-AN-03** | **Inicio** muestra la ganancia neta y las ventas de **hoy**. La Torre de control permite elegir el periodo: Hoy, Ayer, Últimos 7 días (incluye hoy) y Últimos 30 días (incluye hoy). |
+| **RN-AN-03** | **Inicio** muestra dos cifras de **hoy**: *Total vendido* (lo cobrado) y, debajo, *Ganancia real* (la ganancia neta; con pérdida, *Pérdida real*). "Todavía no hay ventas hoy" se dice una sola vez, en el total. La Torre de control permite elegir el periodo: Hoy, Ayer, Últimos 7 días (incluye hoy) y Últimos 30 días (incluye hoy). |
 
 ### Predicción
 

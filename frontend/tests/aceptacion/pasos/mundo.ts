@@ -72,6 +72,8 @@ export class Mundo {
   ultimoProductoCreado: string | null = null
 
   avisos: string[] = []
+  /** Las filas del aviso (RN-OP-20): nombre y sus frases cortas. */
+  filasDeAviso: { nombre: string; lineas: string[] }[] = []
   opciones: readonly string[] = []
   pendiente: (() => Promise<void>) | null = null
   ultimaVenta: string | null = null
@@ -298,6 +300,7 @@ export class Mundo {
    */
   async ingresar(datos: DatosDeIngreso): Promise<void> {
     this.avisos = []
+    this.filasDeAviso = []
     this.opciones = []
     this.pendiente = null
     this.confirmacion = null
@@ -310,6 +313,7 @@ export class Mundo {
       case 'aviso-sobrecompra':
         this.resultado = 'aviso de sobrecompra'
         this.avisos = respuesta.avisos.map((a) => a.mensaje)
+        this.filasDeAviso = respuesta.avisos.map((a) => ({ nombre: a.nombre, lineas: a.lineas }))
         this.opciones = OPCIONES_DE_SOBRECOMPRA
         this.pendiente = () =>
           this.actuar(() => this.ingresar({ ...datos, confirmarSobrecompra: true }))

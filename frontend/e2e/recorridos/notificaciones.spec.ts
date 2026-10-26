@@ -1,6 +1,6 @@
 // Plan 16, ítem 1 (M5): tocar una notificación abre su pantalla real (spec 03, RN-AL-03/07).
 import { expect, test } from '@playwright/test'
-import { abrir } from '../utilidades/navegacion'
+import { abrir, esperarVistaQuieta } from '../utilidades/navegacion'
 import {
   comoSeLee,
   crearProductoPorPantalla,
@@ -76,7 +76,8 @@ test.describe('Recorrido: los avisos en el celular', () => {
     await tocarNotificacion(page, deVarios.url)
     await expect(h1(page)).toHaveText('Productos')
     await expect(page).toHaveURL(/\/productos\?estado=se-acaban$/)
-    await expect(page.getByRole('radio', { name: 'Se acaban' })).toBeChecked()
+    await expect(page.getByRole('button', { name: 'Quitar filtro Se acaban' })).toBeVisible()
+    await esperarVistaQuieta(page)
     for (const nombre of [LEJIA, 'Jabón Bolívar', 'Bolsas de basura x10']) {
       await expect(page.locator('#contenido').getByText(nombre, { exact: true })).toBeVisible()
     }

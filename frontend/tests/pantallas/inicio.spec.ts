@@ -92,10 +92,11 @@ describe('Inicio', () => {
 
     const { wrapper } = await abrirInicio()
 
-    const cifra = wrapper.get('.tarjeta-de-cifra')
-    expect(cifra.text()).toContain('Hoy ganaste')
-    expect(cifra.text()).toContain('S/ 2.20')
-    expect(cifra.text()).toContain('Vendiste S/ 7.00')
+    const [vendido, ganancia] = wrapper.findAll('.tarjeta-de-cifra')
+    expect(vendido?.text()).toContain('Total vendido')
+    expect(vendido?.text()).toContain('S/ 7.00')
+    expect(ganancia?.text()).toContain('Ganancia real')
+    expect(ganancia?.text()).toContain('S/ 2.20')
   })
 
   it('RN-AN-03: sin ventas hoy lo dice con palabras', async () => {
@@ -104,24 +105,50 @@ describe('Inicio', () => {
 
     const { wrapper } = await abrirInicio()
 
-    expect(wrapper.get('.tarjeta-de-cifra').text()).toContain('Todavía no hay ventas hoy')
+    expect(
+      wrapper
+        .get('.cifras-de-hoy')
+        .text()
+        .match(/Todavía no hay ventas hoy/g),
+    ).toHaveLength(1)
+    // «Ganancia real» siempre se ve, también sin ventas.
+    const [, ganancia] = wrapper.findAll('.tarjeta-de-cifra')
+    expect(ganancia?.text()).toContain('Ganancia real')
+    expect(ganancia?.text()).toMatch(/S\/\s0\.00/)
   })
 
-  it('RN-AL-06: avisa cuántos productos se acaban y lleva a Productos ya filtrado', async () => {
+  it('RN-AL-06a: avisa por separado lo agotado y lo que queda poco, y cada aviso lleva a Productos ya filtrado', async () => {
     await tiendaLista()
     await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '0' })
     await crearProductoDePrueba(app, { ...CARBON, stockInicial: '2' })
     const { wrapper, router } = await abrirInicio()
 
-    const aviso = wrapper.get('.fila-de-aviso--atencion')
-    expect(aviso.text()).toContain('2 productos se acaban')
-    // Fila compacta: sin el subtítulo "1 agotado y 1 por acabarse".
-    expect(aviso.text()).not.toContain('agotado')
-
-    await botonCon('Ver productos').trigger('click')
+    // Un aviso por tarjeta, con «1/2» y la flecha al siguiente.
+    expect(wrapper.get('.carrusel--atencion').text()).toContain('1 agotado')
+    expect(wrapper.text()).toContain('1/2')
+    await botonCon('1 producto agotado. Ver productos').trigger('click')
     await esperarPantalla()
     expect(router.currentRoute.value.name).toBe('productos')
-    expect(router.currentRoute.value.query).toEqual({ estado: 'se-acaban' })
+    expect(router.currentRoute.value.query).toEqual({ estado: 'agotados' })
+
+    await router.push('/')
+    await esperarPantalla()
+    await botonCon('Siguiente aviso, 2 de 2').trigger('click')
+    expect(wrapper.get('.carrusel--atencion').text()).toContain('Queda poco: 1')
+    await botonCon('Queda poco de 1 producto. Ver productos').trigger('click')
+    await esperarPantalla()
+    expect(router.currentRoute.value.query).toEqual({ estado: 'queda-poco' })
+  })
+
+  it('RN-AL-06a: un precio igual o menor que el costo es un aviso que lleva a Ayuda inteligente', async () => {
+    await tiendaLista()
+    await crearProductoDePrueba(app, { ...LEJIA, venta: '2.00', stockInicial: '10' })
+    const { wrapper, router } = await abrirInicio()
+
+    expect(wrapper.get('.carrusel--atencion').text()).toContain('1 precio para revisar')
+    await botonCon('1 precio para revisar. Ver ayuda inteligente').trigger('click')
+    await esperarPantalla()
+    expect(router.currentRoute.value.name).toBe('ayuda-inteligente')
   })
 
   it('RN-AL-06: si nada se acaba, lo dice', async () => {
@@ -131,7 +158,7 @@ describe('Inicio', () => {
     const { wrapper } = await abrirInicio()
 
     expect(wrapper.text()).toContain('Todo bien: no falta nada')
-    expect(wrapper.find('.fila-de-aviso--atencion').exists()).toBe(false)
+    expect(wrapper.find('.carrusel--atencion').exists()).toBe(false)
   })
 
   it('RN-UX-10: sin productos ofrece agregar el primero', async () => {
@@ -191,7 +218,7 @@ describe('Inicio', () => {
     }
   })
 
-  it('orden: encabezado, fecha, cifras, aviso y al final las acciones', async () => {
+  it('orden: encabezado, fecha, cifras, y abajo los avisos justo encima de las acciones', async () => {
     await tiendaLista()
     await crearProductoDePrueba(app, { ...LEJIA, stockInicial: '0' })
     const { wrapper } = await abrirInicio()
@@ -206,8 +233,8 @@ describe('Inicio', () => {
       posicion('class="saludo"'),
       posicion('class="fecha-de-hoy"'),
       posicion('tarjeta-de-cifra'),
-      posicion('fila-de-aviso--atencion'),
       posicion('class="acciones"'),
+      posicion('carrusel--atencion'),
       posicion('class="enlace-movimientos"'),
     ]
     expect(orden).toEqual([...orden].sort((a, b) => a - b))

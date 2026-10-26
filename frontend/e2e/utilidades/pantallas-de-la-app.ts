@@ -4,7 +4,7 @@
 // reales y el reloj de Playwright, ver historia-de-demostracion.ts).
 import { expect, type Page } from '@playwright/test'
 import { prepararHistoriaDeDemostracion, type IdsDeDemostracion } from './historia-de-demostracion'
-import { abrir } from './navegacion'
+import { abrir, esperarQueTermineLaAnimacion } from './navegacion'
 import { agregarAlCarrito, cerrarDetalleDeVenta, lineaDelCarrito } from './recorridos'
 import { crearProducto } from './tienda'
 
@@ -54,6 +54,7 @@ export const PANTALLAS_VACIAS: readonly Pantalla[] = [
   { nombre: 'Vender sin productos', ruta: './vender' },
   { nombre: 'Historial vacío', ruta: './historial' },
   { nombre: 'Control sin datos', ruta: './control' },
+  { nombre: 'Ayuda inteligente sin datos', ruta: './control/ayuda' },
   { nombre: 'Para comprar vacío', ruta: './control/para-comprar' },
   { nombre: 'Contar todo sin productos', ruta: './contar' },
   { nombre: 'Producto que no existe', ruta: './productos/no-existe' },
@@ -143,17 +144,27 @@ export function pantallasDeLaTienda(ids: IdsDeDemostracion): Pantalla[] {
       preparar: async (page) => {
         await agregarAlCarrito(page, 'escoba', 'Escoba de paja')
         await page.getByRole('button', { name: 'Registrar llegada' }).click()
-        await expect(dialogo(page)).toContainText('no se vende hace')
+        await expect(dialogo(page)).toContainText('No se vende hace')
       },
     },
     { nombre: 'Llegó mercadería desde Para comprar', ruta: './recibir?desde=para-comprar' },
     // Productos
     {
-      nombre: 'Productos (buscando, con el filtro de categoría abierto)',
+      nombre: 'Productos (buscando, con la hoja de filtros abierta)',
       ruta: './productos',
       preparar: async (page) => {
         await page.getByLabel('Buscar producto').fill('l')
-        await page.getByRole('button', { name: /^Categoría:/ }).click()
+        await page.getByRole('button', { name: /^Filtros/ }).click()
+        await esperarQueTermineLaAnimacion(page)
+      },
+    },
+    {
+      nombre: 'Productos: hoja de producto nuevo',
+      ruta: './productos',
+      preparar: async (page) => {
+        await page.getByRole('button', { name: 'Agregar producto' }).click()
+        await expect(page.getByRole('heading', { name: 'Producto nuevo' })).toBeVisible()
+        await esperarQueTermineLaAnimacion(page)
       },
     },
     { nombre: 'Detalle de producto (con tendencia)', ruta: `./productos/${lejia}` },
@@ -244,6 +255,7 @@ export function pantallasDeLaTienda(ids: IdsDeDemostracion): Pantalla[] {
     },
     // Control
     { nombre: 'Control', ruta: './control' },
+    { nombre: 'Ayuda inteligente', ruta: './control/ayuda' },
     { nombre: 'Para comprar', ruta: './control/para-comprar' },
     {
       nombre: '¿Necesito comprar? (con respuesta)',

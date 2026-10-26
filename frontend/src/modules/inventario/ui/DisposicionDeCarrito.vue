@@ -87,9 +87,13 @@ const idTitulo = useId()
     gap: var(--espacio-3);
     min-inline-size: 0;
     /* Toda la columna entra en la ventana YA al abrir la pantalla, cuando todavía está debajo
-       del título (~6rem, que siguen la letra elegida), y deja libre el aviso Deshacer si
-       aparece: la barra del total nunca queda debajo del borde ni tapa una línea. */
-    max-block-size: calc(100dvh - 7rem - var(--alto-aviso, 0px));
+       del título (~5rem, que siguen la letra elegida) y entre el relleno de arriba y de abajo
+       de <main> (2 × --relleno-bloque), y deja libre el aviso Deshacer si aparece: la barra del
+       total nunca queda debajo del borde, ni tapa una línea, ni hace aparecer la barra de
+       desplazamiento de la página. */
+    max-block-size: calc(
+      100dvh - 5rem - 2 * var(--relleno-bloque, var(--espacio-6)) - var(--alto-aviso, 0px)
+    );
   }
   .carrito {
     display: flex;

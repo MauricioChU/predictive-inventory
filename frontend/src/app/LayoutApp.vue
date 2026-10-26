@@ -10,6 +10,8 @@ import {
   crearContextoAvisoDeshacer,
   SEGUNDOS_PARA_DESHACER,
 } from './aviso-deshacer'
+import { enfocarTituloDeVista } from '@/router/foco-de-titulo'
+import { avisarSalidaDeVista, avisarVistaSalio } from '@/router/salida-de-vista'
 import { exponerGanchosDePrueba } from './ganchos-de-prueba'
 import { useEstadoGlobal } from './estado-global'
 
@@ -35,7 +37,7 @@ watch(contextoAvisoDeshacer.resultado, async (resultado, anterior) => {
   if (!resultado && anterior) {
     if (!document.activeElement?.closest('.resultado-de-deshacer')) return
     await nextTick()
-    const titulo = document.querySelector<HTMLElement>('#contenido h1')
+    const titulo = document.querySelector<HTMLElement>('#contenido .cambio-de-vista h1')
     if (titulo && !titulo.hasAttribute('tabindex')) titulo.setAttribute('tabindex', '-1')
     titulo?.focus()
     return
@@ -44,6 +46,20 @@ watch(contextoAvisoDeshacer.resultado, async (resultado, anterior) => {
   await nextTick()
   document.querySelector<HTMLElement>('.resultado-de-deshacer .cerrar')?.focus()
 })
+
+// Cambio de vista (out-in): primero se va la vieja (solo se desvanece) y luego entra la nueva.
+const animandoVista = ref(false)
+// El lado se fija en la vista al empezar a entrar: si se navega otra vez a mitad de la
+// animación, el atributo de <html> cambia pero lo que ya se mueve no salta.
+function alEntrarVista(el: Element) {
+  animandoVista.value = true
+  const lado = getComputedStyle(document.documentElement).getPropertyValue('--vista-lado')
+  if (lado) (el as HTMLElement).style.setProperty('--vista-lado', lado)
+}
+function alEntrarYa() {
+  // La primera carga (sin dirección) no mueve el foco; las navegaciones, sí: al título nuevo.
+  if (document.documentElement.dataset.vistaDireccion) enfocarTituloDeVista()
+}
 
 // m5: alto real de lo que queda pegado abajo, para scroll-padding-bottom (ver estilos).
 const refPie = ref<HTMLElement>()
@@ -88,8 +104,33 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
   <!-- RN-UX-16: la primera vez no tiene navegación (no hay a dónde ir); sin ella, en PC el
        contenido ocupa todo el ancho en vez de dejar vacía la columna de 260 px. -->
   <div class="layout-app" :class="{ 'sin-navegacion': estadoGlobal.primeraVez }" data-app-montada>
-    <main id="contenido" class="contenido" tabindex="-1">
-      <RouterView />
+    <main
+      id="contenido"
+      class="contenido"
+      :class="{ 'animando-vista': animandoVista }"
+      tabindex="-1"
+    >
+      <!-- Cambio de vista (out-in): la vieja se desvanece y luego la nueva entra con un
+           deslizamiento corto desde el lado hacia el que se va (la dirección la fija el router
+           en <html data-vista-direccion>; estilos abajo). Se anima `left` y no `transform` para
+           que lo fijo (PanelDeCarrito, HojaInferior) siga fijo a la pantalla. -->
+      <RouterView v-slot="{ Component, route }">
+        <Transition
+          name="cambio-de-vista"
+          mode="out-in"
+          @before-leave="avisarSalidaDeVista"
+          @after-leave="avisarVistaSalio"
+          @leave-cancelled="avisarVistaSalio"
+          @before-enter="alEntrarVista"
+          @enter="alEntrarYa"
+          @after-enter="animandoVista = false"
+          @enter-cancelled="animandoVista = false"
+        >
+          <div v-if="Component" :key="String(route.name ?? route.path)" class="cambio-de-vista">
+            <component :is="Component" />
+          </div>
+        </Transition>
+      </RouterView>
     </main>
     <div ref="refPie" class="pie">
       <div
@@ -168,10 +209,59 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
   max-width: var(--ancho-contenido);
   margin-inline: auto;
   padding-inline: var(--espacio-4);
-  padding-block: var(--espacio-4);
+  /* Relleno de arriba y de abajo de <main>: las pantallas que llenan el alto libre lo restan
+     (2 × esta variable) para no pasarse de la ventana y dejar una barra de desplazamiento. */
+  --relleno-bloque: var(--espacio-4);
+  padding-block: var(--relleno-bloque);
+}
+.contenido {
+  position: relative;
 }
 .contenido:focus {
   outline: none;
+}
+/* RN-UX-09: mientras una vista entra o sale no hay desplazamiento a los lados. `clip` no crea
+   contenedor de scroll ni de posición fija. */
+.contenido.animando-vista {
+  overflow-x: clip;
+}
+
+/* Cambio de vista (patrones.md → Movimiento). La dirección: <html data-vista-direccion>.
+   --vista-lado: desde dónde llega la vista nueva (+ derecha, - izquierda, 0 solo fundido). */
+.cambio-de-vista {
+  position: relative;
+  left: 0;
+}
+:global(html[data-vista-direccion='adelante']) {
+  --vista-lado: var(--distancia-vista);
+}
+:global(html[data-vista-direccion='atras']) {
+  --vista-lado: calc(-1 * var(--distancia-vista));
+}
+:global(html[data-vista-direccion='fundido']) {
+  --vista-lado: 0px;
+}
+.cambio-de-vista-leave-active {
+  pointer-events: none;
+  animation: vista-salir var(--duracion-vista-sale) ease-in both;
+}
+.cambio-de-vista-enter-active {
+  animation: vista-entrar var(--duracion-vista) var(--curva-hoja-entrar) both;
+}
+/* La primera vista (carga de la app) no se anima: aún no hay dirección. */
+:global(html:not([data-vista-direccion])) .cambio-de-vista-enter-active {
+  animation: none;
+}
+@keyframes vista-entrar {
+  from {
+    left: var(--vista-lado, 0px);
+    opacity: 0;
+  }
+}
+@keyframes vista-salir {
+  to {
+    opacity: 0;
+  }
 }
 
 .pie {
@@ -210,7 +300,7 @@ onBeforeUnmount(exponerGanchosDePrueba(contextoAvisoDeshacer))
     grid-column: 2;
     grid-row: 1;
     max-width: var(--ancho-contenido-pc);
-    padding-block: var(--espacio-6);
+    --relleno-bloque: var(--espacio-6);
   }
   .pie {
     display: contents;

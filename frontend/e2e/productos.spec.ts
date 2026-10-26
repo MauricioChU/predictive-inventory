@@ -6,7 +6,7 @@ import {
   usarLetra,
 } from './utilidades/calidad'
 import { caja } from './utilidades/escenarios'
-import { abrir } from './utilidades/navegacion'
+import { abrir, esperarQueTermineLaAnimacion, esperarVistaQuieta } from './utilidades/navegacion'
 import { abrirTiendaLista } from './utilidades/tienda'
 import { crearConHistoria, crearProductos, FOTO_PNG, objetivosChicos } from './utilidades/productos'
 
@@ -60,7 +60,9 @@ test.describe('Productos: flujos críticos', () => {
     await abrirTiendaLista(page, './productos')
     await expect(page.getByText('Aún no tienes productos')).toBeVisible()
     await page.getByRole('button', { name: 'Agregar el primero' }).click()
-    await expect(page.getByRole('heading', { level: 1, name: 'Producto nuevo' })).toBeVisible()
+    // Abre en una hoja (sin salir de la lista).
+    await expect(page.getByRole('heading', { name: 'Producto nuevo' })).toBeVisible()
+    await expect(page).toHaveURL(/\/productos$/)
 
     await page.getByLabel('Nombre del producto').fill('Lejía Tradicional 1 L')
     // La foto de la galería (el otro input abre la cámara de atrás: capture="environment").
@@ -99,6 +101,20 @@ test.describe('Productos: flujos críticos', () => {
     await expect(page.getByRole('list', { name: 'Productos' })).toContainText(comoSeLee('12 unid.'))
   })
 
+  test('con una hoja abierta, tocar "Productos" en la navegación la cierra', async ({ page }) => {
+    await abrirTiendaLista(page, './productos')
+    await crearProductos(page, [LEJIAS[0]!])
+    await abrir(page, './productos')
+    await page.getByRole('button', { name: /^Filtros/ }).click()
+    await expect(page.getByRole('heading', { name: 'Filtros' })).toBeVisible()
+    await page.getByRole('navigation').getByRole('link', { name: /^Productos/ }).click()
+    await expect(page.getByRole('heading', { name: 'Filtros' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Agregar producto' }).click()
+    await expect(page.getByRole('heading', { name: 'Producto nuevo' })).toBeVisible()
+    await page.getByRole('navigation').getByRole('link', { name: /^Productos/ }).click()
+    await expect(page.getByRole('heading', { name: 'Producto nuevo' })).toHaveCount(0)
+  })
+
   test('buscar sin tildes y en cualquier orden', async ({ page }) => {
     await abrirTiendaLista(page, './productos')
     await crearProductos(page, LEJIAS)
@@ -119,11 +135,12 @@ test.describe('Productos: flujos críticos', () => {
 
     // "Queda poco" combina con la búsqueda; "Borrar" vuelve a mostrar todo.
     await page.getByRole('button', { name: 'Borrar' }).click()
+    await page.getByRole('button', { name: /^Filtros/ }).click()
     await page.getByRole('radio', { name: 'Queda poco' }).click()
     await expect.poll(() => nombresEnLaLista(page)).toEqual(['Lejía Tradicional 2 L'])
   })
 
-  test('el aviso de Inicio abre Productos filtrado por "Se acaban" (RN-AL-06, RN-CAT-16)', async ({ page }) => {
+  test('los avisos de Inicio abren Productos filtrado por "Agotados" y por "Queda poco" (RN-AL-06a, RN-CAT-16)', async ({ page }) => {
     await abrirTiendaLista(page, './productos')
     await crearProductos(page, [
       ...LEJIAS,
@@ -131,15 +148,24 @@ test.describe('Productos: flujos críticos', () => {
     ])
     await abrir(page, './')
 
-    await expect(page.getByText('2 productos se acaban')).toBeVisible()
-    await page.getByRole('button', { name: 'Ver productos' }).click()
+    // Un aviso por tarjeta: primero lo agotado, con ‹ › para pasar a lo que queda poco.
+    await expect(page.getByText('1 agotado', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: '1 producto agotado. Ver productos' }).click()
 
     await expect(page.getByRole('heading', { level: 1, name: 'Productos' })).toBeVisible()
-    await expect(page).toHaveURL(/\/productos\?estado=se-acaban$/)
-    await expect(page.getByRole('radio', { name: 'Se acaban' })).toBeChecked()
-    // Solo lo agotado y lo que queda poco; lo que tiene stock no sale.
-    await expect.poll(async () => (await nombresEnLaLista(page)).sort()).toEqual(['Escoba', 'Lejía Tradicional 2 L'])
+    await expect(page).toHaveURL(/\/productos\?estado=agotados$/)
+    await expect(page.getByRole('button', { name: 'Quitar filtro Agotados' })).toBeVisible()
+    await expect.poll(async () => (await nombresEnLaLista(page)).sort()).toEqual(['Escoba'])
 
+    await abrir(page, './')
+    await page.getByRole('button', { name: 'Siguiente aviso, 2 de 2' }).click()
+    await expect(page.getByText('Queda poco: 1', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Queda poco de 1 producto. Ver productos' }).click()
+    await expect(page).toHaveURL(/\/productos\?estado=queda-poco$/)
+    await expect(page.getByRole('button', { name: 'Quitar filtro Queda poco' })).toBeVisible()
+    await expect.poll(async () => (await nombresEnLaLista(page)).sort()).toEqual(['Lejía Tradicional 2 L'])
+
+    await page.getByRole('button', { name: /^Filtros/ }).click()
     await page.getByRole('radio', { name: 'Todos' }).click()
     await expect.poll(async () => (await nombresEnLaLista(page)).length).toBe(4)
   })
@@ -174,6 +200,7 @@ test.describe('Productos: flujos críticos', () => {
     // Ya no está entre los activos; sí en Archivados.
     await page.getByRole('link', { name: 'Productos' }).click()
     await expect(page.getByText('Aún no tienes productos')).toHaveCount(0)
+    await page.getByRole('button', { name: /^Filtros/ }).click()
     await page.getByRole('radio', { name: 'Archivados' }).click()
     await expect.poll(() => nombresEnLaLista(page)).toEqual(['Escoba'])
   })
@@ -200,6 +227,7 @@ test.describe('Productos: flujos críticos', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: 'Lejía Tradicional 1 L' }),
     ).toBeVisible()
+    await esperarVistaQuieta(page)
     await expect(page.getByText(comoSeLee('S/ 2.00'))).toBeVisible()
     await expect(page.getByText('Con este precio pierdes dinero')).toBeVisible()
     // "Volver" desde el detalle no vuelve a la edición (no quedó dos veces en el historial).
@@ -264,7 +292,8 @@ async function pantallas(
       ruta: './productos',
       preparar: async () => {
         await page.getByLabel('Buscar producto').fill('l')
-        await page.getByRole('button', { name: /^Categoría:/ }).click()
+        await page.getByRole('button', { name: /^Filtros/ }).click()
+        await esperarQueTermineLaAnimacion(page)
       },
     },
     { ruta: `./productos/${jabon}` },

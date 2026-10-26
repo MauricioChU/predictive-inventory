@@ -165,6 +165,8 @@ describe('Integración (b): ingreso con costo distinto de un producto parado (so
         {
           productoId: expect.any(String),
           mensaje: 'Escoba no se vende hace 45 días y aún tienes 4 unid.',
+          nombre: 'Escoba',
+          lineas: ['No se vende hace 45 días', 'Aún tienes 4 unid.'],
         },
       ],
     })

@@ -39,7 +39,7 @@ async function abrirInicio(page: Page): Promise<void> {
   await abrir(page, './')
   await prepararTienda(page, PRODUCTOS)
   await page.getByRole('link', { name: 'Inicio' }).click()
-  await expect(page.locator('[data-app-montada] #contenido h1')).toBeVisible()
+  await expect(page.locator('[data-app-montada] #contenido .cambio-de-vista:not(.cambio-de-vista-leave-active) h1')).toBeVisible()
 }
 
 /** Desde Inicio: su botón ¿Necesito comprar? (plan 14) → buscar → tocar el producto. */

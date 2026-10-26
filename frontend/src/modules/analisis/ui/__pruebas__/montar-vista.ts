@@ -16,6 +16,7 @@ function rutasDePrueba(conDetalleDeProducto: boolean): RouteRecordRaw[] {
   const rutas: RouteRecordRaw[] = [
     { path: '/', name: 'inicio', component: OtraPantalla },
     { path: '/control', name: 'control', component: OtraPantalla },
+    { path: '/control/ayuda', name: 'ayuda-inteligente', component: OtraPantalla },
     { path: '/control/para-comprar', name: 'para-comprar', component: OtraPantalla },
     { path: '/control/necesito-comprar', name: 'necesito-comprar', component: OtraPantalla },
     { path: '/control/alquiler', name: 'alquiler-del-local', component: OtraPantalla },

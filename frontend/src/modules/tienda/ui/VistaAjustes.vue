@@ -303,7 +303,7 @@ function revisarDatos(): void {
 }
 h2 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.125rem;
 }
 .seccion p {
   margin: 0;

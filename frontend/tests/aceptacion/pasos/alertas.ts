@@ -1,7 +1,7 @@
 import { createPinia } from 'pinia'
 import { expect } from 'vitest'
 import { useEstadoGlobal } from '@/app/estado-global'
-import { RUTA_DE_CONTROL, RUTA_SE_ACABAN } from '@/modules/alertas'
+import { RUTA_AGOTADOS, RUTA_DE_CONTROL, RUTA_SE_ACABAN } from '@/modules/alertas'
 import { sumarDias } from '@/shared/domain/fecha'
 import { PRESENTACION_DE_ESTADO, type EstadoVisual } from '@/shared/ui/presentacion-estado'
 import type { Mundo } from './mundo'
@@ -10,6 +10,7 @@ import { accion, afirmacion, preparacion, type Pasos } from './registro'
 /** Adónde lleva tocar una notificación, por el nombre de la pantalla (M5: rutas del plan 13). */
 const RUTAS_DE_PANTALLA: Record<string, string> = {
   'Productos filtrado por Se acaban': RUTA_SE_ACABAN,
+  'Productos filtrado por Agotados': RUTA_AGOTADOS,
   Control: RUTA_DE_CONTROL,
 }
 
@@ -135,8 +136,8 @@ export function pasosDeAlertas(pasos: Pasos): void {
     expect(m.app.notificador.solicitudes - m.solicitudesDePermisoAntes).toBe(0)
   })
 
-  // RN-AL-06a (plan 19): el botón "Ver productos" del aviso de Inicio solo aparece si hay algo
-  // que se acaba, y abre la ruta que comparten la notificación y Productos (RN-CAT-16).
+  // RN-AL-06a: Inicio avisa por separado de lo agotado y de lo que queda poco; cada aviso solo
+  // aparece si hay algo de eso y abre Productos ya filtrado (RN-CAT-16).
   afirmacion(
     pasos,
     'el botón del aviso de Inicio abre {string}',
@@ -145,7 +146,10 @@ export function pasosDeAlertas(pasos: Pasos): void {
         (await m.app.alertas.resumenDeAtencion()).contador,
         'No hay aviso en Inicio',
       ).toBeGreaterThan(0)
-      expect(RUTAS_DE_PANTALLA[pantalla]).toBe(RUTA_SE_ACABAN)
+      expect(RUTAS_DE_PANTALLA[pantalla]).toBe(RUTA_AGOTADOS)
+      expect((await m.app.alertas.resumenDeAtencion()).agotados, 'No hay agotados').toBeGreaterThan(
+        0,
+      )
     },
   )
 

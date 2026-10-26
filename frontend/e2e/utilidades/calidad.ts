@@ -1,7 +1,9 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, type Page } from '@playwright/test'
 
-export { usarLetra, type Letra } from './navegacion'
+import { esperarVistaQuieta } from './navegacion'
+
+export { esperarVistaQuieta, usarLetra, type Letra } from './navegacion'
 
 /** RN-UX-09 / RN-SIS-06.
  *
@@ -13,6 +15,7 @@ export { usarLetra, type Letra } from './navegacion'
  * desplazamiento horizontal interno.
  */
 export async function esperarSinDesplazamientoHorizontal(page: Page): Promise<void> {
+  await esperarVistaQuieta(page)
   const { scroll, cliente } = await page.evaluate(() => ({
     scroll: document.documentElement.scrollWidth,
     cliente: document.documentElement.clientWidth,
@@ -32,6 +35,9 @@ export async function esperarSinDesplazamientoHorizontal(page: Page): Promise<vo
     // puede ser ancha, pero no se ve ni desplaza la página, así que no cuenta aquí.
     const fueraDeVista = elementos
       .filter((el) => !el.closest('.solo-lector'))
+      // Dentro de una región que se desplaza de lado (GraficoColumnas) el contenido puede ser más
+      // ancho que la pantalla a propósito: lo que debe caber es la región misma.
+      .filter((el) => !el.parentElement?.closest('[data-desplaza-de-lado]'))
       .map((el) => el.getBoundingClientRect())
       .filter((r) => r.width > 0 && r.height > 0)
       .some((r) => r.left < -1 || r.right > anchoVentana + 1)

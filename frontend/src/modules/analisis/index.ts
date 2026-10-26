@@ -28,6 +28,7 @@ export {
   type MasVendidos,
   type MejorDia,
   type NombreDeDia,
+  preciosParaRevisar,
   type PrecioParaRevisar,
   type ProductoEnAtencion,
   type ProductosEnAtencion,
@@ -47,6 +48,7 @@ export {
 // Pantallas de Control (plan 13). El router las importa desde aquí (nunca un archivo interno del
 // módulo) y cada una se carga recién al abrirla: queda en su propio trozo del build.
 export const VistaControl = () => import('./ui/VistaControl.vue')
+export const VistaAyudaInteligente = () => import('./ui/VistaAyudaInteligente.vue')
 export const VistaParaComprar = () => import('./ui/VistaParaComprar.vue')
 export const VistaNecesitoComprar = () => import('./ui/VistaNecesitoComprar.vue')
 export const VistaAlquilerDelLocal = () => import('./ui/VistaAlquilerDelLocal.vue')

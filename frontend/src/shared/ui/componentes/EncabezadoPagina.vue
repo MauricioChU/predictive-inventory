@@ -35,12 +35,16 @@ function alVolver() {
 </script>
 
 <template>
-  <header class="encabezado-pagina">
+  <header class="encabezado-pagina" :class="{ 'encabezado-pagina--con-volver': volver }">
     <button v-if="volver" type="button" class="volver" @click="alVolver">
       <ArrowLeft aria-hidden="true" class="icono" />
       <span>Volver</span>
     </button>
     <h1>{{ titulo }}</h1>
+    <!-- Acción opcional al lado del título (p. ej. «Categorías»): no cambia la altura del encabezado. -->
+    <div v-if="$slots.accion" class="accion">
+      <slot name="accion" />
+    </div>
   </header>
 </template>
 
@@ -58,12 +62,29 @@ function alVolver() {
   gap: var(--espacio-1) var(--espacio-3);
   padding-block: var(--espacio-4);
 }
+/* Con "Volver", el título va debajo, en su propia fila (no pegado al botón). */
+.encabezado-pagina--con-volver {
+  row-gap: 0;
+  padding-block-start: var(--espacio-1);
+}
+.encabezado-pagina--con-volver h1 {
+  flex-basis: 100%;
+  padding-inline: var(--espacio-2);
+}
 h1 {
   flex: 1 1 10rem;
   min-inline-size: 0;
   font-size: 1.375rem;
   margin: 0;
   overflow-wrap: break-word;
+}
+/* Su caja mide 0 de alto: el botón (48 px) sobresale sin estirar el encabezado, así el título
+   queda a la misma altura que en las demás vistas. */
+.accion {
+  flex: none;
+  display: flex;
+  align-items: center;
+  margin-block: calc(-0.5 * var(--alto-toque));
 }
 .volver {
   flex: none;

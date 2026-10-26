@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowRef, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { Plus, Tags } from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { isNavigationFailure, NavigationFailureType, useRoute, useRouter } from 'vue-router'
+import { ListFilter, Plus, Tags, X } from 'lucide-vue-next'
 import { useAplicacion } from '@/app/proveer-aplicacion'
 import type { EstadoDeStock } from '@/shared/contratos/estado-de-stock'
-import Boton from '@/shared/ui/componentes/Boton.vue'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import BuscadorGrande from '@/shared/ui/componentes/BuscadorGrande.vue'
+import HojaInferior from '@/shared/ui/componentes/HojaInferior.vue'
 import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
 import ListaDeProductos from '@/shared/ui/componentes/ListaDeProductos.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
-import SelectorSegmentado from '@/shared/ui/componentes/SelectorSegmentado.vue'
 import type { CategoriaVista, ProductoVista } from '../application/modulo'
 import { usarAltoObservado } from '@/shared/ui/alto-observado'
-import FiltroDeCategoria from './FiltroDeCategoria.vue'
+import FormularioDeProducto from './FormularioDeProducto.vue'
+import HojaDeFiltros from './HojaDeFiltros.vue'
 import { useFiltrosDeProductos, vuelveAtrasDelDetalle } from './filtros-de-productos'
 import {
   aFilaDeLista,
@@ -173,8 +173,64 @@ const resultado = computed(() =>
   filas.value.length > 0 ? textoDeConteo(filas.value.length) : vacio.value.titulo,
 )
 
+/** Las hojas (filtros y producto nuevo) se abren desde aquí, sin salir de la lista. */
+const filtrosAbiertos = ref(false)
+const productoNuevo = ref<{ nombre: string; vez: number } | null>(null)
+const refBotonFiltros = ref<HTMLElement | null>(null)
+const refHojaNueva = ref<InstanceType<typeof HojaInferior>>()
+const refHojaFiltros = ref<InstanceType<typeof HojaDeFiltros>>()
+const tituloDeLaHoja = ref('Producto nuevo')
+const hojaAbierta = computed(() => filtrosAbiertos.value || productoNuevo.value !== null)
+
+/** A dónde vuelve el foco al cerrar la hoja de producto nuevo (el botón fijo, o el del vacío). */
+const abridorDeProductoNuevo = ref<HTMLElement | null>(null)
 function agregar(nombre?: string) {
-  void router.push({ name: 'producto-nuevo', query: nombre ? { nombre } : {} })
+  abridorDeProductoNuevo.value =
+    document.activeElement instanceof HTMLElement ? document.activeElement : null
+  tituloDeLaHoja.value = 'Producto nuevo'
+  productoNuevo.value = { nombre: nombre ?? '', vez: 0 }
+}
+/** "Agregar otro producto": un formulario nuevo y vacío en la misma hoja. */
+function agregarOtro() {
+  tituloDeLaHoja.value = 'Producto nuevo'
+  if (productoNuevo.value) productoNuevo.value = { nombre: '', vez: productoNuevo.value.vez + 1 }
+}
+/** Con lo nuevo guardado, la lista deja de filtrar (un filtro podría esconderlo): ver `@guardado`.
+ * Al cerrar, la lista se vuelve a leer: lo recién guardado ya aparece. */
+function cerrarProductoNuevo() {
+  productoNuevo.value = null
+  void nextTick(() => cargar().catch(fallo))
+}
+
+const filtrosActivos = computed(() => {
+  const chips: { id: 'estado' | 'categoria'; texto: string }[] = []
+  if (filtros.estado !== 'TODOS') {
+    const opcion = OPCIONES_DE_ESTADO.find((o) => o.valor === filtros.estado)
+    if (opcion) chips.push({ id: 'estado', texto: opcion.etiqueta })
+  }
+  if (nombreDeCategoria.value) chips.push({ id: 'categoria', texto: nombreDeCategoria.value })
+  return chips
+})
+const textoDelBotonDeFiltros = computed(() => {
+  const n = filtrosActivos.value.length
+  return n === 0 ? 'Filtros' : `Filtros · ${n} ${n === 1 ? 'activo' : 'activos'}`
+})
+/** Con una hoja abierta, tocar "Productos" en la navegación (misma pantalla) la cierra. */
+const quitarEscucha = router.afterEach((to, _desde, falla) => {
+  if (to.name !== 'productos' || !isNavigationFailure(falla, NavigationFailureType.duplicated))
+    return
+  refHojaNueva.value?.cerrar()
+  refHojaFiltros.value?.cerrar()
+})
+onBeforeUnmount(quitarEscucha)
+
+function alGuardar() {
+  filtros.olvidar()
+  tituloDeLaHoja.value = 'Producto guardado'
+}
+function quitarFiltro(id: 'estado' | 'categoria') {
+  if (id === 'estado') filtros.estado = 'TODOS'
+  else filtros.categoriaId = ''
 }
 
 function alAccionDelVacio() {
@@ -193,35 +249,63 @@ function abrirProducto(id: string) {
 
 <template>
   <div class="vista-productos" :style="{ '--alto-accion': `${altoDeLaAccion}px` }">
-    <div class="cabecera">
-      <EncabezadoPagina titulo="Productos" />
-      <Boton
-        class="ir-a-categorias"
-        texto="Categorías"
-        :icono="Tags"
-        @click="router.push({ name: 'categorias' })"
-      />
-    </div>
+    <!-- Si «Categorías» no cabe junto al título, queda solo el ícono (el texto sigue para el lector). -->
+    <EncabezadoPagina class="cabecera" titulo="Productos" :inert="hojaAbierta ? true : undefined">
+      <template #accion>
+        <button type="button" class="ir-a-categorias" @click="router.push({ name: 'categorias' })">
+          <Tags aria-hidden="true" class="icono" />
+          <span class="texto-categorias">Categorías</span>
+        </button>
+      </template>
+    </EncabezadoPagina>
 
     <MensajeDeError v-if="error" :mensaje="error" ayuda="Vuelve a intentarlo en un momento." />
 
     <template v-if="!cargando">
-      <div class="cuerpo">
+      <div class="cuerpo" :inert="hojaAbierta ? true : undefined">
         <section v-if="hayProductos" class="filtros" aria-label="Buscar y filtrar">
-          <BuscadorGrande v-model="filtros.texto" etiqueta="Buscar producto" />
-          <SelectorSegmentado
-            v-model="filtros.estado"
-            :opciones="OPCIONES_DE_ESTADO"
-            etiqueta="Mostrar"
-          />
-          <FiltroDeCategoria v-model="filtros.categoriaId" :categorias="categorias" />
+          <div class="fila-de-busqueda">
+            <BuscadorGrande
+              v-model="filtros.texto"
+              etiqueta="Buscar producto"
+              marcador="Por ejemplo: lejía"
+            />
+            <button
+              ref="refBotonFiltros"
+              type="button"
+              class="boton-filtros"
+              :class="{ 'boton-filtros--con-filtros': filtrosActivos.length > 0 }"
+              @click="filtrosAbiertos = true"
+            >
+              <ListFilter aria-hidden="true" class="icono" />
+              <span class="solo-lector">{{ textoDelBotonDeFiltros }}</span>
+              <span v-if="filtrosActivos.length > 0" class="cuenta" aria-hidden="true">{{
+                filtrosActivos.length
+              }}</span>
+            </button>
+          </div>
+          <ul v-if="filtrosActivos.length > 0" class="chips" aria-label="Filtros activos">
+            <li v-for="chip in filtrosActivos" :key="chip.id">
+              <button
+                type="button"
+                class="chip"
+                :aria-label="`Quitar filtro ${chip.texto}`"
+                @click="quitarFiltro(chip.id)"
+              >
+                <span class="pastilla">
+                  <span class="chip-texto">{{ chip.texto }}</span>
+                  <X aria-hidden="true" class="chip-x" />
+                </span>
+              </button>
+            </li>
+          </ul>
         </section>
 
         <section class="resultados" aria-label="Lista de productos">
           <!-- Región viva siempre presente: anuncia cuántos hay (o por qué no hay) al buscar. -->
           <p
             v-if="hayProductos"
-            class="conteo"
+            class="conteo titulo-de-seccion"
             :class="{ 'solo-lector': filas.length === 0 }"
             role="status"
           >
@@ -243,13 +327,40 @@ function abrirProducto(id: string) {
         </section>
       </div>
     </template>
+
+    <HojaDeFiltros
+      v-if="filtrosAbiertos"
+      ref="refHojaFiltros"
+      v-model:estado="filtros.estado"
+      v-model:categoria-id="filtros.categoriaId"
+      :categorias="categorias"
+      :cantidad="filas.length"
+      :volver-a="refBotonFiltros"
+      @cerrar="filtrosAbiertos = false"
+    />
+    <HojaInferior
+      v-if="productoNuevo"
+      ref="refHojaNueva"
+      :titulo="tituloDeLaHoja"
+      :volver-a="abridorDeProductoNuevo"
+      @cerrar="cerrarProductoNuevo"
+    >
+      <FormularioDeProducto
+        :key="productoNuevo.vez"
+        en-hoja
+        :nombre-inicial="productoNuevo.nombre"
+        @agregar-otro="agregarOtro"
+        @guardado="alGuardar"
+      />
+    </HojaInferior>
   </div>
 </template>
 
 <style scoped>
 .vista-productos {
   display: grid;
-  gap: var(--espacio-4);
+  /* Sin separación entre filas: el encabezado queda como en Vender y Recibir. */
+  gap: 0;
   min-inline-size: 0;
 }
 /* WCAG 2.4.11: lo que recibe el foco nunca queda tapado por el botón pegado abajo (su alto
@@ -258,11 +369,40 @@ function abrirProducto(id: string) {
   scroll-margin-bottom: calc(var(--alto-accion, 0px) + var(--espacio-3));
 }
 .cabecera {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  /* Título y "Categorías" en la misma fila: si no caben con su texto, queda solo el ícono. */
+  container-type: inline-size;
+  flex-wrap: nowrap;
   justify-content: space-between;
-  gap: 0 var(--espacio-3);
+}
+.ir-a-categorias {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  gap: var(--espacio-2);
+  min-block-size: var(--alto-toque);
+  min-inline-size: var(--alto-toque);
+  padding-inline: var(--espacio-4);
+  border: 2px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+@container (max-width: 17.5rem) {
+  .ir-a-categorias {
+    padding-inline: 0;
+  }
+  .texto-categorias {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
 }
 .cuerpo {
   display: grid;
@@ -276,10 +416,116 @@ function abrirProducto(id: string) {
   align-content: start;
   min-inline-size: 0;
 }
-.conteo {
-  margin: 0;
+.fila-de-busqueda {
+  /* Siempre una fila: el botón de filtros es solo el ícono (con el número de filtros puestos). */
+  display: flex;
+  /* Con la etiqueta visible arriba del campo, el botón se alinea con el campo (abajo). */
+  align-items: flex-end;
+  gap: var(--espacio-2);
+  min-inline-size: 0;
+}
+.fila-de-busqueda > :first-child {
+  flex: 1;
+  min-inline-size: 0;
+}
+.boton-filtros {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-block-size: var(--alto-boton-principal);
+  min-inline-size: var(--alto-boton-principal);
+  padding: 0;
+  border: 2px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  cursor: pointer;
+}
+.boton-filtros--con-filtros {
+  border-color: var(--color-primario);
+  background: var(--color-primario-suave);
+  color: var(--color-primario);
+}
+.cuenta {
+  position: absolute;
+  inset-block-start: -0.5rem;
+  inset-inline-end: -0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 1.5rem;
+  block-size: 1.5rem;
+  padding-inline: 0.25rem;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: var(--color-primario);
+  color: var(--color-fondo);
+  font-size: 1rem;
   font-weight: 700;
-  color: var(--color-texto-suave);
+  line-height: 1;
+}
+.icono {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  flex: none;
+}
+/* Lo activo, en UNA línea de chips: si no caben, se desplaza de lado dentro de su fila (la
+   página no se ensancha). La zona de toque (48 px) es más alta que el chip. */
+.chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0 var(--espacio-2);
+  margin: calc(-1 * var(--espacio-2)) 0;
+  padding: 0 var(--espacio-1);
+  list-style: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar {
+  display: none;
+}
+.chips > li {
+  flex: none;
+  min-inline-size: 0;
+  max-inline-size: 85%;
+  display: flex;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  min-block-size: var(--alto-toque);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-primario);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pastilla {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  min-inline-size: 0;
+  padding: 0.25rem var(--espacio-3);
+  border-radius: 999px;
+  background: var(--color-primario-suave);
+}
+.chip-texto {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip-x {
+  inline-size: 1rem;
+  block-size: 1rem;
+  flex: none;
 }
 .accion-principal {
   position: sticky;

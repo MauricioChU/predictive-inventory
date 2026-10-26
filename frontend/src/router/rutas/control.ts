@@ -1,6 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router'
 import {
   VistaAlquilerDelLocal,
+  VistaAyudaInteligente,
   VistaControl,
   VistaNecesitoComprar,
   VistaParaComprar,
@@ -13,6 +14,14 @@ export const rutasDeControl: RouteRecordRaw[] = [
     name: 'control',
     component: VistaControl,
     meta: { titulo: 'Control', enNavegacion: true, icono: 'gauge' },
+  },
+  {
+    // Atención, Para comprar y Productos parados: se abre desde el botón del final de Control y
+    // desde los avisos de Inicio.
+    path: '/control/ayuda',
+    name: 'ayuda-inteligente',
+    component: VistaAyudaInteligente,
+    meta: { titulo: 'Ayuda inteligente' },
   },
   {
     // Se abre desde Control (ya no la enlazan Inicio ni las notificaciones, RN-AL-07).

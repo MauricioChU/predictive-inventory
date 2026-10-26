@@ -288,6 +288,40 @@ export function usarCarrito(concepto: Concepto) {
       juntarIguales()
     },
 
+    /**
+     * Solo al vender: el lápiz del precio cambia el del PRODUCTO (catálogo), no solo el de esta
+     * venta. Sincrónico por el mismo contrato de `errorPrecio`: lee el precio con el dominio y, si
+     * está mal, deja el error junto al campo y devuelve null.
+     */
+    leerPrecioDelProducto(id: string, texto: string): Dinero | null {
+      const linea = buscar(id)
+      if (!linea) return null
+      try {
+        const precio = leerPrecioDeVenta(texto)
+        linea.errorPrecio = undefined
+        return precio
+      } catch (error) {
+        linea.errorPrecio = mensajeDe(error)
+        return null
+      }
+    },
+
+    /**
+     * Después de cambiar el precio del producto en el catálogo: la línea tocada toma el precio
+     * nuevo (sin marca de «Precio especial») y también las del mismo producto que llevaban el
+     * precio de siempre; un precio especial de otra línea se queda. Las líneas iguales se juntan.
+     */
+    aplicarPrecioDelProducto(lineaId: string, actual: ProductoVista, anterior: Dinero): void {
+      // Por producto, no por línea: si la línea tocada se quitó mientras se guardaba, las demás
+      // del mismo producto igual se ponen al día.
+      for (const linea of lineas.value) {
+        if (linea.producto.id !== actual.id) continue
+        if (linea.id === lineaId || linea.precio.igualA(anterior)) linea.precio = actual.precioVenta
+        linea.producto = actual
+      }
+      juntarIguales()
+    },
+
     cancelarPrecio(id: string): void {
       const linea = buscar(id)
       if (!linea) return

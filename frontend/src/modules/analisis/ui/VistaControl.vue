@@ -5,29 +5,18 @@ import {
   CalendarCheck,
   CalendarRange,
   ChevronRight,
-  CircleHelp,
-  CircleX,
-  Hourglass,
   KeyRound,
-  ShoppingBasket,
-  Tag,
-  TriangleAlert,
+  Lightbulb,
   Trophy,
   Wallet,
 } from 'lucide-vue-next'
 import { useAplicacion } from '@/app/proveer-aplicacion'
-import {
-  formatearCantidad,
-  formatearDinero,
-  formatearEntero,
-  plural,
-} from '@/shared/domain/formato'
-import AvisoEnPagina from '@/shared/ui/componentes/AvisoEnPagina.vue'
+import { formatearCantidad, formatearDinero, plural } from '@/shared/domain/formato'
 import Boton from '@/shared/ui/componentes/Boton.vue'
-import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import EncabezadoPagina from '@/shared/ui/componentes/EncabezadoPagina.vue'
 import FilaDeDato from '@/shared/ui/componentes/FilaDeDato.vue'
 import GraficoBarras from '@/shared/ui/componentes/GraficoBarras.vue'
+import GraficoColumnas from '@/shared/ui/componentes/GraficoColumnas.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import SelectorSegmentado from '@/shared/ui/componentes/SelectorSegmentado.vue'
 import TarjetaDeCifra from '@/shared/ui/componentes/TarjetaDeCifra.vue'
@@ -35,33 +24,34 @@ import BarraDeProgreso from '@/shared/ui/componentes/BarraDeProgreso.vue'
 import { pegarCifras } from '@/shared/ui/texto-sin-cortes'
 import type { TorreDeControl } from '../application/torre'
 import { BOTON_CONFIGURAR_ALQUILER, PREGUNTA_DEL_ALQUILER } from '../domain/alquiler'
-import { SUGERENCIA_PARA_PARADOS } from '../domain/observaciones'
 import type { Periodo } from '../domain/periodos'
-import EnlaceAProducto from './componentes/EnlaceAProducto.vue'
-import FilaDeAtencion from './componentes/FilaDeAtencion.vue'
 import SeccionDeControl from './componentes/SeccionDeControl.vue'
 import {
   OPCIONES_DE_MAS_VENDIDOS,
   OPCIONES_DE_PERIODO,
+  OPCIONES_DE_TOP,
   partesDelCambio,
   textoDeDia,
   textoMejorDia,
-  textoPerdidaPorUnidad,
-  textoSinVender,
   textoSinVentas,
   textoVeces,
-  tituloDeGanancia,
   type PeriodoDeMasVendidos,
+  type TipoDeTop,
 } from './textos'
-
-/** Cuántas líneas de la lista para comprar se adelantan en la tarjeta (el resto, "y N más"). */
-const LINEAS_EN_EL_RESUMEN = 3
 
 const aplicacion = useAplicacion()
 const router = useRouter()
 
 const periodo = ref<Periodo>('HOY')
 const periodoMasVendidos = ref<PeriodoDeMasVendidos>(7)
+/** Cuál de los dos top 5 se ve: lo que más se vende o lo que más ganancia deja. */
+const tipoDeTop = ref<TipoDeTop>('VECES')
+/** Cuál de los dos gráficos de «Semana contra semana» se ve: ventas o ganancia. */
+const metricaDeSemana = ref<'Ventas' | 'Ganancia neta'>('Ventas')
+const OPCIONES_DE_SEMANA = [
+  { valor: 'Ventas', etiqueta: 'Ventas' },
+  { valor: 'Ganancia neta', etiqueta: 'Ganancia' },
+] as const
 
 /** Lo que se ve: la torre con los periodos con los que se calculó (no los recién elegidos). */
 interface Mostrado {
@@ -109,20 +99,27 @@ const resumen = computed(() => {
   const r = torre.resumen
   const perdio = r.gananciaNeta.esNegativo()
   return {
-    titulo: tituloDeGanancia(elegido, r.gananciaNeta),
-    valor: formatearDinero(perdio ? r.gananciaNeta.negar() : r.gananciaNeta),
-    detalle: r.ventas.esCero() ? textoSinVentas(elegido) : `Vendiste ${formatearDinero(r.ventas)}`,
-    tono: perdio ? 'peligro' : r.gananciaNeta.esPositivo() ? 'exito' : 'normal',
+    // Mismo patrón que Inicio (RN-AN-03): lo cobrado, grande; la ganancia real, debajo.
+    vendido: {
+      valor: formatearDinero(r.ventas),
+      detalle: r.ventas.esCero() ? textoSinVentas(elegido) : undefined,
+    },
+    mostrarGanancia: !(r.ventas.esCero() && r.gananciaNeta.esCero()),
+    ganancia: {
+      titulo: perdio ? 'Pérdida real' : 'Ganancia real',
+      valor: formatearDinero(perdio ? r.gananciaNeta.negar() : r.gananciaNeta),
+      tono: perdio
+        ? ('peligro' as const)
+        : r.gananciaNeta.esPositivo()
+          ? ('exito' as const)
+          : ('normal' as const),
+    },
     filas: [
-      { etiqueta: 'Ventas', valor: formatearDinero(r.ventas) },
       { etiqueta: 'Costo de lo vendido', valor: formatearDinero(r.costoVendido) },
-      {
-        etiqueta: 'Pérdidas (se dañó, se derramó o se venció)',
-        valor: formatearDinero(r.mermas),
-      },
+      { etiqueta: 'Pérdidas', valor: formatearDinero(r.mermas) },
     ],
     diferencias: formatearDinero(r.diferenciasDeConteo),
-  } as const
+  }
 })
 
 /** RN-AN-19: "No pago" no muestra la tarjeta; sin configurar pregunta; con pago, el avance. */
@@ -139,21 +136,6 @@ const alquiler = computed(() => {
     lineas: a.textos.map(pegarCifras),
     porcentaje: a.avance.porcentaje,
   } as const
-})
-
-const paraComprar = computed(() => {
-  if (!mostrado.value) return null
-  const { lineas, total } = mostrado.value.torre.paraComprar
-  return {
-    cuantos: `${formatearEntero(lineas.length)} ${plural(lineas.length, 'producto', 'productos')}`,
-    primeras: lineas.slice(0, LINEAS_EN_EL_RESUMEN).map((l) => ({
-      id: l.productoId,
-      nombre: l.nombre,
-      cantidad: formatearCantidad(l.cantidad, l.unidad),
-    })),
-    mas: Math.max(0, lineas.length - LINEAS_EN_EL_RESUMEN),
-    total: formatearDinero(total),
-  }
 })
 
 const masVendidos = computed(() => {
@@ -183,11 +165,28 @@ const semana = computed(() => {
     filas: s.filas.map((f) => ({
       concepto: f.concepto,
       cambio: partesDelCambio(f.cambio),
-      actual: formatearDinero(f.actual),
-      anterior: formatearDinero(f.anterior),
+      // El gráfico: esta semana (destacada) contra la anterior, con la misma escala.
+      barras: [
+        {
+          etiqueta: 'Esta semana',
+          valor: f.actual.centimos,
+          textoValor: formatearDinero(f.actual),
+          destacada: true,
+        },
+        {
+          etiqueta: 'Semana anterior',
+          valor: f.anterior.centimos,
+          textoValor: formatearDinero(f.anterior),
+        },
+      ],
     })),
   }
 })
+
+/** Solo la métrica elegida (Ventas o Ganancia): un gráfico a la vez. */
+const filasDeSemana = computed(
+  () => semana.value?.filas.filter((f) => f.concepto === metricaDeSemana.value) ?? [],
+)
 
 const mejorDia = computed(() => {
   const m = mostrado.value?.torre.mejorDia
@@ -205,45 +204,22 @@ const mejorDia = computed(() => {
   }
 })
 
-const parados = computed(() => {
-  if (!mostrado.value) return null
-  const { productos, total } = mostrado.value.torre.parados
-  return {
-    productos: productos.map((p) => ({
-      id: p.productoId,
-      nombre: p.nombre,
-      dinero: formatearDinero(p.dineroInmovilizado),
-      detalle: `${textoSinVender(p.diasSinVender)} · tienes ${formatearCantidad(p.stock, p.unidad)}`,
-    })),
-    total: formatearDinero(total),
-  }
+/**
+ * Cuántas cosas hay que mirar en Ayuda inteligente (lo que ve el botón del final): productos
+ * ÚNICOS. Un producto agotado y además parado (o con el precio por revisar) cuenta una sola vez.
+ */
+const cosasParaMirar = computed(() => {
+  if (!mostrado.value) return 0
+  const { productosEnAtencion: a, parados, preciosParaRevisar } = mostrado.value.torre
+  return new Set([
+    ...a.agotados.map((p) => p.productoId),
+    ...a.porAcabarse.map((p) => p.productoId),
+    ...preciosParaRevisar.map((p) => p.productoId),
+    ...parados.productos.map((p) => p.productoId),
+  ]).size
 })
 
-const atencion = computed(() => {
-  if (!mostrado.value) return null
-  const { atencion: cuantos, productosEnAtencion, preciosParaRevisar } = mostrado.value.torre
-  return {
-    agotados: { cantidad: cuantos.agotados, productos: productosEnAtencion.agotados },
-    porAcabarse: {
-      cantidad: cuantos.porAcabarse,
-      productos: productosEnAtencion.porAcabarse.map((p) => ({
-        ...p,
-        detalle: [`Quedan ${formatearCantidad(p.stock, p.unidad)}`, p.cobertura]
-          .filter(Boolean)
-          .join(' · '),
-      })),
-    },
-    precios: {
-      cantidad: cuantos.preciosParaRevisar,
-      productos: preciosParaRevisar.map((p) => ({
-        ...p,
-        detalle: textoPerdidaPorUnidad(p.perdidaPorUnidad, p.unidad),
-      })),
-    },
-  }
-})
-
-function irA(nombre: 'para-comprar' | 'necesito-comprar' | 'alquiler-del-local'): void {
+function irA(nombre: 'alquiler-del-local'): void {
   void router.push({ name: nombre })
 }
 </script>
@@ -278,12 +254,22 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar' | 'alquiler-del-local')
             etiqueta-oculta
           />
           <template v-if="resumen">
-            <TarjetaDeCifra
-              :titulo="resumen.titulo"
-              :texto-valor="resumen.valor"
-              :texto-detalle="resumen.detalle"
-              :tono="resumen.tono"
-            />
+            <div class="cifras-principales">
+              <TarjetaDeCifra
+                principal
+                titulo="Total vendido"
+                :texto-valor="resumen.vendido.valor"
+                :texto-detalle="resumen.vendido.detalle"
+              />
+              <TarjetaDeCifra
+                v-if="resumen.mostrarGanancia"
+                compacta
+                en-linea
+                :titulo="resumen.ganancia.titulo"
+                :texto-valor="resumen.ganancia.valor"
+                :tono="resumen.ganancia.tono"
+              />
+            </div>
             <div class="cifras">
               <FilaDeDato
                 v-for="fila in resumen.filas"
@@ -327,101 +313,32 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar' | 'alquiler-del-local')
           </template>
         </SeccionDeControl>
 
-        <SeccionDeControl titulo="Atención" :icono="TriangleAlert">
-          <template v-if="atencion">
-            <FilaDeAtencion
-              etiqueta="Agotados"
-              :cantidad="atencion.agotados.cantidad"
-              :icono="CircleX"
-              tono="peligro"
-            >
-              <ul class="productos" role="list">
-                <li v-for="p in atencion.agotados.productos" :key="p.productoId">
-                  <EnlaceAProducto :producto-id="p.productoId">
-                    <span class="nombre">{{ pegarCifras(p.nombre) }}</span>
-                    <span class="detalle">Agotado</span>
-                  </EnlaceAProducto>
-                </li>
-              </ul>
-            </FilaDeAtencion>
-            <FilaDeAtencion
-              etiqueta="Queda poco"
-              :cantidad="atencion.porAcabarse.cantidad"
-              :icono="TriangleAlert"
-              tono="atencion"
-            >
-              <ul class="productos" role="list">
-                <li v-for="p in atencion.porAcabarse.productos" :key="p.productoId">
-                  <EnlaceAProducto :producto-id="p.productoId">
-                    <span class="nombre">{{ pegarCifras(p.nombre) }}</span>
-                    <span class="detalle">{{ pegarCifras(p.detalle) }}</span>
-                  </EnlaceAProducto>
-                </li>
-              </ul>
-            </FilaDeAtencion>
-            <FilaDeAtencion
-              etiqueta="Precios para revisar"
-              :cantidad="atencion.precios.cantidad"
-              :icono="Tag"
-              tono="atencion"
-            >
-              <ul class="productos" role="list">
-                <li v-for="p in atencion.precios.productos" :key="p.productoId">
-                  <EnlaceAProducto :producto-id="p.productoId">
-                    <span class="nombre">{{ pegarCifras(p.nombre) }}</span>
-                    <span class="detalle">{{ pegarCifras(p.detalle) }}</span>
-                  </EnlaceAProducto>
-                </li>
-              </ul>
-            </FilaDeAtencion>
-          </template>
-        </SeccionDeControl>
-
-        <SeccionDeControl titulo="Para comprar" :icono="ShoppingBasket">
-          <template v-if="paraComprar && paraComprar.primeras.length > 0">
-            <p class="cuantos">{{ paraComprar.cuantos }}</p>
-            <div>
-              <FilaDeDato
-                v-for="linea in paraComprar.primeras"
-                :key="linea.id"
-                :etiqueta="linea.nombre"
-                :texto-valor="linea.cantidad"
-              />
-              <p v-if="paraComprar.mas > 0" class="mas">
-                y {{ formatearEntero(paraComprar.mas) }} más
-              </p>
-              <FilaDeDato etiqueta="Total estimado" :texto-valor="paraComprar.total" destacado />
-            </div>
-            <BotonPrincipal
-              texto="Ver la lista para comprar"
-              :icono="ShoppingBasket"
-              @click="irA('para-comprar')"
-            />
-          </template>
-          <p v-else class="vacio">No hace falta comprar nada por ahora</p>
-          <Boton texto="¿Necesito comprar?" :icono="CircleHelp" @click="irA('necesito-comprar')" />
-        </SeccionDeControl>
-
-        <SeccionDeControl titulo="Más vendidos" :icono="Trophy">
+        <SeccionDeControl titulo="Tus mejores productos" :icono="Trophy">
+          <SelectorSegmentado
+            v-model="tipoDeTop"
+            :opciones="OPCIONES_DE_TOP"
+            etiqueta="Qué ver"
+            etiqueta-oculta
+          />
           <SelectorSegmentado
             v-model="periodoMasVendidos"
             :opciones="OPCIONES_DE_MAS_VENDIDOS"
-            etiqueta="Periodo de los más vendidos"
+            etiqueta="Periodo de los mejores productos"
             etiqueta-oculta
           />
           <template v-if="masVendidos">
             <p v-if="masVendidos.porVeces.length === 0" class="vacio">{{ masVendidos.vacio }}</p>
             <template v-else>
-              <h3>Los que más se venden</h3>
+              <h3>
+                {{ tipoDeTop === 'VECES' ? 'Los que más se venden' : 'Los que más ganancia dejan' }}
+              </h3>
               <ol class="ranking">
-                <li v-for="f in masVendidos.porVeces" :key="f.id">
-                  <span class="nombre">{{ pegarCifras(f.nombre) }}</span>
-                  <span class="detalle">{{ pegarCifras(f.detalle) }}</span>
-                </li>
-              </ol>
-              <h3>Los que más ganancia dejan</h3>
-              <ol class="ranking">
-                <li v-for="f in masVendidos.porGanancia" :key="f.id">
+                <li
+                  v-for="f in tipoDeTop === 'VECES'
+                    ? masVendidos.porVeces
+                    : masVendidos.porGanancia"
+                  :key="f.id"
+                >
                   <span class="nombre">{{ pegarCifras(f.nombre) }}</span>
                   <span class="detalle">{{ pegarCifras(f.detalle) }}</span>
                 </li>
@@ -441,14 +358,19 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar' | 'alquiler-del-local')
               </p>
             </div>
             <template v-else>
-              <div v-for="fila in semana.filas" :key="fila.concepto" class="comparacion">
+              <SelectorSegmentado
+                v-model="metricaDeSemana"
+                :opciones="OPCIONES_DE_SEMANA"
+                etiqueta="Qué comparar"
+                etiqueta-oculta
+              />
+              <div v-for="fila in filasDeSemana" :key="fila.concepto" class="comparacion">
                 <h3>{{ fila.concepto }}</h3>
                 <p class="cambio" :class="`cambio--${fila.cambio.tono}`">
                   <span class="flecha" aria-hidden="true">{{ fila.cambio.flecha }}</span>
                   {{ ' ' }}<span>{{ fila.cambio.texto }}</span>
                 </p>
-                <FilaDeDato etiqueta="Esta semana" :texto-valor="fila.actual" />
-                <FilaDeDato etiqueta="Semana anterior" :texto-valor="fila.anterior" />
+                <GraficoBarras titulo="Esta semana y la anterior" :barras="fila.barras" />
               </div>
               <p class="nota">Los últimos 7 días completos (sin hoy) contra los 7 anteriores.</p>
             </template>
@@ -460,37 +382,30 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar' | 'alquiler-del-local')
             <p v-if="mejorDia.mensaje" class="vacio">{{ mejorDia.mensaje }}</p>
             <template v-else>
               <p class="frase">{{ mejorDia.frase }}</p>
-              <GraficoBarras titulo="Venta promedio por día" :barras="mejorDia.barras" />
-              <p class="nota">Promedio por día de la semana, sin contar hoy.</p>
-            </template>
-          </template>
-        </SeccionDeControl>
-
-        <SeccionDeControl titulo="Productos parados" :icono="Hourglass">
-          <template v-if="parados">
-            <div v-if="parados.productos.length === 0" class="vacio">
-              <p>Ningún producto está parado</p>
-              <p class="nota">Aquí verás lo que no se vende hace 30 días o más.</p>
-            </div>
-            <template v-else>
-              <ul class="parados" role="list">
-                <li v-for="p in parados.productos" :key="p.id">
-                  <FilaDeDato :etiqueta="p.nombre" :texto-valor="p.dinero" />
-                  <p class="detalle">{{ pegarCifras(p.detalle) }}</p>
-                </li>
-              </ul>
-              <FilaDeDato
-                class="total"
-                etiqueta="Total de dinero parado"
-                :texto-valor="parados.total"
-                destacado
+              <GraficoColumnas
+                titulo="Venta promedio por día"
+                descripcion="Venta promedio por día. Se desplaza de lado para ver todos los días"
+                :columnas="mejorDia.barras"
               />
-              <AvisoEnPagina tono="info" :titulo="SUGERENCIA_PARA_PARADOS" />
+              <p class="nota">Promedio por día de la semana, sin contar hoy.</p>
             </template>
           </template>
         </SeccionDeControl>
       </div>
     </div>
+
+    <!-- Lo que el sistema avisa y sugiere (Atención, Para comprar, Productos parados) vive aparte:
+         Control es para medir. -->
+    <RouterLink v-if="mostrado" :to="{ name: 'ayuda-inteligente' }" class="ayuda">
+      <Lightbulb aria-hidden="true" class="ayuda-icono" />
+      <span class="ayuda-texto">
+        <span class="ayuda-titulo">Ayuda inteligente</span>
+        <span v-if="cosasParaMirar > 0" class="ayuda-detalle">
+          {{ cosasParaMirar }} {{ plural(cosasParaMirar, 'cosa para mirar', 'cosas para mirar') }}
+        </span>
+      </span>
+      <ChevronRight aria-hidden="true" class="ayuda-flecha" />
+    </RouterLink>
   </div>
 </template>
 
@@ -541,13 +456,10 @@ function irA(nombre: 'para-comprar' | 'necesito-comprar' | 'alquiler-del-local')
 .vacio .nota {
   font-weight: 400;
 }
-.cuantos {
-  margin: 0;
-  font-weight: 700;
-}
-.mas {
-  margin: var(--espacio-1) 0;
-  color: var(--color-texto-suave);
+.cifras-principales {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
 }
 
 /* Tarjeta Alquiler del local (RN-AN-19). */
@@ -589,24 +501,11 @@ h3 {
   font-size: 1.05rem;
 }
 
-.productos,
-.parados {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.productos li + li,
-.parados li + li {
-  border-top: 1px solid color-mix(in srgb, var(--color-borde) 30%, transparent);
-}
 .nombre {
   font-weight: 700;
 }
 .detalle {
   color: var(--color-texto-suave);
-}
-.parados .detalle {
-  margin: 0 0 var(--espacio-2);
 }
 
 /* Puestos 1, 2, 3… en un círculo; el número lo da la lista ordenada (el lector dice "1 de 3"). */
@@ -646,10 +545,6 @@ h3 {
 .comparacion {
   padding-bottom: var(--espacio-2);
 }
-.comparacion + .comparacion {
-  padding-top: var(--espacio-2);
-  border-top: 1px solid color-mix(in srgb, var(--color-borde) 30%, transparent);
-}
 .cambio {
   margin: var(--espacio-1) 0;
   font-size: 1.35rem;
@@ -670,5 +565,49 @@ h3 {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
+}
+
+/* Botón del final: lleva a la subvista de ayudas del sistema. */
+.ayuda {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-4);
+  min-block-size: var(--alto-boton-principal);
+  padding: var(--espacio-2) var(--espacio-3);
+  border: 2px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-fondo);
+  color: var(--color-primario);
+  font-size: 1.125rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.ayuda-icono,
+.ayuda-flecha {
+  inline-size: 1.4em;
+  block-size: 1.4em;
+  flex: none;
+}
+.ayuda-texto {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+.ayuda-titulo {
+  font-size: 1rem;
+  line-height: 1.25;
+}
+.ayuda-detalle {
+  color: var(--color-texto-suave);
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+/* Celular angosto: sin la flecha, el nombre cabe entero aun con letra Muy grande. */
+@media (max-width: 479px) {
+  .ayuda-flecha {
+    display: none;
+  }
 }
 </style>

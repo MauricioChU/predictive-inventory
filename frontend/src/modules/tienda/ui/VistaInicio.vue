@@ -1,23 +1,19 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import {
-  ChevronUp,
-  CircleHelp,
-  History,
-  PackagePlus,
-  Settings,
-  ShoppingCart,
-} from 'lucide-vue-next'
+import { ChevronRight, CircleHelp, PackagePlus, Settings, ShoppingCart } from 'lucide-vue-next'
 import { useEstadoGlobal } from '@/app/estado-global'
 import { useAplicacion } from '@/app/proveer-aplicacion'
-import { RUTA_SE_ACABAN, type ResumenDeAtencion } from '@/modules/alertas'
+import { preciosParaRevisar } from '@/modules/analisis'
+import { RUTA_AGOTADOS, RUTA_QUEDA_POCO, type ResumenDeAtencion } from '@/modules/alertas'
 import { HojaDeMovimientos } from '@/modules/inventario'
 import type { Dinero } from '@/shared/domain/dinero'
 import { formatearDinero, plural } from '@/shared/domain/formato'
 import BotonPrincipal from '@/shared/ui/componentes/BotonPrincipal.vue'
 import EstadoVacio from '@/shared/ui/componentes/EstadoVacio.vue'
-import FilaDeAviso from '@/shared/ui/componentes/FilaDeAviso.vue'
+import CarruselDeAvisos, {
+  type AvisoDelCarrusel,
+} from '@/shared/ui/componentes/CarruselDeAvisos.vue'
 import MensajeDeError from '@/shared/ui/componentes/MensajeDeError.vue'
 import TarjetaDeCifra from '@/shared/ui/componentes/TarjetaDeCifra.vue'
 import FechaDeHoy from './FechaDeHoy.vue'
@@ -31,6 +27,8 @@ const route = useRoute()
 const nombreTienda = ref('')
 const deHoy = ref<{ ganancia: Dinero; ventas: Dinero } | null>(null)
 const atencion = ref<ResumenDeAtencion | null>(null)
+/** Productos activos que se venden a su costo o por debajo (RN-AN-10). */
+const preciosARevisar = ref(0)
 /** `null` mientras se lee. */
 const hayProductos = ref<boolean | null>(null)
 const fallo = ref(false)
@@ -68,27 +66,74 @@ function cerrarMovimientos(): void {
 /** Plan 20: el nombre de la tienda en mayúsculas (el guardado no cambia); sin nombre, solo "Inicio". */
 const encabezado = computed(() => nombreTienda.value.trim().toLocaleUpperCase('es') || 'Inicio')
 
-/** RN-AN-03: la ganancia neta de hoy (o la pérdida, dicha como tal) y las ventas. */
-const cifraDeHoy = computed(() => {
+/**
+ * RN-AN-03: lo cobrado hoy ("Total vendido", la cifra principal) y debajo la ganancia real: la neta de hoy (o la
+ * pérdida, dicha como tal). "Todavía no hay ventas hoy" se dice una sola vez, en el total.
+ */
+const cifrasDeHoy = computed(() => {
   if (!deHoy.value) return null
   const { ganancia, ventas } = deHoy.value
   const perdio = ganancia.esNegativo()
   return {
-    titulo: perdio ? 'Hoy perdiste' : 'Hoy ganaste',
-    valor: formatearDinero(perdio ? ganancia.negar() : ganancia),
-    detalle: ventas.esCero() ? 'Todavía no hay ventas hoy' : `Vendiste ${formatearDinero(ventas)}`,
-    tono: perdio ? ('peligro' as const) : ('normal' as const),
+    vendido: {
+      valor: formatearDinero(ventas),
+      detalle: ventas.esCero() ? 'Todavía no hay ventas hoy' : undefined,
+    },
+    ganancia: {
+      titulo: perdio ? 'Pérdida real' : 'Ganancia real',
+      valor: formatearDinero(perdio ? ganancia.negar() : ganancia),
+      tono: perdio ? ('peligro' as const) : ('normal' as const),
+    },
   }
 })
 
-/** RN-AL-06a: "4 productos se acaban" (agotados + por acabarse). */
-const tituloDeAtencion = computed(() => {
-  const n = atencion.value?.contador ?? 0
-  return `${n} ${plural(n, 'producto se acaba', 'productos se acaban')}`
+/**
+ * Los avisos de Inicio, de uno en uno en un carrusel: los mismos de Atención en Control, cada uno con
+ * su cantidad y su flecha a la pantalla que corresponde (RN-AL-06a). Sin ninguno, "Todo en orden".
+ */
+const avisos = computed<AvisoDelCarrusel[]>(() => {
+  if (!atencion.value) return []
+  const { agotados, porAcabarse } = atencion.value
+  const lista: AvisoDelCarrusel[] = []
+  if (agotados > 0)
+    lista.push({
+      id: 'agotados',
+      tono: 'atencion',
+      texto: `${agotados} ${plural(agotados, 'agotado', 'agotados')}`,
+      textoAccion: `${agotados} ${plural(agotados, 'producto agotado', 'productos agotados')}. Ver productos`,
+    })
+  if (porAcabarse > 0)
+    lista.push({
+      id: 'queda-poco',
+      tono: 'atencion',
+      texto: `Queda poco: ${porAcabarse}`,
+      textoAccion: `Queda poco de ${porAcabarse} ${plural(porAcabarse, 'producto', 'productos')}. Ver productos`,
+    })
+  if (preciosARevisar.value > 0)
+    lista.push({
+      id: 'precios',
+      tono: 'atencion',
+      texto: `${preciosARevisar.value} ${plural(preciosARevisar.value, 'precio para revisar', 'precios para revisar')}`,
+      textoAccion: `${preciosARevisar.value} ${plural(preciosARevisar.value, 'precio para revisar', 'precios para revisar')}. Ver ayuda inteligente`,
+    })
+  return lista.length > 0
+    ? lista
+    : [{ id: 'todo-en-orden', tono: 'exito', texto: atencion.value.texto }]
 })
 
+function alTocarAviso(id: string): void {
+  if (id === 'agotados') void router.push(RUTA_AGOTADOS)
+  else if (id === 'queda-poco') void router.push(RUTA_QUEDA_POCO)
+  else if (id === 'precios') void router.push({ name: 'ayuda-inteligente' })
+}
+
 async function cargarAtencion(): Promise<void> {
-  atencion.value = await aplicacion.alertas.resumenDeAtencion()
+  const [resumen, productos] = await Promise.all([
+    aplicacion.alertas.resumenDeAtencion(),
+    aplicacion.catalogo.consultable.productos({ soloActivos: true }),
+  ])
+  atencion.value = resumen
+  preciosARevisar.value = preciosParaRevisar(productos).length
 }
 
 async function cargar(): Promise<void> {
@@ -125,24 +170,20 @@ watch(
 function ir(nombre: PantallaDeOtraRama): void {
   void router.push(haciaPantalla(router, nombre))
 }
-
-/** RN-AL-06a: el aviso abre Productos ya filtrado por "Se acaban" (RN-CAT-16). */
-function verLoQueSeAcaba(): void {
-  void router.push(RUTA_SE_ACABAN)
-}
 </script>
 
 <template>
   <div class="vista-inicio">
     <header class="saludo" :inert="movimientosAbiertos ? true : undefined">
-      <h1>{{ encabezado }}</h1>
+      <div class="titulares">
+        <h1>{{ encabezado }}</h1>
+        <FechaDeHoy />
+      </div>
       <!-- Excepción deliberada a RN-UX-04: solo la tuerca, con nombre accesible y zona de 48 px. -->
       <RouterLink :to="{ name: 'ajustes' }" class="enlace-ajustes" aria-label="Ajustes">
         <Settings aria-hidden="true" class="icono" />
       </RouterLink>
     </header>
-
-    <FechaDeHoy :inert="movimientosAbiertos ? true : undefined" />
 
     <MensajeDeError
       v-if="fallo"
@@ -151,66 +192,74 @@ function verLoQueSeAcaba(): void {
     />
 
     <!--
-      Inicio es para vender (plan 19). Celular: encabezado → fecha → lo de hoy (cifras y lo
-      que se acaba) → espacio libre → las acciones, pegadas abajo, al alcance del pulgar (si el
-      contenido es más alto que la pantalla, todo fluye sin taparse). PC: lo que hay que saber a
-      la izquierda y lo que hay que hacer a la derecha.
+      Inicio es para vender (plan 19). Celular: encabezado → fecha → lo de hoy (las cifras crecen
+      para llenar el alto libre) → los avisos → las acciones, todo pegado abajo, al alcance del
+      pulgar (si el contenido es más alto que la pantalla, todo fluye sin taparse). Los avisos van
+      justo encima de los botones, como parte de esa zona. PC: las cifras a la izquierda y, a la
+      derecha, los avisos y las acciones.
     -->
     <div class="cuerpo" :inert="movimientosAbiertos ? true : undefined">
-      <TarjetaDeCifra
-        v-if="cifraDeHoy"
-        class="cifra"
-        compacta
-        :titulo="cifraDeHoy.titulo"
-        :texto-valor="cifraDeHoy.valor"
-        :texto-detalle="cifraDeHoy.detalle"
-        :tono="cifraDeHoy.tono"
-      />
-
-      <div v-if="atencion" class="atencion">
-        <EstadoVacio
-          v-if="hayProductos === false"
-          titulo="Aún no tienes productos"
-          descripcion="Agrégalos para llevar tu stock y saber qué comprar."
-          accion="Agregar el primero"
-          @accion="ir('producto-nuevo')"
+      <div v-if="cifrasDeHoy" class="cifra cifras-de-hoy">
+        <!-- La cifra principal: lo cobrado hoy, grande; la ganancia real, más chica debajo. -->
+        <TarjetaDeCifra
+          blanca
+          principal
+          titulo="Total vendido"
+          :texto-valor="cifrasDeHoy.vendido.valor"
+          :texto-detalle="cifrasDeHoy.vendido.detalle"
         />
-        <!-- Filas compactas: varias alertas se apilan una bajo otra sin alargar la pantalla. -->
-        <FilaDeAviso
-          v-else-if="atencion.contador > 0"
-          tono="atencion"
-          :texto="tituloDeAtencion"
-          texto-accion="Ver productos"
-          @accion="verLoQueSeAcaba"
+        <TarjetaDeCifra
+          blanca
+          compacta
+          en-linea
+          :titulo="cifrasDeHoy.ganancia.titulo"
+          :texto-valor="cifrasDeHoy.ganancia.valor"
+          :tono="cifrasDeHoy.ganancia.tono"
         />
-        <FilaDeAviso v-else tono="exito" :texto="atencion.texto" />
       </div>
 
       <div class="acciones">
-        <div class="vender-fijo">
-          <BotonPrincipal texto="Vender" :icono="ShoppingCart" @click="ir('vender')" />
+        <div v-if="atencion" class="atencion">
+          <EstadoVacio
+            v-if="hayProductos === false"
+            titulo="Aún no tienes productos"
+            descripcion="Agrégalos para llevar tu stock y saber qué comprar."
+            accion="Agregar el primero"
+            @accion="ir('producto-nuevo')"
+          />
+          <!-- Un aviso a la vez, en un espacio reservado, con ‹ › si hay varios. -->
+          <CarruselDeAvisos
+            v-else
+            franja
+            :avisos="avisos"
+            etiqueta="Avisos"
+            @accion="alTocarAviso"
+          />
         </div>
-        <BotonPrincipal
-          texto="Llegó mercadería"
-          variante="secundario"
-          :icono="PackagePlus"
-          @click="ir('recibir')"
-        />
-        <BotonPrincipal
-          texto="¿Necesito comprar?"
-          variante="secundario"
-          :icono="CircleHelp"
-          @click="ir('necesito-comprar')"
-        />
+
+        <div class="vender-fijo">
+          <BotonPrincipal pastilla texto="Vender" :icono="ShoppingCart" @click="ir('vender')" />
+        </div>
+        <div class="par-de-botones">
+          <div class="par-grilla">
+            <button type="button" class="boton-par" @click="ir('recibir')">
+              <PackagePlus aria-hidden="true" class="icono" />
+              <span>Llegó mercadería</span>
+            </button>
+            <button type="button" class="boton-par" @click="ir('necesito-comprar')">
+              <CircleHelp aria-hidden="true" class="icono" />
+              <span>¿Necesito comprar?</span>
+            </button>
+          </div>
+        </div>
         <button
           ref="refMovimientos"
           type="button"
           class="enlace-movimientos"
           @click="abrirMovimientos"
         >
-          <History aria-hidden="true" class="icono" />
           <span>Movimientos</span>
-          <ChevronUp aria-hidden="true" class="icono" />
+          <ChevronRight aria-hidden="true" class="icono" />
         </button>
       </div>
     </div>
@@ -231,50 +280,91 @@ function verLoQueSeAcaba(): void {
   flex-direction: column;
   gap: var(--espacio-3);
   /* Ocupa el alto que deja libre la navegación (medida en vivo en --alto-pie). */
-  min-height: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--espacio-4));
+  min-height: calc(100dvh - var(--alto-pie, 0px) - 2 * var(--relleno-bloque, var(--espacio-4)));
 }
 .saludo {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--espacio-2) var(--espacio-4);
   padding-block: 0;
 }
+.titulares {
+  min-inline-size: 0;
+}
 h1 {
   margin: 0;
   font-size: 1.5rem;
-  line-height: 1.2;
-}
-.enlace-ajustes,
-.enlace-movimientos {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--espacio-2);
-  min-height: var(--alto-toque);
-  padding-inline: var(--espacio-3);
-  border-radius: var(--radio-chico);
-  color: var(--color-primario);
-  font-weight: 700;
-  text-decoration: none;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: break-word;
 }
 .enlace-ajustes {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  flex: none;
   min-width: var(--alto-toque);
-  padding-inline: var(--espacio-2);
+  min-height: var(--alto-toque);
   border: 2px solid var(--color-borde);
+  border-radius: var(--radio-chico);
   background: var(--color-fondo);
+  color: var(--color-primario);
+  text-decoration: none;
 }
+/* Propuesta Inicio: «Movimientos ›», fila a todo el ancho con fondo muy suave y texto centrado. */
 .enlace-movimientos {
-  align-self: flex-start;
-  padding-inline: var(--espacio-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-1);
+  inline-size: 100%;
+  min-height: var(--alto-toque);
   border: none;
-  background: none;
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+  color: var(--color-texto);
   font: inherit;
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
+  font-weight: 500;
   cursor: pointer;
+}
+/* Propuesta Inicio: dos botones secundarios lado a lado, ícono y texto (hasta 2 líneas). */
+.par-de-botones {
+  container-type: inline-size;
+}
+.par-grilla {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-3);
+}
+.boton-par {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--espacio-1);
+  min-height: var(--alto-boton-principal);
+  padding: var(--espacio-1);
+  border: 2px solid var(--color-primario);
+  border-radius: var(--radio);
+  background: var(--color-primario-suave);
+  color: var(--color-primario);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: start;
+  cursor: pointer;
+}
+/* Ícono algo más chico para que «mercadería» entre entera junto a él. */
+.boton-par .icono {
+  width: 1.1em;
+  height: 1.1em;
+}
+/* Si ni así entra «mercadería» sin partirse (letra Muy grande en 320 px), uno bajo otro. */
+@container (max-width: 14rem) {
+  .par-grilla {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .icono {
   width: 1.25em;
@@ -293,34 +383,52 @@ h1 {
 .acciones {
   display: contents;
 }
-/* Celular: "Vender" queda pegado sobre la navegación (--alto-pie, medido en vivo) mientras su
-   lugar está más abajo; al llegar a él, sigue en su sitio. El primero de las acciones lleva
-   `margin-top: auto`: todo el bloque queda al fondo del área de contenido. */
-.vender-fijo {
-  position: sticky;
-  bottom: var(--alto-pie, 0px);
-  z-index: 5;
-  /* De borde a borde del contenido (cubre el relleno de <main>): el navegador dibuja la franja
-     pegada aparte y sus bordes laterales dejaban una línea fina junto al botón; así quedan en el
-     borde de la pantalla. */
-  margin: auto calc(-1 * var(--espacio-4)) calc(-1 * var(--espacio-2));
-  padding: var(--espacio-2) var(--espacio-4);
-  background: var(--color-fondo);
-  /* Cuando el contenido pasa por debajo (pantalla baja), se nota que es una barra encima. */
-  box-shadow: 0 -6px 8px -6px rgb(18 26 24 / 0.35);
+/* Las dos cifras de hoy, apiladas. Crecen para llenar el alto que queda libre (sin huecos en
+   blanco): la principal se lleva más; el contenido de cada una va arriba (centrado en una caja
+   alta se veía flotando en un bloque vacío). */
+.cifra {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--espacio-1);
 }
-/* Lo enfocado con el teclado no queda debajo de "Vender" pegado (WCAG 2.4.11)... */
-.vista-inicio :is(a, button) {
-  scroll-margin-bottom: calc(var(--alto-boton-principal) + 2 * var(--espacio-2));
+.cifra :deep(.tarjeta-de-cifra) {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
-/* ...salvo el propio "Vender": ya está a la vista, enfocarlo no mueve la página. */
-.vender-fijo button {
-  scroll-margin-bottom: 0;
+.cifra :deep(.tarjeta-de-cifra--principal) {
+  flex: 2;
 }
-
-/* PC, en el mismo orden que el código (WCAG 1.3.2 / 2.4.3): las cifras y el aviso a la izquierda
-   y las acciones a la derecha. Sin filas vacías: la separación es el margen de cada bloque, no
-   el espacio entre filas. */
+.cifra :deep(.tarjeta-de-cifra--compacta) {
+  flex: 1;
+}
+/* «Total vendido»: la etiqueta arriba a la izquierda y el MONTO centrado en el alto libre de la
+   tarjeta, mucho más grande y escalando con ella (el monto entero nunca se parte ni se sale: el
+   tope por ancho es el mismo cálculo que TarjetaDeCifra, ~0.62 em por carácter). */
+.cifra :deep(.tarjeta-de-cifra--principal .cifra) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.cifra :deep(.tarjeta-de-cifra--principal .valor) {
+  margin-block: auto;
+  line-height: 1;
+  white-space: nowrap;
+  font-size: max(1.25rem, min(4.5rem, calc(100cqi / (max(var(--caracteres), 1) * 0.7))));
+}
+/* «Ganancia real»: etiqueta a la izquierda y monto a la derecha, ambos centrados en su tarjeta,
+   con el monto más grande y en la misma línea base. */
+.cifra :deep(.tarjeta-de-cifra--compacta) {
+  justify-content: center;
+}
+.cifra :deep(.tarjeta-de-cifra--compacta .valor) {
+  font-size: clamp(1.5rem, 9cqi, 2rem);
+  white-space: nowrap;
+}
+/* PC, en el mismo orden que el código (WCAG 1.3.2 / 2.4.3): las cifras a la izquierda y, a la
+   derecha, los avisos y las acciones. Sin filas vacías: la separación es el margen de cada
+   bloque, no el espacio entre filas. */
 @media (min-width: 1024px) {
   .vista-inicio {
     min-height: auto;
@@ -328,18 +436,17 @@ h1 {
   .cuerpo {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      'cifra acciones'
-      'atencion acciones';
+    grid-template-areas: 'cifra acciones';
     align-items: start;
     gap: 0 var(--espacio-6);
   }
   .cifra {
     grid-area: cifra;
+    flex: none;
   }
-  .atencion {
-    grid-area: atencion;
+  .cifra :deep(.tarjeta-de-cifra--principal),
+  .cifra :deep(.tarjeta-de-cifra--compacta) {
+    flex: none;
   }
   .acciones {
     grid-area: acciones;
@@ -348,18 +455,8 @@ h1 {
     gap: var(--espacio-3);
   }
   .cifra,
-  .atencion,
   .acciones {
     margin-bottom: var(--espacio-4);
-  }
-  .vender-fijo {
-    position: static;
-    margin: 0;
-    padding: 0;
-    background: none;
-  }
-  .vista-inicio :is(a, button) {
-    scroll-margin-bottom: 0;
   }
 }
 </style>

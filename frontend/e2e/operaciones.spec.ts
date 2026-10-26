@@ -232,6 +232,59 @@ test.describe('Panel de venta (RN-OP-22)', () => {
     expect(await stockDe(page, lejia)).toBe(5)
   })
 
+  test('celular: con una sola unidad, "otro precio" solo pide a cuánto y cambia el precio de la línea (más alto o más bajo)', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'celular', 'El panel deslizable es de celular (< 1024 px)')
+    await abrirTiendaLista(page, './')
+    const lejia = await crearProducto(page, LEJIA)
+    await abrir(page, './vender')
+    await agregarBuscando(page, 'lejia', 'Lejía 1 L')
+    const linea = lineaDe(page, 'Lejía 1 L').first()
+    await linea.getByRole('button', { name: '¿Vendiste alguno a otro precio?' }).click()
+    await expect(linea.getByLabel(/^¿Cuántos\?/)).toHaveCount(0)
+    await linea.getByLabel('¿A cuánto lo vendiste? (S/)').fill('4.20')
+    await linea.getByRole('button', { name: 'Guardar', exact: true }).click()
+    await expect(lineaDe(page, 'Lejía 1 L')).toHaveCount(1)
+    await expect(lineaDe(page, 'Lejía 1 L').getByText('Precio especial')).toBeVisible()
+    await expect(totalDeLaVenta(page)).toHaveText('S/ 4.20')
+    // Ya no es la línea con el precio de siempre: no ofrece "otro precio".
+    await expect(
+      linea.getByRole('button', { name: '¿Vendiste alguno a otro precio?' }),
+    ).toHaveCount(0)
+    await page.getByRole('button', { name: 'Confirmar venta' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Venta registrada' })).toBeVisible()
+    expect(await stockDe(page, lejia)).toBe(9)
+  })
+
+  test('celular: el lápiz del precio cambia el precio del producto para siempre, tras confirmar en un diálogo', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'celular', 'El panel deslizable es de celular (< 1024 px)')
+    await abrirTiendaLista(page, './')
+    const lejia = await crearProducto(page, LEJIA)
+    await abrir(page, './vender')
+    await agregarBuscando(page, 'lejia', 'Lejía 1 L')
+    const linea = lineaDe(page, 'Lejía 1 L').first()
+    await linea.getByRole('button', { name: /^Cambiar precio de Lejía 1 L/ }).click()
+    await linea.getByLabel('Nuevo precio en S/').fill('4.00')
+    await linea.getByRole('button', { name: 'Guardar precio' }).click()
+    const dialogo = page.getByRole('dialog')
+    await expect(dialogo).toContainText('¿Cambiar el precio de Lejía 1 L?')
+    await expect(dialogo).toContainText('Desde ahora se venderá a S/ 4.00 (antes S/ 3.50).')
+    await dialogo.getByRole('button', { name: 'Cambiar precio' }).click()
+    await expect(dialogo).toHaveCount(0)
+    await expect(lineaDe(page, 'Lejía 1 L').getByText('Precio especial')).toHaveCount(0)
+    await expect(totalDeLaVenta(page)).toHaveText('S/ 4.00')
+    await page.getByRole('button', { name: 'Confirmar venta' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Venta registrada' })).toBeVisible()
+    // El catálogo quedó con el precio nuevo: la próxima venta ya sale a S/ 4.00.
+    await abrir(page, './vender')
+    await agregarBuscando(page, 'lejia', 'Lejía 1 L')
+    await expect(totalDeLaVenta(page)).toHaveText('S/ 4.00')
+    expect(lejia).toBeTruthy()
+  })
+
   test('celular: cancelar la última línea deja el bloque cerrado en cero', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'El panel deslizable es de celular (< 1024 px)')
     await abrirTiendaLista(page, './')
@@ -319,7 +372,10 @@ test.describe('Llegó mercadería (HU-OP-03, HU-OP-09)', () => {
     await page.getByRole('button', { name: 'Registrar llegada' }).click()
 
     const dialogo = page.getByRole('dialog')
-    await expect(dialogo).toContainText('Escoba no se vende hace 45 días y aún tienes 5 unid.')
+    await expect(dialogo).toContainText('Esto es más de lo que necesitas')
+    await expect(dialogo).toContainText('Escoba')
+    await expect(dialogo).toContainText('No se vende hace 45 días')
+    await expect(dialogo).toContainText('Aún tienes 5 unid.')
     await dialogo.getByRole('button', { name: 'Cambiar cantidad' }).click()
     await expect(dialogo).toBeHidden()
     await expect(lineaDe(page, 'Escoba').getByLabel('Cantidad (unid.)')).toBeFocused()

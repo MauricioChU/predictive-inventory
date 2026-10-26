@@ -14,8 +14,24 @@ const props = withDefaults(
     tono?: 'normal' | 'exito' | 'peligro'
     /** Menos alto (Inicio entra en una pantalla): menos relleno y el detalle más pegado. */
     compacta?: boolean
+    /** Título a la izquierda y cifra a la derecha, en una sola línea (si no caben, una bajo la otra). */
+    enLinea?: boolean
+    /** Más relleno y cifra más grande (solo si hay alto de sobra): sustituye a la compacta. */
+    alta?: boolean
+    /** La cifra principal de una pantalla (Inicio: lo vendido hoy): título arriba y la cifra mucho más grande. */
+    principal?: boolean
+    /** Propuesta Inicio: tarjeta blanca con sombra suave, sin la barra de color a la izquierda. */
+    blanca?: boolean
   }>(),
-  { textoDetalle: undefined, tono: 'normal', compacta: false },
+  {
+    textoDetalle: undefined,
+    tono: 'normal',
+    compacta: false,
+    enLinea: false,
+    alta: false,
+    principal: false,
+    blanca: false,
+  },
 )
 
 const valor = computed(() => pegarCifras(props.textoValor))
@@ -25,7 +41,16 @@ const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.text
 <template>
   <div
     class="tarjeta-de-cifra"
-    :class="[`tarjeta-de-cifra--${tono}`, { 'tarjeta-de-cifra--compacta': compacta }]"
+    :class="[
+      `tarjeta-de-cifra--${tono}`,
+      {
+        'tarjeta-de-cifra--compacta': compacta,
+        'tarjeta-de-cifra--en-linea': enLinea,
+        'tarjeta-de-cifra--alta': alta,
+        'tarjeta-de-cifra--principal': principal,
+        'tarjeta-de-cifra--blanca': blanca,
+      },
+    ]"
   >
     <!-- Título y cifra en UN párrafo: el lector de pantalla lee "Hoy ganaste S/ 48.20" de una
          vez, no dos datos sueltos. El espacio explícito los separa también al leerlos. -->
@@ -90,6 +115,55 @@ const medida = computed(() => ({ '--caracteres': String(largoSinCorte(props.text
 }
 .tarjeta-de-cifra--compacta .detalle {
   margin-block-start: 0;
+}
+.tarjeta-de-cifra--en-linea .cifra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--espacio-2);
+}
+.tarjeta-de-cifra--en-linea .valor {
+  font-size: 1.4rem;
+}
+/* Cifra secundaria (Inicio: la ganancia bajo el total): una línea baja, sin aire de más. */
+.tarjeta-de-cifra--compacta.tarjeta-de-cifra--en-linea {
+  padding-block: var(--espacio-1);
+}
+/* Más alta, con la cifra más grande: ocupa el aire que sobra (Inicio con ventas, sin detalle). */
+.tarjeta-de-cifra--alta {
+  padding-block: var(--espacio-3);
+}
+.tarjeta-de-cifra--alta .valor {
+  font-size: 1.5rem;
+}
+/* Cifra principal: la más grande de la pantalla (hasta 2.5rem), el monto entero sin partirse. */
+.tarjeta-de-cifra--principal {
+  padding-block: var(--espacio-2);
+}
+.tarjeta-de-cifra--principal .titulo {
+  line-height: 1.2;
+}
+.tarjeta-de-cifra--principal .valor {
+  font-size: 2rem;
+  font-size: clamp(1.25rem, calc(100cqi / (max(var(--caracteres), 1) * 0.62)), 2.5rem);
+  line-height: 1.05;
+}
+.tarjeta-de-cifra--principal .detalle {
+  margin-block-start: var(--espacio-1);
+  /* Pegado a la cifra: sin ventas hoy Inicio muestra las tres líneas y debe seguir entrando. */
+  line-height: 1.2;
+}
+.tarjeta-de-cifra--blanca {
+  padding: var(--espacio-3) var(--espacio-4);
+  border-left: none;
+  border-radius: var(--radio-grande);
+  background: var(--color-fondo);
+  box-shadow: var(--sombra-tarjeta);
+}
+.tarjeta-de-cifra--blanca .titulo {
+  font-weight: 400;
+  color: var(--color-texto);
 }
 .tarjeta-de-cifra--exito {
   border-left-color: var(--color-exito);

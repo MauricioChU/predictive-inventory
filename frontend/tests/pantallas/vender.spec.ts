@@ -517,7 +517,7 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
     )
   })
 
-  it('RN-OP-11: el precio especial vale solo para esta venta y debe ser mayor que S/ 0.00', async () => {
+  it('RN-OP-11: el lápiz del precio cambia el del PRODUCTO para siempre, tras confirmar, y debe ser mayor que S/ 0.00', async () => {
     const { app, ids } = await tiendaDePrueba()
     const p = await abrirVender(app)
     await agregarBuscando(p, 'lejia', 'Lejía 1 L')
@@ -532,25 +532,108 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       'El precio de venta debe ser mayor que S/ 0.00',
     )
 
-    await linea().get('.edicion-precio input').setValue('3,00')
+    // Antes de guardar, pregunta: es el precio del producto, no solo de esta venta.
+    await linea().get('.edicion-precio input').setValue('4,00')
     await boton(linea(), 'Guardar precio').trigger('click')
     await esperarDatos(app)
-    expect(linea().find('.edicion-precio').exists()).toBe(false)
-    expect(linea().text()).toContain('Precio especial')
-    expect(total(p)).toBe('S/ 6.00')
+    const dialogo = p.w.get('dialog[open]')
+    expect(leer(dialogo.get('h2'))).toBe('¿Cambiar el precio de Lejía 1 L?')
+    expect(leer(dialogo.get('p'))).toBe('Desde ahora se venderá a S/ 4.00 (antes S/ 3.50).')
+    expect((await app.catalogo.obtenerProducto(ids.lejia))?.precioVenta.centimos).toBe(350)
+
+    await boton(dialogo, 'Cambiar precio').trigger('click')
+    await esperarDatos(app)
+    expect((await app.catalogo.obtenerProducto(ids.lejia))?.precioVenta.centimos).toBe(400)
+    // La línea toma el precio nuevo, sin la marca «Precio especial».
+    expect(linea().text()).not.toContain('Precio especial')
+    expect(linea().text()).toContain('S/ 4.00 c/u')
+    expect(total(p)).toBe('S/ 8.00')
 
     await confirmarVenta(p)
     const [venta] = await app.inventario.historial({ tipo: 'VENTA' })
-    expect(venta?.total?.centimos).toBe(600)
+    expect(venta?.total?.centimos).toBe(800)
+  })
+
+  it('RN-OP-11: cancelar el diálogo del lápiz no cambia ni el producto ni la línea', async () => {
+    const { app, ids } = await tiendaDePrueba()
+    const p = await abrirVender(app)
+    await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+    await lineas(p)[0]!.get('.precio-tocable').trigger('click')
+    await lineas(p)[0]!.get('.edicion-precio input').setValue('4.00')
+    await boton(lineas(p)[0]!, 'Guardar precio').trigger('click')
+    await esperarDatos(app)
+    await boton(p.w.get('dialog[open]'), 'Cancelar').trigger('click')
+    await esperarDatos(app)
+    expect(p.w.find('dialog[open]').exists()).toBe(false)
     expect((await app.catalogo.obtenerProducto(ids.lejia))?.precioVenta.centimos).toBe(350)
+    expect(total(p)).toBe('S/ 3.50')
+  })
+
+  it('RN-OP-11: el lápiz con el precio de siempre devuelve a la normalidad una línea con precio especial; sin especial, avisa', async () => {
+    const { app, ids } = await tiendaDePrueba()
+    const p = await abrirVender(app)
+    await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+    await cambiarCantidad(p, 0, '3')
+    await boton(lineas(p)[0]!, '¿Vendiste alguno a otro precio?').trigger('click')
+    const [cuantos, precio] = lineas(p)[0]!.findAll('.separar input')
+    await cuantos!.setValue('1')
+    await precio!.setValue('3.00')
+    await boton(lineas(p)[0]!, 'Guardar').trigger('click')
+    await esperarDatos(app)
+    expect(lineas(p)).toHaveLength(2)
+
+    // El lápiz de la línea especial con S/ 3.50 (el precio del producto): vuelve y se junta.
+    await lineas(p)[1]!.get('.precio-tocable').trigger('click')
+    await lineas(p)[1]!.get('.edicion-precio input').setValue('3.50')
+    await boton(lineas(p)[1]!, 'Guardar precio').trigger('click')
+    await esperarDatos(app)
+    expect(p.w.find('dialog[open]').exists()).toBe(false)
+    expect(lineas(p)).toHaveLength(1)
+    expect(lineas(p)[0]!.text()).not.toContain('Precio especial')
+    expect(total(p)).toBe('S/ 10.50')
+
+    // Sin especial: no hay diálogo ni cambio; el producto sigue igual.
+    await lineas(p)[0]!.get('.precio-tocable').trigger('click')
+    await lineas(p)[0]!.get('.edicion-precio input').setValue('3.50')
+    await boton(lineas(p)[0]!, 'Guardar precio').trigger('click')
+    await esperarDatos(app)
+    expect(p.w.find('dialog[open]').exists()).toBe(false)
+    expect((await app.catalogo.obtenerProducto(ids.lejia))?.precioVenta.centimos).toBe(350)
+  })
+
+  it('RN-CAT-05 / RN-UX-08: si el precio nuevo deja pérdida, el catálogo lo pide y se confirma otra vez', async () => {
+    const { app, ids } = await tiendaDePrueba()
+    const p = await abrirVender(app)
+    await agregarBuscando(p, 'lejia', 'Lejía 1 L')
+    await lineas(p)[0]!.get('.precio-tocable').trigger('click')
+    // El costo de la lejía es S/ 2.40: a S/ 2.00 se pierde.
+    await lineas(p)[0]!.get('.edicion-precio input').setValue('2.00')
+    await boton(lineas(p)[0]!, 'Guardar precio').trigger('click')
+    await esperarDatos(app)
+    await boton(p.w.get('dialog[open]'), 'Cambiar precio').trigger('click')
+    await esperarDatos(app)
+    const perdida = p.w.get('dialog[open]')
+    expect(perdida.get('h2').text()).toBe('¿Guardar con este precio?')
+    expect(leer(perdida.get('p'))).toBe('Vas a perder S/ 0.40 por cada unidad')
+    expect((await app.catalogo.obtenerProducto(ids.lejia))?.precioVenta.centimos).toBe(350)
+
+    await boton(perdida, 'Sí, guardar así').trigger('click')
+    await esperarDatos(app)
+    expect((await app.catalogo.obtenerProducto(ids.lejia))?.precioVenta.centimos).toBe(200)
+    expect(total(p)).toBe('S/ 2.00')
   })
 
   it('RN-OP-11: "¿Vendiste alguno a otro precio?" separa esas unidades y no deja pasar de las que hay', async () => {
     const { app, ids } = await tiendaDePrueba()
     const p = await abrirVender(app)
     await agregarBuscando(p, 'lejia', 'Lejía 1 L')
-    // Con una sola unidad no hay nada que separar (para eso está el precio de la línea).
-    expect(lineas(p)[0]!.find('.otro-precio').exists()).toBe(false)
+    // Con una sola unidad también está, pero sin «¿Cuántos?»: solo a cuánto (cambia el precio de la línea).
+    expect(lineas(p)[0]!.find('.otro-precio').exists()).toBe(true)
+    await boton(lineas(p)[0]!, '¿Vendiste alguno a otro precio?').trigger('click')
+    expect(lineas(p)[0]!.findAll('.separar input')).toHaveLength(1)
+    expect(lineas(p)[0]!.get('.separar').text()).toContain('¿A cuánto lo vendiste?')
+    expect(lineas(p)[0]!.get('.separar').text()).not.toContain('¿Cuántos?')
+    await boton(lineas(p)[0]!.get('.separar'), 'Cancelar').trigger('click')
     await cambiarCantidad(p, 0, '2')
     const linea = () => lineas(p)[0]!
 
@@ -748,9 +831,10 @@ describe('Vender (HU-OP-01, RN-OP-22: panel de venta)', () => {
       const p = await abrirVender(app)
       await agregarBuscando(p, 'lejia', 'Lejía 1 L')
       await detalle(p)
-      await lineas(p)[0]!.get('.precio-tocable').trigger('click')
-      await lineas(p)[0]!.get('.edicion-precio input').setValue('3.00')
-      await boton(lineas(p)[0]!, 'Guardar precio').trigger('click')
+      // «¿Vendiste alguno a otro precio?» vale solo para esta venta: es el precio especial.
+      await boton(lineas(p)[0]!, '¿Vendiste alguno a otro precio?').trigger('click')
+      await lineas(p)[0]!.get('.separar input').setValue('3.00')
+      await boton(lineas(p)[0]!, 'Guardar').trigger('click')
       await esperarDatos(app)
       await p.ir('/historial')
       await app.catalogo.editarProducto({ productoId: ids.lejia, precioVenta: '5.00' })

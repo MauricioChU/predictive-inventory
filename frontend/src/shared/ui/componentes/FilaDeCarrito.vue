@@ -5,6 +5,7 @@ import type { Unidad } from '@/shared/domain/cantidad'
 import { SIMBOLO_DE_UNIDAD } from '@/shared/domain/formato'
 import Boton from './Boton.vue'
 import CampoNumero from './CampoNumero.vue'
+import DespliegueAnimado from './DespliegueAnimado.vue'
 import FotoDeProducto from './FotoDeProducto.vue'
 
 const props = withDefaults(
@@ -44,9 +45,10 @@ const props = withDefaults(
      */
     errorPrecio?: string
     /**
-     * RN-OP-11 (solo Vender, más de una unidad): "¿Vendiste alguno a otro precio?" abre un mini
-     * formulario (cuántos, de 1 a `maximoSeparar`, y a cuánto cada uno) que emite `separar`;
-     * la pantalla pasa esas unidades a otra línea con ese precio.
+     * RN-OP-11 (solo Vender): "¿Vendiste alguno a otro precio?" abre un mini formulario (cuántos,
+     * de 1 a `maximoSeparar`, y a cuánto cada uno) que emite `separar`; la pantalla pasa esas
+     * unidades a otra línea con ese precio. Con una sola unidad no pregunta cuántos: pide solo
+     * "¿A cuánto lo vendiste?" y el precio de esa línea cambia.
      */
     puedeSeparar?: boolean
     /** RN-OP-05: tope de la cantidad (lo que queda en stock para esta línea); "+" se detiene. */
@@ -175,6 +177,10 @@ onBeforeUnmount(() => {
   if (algunaEdicion.value) emit('edicionAbierta', false)
 })
 const cuantos = ref('1')
+/** Con una sola unidad (o un kilo, un litro) no hay "cuántos": es todo lo de la línea. */
+const unaSola = computed(
+  () => (props.maximoSeparar ?? Number(props.cantidad.replace(',', '.'))) <= 1,
+)
 const precioSeparado = ref('')
 const refSeparar = ref<HTMLElement>()
 const refAbrirSeparar = ref<HTMLButtonElement>()
@@ -182,12 +188,18 @@ const refAbrirSeparar = ref<HTMLButtonElement>()
 /** Se valida mientras se escribe: nunca más de las que hay en la línea. */
 const errorCuantosLocal = computed(() => {
   const maximo = props.maximoSeparar
-  if (maximo === undefined || cuantos.value.trim() === '') return undefined
+  if (unaSola.value || maximo === undefined || cuantos.value.trim() === '') return undefined
   const valor = Number(cuantos.value.replace(',', '.'))
   if (Number.isFinite(valor) && valor > 0 && valor <= maximo) return undefined
   return `Son ${maximo} en total: escribe de 1 a ${maximo}`
 })
 const errorCuantos = computed(() => errorCuantosLocal.value ?? props.errorUnidades)
+
+/** El campo del precio es el último (con una sola unidad es el único). */
+function enfocarPrecioSeparado() {
+  const campos = refSeparar.value?.querySelectorAll('input')
+  campos?.item(campos.length - 1)?.focus()
+}
 
 function abrirSeparar() {
   if (editando.value) emit('cancelarPrecio')
@@ -195,7 +207,7 @@ function abrirSeparar() {
   cuantos.value = '1'
   precioSeparado.value = props.valorPrecio ?? ''
   separando.value = true
-  void nextTick(() => refSeparar.value?.querySelectorAll('input')[1]?.focus())
+  void nextTick(() => enfocarPrecioSeparado())
 }
 
 function cerrarSeparar() {
@@ -214,14 +226,14 @@ async function guardarSeparar() {
     refSeparar.value?.querySelector('input')?.focus()
     return
   }
-  emit('separar', cuantos.value, precioSeparado.value)
+  emit('separar', unaSola.value ? '1' : cuantos.value, precioSeparado.value)
   await nextTick()
   if (props.errorUnidades) {
     refSeparar.value?.querySelector('input')?.focus()
     return
   }
   if (props.errorPrecio) {
-    refSeparar.value?.querySelectorAll('input')[1]?.focus()
+    enfocarPrecioSeparado()
     return
   }
   separando.value = false
@@ -333,42 +345,46 @@ function alPresionarEnter(evento: KeyboardEvent) {
         <Tag aria-hidden="true" class="icono-accion" />
         <span>¿Vendiste alguno a otro precio?</span>
       </button>
-      <div
-        v-if="separando"
-        ref="refSeparar"
-        class="edicion-precio separar"
-        role="group"
-        :aria-label="`Otro precio para algunos de ${nombre}`"
-        @keydown.esc.stop="cancelarSeparar"
-        @keydown.enter="alPresionarEnterAlSeparar"
-      >
-        <p class="titulo-separar">¿Vendiste alguno a otro precio?</p>
-        <CampoNumero
-          v-model="cuantos"
-          :etiqueta="`¿Cuántos? (de ${maximoSeparar ?? cantidad})`"
-          :decimales="!porUnidades"
-          :minimo="minimo"
-          :maximo="maximoSeparar"
-          :error="errorCuantos"
-        />
-        <CampoNumero
-          v-model="precioSeparado"
-          etiqueta="¿A cuánto cada uno? (S/)"
-          decimales
-          :error="errorPrecio"
-        />
-        <div class="acciones">
-          <Boton
-            class="accion"
-            texto="Guardar"
-            variante="primario"
-            :icono="Check"
-            :deshabilitado="Boolean(errorCuantosLocal)"
-            @click="guardarSeparar"
+      <DespliegueAnimado :abierto="separando">
+        <div
+          ref="refSeparar"
+          class="edicion-precio separar"
+          role="group"
+          :aria-label="
+            unaSola ? `Otro precio para ${nombre}` : `Otro precio para algunos de ${nombre}`
+          "
+          @keydown.esc.stop="cancelarSeparar"
+          @keydown.enter="alPresionarEnterAlSeparar"
+        >
+          <p class="titulo-separar">¿Vendiste alguno a otro precio?</p>
+          <CampoNumero
+            v-if="!unaSola"
+            v-model="cuantos"
+            :etiqueta="`¿Cuántos? (de ${maximoSeparar ?? cantidad})`"
+            :decimales="!porUnidades"
+            :minimo="minimo"
+            :maximo="maximoSeparar"
+            :error="errorCuantos"
           />
-          <Boton class="accion" texto="Cancelar" @click="cancelarSeparar" />
+          <CampoNumero
+            v-model="precioSeparado"
+            :etiqueta="unaSola ? '¿A cuánto lo vendiste? (S/)' : '¿A cuánto cada uno? (S/)'"
+            decimales
+            :error="errorPrecio"
+          />
+          <div class="acciones">
+            <Boton
+              class="accion"
+              texto="Guardar"
+              variante="primario"
+              :icono="Check"
+              :deshabilitado="Boolean(errorCuantosLocal)"
+              @click="guardarSeparar"
+            />
+            <Boton class="accion" texto="Cancelar" @click="cancelarSeparar" />
+          </div>
         </div>
-      </div>
+      </DespliegueAnimado>
     </template>
 
     <template v-else>
@@ -450,26 +466,32 @@ function alPresionarEnter(evento: KeyboardEvent) {
 
     <!-- Escape cierra solo esta edición (.stop): no llega al panel de venta, que con Escape se
          cerraría entero. -->
-    <div
-      v-if="editando"
-      :id="idEdicion"
-      ref="refEdicion"
-      class="edicion-precio"
-      @keydown.esc.stop="cancelar"
-      @keydown.enter="alPresionarEnter"
-    >
-      <CampoNumero v-model="precioNuevo" :etiqueta="textos.nuevo" decimales :error="errorPrecio" />
-      <div class="acciones">
-        <Boton
-          class="accion"
-          :texto="textos.guardar"
-          variante="primario"
-          :icono="Check"
-          @click="guardar"
+    <DespliegueAnimado :abierto="editando">
+      <div
+        :id="idEdicion"
+        ref="refEdicion"
+        class="edicion-precio"
+        @keydown.esc.stop="cancelar"
+        @keydown.enter="alPresionarEnter"
+      >
+        <CampoNumero
+          v-model="precioNuevo"
+          :etiqueta="textos.nuevo"
+          decimales
+          :error="errorPrecio"
         />
-        <Boton class="accion" texto="Cancelar" @click="cancelar" />
+        <div class="acciones">
+          <Boton
+            class="accion"
+            :texto="textos.guardar"
+            variante="primario"
+            :icono="Check"
+            @click="guardar"
+          />
+          <Boton class="accion" texto="Cancelar" @click="cancelar" />
+        </div>
       </div>
-    </div>
+    </DespliegueAnimado>
   </div>
 </template>
 
