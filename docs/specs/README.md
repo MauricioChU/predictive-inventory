@@ -24,6 +24,7 @@ Este proyecto sigue **Spec-Driven Development**: ninguna funcionalidad se progra
 
 | Documento | Contenido |
 |---|---|
+| [../proyecto/](../proyecto/README.md) | Visión, misión, alcance, hoja de ruta y funcionalidades del proyecto |
 | [00-vision-y-arquitectura.md](00-vision-y-arquitectura.md) | Problema, usuarios, fases, arquitectura, módulos y lenguaje ubicuo |
 | [fase-1/README.md](fase-1/README.md) | Alcance de la Fase 1 (app local en el celular) |
 | [fase-1/01-catalogo.md](fase-1/01-catalogo.md) | Productos, categorías, código de barras y fotos |
